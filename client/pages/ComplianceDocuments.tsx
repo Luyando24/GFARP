@@ -13,7 +13,9 @@ import {
   Clock,
   FileText,
   Plus,
-  X
+  X,
+  Calendar,
+  Save
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -44,6 +46,8 @@ interface ComplianceDocumentsProps {
 }
 
 const ComplianceDocuments: React.FC<ComplianceDocumentsProps> = ({ onBack }) => {
+  console.log('ComplianceDocuments component is rendering');
+  
   const [documents, setDocuments] = useState<ComplianceDocument[]>([
     {
       id: 1,
