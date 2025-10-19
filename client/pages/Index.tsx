@@ -92,7 +92,7 @@ export default function Index() {
                   <Globe className="h-5 w-5" />
                 </Button>
                 <Button asChild className="bg-white text-[#005391] hover:bg-yellow-400 hover:text-black font-bold px-4 py-2 rounded-full text-xs lg:flex hidden">
-                  <Link to="/academy-login">GET STARTED</Link>
+                  <Link to="/academy-registration">GET STARTED</Link>
                 </Button>
                 <Button variant="ghost" className="p-2 text-white hover:bg-white/20 rounded-lg">
                   <User className="h-5 w-5" />
@@ -100,7 +100,7 @@ export default function Index() {
                 
                 {/* Mobile Sign In */}
                 <Button asChild className="bg-white text-[#005391] hover:bg-yellow-400 hover:text-black font-bold px-4 py-2 rounded-full text-sm lg:hidden">
-                  <Link to="/academy-login">GET STARTED</Link>
+                  <Link to="/academy-registration">GET STARTED</Link>
                 </Button>
               </div>
             </div>
@@ -268,109 +268,115 @@ export default function Index() {
           {/* Features Grid - Tournament Card Style */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
             {/* Feature 1 - Player Registration */}
-            <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
-              {/* Card Header */}
-              <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#005391] to-[#0066b3]"></div>
-              
-              {/* Icon Badge */}
-              <div className="relative mb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-[#005391]/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
-                  <Users className="h-10 w-10 text-white" />
+            <Link to="/academy-dashboard" className="block">
+              <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden cursor-pointer">
+                {/* Card Header */}
+                <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#005391] to-[#0066b3]"></div>
+                
+                {/* Icon Badge */}
+                <div className="relative mb-6">
+                  <div className="w-20 h-20 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-[#005391]/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
+                    <Users className="h-10 w-10 text-white" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center">
+                    <Star className="h-4 w-4 text-black fill-current" />
+                  </div>
                 </div>
-                <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center">
-                  <Star className="h-4 w-4 text-black fill-current" />
-                </div>
+
+                {/* Content */}
+                <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-[#005391] transition-colors duration-300">
+                  PLAYER REGISTRATION SYSTEM
+                </h3>
+                <p className="text-gray-600 leading-relaxed mb-6 group-hover:text-gray-700 transition-colors duration-300">
+                  Championship-level player registration with FIFA-compliant documentation, medical records, and comprehensive contract management system.
+                </p>
+
+                {/* CTA Button */}
+                <Button className="w-full bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#0066b3] hover:to-[#005391] text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 pointer-events-none">
+                  <div className="flex items-center justify-center gap-2">
+                    TRY DEMO
+                    <Target className="h-4 w-4" />
+                  </div>
+                </Button>
+
+                {/* Hover Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-[#005391]/5 to-[#0066b3]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl"></div>
               </div>
-
-              {/* Content */}
-              <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-[#005391] transition-colors duration-300">
-                PLAYER REGISTRATION SYSTEM
-              </h3>
-              <p className="text-gray-600 leading-relaxed mb-6 group-hover:text-gray-700 transition-colors duration-300">
-                Championship-level player registration with FIFA-compliant documentation, medical records, and comprehensive contract management system.
-              </p>
-
-              {/* CTA Button */}
-              <Button className="w-full bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#0066b3] hover:to-[#005391] text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <Link to="/player-registration" className="flex items-center justify-center gap-2">
-                  EXPLORE FEATURE
-                  <Target className="h-4 w-4" />
-                </Link>
-              </Button>
-
-              {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-[#005391]/5 to-[#0066b3]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl"></div>
-            </div>
+            </Link>
 
             {/* Feature 2 - Document Management */}
-            <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
-              {/* Card Header */}
-              <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-yellow-400 to-yellow-500"></div>
-              
-              {/* Icon Badge */}
-              <div className="relative mb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-yellow-500/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
-                  <FileText className="h-10 w-10 text-black" />
+            <Link to="/academy-dashboard" className="block">
+              <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden cursor-pointer">
+                {/* Card Header */}
+                <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-yellow-400 to-yellow-500"></div>
+                
+                {/* Icon Badge */}
+                <div className="relative mb-6">
+                  <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-yellow-500/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
+                    <FileText className="h-10 w-10 text-black" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-[#005391] to-[#0066b3] rounded-full flex items-center justify-center">
+                    <Shield className="h-4 w-4 text-white" />
+                  </div>
                 </div>
-                <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-[#005391] to-[#0066b3] rounded-full flex items-center justify-center">
-                  <Shield className="h-4 w-4 text-white" />
-                </div>
+
+                {/* Content */}
+                <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-yellow-600 transition-colors duration-300">
+                  DOCUMENT MANAGEMENT
+                </h3>
+                <p className="text-gray-600 leading-relaxed mb-6 group-hover:text-gray-700 transition-colors duration-300">
+                  Elite-grade secure cloud storage for player documents, contracts, medical certificates, and FIFA registration forms with military-level encryption.
+                </p>
+
+                {/* CTA Button */}
+                <Button className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 pointer-events-none">
+                  <div className="flex items-center justify-center gap-2">
+                    TRY DEMO
+                    <Target className="h-4 w-4" />
+                  </div>
+                </Button>
+
+                {/* Hover Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/5 to-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl"></div>
               </div>
-
-              {/* Content */}
-              <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-yellow-600 transition-colors duration-300">
-                DOCUMENT MANAGEMENT
-              </h3>
-              <p className="text-gray-600 leading-relaxed mb-6 group-hover:text-gray-700 transition-colors duration-300">
-                Elite-grade secure cloud storage for player documents, contracts, medical certificates, and FIFA registration forms with military-level encryption.
-              </p>
-
-              {/* CTA Button */}
-              <Button className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <Link to="/document-management" className="flex items-center justify-center gap-2">
-                  EXPLORE FEATURE
-                  <Target className="h-4 w-4" />
-                </Link>
-              </Button>
-
-              {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/5 to-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl"></div>
-            </div>
+            </Link>
 
             {/* Feature 3 - FIFA Compliance */}
-            <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
-              {/* Card Header */}
-              <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-green-400 to-green-500"></div>
-              
-              {/* Icon Badge */}
-              <div className="relative mb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-green-500/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
-                  <Shield className="h-10 w-10 text-white" />
+            <Link to="/academy-dashboard" className="block">
+              <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden cursor-pointer">
+                {/* Card Header */}
+                <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-green-400 to-green-500"></div>
+                
+                {/* Icon Badge */}
+                <div className="relative mb-6">
+                  <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-green-500/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
+                    <Shield className="h-10 w-10 text-white" />
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-[#005391] to-[#0066b3] rounded-full flex items-center justify-center">
+                    <CheckCircle className="h-4 w-4 text-white" />
+                  </div>
                 </div>
-                <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-[#005391] to-[#0066b3] rounded-full flex items-center justify-center">
-                  <CheckCircle className="h-4 w-4 text-white" />
-                </div>
+
+                {/* Content */}
+                <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-green-600 transition-colors duration-300">
+                  FIFA COMPLIANCE
+                </h3>
+                <p className="text-gray-600 leading-relaxed mb-6 group-hover:text-gray-700 transition-colors duration-300">
+                  World Cup-standard automated compliance checks, training compensation calculations, and solidarity mechanism management with real-time FIFA integration.
+                </p>
+
+                {/* CTA Button */}
+                <Button className="w-full bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 pointer-events-none">
+                  <div className="flex items-center justify-center gap-2">
+                    TRY DEMO
+                    <Target className="h-4 w-4" />
+                  </div>
+                </Button>
+
+                {/* Hover Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-br from-green-400/5 to-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl"></div>
               </div>
-
-              {/* Content */}
-              <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-green-600 transition-colors duration-300">
-                FIFA COMPLIANCE
-              </h3>
-              <p className="text-gray-600 leading-relaxed mb-6 group-hover:text-gray-700 transition-colors duration-300">
-                World Cup-standard automated compliance checks, training compensation calculations, and solidarity mechanism management with real-time FIFA integration.
-              </p>
-
-              {/* CTA Button */}
-              <Button className="w-full bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <Link to="/fifa-compliance" className="flex items-center justify-center gap-2">
-                  EXPLORE FEATURE
-                  <Target className="h-4 w-4" />
-                </Link>
-              </Button>
-
-              {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-green-400/5 to-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl"></div>
-            </div>
+            </Link>
           </div>
 
           {/* Bottom CTA */}

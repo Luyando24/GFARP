@@ -38,6 +38,7 @@ import {
   Banknote,
   ArrowUpRight,
   ArrowDownRight,
+  Search,
   Plus,
   Minus
 } from 'lucide-react';
@@ -252,7 +253,7 @@ export default function AcademyDashboard() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       {/* Header */}
-      <header className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
+      <header className="bg-white dark:bg-slate-900 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
         <div className="px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo and Academy Name */}
@@ -266,13 +267,32 @@ export default function AcademyDashboard() {
                 {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </Button>
               <div className="flex items-center gap-3">
-                <Trophy className="h-8 w-8 text-blue-600" />
+                <div className="relative">
+                  <div className="w-10 h-10 bg-gradient-to-br from-white to-gray-100 rounded-full flex items-center justify-center shadow-xl">
+                    <Trophy className="h-5 w-5 text-[#005391]" />
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg">
+                    <Star className="h-2 w-2 text-white" />
+                  </div>
+                </div>
                 <div>
                   <h1 className="text-lg font-bold text-slate-900 dark:text-white">
                     {academyData.name}
                   </h1>
                   <p className="text-sm text-slate-600 dark:text-slate-400">Academy Dashboard</p>
                 </div>
+              </div>
+            </div>
+
+            {/* Search Bar */}
+            <div className="flex-1 max-w-md mx-8 hidden md:block">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                <input
+                  type="text"
+                  placeholder="Search players, transactions, documents..."
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
             </div>
 
@@ -285,7 +305,7 @@ export default function AcademyDashboard() {
               <div className="flex items-center gap-3">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={academyData.logo} />
-                  <AvatarFallback>{academyData.name.substring(0, 2)}</AvatarFallback>
+                  <AvatarFallback className="bg-blue-600 text-white font-bold">{academyData.name.substring(0, 2)}</AvatarFallback>
                 </Avatar>
                 <div className="hidden sm:block">
                   <p className="text-sm font-medium text-slate-900 dark:text-white">
@@ -306,7 +326,7 @@ export default function AcademyDashboard() {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 transition-transform duration-300 ease-in-out min-h-screen`}>
+        <aside className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-gradient-to-b from-[#005391] to-[#0066b3] border-r-4 border-yellow-400 transition-transform duration-300 ease-in-out min-h-screen`}>
           <div className="flex flex-col h-full pt-16 lg:pt-0">
             <nav className="flex-1 px-4 py-6 space-y-2">
               {sidebarItems.map((item) => {
@@ -314,10 +334,15 @@ export default function AcademyDashboard() {
                 return (
                   <Button
                     key={item.id}
-                    variant={activeTab === item.id ? "default" : "ghost"}
-                    className="w-full justify-start"
+                    variant="ghost"
+                    className={`w-full justify-start text-white hover:bg-white/20 transition-all duration-300 ${
+                      activeTab === item.id 
+                        ? 'bg-white/20 border-l-4 border-yellow-400 shadow-lg' 
+                        : 'border-l-4 border-transparent hover:border-yellow-400/50'
+                    }`}
                     onClick={() => {
                       setActiveTab(item.id);
+                      setActiveView('main'); // Reset to main view when navigating via sidebar
                       setIsSidebarOpen(false);
                     }}
                   >
@@ -344,11 +369,12 @@ export default function AcademyDashboard() {
             <ComplianceDocuments onBack={() => setActiveView('main')} />
           ) : (
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-5">
+              <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
                 <TabsTrigger value="players">Players</TabsTrigger>
                 <TabsTrigger value="compliance">Compliance</TabsTrigger>
                 <TabsTrigger value="finances">Finances</TabsTrigger>
+                <TabsTrigger value="subscription">Subscription</TabsTrigger>
                 <TabsTrigger value="settings">Settings</TabsTrigger>
               </TabsList>
               
@@ -369,7 +395,7 @@ export default function AcademyDashboard() {
               </div>
 
               {/* Quick Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 <Card>
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
@@ -377,7 +403,7 @@ export default function AcademyDashboard() {
                         <p className="text-sm text-slate-600 dark:text-slate-400">Total Players</p>
                         <p className="text-2xl font-bold text-slate-900 dark:text-white">{statsData.totalPlayers}</p>
                       </div>
-                      <Users className="h-8 w-8 text-blue-600" />
+                      <Users className="h-8 w-8 text-[#005391]" />
                     </div>
                   </CardContent>
                 </Card>
@@ -414,6 +440,23 @@ export default function AcademyDashboard() {
                         <p className="text-2xl font-bold text-slate-900 dark:text-white">{statsData.complianceScore}%</p>
                       </div>
                       <Shield className="h-8 w-8 text-purple-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Subscription</p>
+                        <p className="text-lg font-bold text-slate-900 dark:text-white">Professional</p>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <Star className="h-6 w-6 text-yellow-500 mb-1" />
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                          Active
+                        </Badge>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
@@ -594,7 +637,7 @@ export default function AcademyDashboard() {
                       e.stopPropagation();
                       setActiveView('compliance-documents');
                     }}
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    className="bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#0066b3] hover:to-[#005391] text-white"
                   >
                     <Settings className="h-4 w-4 mr-2" />
                     Manage Documents
@@ -621,11 +664,11 @@ export default function AcademyDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Compliant Areas</p>
-                        <p className="text-2xl font-bold text-blue-600">
+                        <p className="text-2xl font-bold text-[#005391]">
                           {complianceData.areas.filter(area => area.status === 'compliant').length}/{complianceData.areas.length}
                         </p>
                       </div>
-                      <CheckCircle className="h-8 w-8 text-blue-600" />
+                      <CheckCircle className="h-8 w-8 text-[#005391]" />
                     </div>
                   </CardContent>
                 </Card>
@@ -877,13 +920,13 @@ export default function AcademyDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Net Profit</p>
-                        <p className="text-2xl font-bold text-blue-600">${financialData.overview.netProfit.toLocaleString()}</p>
-                        <p className="text-xs text-blue-600 flex items-center mt-1">
+                        <p className="text-2xl font-bold text-[#005391]">${financialData.overview.netProfit.toLocaleString()}</p>
+                        <p className="text-xs text-[#005391] flex items-center mt-1">
                           <ArrowUpRight className="h-3 w-3 mr-1" />
                           {financialData.overview.profitMargin}% margin
                         </p>
                       </div>
-                      <Calculator className="h-8 w-8 text-blue-600" />
+                      <Calculator className="h-8 w-8 text-[#005391]" />
                     </div>
                   </CardContent>
                 </Card>
@@ -1065,7 +1108,7 @@ export default function AcademyDashboard() {
                         <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
                           <div className="flex items-center">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
-                              transaction.type === 'income' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'
+                              transaction.type === 'income' ? 'bg-blue-100 text-[#005391]' : 'bg-red-100 text-red-600'
                             }`}>
                               {transaction.type === 'income' ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
                             </div>
@@ -1075,7 +1118,7 @@ export default function AcademyDashboard() {
                             </div>
                           </div>
                           <div className={`font-semibold ${
-                            transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                            transaction.type === 'income' ? 'text-[#005391]' : 'text-red-600'
                           }`}>
                             {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString()}
                           </div>
@@ -1106,7 +1149,7 @@ export default function AcademyDashboard() {
                             <div 
                               className={`h-2 rounded-full ${
                                 category.percentage >= 90 ? 'bg-red-500' : 
-                                category.percentage >= 75 ? 'bg-yellow-500' : 'bg-green-500'
+                                category.percentage >= 75 ? 'bg-yellow-500' : 'bg-[#005391]'
                               }`}
                               style={{ width: `${category.percentage}%` }}
                             ></div>
@@ -1114,7 +1157,7 @@ export default function AcademyDashboard() {
                           <div className="flex items-center justify-between text-xs">
                             <span className={`${
                               category.percentage >= 90 ? 'text-red-600' : 
-                              category.percentage >= 75 ? 'text-yellow-600' : 'text-green-600'
+                              category.percentage >= 75 ? 'text-yellow-600' : 'text-[#005391]'
                             }`}>
                               {category.percentage}% used
                             </span>
@@ -1188,6 +1231,159 @@ export default function AcademyDashboard() {
                   <strong>Budget Alert:</strong> Staff Salaries category is at 90% of budget. Consider reviewing expenses or adjusting budget allocation for next month.
                 </AlertDescription>
               </Alert>
+            </TabsContent>
+
+            {/* Subscription Tab */}
+            <TabsContent value="subscription" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Subscription Management</h2>
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                  Active Plan
+                </Badge>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Current Plan */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Star className="h-5 w-5 text-yellow-500" />
+                      Current Plan
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-semibold">Professional Plan</span>
+                      <Badge className="bg-blue-600 text-white">$99/month</Badge>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>Next billing date:</span>
+                        <span className="font-medium">March 15, 2024</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Plan started:</span>
+                        <span className="font-medium">January 15, 2024</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span>Status:</span>
+                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                          Active
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="pt-4 border-t">
+                      <h4 className="font-medium mb-2">Plan Features:</h4>
+                      <ul className="text-sm space-y-1 text-slate-600">
+                        <li>• Up to 500 players</li>
+                        <li>• Advanced analytics</li>
+                        <li>• Priority support</li>
+                        <li>• Custom reports</li>
+                        <li>• API access</li>
+                      </ul>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Usage Statistics */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <BarChart3 className="h-5 w-5 text-blue-600" />
+                      Usage Statistics
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span>Players</span>
+                          <span>287 / 500</span>
+                        </div>
+                        <div className="w-full bg-slate-200 rounded-full h-2">
+                          <div className="bg-blue-600 h-2 rounded-full" style={{width: '57%'}}></div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span>Storage</span>
+                          <span>12.4 GB / 50 GB</span>
+                        </div>
+                        <div className="w-full bg-slate-200 rounded-full h-2">
+                          <div className="bg-green-500 h-2 rounded-full" style={{width: '25%'}}></div>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span>API Calls</span>
+                          <span>8,432 / 50,000</span>
+                        </div>
+                        <div className="w-full bg-slate-200 rounded-full h-2">
+                          <div className="bg-yellow-500 h-2 rounded-full" style={{width: '17%'}}></div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Billing History */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Receipt className="h-5 w-5 text-slate-600" />
+                      Billing History
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {[
+                        { date: "Feb 15, 2024", amount: "$99.00", status: "Paid", invoice: "INV-2024-002" },
+                        { date: "Jan 15, 2024", amount: "$99.00", status: "Paid", invoice: "INV-2024-001" },
+                        { date: "Dec 15, 2023", amount: "$99.00", status: "Paid", invoice: "INV-2023-012" }
+                      ].map((bill, index) => (
+                        <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                          <div>
+                            <div className="font-medium">{bill.date}</div>
+                            <div className="text-sm text-slate-600">{bill.invoice}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="font-medium">{bill.amount}</div>
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
+                              {bill.status}
+                            </Badge>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Plan Management */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="h-5 w-5 text-slate-600" />
+                      Plan Management
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      <Button className="w-full bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#004080] hover:to-[#0052a3] text-white">
+                        Upgrade Plan
+                      </Button>
+                      <Button variant="outline" className="w-full">
+                        Change Payment Method
+                      </Button>
+                      <Button variant="outline" className="w-full">
+                        Download Invoice
+                      </Button>
+                      <Button variant="outline" className="w-full text-red-600 border-red-200 hover:bg-red-50">
+                        Cancel Subscription
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
             </TabsContent>
 
             {/* Settings Tab */}

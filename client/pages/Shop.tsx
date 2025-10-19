@@ -170,7 +170,7 @@ export default function Shop() {
                   <Globe className="h-5 w-5" />
                 </Button>
                 <Button asChild className="bg-white text-[#005391] hover:bg-yellow-400 hover:text-black font-bold px-4 py-2 rounded-full text-xs lg:flex hidden">
-                  <Link to="/academy-login">GET STARTED</Link>
+                  <Link to="/academy-registration">GET STARTED</Link>
                 </Button>
                 <Button variant="ghost" className="p-2 text-white hover:bg-white/20 rounded-lg">
                   <User className="h-5 w-5" />
@@ -178,7 +178,7 @@ export default function Shop() {
                 
                 {/* Mobile Sign In */}
                 <Button asChild className="bg-white text-[#005391] hover:bg-yellow-400 hover:text-black font-bold px-4 py-2 rounded-full text-sm lg:hidden">
-                  <Link to="/academy-login">GET STARTED</Link>
+                  <Link to="/academy-registration">GET STARTED</Link>
                 </Button>
               </div>
             </div>

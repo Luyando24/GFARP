@@ -55,7 +55,7 @@ export default function MobileMenu() {
                   </Link>
                 </Button>
                 <Button asChild className="w-full justify-start" size="lg">
-                  <Link to="/register" onClick={closeMenu}>
+                  <Link to="/academy-registration" onClick={closeMenu}>
                     Create account
                   </Link>
                 </Button>
