@@ -730,6 +730,14 @@ export default function AdminDashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [newUserData, setNewUserData] = useState({
+    name: '',
+    email: '',
+    password: '',
+    role: 'admin',
+    status: 'active'
+  });
   const [selectedTransfer, setSelectedTransfer] = useState(null);
   const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
   const [selectedCompliance, setSelectedCompliance] = useState(null);
@@ -773,6 +781,40 @@ export default function AdminDashboard() {
   const handleDeleteUser = (userId) => {
     // Handle user deletion logic
     console.log('Deleting user:', userId);
+  };
+
+  const handleAddUser = () => {
+    setNewUserData({
+      name: '',
+      email: '',
+      password: '',
+      role: 'admin',
+      status: 'active'
+    });
+    setIsAddUserModalOpen(true);
+  };
+
+  const handleCreateUser = async () => {
+    try {
+      // API call to create user in staff_users table
+      const response = await fetch('/api/admin/create-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newUserData),
+      });
+
+      if (response.ok) {
+        console.log('User created successfully');
+        setIsAddUserModalOpen(false);
+        // Refresh user list or show success message
+      } else {
+        console.error('Failed to create user');
+      }
+    } catch (error) {
+      console.error('Error creating user:', error);
+    }
   };
 
   const handleViewTransfer = (transfer) => {
@@ -1234,7 +1276,7 @@ export default function AdminDashboard() {
                     <RefreshCw className="h-4 w-4 mr-2" />
                     Refresh
                   </Button>
-                  <Button size="sm">
+                  <Button size="sm" onClick={handleAddUser}>
                     <Plus className="h-4 w-4 mr-2" />
                     Add User
                   </Button>
@@ -3307,6 +3349,96 @@ export default function AdminDashboard() {
               setIsUserModalOpen(false);
             }}>
               Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add User Modal */}
+      <Dialog open={isAddUserModalOpen} onOpenChange={setIsAddUserModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-blue-600" />
+              Add New Admin User
+            </DialogTitle>
+            <DialogDescription>
+              Create a new admin user account for the system
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-name">Full Name</Label>
+              <Input 
+                id="new-name" 
+                placeholder="Enter full name"
+                value={newUserData.name}
+                onChange={(e) => setNewUserData({...newUserData, name: e.target.value})}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="new-email">Email</Label>
+              <Input 
+                id="new-email" 
+                type="email" 
+                placeholder="Enter email address"
+                value={newUserData.email}
+                onChange={(e) => setNewUserData({...newUserData, email: e.target.value})}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="new-password">Password</Label>
+              <Input 
+                id="new-password" 
+                type="password" 
+                placeholder="Enter password"
+                value={newUserData.password}
+                onChange={(e) => setNewUserData({...newUserData, password: e.target.value})}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="new-role">Role</Label>
+              <Select 
+                value={newUserData.role} 
+                onValueChange={(value) => setNewUserData({...newUserData, role: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Administrator</SelectItem>
+                  <SelectItem value="super_admin">Super Administrator</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="new-status">Status</Label>
+              <Select 
+                value={newUserData.status} 
+                onValueChange={(value) => setNewUserData({...newUserData, status: value})}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsAddUserModalOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleCreateUser}>
+              Create User
             </Button>
           </DialogFooter>
         </DialogContent>

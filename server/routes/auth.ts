@@ -349,6 +349,53 @@ export const handleListSuperAdmins: RequestHandler = async (req, res) => {
   }
 };
 
+export const handleCreateAdminUser: RequestHandler = async (req, res) => {
+  try {
+    const { name, email, password, role, status } = req.body;
+    
+    // Validate required fields
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+    
+    // Check if user already exists
+    const existingUser = await query(
+      'SELECT id FROM staff_users WHERE email = $1',
+      [email]
+    );
+    
+    if (existingUser.rows.length > 0) {
+      return res.status(409).json({ error: "User with this email already exists" });
+    }
+    
+    // Hash password
+    const passwordHash = await hashPassword(password);
+    
+    // Split name into first and last name
+    const nameParts = name.trim().split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ') || '';
+    
+    // Create new admin user
+    const userId = uuidv4();
+    const isActive = status === 'active';
+    
+    await query(
+      `INSERT INTO staff_users (id, email, password_hash, role, first_name, last_name, is_active, created_at, updated_at)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())`,
+      [userId, email, passwordHash, role, firstName, lastName, isActive]
+    );
+    
+    res.status(201).json({ 
+      message: "Admin user created successfully",
+      userId: userId
+    });
+  } catch (error) {
+    console.error('Create Admin User error:', error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 export const handleDeleteSuperAdmin: RequestHandler = async (req, res) => {
   try {
     const { userId } = req.params;

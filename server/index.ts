@@ -7,7 +7,8 @@ import {
   handleRegisterSchool,
   handleRegisterSuperAdmin,
   handleListSuperAdmins,
-  handleDeleteSuperAdmin
+  handleDeleteSuperAdmin,
+  handleCreateAdminUser
 } from "./routes/auth";
 import {
   handleGetDashboardStats
@@ -38,6 +39,9 @@ export function createServer() {
   app.post("/api/auth/login", handleLogin);
   app.post("/api/auth/register-school", handleRegisterSchool);
   app.post("/api/auth/register-superadmin", handleRegisterSuperAdmin);
+  
+  // Admin Management routes
+  app.post("/api/admin/create-user", handleCreateAdminUser);
   
   // Super Admin Management routes
   app.get("/api/auth/list-superadmins", handleListSuperAdmins);
