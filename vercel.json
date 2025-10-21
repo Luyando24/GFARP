@@ -1,18 +1,7 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "server/node-build.ts",
-      "use": "@vercel/node"
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist/spa"
-      }
-    }
-  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/spa",
   "routes": [
     {
       "src": "/api/(.*)",
@@ -35,7 +24,7 @@
     "NRC_SALT": "@nrc_salt"
   },
   "functions": {
-    "dist/server/node-build.mjs": {
+    "api/server/node-build.js": {
       "maxDuration": 30
     }
   }
