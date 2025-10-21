@@ -16,6 +16,7 @@ import Register from "./pages/Register";
 import Shop from "./pages/Shop";
 import RegisterAcademy from "./pages/RegisterAcademy";
 import AcademyDashboard from "./pages/AcademyDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import DatabaseManagement from "./pages/DatabaseManagement";
 import NotificationsPage from "./pages/NotificationsPage";
 import AdminSupportManagement from "./pages/AdminSupportManagement";
@@ -51,6 +52,9 @@ const App = () => {
               
               {/* Academy Dashboard - No auth required for UI development */}
               <Route path="/academy-dashboard" element={<AcademyDashboard />} />
+              
+              {/* Admin Dashboard - No auth required for UI development */}
+              <Route path="/admin-dashboard" element={<AdminDashboard />} />
               
               {/* Protected Admin Routes */}
               <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>

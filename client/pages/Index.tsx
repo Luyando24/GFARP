@@ -1,4 +1,4 @@
-import { Trophy, Users, FileText, ShoppingCart, BookOpen, Globe, Shield, UserCheck, Menu, Target, Calendar, BarChart3, DollarSign, Award, Star, CheckCircle, Building, Crown, User } from 'lucide-react';
+import { Trophy, Users, FileText, ShoppingCart, BookOpen, Globe, Shield, UserCheck, Menu, Target, Calendar, BarChart3, DollarSign, Award, Star, CheckCircle, Building, Crown, User, Lightbulb } from 'lucide-react';
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/navigation/ThemeToggle";
@@ -143,35 +143,24 @@ export default function Index() {
       </header>
 
       <section id="hero" className="relative min-h-screen bg-gradient-to-br from-[#001a33] via-[#003366] to-[#005391] overflow-hidden">
-        {/* Background Video */}
+        {/* FIFA-related Background Image */}
         <div className="absolute inset-0 w-full h-full">
-          <video 
-            className="w-full h-full object-cover"
-            autoPlay 
-            muted 
-            loop 
-            playsInline
-            preload="auto"
-            onLoadStart={() => console.log('Video loading started')}
-            onCanPlay={() => console.log('Video can play')}
-            onError={(e) => {
-              console.log('Video failed to load:', e);
-              // Fallback to a solid background if video fails
-              const videoContainer = e.currentTarget.parentElement;
-              if (videoContainer) {
-                videoContainer.style.background = 'linear-gradient(135deg, #001a33 0%, #003366 50%, #005391 100%)';
-              }
+          <div 
+            className="w-full h-full bg-cover bg-center"
+            style={{
+              backgroundImage: "url('https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')"
             }}
-          >
-            <source src="https://videos.pexels.com/video-files/6077718/6077718-uhd_2560_1440_25fps.mp4" type="video/mp4" />
-            <source src="https://videos.pexels.com/video-files/6077718/6077718-hd_1920_1080_25fps.mp4" type="video/mp4" />
-            <source src="https://videos.pexels.com/video-files/3441747/3441747-uhd_2560_1440_25fps.mp4" type="video/mp4" />
-            <source src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4" />
-            Your browser does not support the video tag.
-          </video>
+          />
           
-          {/* Video Overlay */}
-          <div className="absolute inset-0 bg-gradient-to-br from-[#001a33]/85 via-[#003366]/80 to-[#005391]/85"></div>
+          {/* Image Overlay with FIFA-inspired elements */}
+          <div className="absolute inset-0 bg-gradient-to-br from-[#001a33]/90 via-[#003366]/85 to-[#005391]/80">
+            {/* FIFA Trophy Silhouette */}
+            <div className="absolute right-10 bottom-0 w-96 h-96 bg-contain bg-no-repeat bg-bottom opacity-20"
+              style={{
+                backgroundImage: "url('https://www.fifamuseum.com/media/3832/wc_trophy.png?anchor=center&mode=crop&width=1600&height=900&rnd=132739247710000000')"
+              }}
+            />
+          </div>
         </div>
 
         {/* Dynamic FIFA-inspired background elements */}
@@ -206,30 +195,30 @@ export default function Index() {
             {/* Main Headline */}
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black leading-tight tracking-tight text-white mb-6">
               <span className="block bg-gradient-to-r from-white via-yellow-100 to-white bg-clip-text text-transparent">
-                GLOBAL FOOTBALL
+                INVEST IN YOUR PLAYERS'
               </span>
               <span className="block bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 bg-clip-text text-transparent">
-                ACADEMY PLATFORM
+                FUTURE WITH FIFA
               </span>
             </h1>
 
             {/* Subtitle */}
-            <p className="text-lg sm:text-xl md:text-2xl text-blue-100 font-semibold max-w-4xl mx-auto leading-relaxed mb-10">
-              Register your academy with FIFA • Manage player transfers • Secure training compensation • 
-              <span className="text-yellow-300"> All in one revolutionary platform</span>
+            <p className="text-lg sm:text-xl md:text-2xl text-blue-100 font-semibold max-w-4xl mx-auto leading-relaxed mb-10 px-4">
+              Register your academy players today • Secure future compensation payments • 
+              <span className="text-yellow-300"> Your first step towards long-term financial stability</span>
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
-              <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black font-black shadow-xl hover:shadow-yellow-500/25 transition-all duration-500 transform hover:scale-105 border-2 border-white/20 hover:border-white/40">
-                <Link to="/academy-registration" className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row gap-6 justify-center mb-12 px-4">
+              <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-black shadow-2xl hover:shadow-yellow-500/50 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/60 animate-pulse w-full sm:w-auto">
+                <Link to="/academy-registration" className="flex items-center gap-3 justify-center">
                   <Trophy className="h-5 w-5" />
                   REGISTER ACADEMY
                 </Link>
               </Button>
               
-              <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-white/10 hover:bg-white/20 text-white font-black shadow-xl hover:shadow-white/25 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/50 backdrop-blur-sm">
-                <Link to="/academy-dashboard" className="flex items-center gap-3">
+              <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-white/10 hover:bg-white/20 text-white font-black shadow-xl hover:shadow-white/25 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/50 backdrop-blur-sm w-full sm:w-auto">
+                <Link to="/academy-dashboard" className="flex items-center gap-3 justify-center">
                   <Target className="h-6 w-6" />
                   TRY DEMO
                 </Link>
@@ -240,6 +229,75 @@ export default function Index() {
           </div>
         </div>
 
+      </section>
+
+      {/* How It Works Section */}
+      <section className="py-24 bg-gradient-to-b from-[#001a33] to-[#003366] relative overflow-hidden" id="how-it-works">
+        {/* Background Elements */}
+        <div className="absolute inset-0">
+          <div className="absolute top-20 left-10 w-96 h-96 bg-gradient-to-r from-yellow-400/10 to-yellow-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-10 w-80 h-80 bg-gradient-to-r from-[#005391]/10 to-[#0066b3]/10 rounded-full blur-3xl"></div>
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10">
+          {/* Section Header */}
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full mb-6">
+              <Lightbulb className="h-5 w-5 text-black" />
+              <span className="text-black font-bold text-sm tracking-wide">SIMPLE PROCESS</span>
+            </div>
+            <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white mb-6">
+              HOW IT
+              <span className="block bg-gradient-to-r from-yellow-400 to-yellow-500 bg-clip-text text-transparent">
+                WORKS
+              </span>
+            </h2>
+            <p className="text-xl text-blue-100 max-w-3xl mx-auto">
+              Four simple steps to secure your academy's financial future with FIFA
+            </p>
+          </div>
+
+          {/* Steps */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mb-16 px-4">
+            {/* Step 1 */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-white/20 hover:border-yellow-500/50 transition-all duration-300 transform hover:-translate-y-2">
+              <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 w-12 h-12 rounded-full flex items-center justify-center mb-6 text-black font-bold text-xl">1</div>
+              <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Register Academy</h3>
+              <p className="text-blue-100">Create your academy profile and verify your credentials with our FIFA-approved system.</p>
+            </div>
+            
+            {/* Step 2 */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-white/20 hover:border-yellow-500/50 transition-all duration-300 transform hover:-translate-y-2">
+              <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 w-12 h-12 rounded-full flex items-center justify-center mb-6 text-black font-bold text-xl">2</div>
+              <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Add Players</h3>
+              <p className="text-blue-100">Register all your players with complete profiles, documentation, and training history.</p>
+            </div>
+            
+            {/* Step 3 */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-white/20 hover:border-yellow-500/50 transition-all duration-300 transform hover:-translate-y-2">
+              <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 w-12 h-12 rounded-full flex items-center justify-center mb-6 text-black font-bold text-xl">3</div>
+              <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Track Progress</h3>
+              <p className="text-blue-100">Monitor player development and transfers through our FIFA-connected dashboard.</p>
+            </div>
+            
+            {/* Step 4 */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-white/20 hover:border-yellow-500/50 transition-all duration-300 transform hover:-translate-y-2">
+              <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 w-12 h-12 rounded-full flex items-center justify-center mb-6 text-black font-bold text-xl">4</div>
+              <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Receive Compensation</h3>
+              <p className="text-blue-100">Get automatic notifications and secure payments when your players advance to professional clubs.</p>
+            </div>
+          </div>
+          
+          {/* CTA Button */}
+          <div className="text-center">
+            <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-black shadow-2xl hover:shadow-yellow-500/50 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/60">
+              <Link to="/academy-registration" className="flex items-center gap-3">
+                <Trophy className="h-5 w-5" />
+                START YOUR JOURNEY TODAY
+              </Link>
+            </Button>
+          </div>
+        </div>
       </section>
 
       {/* Key Features Section - FIFA Tournament Style */}
@@ -978,10 +1036,12 @@ export default function Index() {
           
           {/* Call to Action */}
           <div className="text-center mt-16">
-            <Button className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-black px-8 py-4 rounded-2xl text-lg shadow-lg hover:shadow-xl hover:shadow-amber-500/25 transition-all duration-300 group">
-              <Trophy className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform duration-300" />
-              JOIN THE CHAMPIONS
-            </Button>
+            <Link to="/academy-registration">
+              <Button className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-black px-8 py-4 rounded-2xl text-lg shadow-lg hover:shadow-xl hover:shadow-amber-500/25 transition-all duration-300 group">
+                <Trophy className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform duration-300" />
+                JOIN THE CHAMPIONS
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
