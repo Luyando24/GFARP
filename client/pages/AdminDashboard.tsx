@@ -796,6 +796,12 @@ export default function AdminDashboard() {
 
   const handleCreateUser = async () => {
     try {
+      // Validate required fields
+      if (!newUserData.name || !newUserData.email || !newUserData.password) {
+        alert('Please fill in all required fields');
+        return;
+      }
+
       // API call to create user in staff_users table
       const response = await fetch('/api/admin/create-user', {
         method: 'POST',
@@ -805,15 +811,26 @@ export default function AdminDashboard() {
         body: JSON.stringify(newUserData),
       });
 
+      const data = await response.json();
+
       if (response.ok) {
-        console.log('User created successfully');
+        alert('User created successfully!');
         setIsAddUserModalOpen(false);
-        // Refresh user list or show success message
+        setNewUserData({
+          name: '',
+          email: '',
+          password: '',
+          role: 'admin',
+          status: 'active'
+        });
+        // Refresh the page to show the new user
+        window.location.reload();
       } else {
-        console.error('Failed to create user');
+        alert(`Failed to create user: ${data.error || 'Unknown error'}`);
       }
     } catch (error) {
       console.error('Error creating user:', error);
+      alert('Network error: Unable to create user. Please check your connection.');
     }
   };
 
