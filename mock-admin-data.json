@@ -1,0 +1,24 @@
+[
+  {
+    "id": "super-admin-001",
+    "email": "admin@system.com",
+    "password": "admin123",
+    "role": "SUPERADMIN",
+    "first_name": "System",
+    "last_name": "Administrator",
+    "is_active": true,
+    "created_at": "2025-10-21T19:31:34.563Z",
+    "updated_at": "2025-10-21T19:31:34.563Z"
+  },
+  {
+    "id": "admin-001",
+    "email": "admin@gfarp.com",
+    "password": "admin123",
+    "role": "ADMIN",
+    "first_name": "Admin",
+    "last_name": "User",
+    "is_active": true,
+    "created_at": "2025-10-21T19:31:34.563Z",
+    "updated_at": "2025-10-21T19:31:34.563Z"
+  }
+]
