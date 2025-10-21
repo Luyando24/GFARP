@@ -24,6 +24,7 @@ export default function Index() {
                <Link to="/shop" className="hover:text-yellow-300 transition-colors font-medium">SHOP</Link>
                <a href="#blog" className="hover:text-yellow-300 transition-colors font-medium">BLOG</a>
                <a href="#help" className="hover:text-yellow-300 transition-colors font-medium">HELP CENTER</a>
+               <Link to="/admin-dashboard" className="hover:text-yellow-300 transition-colors font-medium">ADMIN (TEST)</Link>
              </div>
            </div>
          </div>
