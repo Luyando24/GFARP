@@ -7,14 +7,12 @@ import dotenv from 'dotenv';
 // Load environment variables
 dotenv.config();
 
-// Database connection pool
+// Database connection using DATABASE_URL
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'muchi_db',
-  max: 20, // Maximum number of connections in the pool
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
 });
 
 // Helper function to execute queries

@@ -1,8 +1,12 @@
 import pkg from 'pg';
 const { Pool } = pkg;
 import bcrypt from 'bcrypt';
+import { PrismaClient } from '../../generated/prisma/index.js';
 
-// Database connection pool
+// Initialize Prisma Client
+export const prisma = new PrismaClient();
+
+// Database connection pool (keeping for backward compatibility)
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
   port: parseInt(process.env.DB_PORT || '5432'),

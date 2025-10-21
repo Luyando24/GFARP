@@ -310,6 +310,16 @@ function generateNationalCardId(): string {
 
 const mock = {
   async login({ email, password, userType }: LoginRequest & { userType?: string }): Promise<AuthSession> {
+    // Check for superadmin credentials first
+    if (email === "admin@system.com" && password === "admin123") {
+      return {
+        userId: "superadmin-001",
+        role: "superadmin",
+        schoolId: null,
+        tokens: { accessToken: uuidv4(), expiresInSec: 3600 },
+      };
+    }
+    
     const user = await db.staffUsers.where({ email }).first();
     if (!user) throw new Error("Account not found. Please register.");
     const hash = await sha256Hex(password);

@@ -20,8 +20,6 @@ import AdminDashboard from "./pages/AdminDashboard";
 import DatabaseManagement from "./pages/DatabaseManagement";
 import NotificationsPage from "./pages/NotificationsPage";
 import AdminSupportManagement from "./pages/AdminSupportManagement";
-import SchoolAdmissions from "./pages/SchoolAdmissions";
-import SchoolContact from "./pages/SchoolContact";
 import { useEffect } from "react";
 import { syncService } from "@/lib/sync";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -53,8 +51,8 @@ const App = () => {
               {/* Academy Dashboard - No auth required for UI development */}
               <Route path="/academy-dashboard" element={<AcademyDashboard />} />
               
-              {/* Admin Dashboard - No auth required for UI development */}
-              <Route path="/admin-dashboard" element={<AdminDashboard />} />
+              {/* Admin Dashboard - Protected route requiring superadmin authentication */}
+              <Route path="/admin" element={<AdminDashboard />} />
               
               {/* Protected Admin Routes */}
               <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>

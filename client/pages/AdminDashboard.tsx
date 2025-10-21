@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth, clearSession } from '@/lib/auth';
 import { 
   Trophy, 
   Users, 
@@ -723,6 +724,8 @@ const chartConfig = {
 };
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
+  const { session } = useAuth();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -734,6 +737,13 @@ export default function AdminDashboard() {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [isFinancialModalOpen, setIsFinancialModalOpen] = useState(false);
 
+  // Authentication check
+  useEffect(() => {
+    if (!session || session.role !== "superadmin") {
+      navigate("/admin/login");
+    }
+  }, [session, navigate]);
+
   // System settings handlers
   const handleSystemSettingsChange = (section, field, value) => {
     // Handle system settings changes
@@ -741,7 +751,8 @@ export default function AdminDashboard() {
   };
 
   const handleLogout = () => {
-    console.log("Admin logout clicked - auth disabled for UI development");
+    clearSession();
+    navigate("/admin/login");
   };
 
   const handleViewUser = (user) => {
