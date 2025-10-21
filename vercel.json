@@ -1,0 +1,35 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["dist/**"]
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/dist/server/node-build.mjs"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/dist/spa/$1"
+    }
+  ],
+  "env": {
+    "DATABASE_URL": "@database_url",
+    "VITE_SUPABASE_URL": "@vite_supabase_url",
+    "VITE_SUPABASE_ANON_KEY": "@vite_supabase_anon_key",
+    "REACT_APP_SUPABASE_URL": "@react_app_supabase_url",
+    "REACT_APP_SUPABASE_ANON_KEY": "@react_app_supabase_anon_key",
+    "NRC_SALT": "@nrc_salt"
+  },
+  "functions": {
+    "dist/server/node-build.mjs": {
+      "maxDuration": 30
+    }
+  }
+}

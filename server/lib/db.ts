@@ -1,18 +1,14 @@
 import pkg from 'pg';
 const { Pool } = pkg;
 import bcrypt from 'bcrypt';
-import { PrismaClient } from '../../generated/prisma/index.js';
+// import { PrismaClient } from '../../generated/prisma/index.js';
 
 // Initialize Prisma Client
-export const prisma = new PrismaClient();
+// export const prisma = new PrismaClient();
 
-// Database connection pool (keeping for backward compatibility)
+// Database connection pool using DATABASE_URL
 const pool = new Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5432'),
-  user: process.env.DB_USER || 'postgres',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'muchi_db',
+  connectionString: process.env.DATABASE_URL,
   max: 20, // Maximum number of connections in the pool
 });
 
