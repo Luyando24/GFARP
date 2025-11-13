@@ -1,15 +1,16 @@
 const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config({ path: '.env.local' });
 
 async function runFifaComplianceMigration() {
   const client = new Client({
-    connectionString: process.env.DATABASE_URL || 'postgresql://postgres:password@localhost:5432/football_academy',
+    connectionString: process.env.DATABASE_URL,
   });
 
   try {
     await client.connect();
-    console.log('Connected to database');
+    console.log('✅ Connected to database');
 
     // Read the FIFA compliance schema file
     const schemaPath = path.join(__dirname, '..', 'db', 'fifa_compliance_schema.sql');
@@ -17,7 +18,7 @@ async function runFifaComplianceMigration() {
 
     // Execute the schema
     await client.query(schema);
-    console.log('FIFA compliance schema created successfully');
+    console.log('✅ FIFA compliance schema created successfully');
 
     // Insert some sample data for testing
     const sampleData = `
@@ -107,10 +108,10 @@ async function runFifaComplianceMigration() {
     `;
 
     await client.query(sampleData);
-    console.log('Sample FIFA compliance data inserted successfully');
+    console.log('📥 Sample FIFA compliance data inserted successfully');
 
   } catch (error) {
-    console.error('Error running FIFA compliance migration:', error);
+    console.error('❌ Error running FIFA compliance migration:', error);
     throw error;
   } finally {
     await client.end();

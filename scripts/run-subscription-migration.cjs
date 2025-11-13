@@ -1,25 +1,25 @@
 const { Client } = require('pg');
 const fs = require('fs');
 const path = require('path');
+require('dotenv').config({ path: '.env.local' });
+
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Found' : 'Not found');
+
+const client = new Client({
+  connectionString: process.env.DATABASE_URL
+});
 
 async function runSubscriptionMigration() {
-  const client = new Client({
-    host: process.env.DB_HOST || 'localhost',
-    port: process.env.DB_PORT || 5432,
-    database: process.env.DB_NAME || 'sofwan_db',
-    user: process.env.DB_USER || 'postgres',
-    password: 'Pythonja@2'
-  });
-
   try {
+    console.log('🔗 Connecting to database...');
     await client.connect();
-    console.log('✅ Connected to PostgreSQL database');
+    console.log('✅ Connected to database');
 
     // Read the subscription schema file
     const schemaPath = path.join(__dirname, '..', 'db', 'subscription_schema.sql');
     const schema = fs.readFileSync(schemaPath, 'utf8');
 
-    // Execute the schema
+    console.log('📝 Executing subscription schema migration...');
     await client.query(schema);
     console.log('✅ Subscription schema migration completed successfully');
 
@@ -46,13 +46,14 @@ async function runSubscriptionMigration() {
 
   } catch (error) {
     console.error('❌ Migration failed:', error);
-    if (error.message.includes('already exists')) {
-      console.log('ℹ️  Tables already exist - this is safe to ignore');
+    if (error.message && error.message.includes('already exists')) {
+      console.log('ℹ️ Tables already exist - this is safe to ignore');
     } else {
       process.exit(1);
     }
   } finally {
     await client.end();
+    console.log('🔌 Database connection closed');
   }
 }
 

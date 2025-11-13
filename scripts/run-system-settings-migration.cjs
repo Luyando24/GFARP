@@ -1,7 +1,20 @@
 const fs = require('fs');
 const path = require('path');
 const { Pool } = require('pg');
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+const dotenv = require('dotenv');
+
+// Load env: prefer .env.local, then .env, else default process env
+const localEnvPath = path.resolve(__dirname, '../.env.local');
+const defaultEnvPath = path.resolve(__dirname, '../.env');
+if (fs.existsSync(localEnvPath)) {
+  dotenv.config({ path: localEnvPath });
+} else if (fs.existsSync(defaultEnvPath)) {
+  dotenv.config({ path: defaultEnvPath });
+} else {
+  dotenv.config();
+}
+
+console.log('DATABASE_URL:', process.env.DATABASE_URL ? 'Found' : 'Not found');
 
 const { exec } = require('child_process');
 

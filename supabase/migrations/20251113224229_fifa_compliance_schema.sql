@@ -186,6 +186,14 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
+-- Make triggers idempotent by dropping existing ones before creating
+DROP TRIGGER IF EXISTS update_fifa_compliance_updated_at ON fifa_compliance;
+DROP TRIGGER IF EXISTS update_fifa_compliance_documents_updated_at ON fifa_compliance_documents;
+DROP TRIGGER IF EXISTS update_fifa_compliance_areas_updated_at ON fifa_compliance_areas;
+DROP TRIGGER IF EXISTS update_fifa_compliance_actions_updated_at ON fifa_compliance_actions;
+DROP TRIGGER IF EXISTS update_fifa_compliance_audits_updated_at ON fifa_compliance_audits;
+DROP TRIGGER IF EXISTS update_fifa_compliance_comments_updated_at ON fifa_compliance_comments;
+
 CREATE TRIGGER update_fifa_compliance_updated_at BEFORE UPDATE ON fifa_compliance FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_fifa_compliance_documents_updated_at BEFORE UPDATE ON fifa_compliance_documents FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_fifa_compliance_areas_updated_at BEFORE UPDATE ON fifa_compliance_areas FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();

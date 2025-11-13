@@ -9,14 +9,19 @@ import path from 'path';
 const router = express.Router();
 const execAsync = promisify(exec);
 
-// Database connection
-const pool = new Pool({
-  user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'sofwan_db',
-  password: process.env.DB_PASSWORD || 'password',
-  port: parseInt(process.env.DB_PORT || '5432'),
-});
+// Database connection: prefer DATABASE_URL, fallback to individual env vars
+const pool = process.env.DATABASE_URL
+  ? new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+    })
+  : new Pool({
+      user: process.env.DB_USER || 'postgres',
+      host: process.env.DB_HOST || 'localhost',
+      database: process.env.DB_NAME || 'sofwan_db',
+      password: process.env.DB_PASSWORD || 'password',
+      port: parseInt(process.env.DB_PORT || '5432'),
+    });
 
 // Database schema information interfaces
 export interface TableInfo {
