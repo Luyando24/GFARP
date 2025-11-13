@@ -8,7 +8,7 @@ const router = express.Router();
 const pool = new Pool({
   user: process.env.DB_USER || 'postgres',
   host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'muchi_db',
+  database: process.env.DB_NAME || 'sofwan_db',
   password: process.env.DB_PASSWORD || 'password',
   port: parseInt(process.env.DB_PORT || '5432'),
 });
@@ -21,11 +21,11 @@ router.get('/tickets', async (req, res) => {
     let query = `
       SELECT 
         st.*,
-        s.name as school_name,
+        a.name as academy_name,
         creator.username as created_by_username,
         assignee.username as assigned_to_username
       FROM support_tickets st
-      LEFT JOIN schools s ON st.school_id = s.id
+      LEFT JOIN academies a ON st.academy_id = a.id
       LEFT JOIN staff_users creator ON st.created_by = creator.id
       LEFT JOIN staff_users assignee ON st.assigned_to = assignee.id
       WHERE 1=1
@@ -117,11 +117,11 @@ router.get('/tickets/:id', async (req, res) => {
     const ticketResult = await pool.query(
       `SELECT 
         st.*,
-        s.name as school_name,
+        a.name as academy_name,
         creator.username as created_by_username,
         assignee.username as assigned_to_username
       FROM support_tickets st
-      LEFT JOIN schools s ON st.school_id = s.id
+      LEFT JOIN academies a ON st.academy_id = a.id
       LEFT JOIN staff_users creator ON st.created_by = creator.id
       LEFT JOIN staff_users assignee ON st.assigned_to = assignee.id
       WHERE st.id = $1`,
@@ -190,10 +190,10 @@ router.post('/tickets', async (req, res) => {
     const ticketResult = await pool.query(
       `SELECT 
         st.*,
-        s.name as school_name,
+        a.name as academy_name,
         creator.username as created_by_username
       FROM support_tickets st
-      LEFT JOIN schools s ON st.school_id = s.id
+      LEFT JOIN academies a ON st.academy_id = a.id
       LEFT JOIN staff_users creator ON st.created_by = creator.id
       WHERE st.id = $1`,
       [ticketId]

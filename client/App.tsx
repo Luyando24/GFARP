@@ -18,11 +18,18 @@ import RegisterAcademy from "./pages/RegisterAcademy";
 import AcademyDashboard from "./pages/AcademyDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import DatabaseManagement from "./pages/DatabaseManagement";
+import BillingSettings from "./pages/BillingSettings";
 import NotificationsPage from "./pages/NotificationsPage";
 import AdminSupportManagement from "./pages/AdminSupportManagement";
+import SuperAdmins from "./pages/SuperAdmins";
+import PlayerDetails from "./pages/PlayerDetails";
+import AcademyDetails from "./pages/AcademyDetails";
 import { useEffect } from "react";
 import { syncService } from "@/lib/sync";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import PaymentSuccess from "./pages/PaymentSuccess";
+import SubscriptionSuccess from "./pages/SubscriptionSuccess";
+import SubscriptionCancel from "./pages/SubscriptionCancel";
 
 const queryClient = new QueryClient();
 
@@ -48,18 +55,29 @@ const App = () => {
               {/* Academy Registration - Public route */}
               <Route path="/academy-registration" element={<RegisterAcademy />} />
               
-              {/* Academy Dashboard - No auth required for UI development */}
-              <Route path="/academy-dashboard" element={<AcademyDashboard />} />
+              {/* Academy Dashboard - Protected route requiring authentication */}
+              <Route element={<ProtectedRoute allowedRoles={["academy"]} />}>
+                <Route path="/academy-dashboard" element={<AcademyDashboard />} />
+                <Route path="/academy-dashboard/player-details/:id" element={<PlayerDetails />} />
+              </Route>
               
               {/* Admin Dashboard - Protected route requiring superadmin authentication */}
               <Route path="/admin" element={<AdminDashboard />} />
               
               {/* Protected Admin Routes */}
-              <Route element={<ProtectedRoute allowedRoles={["admin"]} />}>
+              <Route element={<ProtectedRoute allowedRoles={["admin", "superadmin"]} />}>
                 <Route path="/admin/database" element={<DatabaseManagement />} />
+                <Route path="/admin/billing" element={<BillingSettings />} />
                 <Route path="/admin/notifications" element={<NotificationsPage />} />
                 <Route path="/admin/support" element={<AdminSupportManagement />} />
+                <Route path="/admin/super-admins" element={<SuperAdmins />} />
+                <Route path="/admin/academy/:id" element={<AcademyDetails />} />
               </Route>
+
+              {/* Stripe payment/subscription outcome routes */}
+              <Route path="/payment-success" element={<PaymentSuccess />} />
+              <Route path="/subscription/success" element={<SubscriptionSuccess />} />
+              <Route path="/subscription/cancel" element={<SubscriptionCancel />} />
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />

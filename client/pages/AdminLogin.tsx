@@ -6,13 +6,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Api } from "@/lib/api";
 import { saveSession, useAuth } from "@/lib/auth";
 import { handleError, validateEmail, validateRequired } from "@/lib/errors";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Eye, EyeOff } from "lucide-react";
 
 export default function AdminLogin() {
   const navigate = useNavigate();
   const { session } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -38,8 +39,8 @@ export default function AdminLogin() {
       
       const session = await Api.login({ email, password, userType: "staff" });
       
-      // Check if the user is a superadmin
-      if (session.role !== "superadmin") {
+      // Check if the user is an admin or superadmin
+      if (session.role !== "admin" && session.role !== "superadmin") {
         throw new Error("Access denied. This login is for system administrators only.");
       }
       
@@ -88,14 +89,28 @@ export default function AdminLogin() {
                   Password
                 </label>
               </div>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="bg-background"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="bg-background pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
             </div>
             {error && (
               <div className="p-3 rounded-md bg-destructive/10 text-destructive text-sm">

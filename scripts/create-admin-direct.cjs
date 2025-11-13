@@ -1,4 +1,5 @@
 const { Client } = require('pg');
+const { hashPassword } = require('../dist/server/lib/db'); // Import hashPassword from dist
 require('dotenv').config();
 
 async function createAdminTable() {
@@ -42,9 +43,10 @@ async function createAdminTable() {
       RETURNING id, email, role;
     `;
 
+    const superAdminPasswordHash = await hashPassword('admin123');
     const superAdminResult = await client.query(insertSuperAdminQuery, [
       'admin@gfarp.com',
-      'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', // SHA-256 hash of 'admin123'
+      superAdminPasswordHash,
       'SUPERADMIN',
       'Super',
       'Admin'
@@ -63,9 +65,10 @@ async function createAdminTable() {
       RETURNING id, email, role;
     `;
 
+    const adminPasswordHash = await hashPassword('admin123');
     const adminResult = await client.query(insertAdminQuery, [
       'admin@system.com',
-      'ef92b778bafe771e89245b89ecbc08a44a4e166c06659911881f383d4473e94f', // SHA-256 hash of 'admin123'
+      adminPasswordHash,
       'ADMIN',
       'System',
       'Admin'

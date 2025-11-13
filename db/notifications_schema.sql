@@ -1,4 +1,4 @@
--- Notifications Schema for MUCHI Platform
+-- Notifications Schema for SOFWAN Platform
 -- This schema handles system-wide notifications for all user types
 
 -- System Notifications

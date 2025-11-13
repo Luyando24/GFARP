@@ -29,12 +29,6 @@ const navigationItems = [
     description: 'Overview and analytics'
   },
   {
-    title: 'Schools',
-    href: '/admin/schools',
-    icon: Building,
-    description: 'Manage schools'
-  },
-  {
     title: 'Subscriptions',
     href: '/admin/subscriptions',
     icon: CreditCard,
@@ -140,7 +134,7 @@ export default function AdminSidebar({ collapsed = false, onToggle }: AdminSideb
       <div className="p-4 border-t">
         {!collapsed && (
           <div className="text-xs text-muted-foreground">
-            <p>MUCHI Admin v1.0</p>
+            <p>SOFWAN Admin v1.0</p>
             <p>System Management</p>
           </div>
         )}

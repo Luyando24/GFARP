@@ -38,90 +38,59 @@ export function useAuth() {
   return { session, setSession } as const;
 }
 
-// Role-based helper functions for School Management System
-export function isSchoolAdmin(session: AuthSession | null): boolean {
-  return session?.role === 'admin' || session?.role === 'super_admin';
+// Role-based helper functions for Football Academy Management System
+export function isAdmin(session: AuthSession | null): boolean {
+  return session?.role === 'admin' || session?.role === 'superadmin';
 }
 
-export function isTeacher(session: AuthSession | null): boolean {
-  return session?.role === 'teacher' || isSchoolAdmin(session);
-}
-
-export function isParent(session: AuthSession | null): boolean {
-  return session?.role === 'parent';
-}
-
-export function isStudent(session: AuthSession | null): boolean {
-  return session?.role === 'student';
-}
-
-export function isHeadteacher(session: AuthSession | null): boolean {
-  return session?.role === 'headteacher';
-}
-
-export function isAccountant(session: AuthSession | null): boolean {
-  return session?.role === 'accountant';
-}
-
-export function canAccessAcademicPortal(session: AuthSession | null): boolean {
-  return isTeacher(session) || isSchoolAdmin(session) || isHeadteacher(session);
+export function isSuperAdmin(session: AuthSession | null): boolean {
+  return session?.role === 'superadmin';
 }
 
 // Dashboard Module Access Control
-export function canAccessStudentManagement(session: AuthSession | null): boolean {
-  return isSchoolAdmin(session) || isHeadteacher(session) || isTeacher(session);
+export function canAccessAdminPanel(session: AuthSession | null): boolean {
+  return isAdmin(session);
 }
 
-export function canAccessTeacherManagement(session: AuthSession | null): boolean {
-  return isSchoolAdmin(session) || isHeadteacher(session);
+export function canManageAdmins(session: AuthSession | null): boolean {
+  return isSuperAdmin(session);
 }
 
-export function canAccessAcademicManagement(session: AuthSession | null): boolean {
-  return isSchoolAdmin(session) || isHeadteacher(session) || isTeacher(session);
-}
-
-export function canAccessClassesManagement(session: AuthSession | null): boolean {
-  return isSchoolAdmin(session) || isHeadteacher(session) || isTeacher(session);
-}
-
-export function canAccessSubjectsManagement(session: AuthSession | null): boolean {
-  return isSchoolAdmin(session) || isHeadteacher(session) || isTeacher(session);
-}
-
-export function canAccessAttendanceTracking(session: AuthSession | null): boolean {
-  return isSchoolAdmin(session) || isHeadteacher(session) || isTeacher(session);
-}
-
-export function canAccessGradesManagement(session: AuthSession | null): boolean {
-  return isSchoolAdmin(session) || isHeadteacher(session) || isTeacher(session);
-}
-
-export function canAccessTimetableManagement(session: AuthSession | null): boolean {
-  return isSchoolAdmin(session) || isHeadteacher(session) || isTeacher(session);
-}
-
-export function canAccessFinanceManagement(session: AuthSession | null): boolean {
-  return isSchoolAdmin(session) || isHeadteacher(session) || isAccountant(session);
-}
-
-export function canAccessCommunications(session: AuthSession | null): boolean {
-  return isSchoolAdmin(session) || isHeadteacher(session) || isTeacher(session);
+export function canAccessSystemSettings(session: AuthSession | null): boolean {
+  return isAdmin(session);
 }
 
 export function canAccessReports(session: AuthSession | null): boolean {
-  return isSchoolAdmin(session) || isHeadteacher(session) || isAccountant(session);
+  return isAdmin(session);
+}
+
+export function canAccessSupportManagement(session: AuthSession | null): boolean {
+  return isAdmin(session);
+}
+
+// Temporary functions for school management components (to be removed)
+export function canAccessStudentManagement(session: AuthSession | null): boolean {
+  return isAdmin(session);
+}
+
+export function canAccessTeacherManagement(session: AuthSession | null): boolean {
+  return isAdmin(session);
+}
+
+export function canAccessAcademicManagement(session: AuthSession | null): boolean {
+  return isAdmin(session);
+}
+
+export function canAccessFinanceManagement(session: AuthSession | null): boolean {
+  return isAdmin(session);
 }
 
 export function canAccessSchoolSettings(session: AuthSession | null): boolean {
-  return isSchoolAdmin(session) || isHeadteacher(session);
+  return isAdmin(session);
 }
 
-export function canAccessEMISExport(session: AuthSession | null): boolean {
-  return isSchoolAdmin(session) || isHeadteacher(session);
-}
-
-export function canAccessParentPortal(session: AuthSession | null): boolean {
-  return isSchoolAdmin(session) || isHeadteacher(session) || isTeacher(session);
+export function canAccessCommunications(session: AuthSession | null): boolean {
+  return isAdmin(session);
 }
 
 // Legacy functions for backward compatibility

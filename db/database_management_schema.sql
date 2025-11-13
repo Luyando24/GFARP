@@ -52,9 +52,9 @@ CREATE INDEX IF NOT EXISTS idx_performance_metrics_table ON database_performance
 
 -- Insert some sample data for development
 INSERT INTO database_backups (filename, size_mb, type, description, status, created_at) VALUES
-('muchi_backup_2024-01-15T10-30-00.sql', 45.67, 'automatic', 'Daily automatic backup', 'completed', '2024-01-15 10:30:00+00'),
-('muchi_backup_2024-01-14T10-30-00.sql', 44.23, 'automatic', 'Daily automatic backup', 'completed', '2024-01-14 10:30:00+00'),
-('muchi_backup_2024-01-13T15-45-00.sql', 43.89, 'manual', 'Pre-update backup', 'completed', '2024-01-13 15:45:00+00')
+('sofwan_backup_2024-01-15T10-30-00.sql', 45.67, 'automatic', 'Daily automatic backup', 'completed', '2024-01-15 10:30:00+00'),
+('sofwan_backup_2024-01-14T10-30-00.sql', 44.23, 'automatic', 'Daily automatic backup', 'completed', '2024-01-14 10:30:00+00'),
+('sofwan_backup_2024-01-13T15-45-00.sql', 43.89, 'manual', 'Pre-update backup', 'completed', '2024-01-13 15:45:00+00')
 ON CONFLICT DO NOTHING;
 
 INSERT INTO database_maintenance_log (operation_type, status, duration_seconds, details, created_at) VALUES

@@ -13,7 +13,7 @@ export default function AuthLogin() {
   const { session } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [userType, setUserType] = useState<"staff" | "student" | "parent">("staff");
+  const [userType] = useState<"academy">("academy");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
@@ -38,14 +38,27 @@ export default function AuthLogin() {
         throw new Error("Please enter a valid email address");
       }
       
-      const session = await Api.login({ email, password, userType });
-      saveSession(session);
-      
-      // Navigate based on user role
-      if (session.role === "student") {
-        navigate("/student-portal");
+      // Academy login only
+      const response = await Api.post('football-auth/academy/login', { email, password });
+      if (response.success) {
+        // Transform academy response to match AuthSession format
+        const session = {
+          userId: response.data.academy.id,
+          role: 'academy',
+          schoolId: response.data.academy.id,
+          tokens: {
+            accessToken: response.data.token,
+            expiresInSec: 7 * 24 * 3600 // 7 days
+          }
+        };
+        // Store additional academy data
+        localStorage.setItem('academy_data', JSON.stringify(response.data.academy));
+        localStorage.setItem('subscription_data', JSON.stringify(response.data.subscription));
+        
+        saveSession(session);
+        navigate("/academy-dashboard");
       } else {
-        navigate("/dashboard");
+        throw new Error(response.message || 'Academy login failed');
       }
     } catch (e: any) {
       const errorMessage = String(e?.message || e);
@@ -90,37 +103,6 @@ export default function AuthLogin() {
           <p className="text-sm text-gray-600 mt-1">Sign in to access your academy dashboard</p>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* User Type Selection */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-gray-700">Select Your Role</label>
-            <div className="grid grid-cols-3 gap-2">
-              <Button 
-                type="button" 
-                variant={userType === "staff" ? "default" : "outline"} 
-                className={`text-xs py-2 ${userType === "staff" ? 'bg-blue-600 hover:bg-blue-700' : 'hover:bg-blue-50 hover:border-blue-300'}`}
-                onClick={() => setUserType("staff")}
-              >
-                Coach/Staff
-              </Button>
-              <Button 
-                type="button" 
-                variant={userType === "student" ? "default" : "outline"} 
-                className={`text-xs py-2 ${userType === "student" ? 'bg-blue-600 hover:bg-blue-700' : 'hover:bg-blue-50 hover:border-blue-300'}`}
-                onClick={() => setUserType("student")}
-              >
-                Player
-              </Button>
-              <Button 
-                type="button" 
-                variant={userType === "parent" ? "default" : "outline"} 
-                className={`text-xs py-2 ${userType === "parent" ? 'bg-blue-600 hover:bg-blue-700' : 'hover:bg-blue-50 hover:border-blue-300'}`}
-                onClick={() => setUserType("parent")}
-              >
-                Parent
-              </Button>
-            </div>
-          </div>
-
           <form className="space-y-5" onSubmit={onSubmit}>
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700" htmlFor="email">
@@ -132,13 +114,7 @@ export default function AuthLogin() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                placeholder={
-                  userType === "student" 
-                    ? "player.name@academy.com" 
-                    : userType === "parent"
-                    ? "parent.email@example.com"
-                    : "coach.email@academy.com"
-                }
+                placeholder="academy@example.com"
                 className="h-11 border-gray-300 focus:border-blue-500 focus:ring-blue-500"
               />
             </div>

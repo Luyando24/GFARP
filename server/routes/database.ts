@@ -13,7 +13,7 @@ const execAsync = promisify(exec);
 const pool = new Pool({
   user: process.env.DB_USER || 'postgres',
   host: process.env.DB_HOST || 'localhost',
-  database: process.env.DB_NAME || 'muchi_db',
+  database: process.env.DB_NAME || 'sofwan_db',
   password: process.env.DB_PASSWORD || 'password',
   port: parseInt(process.env.DB_PORT || '5432'),
 });
@@ -165,14 +165,14 @@ export const handleCreateBackup: RequestHandler = async (req, res) => {
   try {
     const { type = 'manual', description } = req.body;
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const filename = `muchi_backup_${timestamp}.sql`;
+    const filename = `sofwan_backup_${timestamp}.sql`;
     const backupPath = path.join(process.cwd(), 'backups', filename);
 
     // Ensure backups directory exists
     await fs.mkdir(path.dirname(backupPath), { recursive: true });
 
     // Create backup using pg_dump
-    const dbUrl = `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'password'}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '5432'}/${process.env.DB_NAME || 'muchi_db'}`;
+    const dbUrl = `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'password'}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '5432'}/${process.env.DB_NAME || 'sofwan_db'}`;
     
     const command = `pg_dump "${dbUrl}" > "${backupPath}"`;
     
@@ -262,7 +262,7 @@ export const handleRestoreBackup: RequestHandler = async (req, res) => {
     }
 
     // Restore database using psql
-    const dbUrl = `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'password'}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '5432'}/${process.env.DB_NAME || 'muchi_db'}`;
+    const dbUrl = `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'password'}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '5432'}/${process.env.DB_NAME || 'sofwan_db'}`;
     
     const command = `psql "${dbUrl}" < "${backupPath}"`;
     

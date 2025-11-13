@@ -80,7 +80,7 @@ export default function DashboardLayout({
                   <GraduationCap className="h-6 w-6 text-primary-foreground" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-gray-900">MUCHI</h1>
+                  <h1 className="text-xl font-bold text-gray-900">SOFWAN</h1>
                   <p className="text-xs text-gray-500 leading-tight">
                     Football Academy Management
                   </p>
@@ -100,7 +100,7 @@ export default function DashboardLayout({
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
                 type="text"
-                placeholder="Search students, classes, reports..."
+                placeholder="Search academies, players, reports..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10 pr-4 py-2 w-full bg-gray-50 border-gray-200 focus:bg-white focus:border-primary"

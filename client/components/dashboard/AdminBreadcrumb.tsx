@@ -26,7 +26,8 @@ const AdminBreadcrumb: React.FC<AdminBreadcrumbProps> = ({ items, className }) =
     
     // Map admin routes to readable names
     const routeMap: Record<string, string> = {
-      'schools': 'Schools',
+      'academies': 'Academies',
+      'schools': 'Academies',
       'subscriptions': 'Subscriptions',
       'super-admins': 'Super Admins',
       'settings': 'System Settings',

@@ -27,13 +27,89 @@ import {
   validateStudentData,
 } from "./errors";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080/api";
+// Player types
+export interface Player {
+  id: string;
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  nationality?: string;
+  position: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  parentName?: string;
+  parentPhone?: string;
+  parentEmail?: string;
+  medicalInfo?: string;
+  emergencyContact?: string;
+  emergencyPhone?: string;
+  height?: number;
+  weight?: number;
+}
+
+// Transfer types
+export interface Transfer {
+  id: string;
+  academy_id: string;
+  player_id?: string;
+  player_name: string;
+  from_club: string;
+  to_club: string;
+  transfer_amount?: number;
+  currency: string;
+  transfer_date: string;
+  contract_start_date?: string;
+  contract_end_date?: string;
+  status: 'pending' | 'approved' | 'completed' | 'rejected' | 'cancelled';
+  transfer_type: 'permanent' | 'loan' | 'free_transfer';
+  priority: 'low' | 'medium' | 'high';
+  agent_name?: string;
+  agent_fee?: number;
+  notes?: string;
+  documents?: string[];
+  fifa_clearance_status?: 'pending' | 'approved' | 'rejected';
+  fifa_clearance_date?: string;
+  created_by?: string;
+  approved_by?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+const API_BASE = (() => {
+  if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
+  // In dev on Windows, port 8080 may be occupied on IPv4 by another service.
+  // Prefer IPv6 loopback explicitly to reach the Vite server correctly.
+  if (import.meta.env.DEV) return "http://[::1]:8080/api";
+  return "/api";
+})();
 const USE_MOCK =
   (import.meta.env.VITE_USE_MOCK as string | undefined) === "true";
+  
+// Player API response types
+export interface PlayerResponse {
+  success: boolean;
+  message: string;
+  data: Player;
+}
+
+export interface PlayersListResponse {
+  success: boolean;
+  message: string;
+  data: {
+    players: Player[];
+    total: number;
+    page: number;
+    limit: number;
+  };
+}
 
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   try {
-    const res = await fetch(`${API_BASE}${path}`, {
+    const finalPath = path.startsWith('/') ? path.substring(1) : path;
+    const res = await fetch(`${API_BASE}/${finalPath}`, {
       credentials: "include",
       headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
       ...init,
@@ -104,6 +180,48 @@ export const Api = {
   async delete<T>(path: string): Promise<T> {
     return http<T>(path, {
       method: "DELETE",
+    });
+  },
+  
+  // Players
+  async getPlayers(academyId?: string, page = 1, limit = 10): Promise<PlayersListResponse> {
+    const academyParam = academyId ? `&academyId=${academyId}` : '';
+    return http<PlayersListResponse>(`/football-players?page=${page}&limit=${limit}${academyParam}`);
+  },
+  
+  async getPlayer(playerId: string): Promise<PlayerResponse> {
+    return http<PlayerResponse>(`/football-players/${playerId}`);
+  },
+  
+  async searchPlayers(query: string, academyId?: string, limit = 10): Promise<{ success: boolean; data: any[] }> {
+    const academyParam = academyId ? `&academyId=${academyId}` : '';
+    return http<{ success: boolean; data: any[] }>(`/football-players/search?q=${encodeURIComponent(query)}&limit=${limit}${academyParam}`);
+  },
+  
+  async createPlayer(playerData: Omit<Player, 'id' | 'createdAt' | 'updatedAt' | 'isActive'> & { academyId: string }): Promise<PlayerResponse> {
+    return http<PlayerResponse>('/football-players', {
+      method: 'POST',
+      body: JSON.stringify(playerData),
+    });
+  },
+  
+  async updatePlayer(playerId: string, playerData: Partial<Player>): Promise<PlayerResponse> {
+    return http<PlayerResponse>(`/football-players/${playerId}`, {
+      method: 'PUT',
+      body: JSON.stringify(playerData),
+    });
+  },
+
+  async updatePlayerDetails(playerId: string, playerData: Partial<Player>): Promise<PlayerResponse> {
+    return http<PlayerResponse>(`/football-players/${playerId}`, {
+      method: 'PUT',
+      body: JSON.stringify(playerData),
+    });
+  },
+  
+  async deletePlayer(playerId: string): Promise<PlayerResponse> {
+    return http<PlayerResponse>(`/football-players/${playerId}`, {
+      method: 'DELETE',
     });
   },
 
@@ -411,7 +529,862 @@ const mock = {
     const items = await query.toArray();
     return { items };
   },
+
+  // FIFA Compliance
+  async getFifaCompliance(academyId?: string): Promise<{ success: boolean; data: any[] }> {
+    const academyParam = academyId ? `?academyId=${academyId}` : '';
+    return http<{ success: boolean; data: any[] }>(`/fifa-compliance${academyParam}`);
+  },
+
+  async getFifaComplianceById(id: string): Promise<{ success: boolean; data: any }> {
+    return http<{ success: boolean; data: any }>(`/fifa-compliance/${id}`);
+  },
+
+  async createFifaCompliance(data: any): Promise<{ success: boolean; data: any }> {
+    return http<{ success: boolean; data: any }>('/fifa-compliance', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateFifaCompliance(id: string, data: any): Promise<{ success: boolean; data: any }> {
+    return http<{ success: boolean; data: any }>(`/fifa-compliance/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteFifaCompliance(id: string): Promise<{ success: boolean; message: string }> {
+    return http<{ success: boolean; message: string }>(`/fifa-compliance/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // FIFA Compliance Documents
+  async getFifaComplianceDocuments(complianceId?: string): Promise<{ success: boolean; data: any[] }> {
+    const param = complianceId ? `?complianceId=${complianceId}` : '';
+    return http<{ success: boolean; data: any[] }>(`/fifa-compliance/documents${param}`);
+  },
+
+  async createFifaComplianceDocument(data: any): Promise<{ success: boolean; data: any }> {
+    return http<{ success: boolean; data: any }>('/fifa-compliance/documents', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateFifaComplianceDocument(id: string, data: any): Promise<{ success: boolean; data: any }> {
+    return http<{ success: boolean; data: any }>(`/fifa-compliance/documents/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteFifaComplianceDocument(id: string): Promise<{ success: boolean; message: string }> {
+    return http<{ success: boolean; message: string }>(`/fifa-compliance/documents/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // FIFA Compliance Areas
+  async getFifaComplianceAreas(): Promise<{ success: boolean; data: any[] }> {
+    return http<{ success: boolean; data: any[] }>('/fifa-compliance/areas');
+  },
+
+  // FIFA Compliance Actions
+  async getFifaComplianceActions(complianceId: string): Promise<{ success: boolean; data: any[] }> {
+    return http<{ success: boolean; data: any[] }>(`/fifa-compliance/${complianceId}/actions`);
+  },
+
+  async createFifaComplianceAction(complianceId: string, data: any): Promise<{ success: boolean; data: any }> {
+    return http<{ success: boolean; data: any }>(`/fifa-compliance/${complianceId}/actions`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // FIFA Compliance Audits
+  async getFifaComplianceAudits(complianceId: string): Promise<{ success: boolean; data: any[] }> {
+    return http<{ success: boolean; data: any[] }>(`/fifa-compliance/${complianceId}/audits`);
+  },
+
+  async createFifaComplianceAudit(complianceId: string, data: any): Promise<{ success: boolean; data: any }> {
+    return http<{ success: boolean; data: any }>(`/fifa-compliance/${complianceId}/audits`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // FIFA Compliance Comments
+  async getFifaComplianceComments(complianceId: string): Promise<{ success: boolean; data: any[] }> {
+    return http<{ success: boolean; data: any[] }>(`/fifa-compliance/${complianceId}/comments`);
+  },
+
+  async createFifaComplianceComment(complianceId: string, data: any): Promise<{ success: boolean; data: any }> {
+    return http<{ success: boolean; data: any }>(`/fifa-compliance/${complianceId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  // FIFA Compliance Dashboard
+  async getFifaComplianceDashboard(academyId?: string): Promise<{ success: boolean; data: any }> {
+    const academyParam = academyId ? `?academyId=${academyId}` : '';
+    return http<{ success: boolean; data: any }>(`/fifa-compliance/dashboard${academyParam}`);
+  },
 };
 export async function enqueueSync(op: Parameters<typeof db.syncQueue.add>[0]) {
   await db.syncQueue.add(op as any);
+}
+
+// Transfer API functions
+const BASE_URL = 'http://localhost:8080/api';
+
+export async function getTransfers(academyId?: string, limit = 50, offset = 0, status?: string): Promise<{ success: boolean; data: Transfer[]; total: number }> {
+  try {
+    const params = new URLSearchParams();
+    if (academyId) params.append('academyId', academyId);
+    if (limit) params.append('limit', limit.toString());
+    if (offset) params.append('offset', offset.toString());
+    if (status) params.append('status', status);
+
+    const response = await fetch(`${BASE_URL}/transfers?${params}`);
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch transfers');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error fetching transfers:', error);
+    throw error;
+  }
+}
+
+export async function getTransfer(transferId: string): Promise<{ success: boolean; data: Transfer }> {
+  try {
+    const response = await fetch(`${BASE_URL}/transfers/${transferId}`);
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch transfer');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error fetching transfer:', error);
+    throw error;
+  }
+}
+
+export async function createTransfer(transferData: Partial<Transfer>): Promise<{ success: boolean; data: Transfer }> {
+  try {
+    // Transform the data to match the API expectations
+    const apiData = {
+      academyId: transferData.academyId || transferData.academy_id,
+      playerId: transferData.player_id,
+      playerName: transferData.player_name,
+      fromClub: transferData.from_club,
+      toClub: transferData.to_club,
+      transferAmount: transferData.transfer_amount,
+      currency: transferData.currency,
+      transferDate: transferData.transfer_date,
+      contractStartDate: transferData.contract_start_date,
+      contractEndDate: transferData.contract_end_date,
+      status: transferData.status,
+      transferType: transferData.transfer_type,
+      priority: transferData.priority,
+      agentName: transferData.agent_name,
+      agentFee: transferData.agent_fee,
+      notes: transferData.notes,
+      documents: transferData.documents,
+      createdBy: transferData.createdBy || transferData.created_by
+    };
+
+    console.log('API Data being sent to server:', apiData);
+
+    const response = await fetch(`${BASE_URL}/transfers`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(apiData),
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to create transfer');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error creating transfer:', error);
+    throw error;
+  }
+}
+
+export async function updateTransfer(transferId: string, transferData: Partial<Transfer>): Promise<{ success: boolean; data: Transfer }> {
+  try {
+    // Transform the data to match the API expectations
+    const apiData = {
+      academyId: transferData.academyId || transferData.academy_id,
+      playerId: transferData.player_id,
+      playerName: transferData.player_name,
+      fromClub: transferData.from_club,
+      toClub: transferData.to_club,
+      transferAmount: transferData.transfer_amount,
+      currency: transferData.currency,
+      transferDate: transferData.transfer_date,
+      contractStartDate: transferData.contract_start_date,
+      contractEndDate: transferData.contract_end_date,
+      status: transferData.status,
+      transferType: transferData.transfer_type,
+      priority: transferData.priority,
+      agentName: transferData.agent_name,
+      agentFee: transferData.agent_fee,
+      notes: transferData.notes,
+      documents: transferData.documents,
+      createdBy: transferData.createdBy || transferData.created_by
+    };
+
+    const response = await fetch(`${BASE_URL}/transfers/${transferId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(apiData),
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to update transfer');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error updating transfer:', error);
+    throw error;
+  }
+}
+
+export async function deleteTransfer(transferId: string): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await fetch(`${BASE_URL}/transfers/${transferId}`, {
+      method: 'DELETE',
+    });
+    
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to delete transfer');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error deleting transfer:', error);
+    throw error;
+  }
+}
+
+export async function getTransferStats(academyId?: string): Promise<{ success: boolean; data: any }> {
+  try {
+    const params = new URLSearchParams();
+    if (academyId) params.append('academyId', academyId);
+
+    const response = await fetch(`${BASE_URL}/transfers/stats?${params}`);
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch transfer stats');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error fetching transfer stats:', error);
+    throw error;
+  }
+}
+
+export async function getAcademyDashboardStats(academyId: string): Promise<{ 
+  success: boolean; 
+  data: {
+    totalPlayers: number;
+    activeTransfers: number;
+    monthlyRevenue: number;
+    recentTransfers: {
+      id: string;
+      player: string;
+      from: string;
+      to: string;
+      amount: string;
+      date: string;
+      status: 'pending' | 'approved' | 'completed' | 'rejected';
+    }[];
+    monthlyFinancialPerformance: {
+      month: string;
+      revenue: number;
+      expenses: number;
+      profit: number;
+    }[];
+  }
+}> {
+  try {
+    const params = new URLSearchParams();
+    params.append('academyId', academyId);
+
+    const response = await fetch(`${BASE_URL}/dashboard/academy-stats?${params}`);
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch academy dashboard stats');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error fetching academy dashboard stats:', error);
+    throw error;
+  }
+}
+
+// Financial Transactions API
+
+export interface FinancialTransaction {
+  id?: number;
+  academy_id: string; // Changed from number to string for UUID support
+  transaction_type: 'income' | 'expense';
+  category: string;
+  subcategory?: string;
+  amount: number;
+  description: string;
+  transaction_date: string;
+  payment_method?: string;
+  reference_number?: string;
+  status: 'pending' | 'completed' | 'cancelled' | 'refunded';
+  notes?: string;
+  created_by?: string; // Also changed to string for UUID support
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface BudgetCategory {
+  id?: number;
+  academy_id: string; // Changed from number to string for UUID support
+  category_name: string;
+  category_type: 'revenue' | 'expense';
+  budgeted_amount: number;
+  spent_amount?: number;
+  remaining_amount?: number;
+  percentage_used?: string;
+  period_type: 'monthly' | 'quarterly' | 'yearly';
+  fiscal_year: number;
+  is_active: boolean;
+  transaction_count?: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface FinancialSummary {
+  totalRevenue: number;
+  totalExpenses: number;
+  netProfit: number;
+  profitMargin: string;
+  totalTransactions: number;
+}
+
+export interface FinancialTransactionsResponse {
+  success: boolean;
+  data: {
+    transactions: FinancialTransaction[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+      hasNext: boolean;
+      hasPrev: boolean;
+    };
+  };
+}
+
+export async function getFinancialTransactions(
+  academyId: string,
+  options: {
+    page?: number;
+    limit?: number;
+    type?: 'income' | 'expense';
+    category?: string;
+    status?: string;
+    dateFrom?: string;
+    dateTo?: string;
+    search?: string;
+  } = {}
+): Promise<FinancialTransactionsResponse> {
+  try {
+    const params = new URLSearchParams();
+    
+    if (options.page) params.append('page', options.page.toString());
+    if (options.limit) params.append('limit', options.limit.toString());
+    if (options.type) params.append('type', options.type);
+    if (options.category) params.append('category', options.category);
+    if (options.status) params.append('status', options.status);
+    if (options.dateFrom) params.append('dateFrom', options.dateFrom);
+    if (options.dateTo) params.append('dateTo', options.dateTo);
+    if (options.search) params.append('search', options.search);
+
+    const response = await fetch(`${BASE_URL}/financial-transactions/${academyId}?${params}`);
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch financial transactions');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error fetching financial transactions:', error);
+    throw error;
+  }
+}
+
+export async function createFinancialTransaction(transaction: Omit<FinancialTransaction, 'id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; data: FinancialTransaction }> {
+  try {
+    const response = await fetch(`${BASE_URL}/financial-transactions`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(transaction),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to create financial transaction');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error creating financial transaction:', error);
+    throw error;
+  }
+}
+
+export async function updateFinancialTransaction(id: number, transaction: Partial<FinancialTransaction>): Promise<{ success: boolean; data: FinancialTransaction }> {
+  try {
+    const response = await fetch(`${BASE_URL}/financial-transactions/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(transaction),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to update financial transaction');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error updating financial transaction:', error);
+    throw error;
+  }
+}
+
+export async function deleteFinancialTransaction(id: number): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await fetch(`${BASE_URL}/financial-transactions/${id}`, {
+      method: 'DELETE',
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to delete financial transaction');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error deleting financial transaction:', error);
+    throw error;
+  }
+}
+
+export async function getFinancialSummary(academyId: string, options: { period?: string; year?: number } = {}): Promise<{
+  success: boolean;
+  data: {
+    summary: FinancialSummary;
+    categoryBreakdown: Array<{
+      transaction_type: string;
+      category: string;
+      total_amount: string;
+      transaction_count: string;
+    }>;
+    monthlyBreakdown: Array<{
+      month: number;
+      transaction_type: string;
+      total_amount: string;
+    }>;
+  };
+}> {
+  try {
+    const params = new URLSearchParams();
+    if (options.period) params.append('period', options.period);
+    if (options.year) params.append('year', options.year.toString());
+
+    const response = await fetch(`${BASE_URL}/financial-transactions/${academyId}/summary?${params}`);
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch financial summary');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error fetching financial summary:', error);
+    throw error;
+  }
+}
+
+export async function getBudgetCategories(academyId: string, year?: number): Promise<{ success: boolean; data: BudgetCategory[] }> {
+  try {
+    const params = new URLSearchParams();
+    if (year) params.append('year', year.toString());
+
+    const response = await fetch(`${BASE_URL}/financial-transactions/${academyId}/budget-categories?${params}`);
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to fetch budget categories');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error fetching budget categories:', error);
+    throw error;
+  }
+}
+
+export async function createBudgetCategory(academyId: string, category: Omit<BudgetCategory, 'id' | 'academy_id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; data: BudgetCategory }> {
+  try {
+    const response = await fetch(`${BASE_URL}/financial-transactions/${academyId}/budget-categories`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(category),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to create budget category');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error creating budget category:', error);
+    throw error;
+  }
+}
+
+export async function updateBudgetCategory(id: number, category: Partial<BudgetCategory>): Promise<{ success: boolean; data: BudgetCategory }> {
+  try {
+    const response = await fetch(`${BASE_URL}/financial-transactions/budget-categories/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(category),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to update budget category');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error updating budget category:', error);
+    throw error;
+  }
+}
+
+export async function deleteBudgetCategory(id: number): Promise<{ success: boolean; message: string }> {
+  try {
+    const response = await fetch(`${BASE_URL}/financial-transactions/budget-categories/${id}`, {
+      method: 'DELETE',
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.error || 'Failed to delete budget category');
+    }
+    
+    return result;
+  } catch (error) {
+    console.error('Error deleting budget category:', error);
+    throw error;
+  }
+}
+
+// ===== SUBSCRIPTION MANAGEMENT API =====
+
+// Subscription types
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  description?: string;
+  price: number;
+  currency: string;
+  billingCycle: 'MONTHLY' | 'YEARLY' | 'LIFETIME';
+  playerLimit: number;
+  storageLimit: number;
+  features: string[];
+  isActive: boolean;
+  isFree: boolean;
+  sortOrder: number;
+}
+
+export interface Subscription {
+  id: string;
+  status: 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED' | 'SUSPENDED';
+  planName: string;
+  price: number;
+  startDate: string;
+  endDate: string;
+  autoRenew: boolean;
+  daysRemaining: number;
+}
+
+export interface SubscriptionUsage {
+  playerCount: number;
+  playerUsagePercentage: number;
+  storageUsed: number;
+  storageUsagePercentage: number;
+}
+
+export interface SubscriptionLimits {
+  playerLimit: number;
+  storageLimit: number;
+}
+
+export interface SubscriptionData {
+  subscription: Subscription;
+  limits: SubscriptionLimits;
+  usage: SubscriptionUsage;
+}
+
+export interface SubscriptionHistory {
+  id: string;
+  action: string;
+  reason: string;
+  previousPlan?: string;
+  newPlan?: string;
+  createdAt: string;
+}
+
+export interface UpgradeSubscriptionRequest {
+  planId: string;
+  paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'MOBILE_MONEY' | 'CARD';
+  paymentReference?: string;
+  notes?: string;
+}
+
+// Get current academy subscription
+export async function getCurrentSubscription(academyId?: string): Promise<SubscriptionData | null> {
+  try {
+    const url = `${BASE_URL}/subscriptions/current`;
+      
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getAuthToken()}`,
+      },
+    });
+
+    const result = await response.json();
+    
+    // Handle 404 - No active subscription found
+    if (response.status === 404) {
+      return null;
+    }
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to get subscription details');
+    }
+    
+    return result.data;
+  } catch (error) {
+    console.error('Error getting current subscription:', error);
+    throw error;
+  }
+}
+
+// Get available subscription plans
+export async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
+  try {
+    const response = await fetch(`${BASE_URL}/subscriptions/plans`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to get subscription plans');
+    }
+    
+    return result.data.plans;
+  } catch (error) {
+    console.error('Error getting subscription plans:', error);
+    throw error;
+  }
+}
+
+// Upgrade subscription plan
+export async function upgradeSubscription(upgradeData: UpgradeSubscriptionRequest): Promise<{
+  subscription: Subscription;
+  paymentId: string;
+  paymentStatus: string;
+}> {
+  try {
+    const response = await fetch(`${BASE_URL}/subscriptions/upgrade`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getAuthToken()}`,
+      },
+      body: JSON.stringify(upgradeData),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to upgrade subscription');
+    }
+    
+    return result.data;
+  } catch (error) {
+    console.error('Error upgrading subscription:', error);
+    throw error;
+  }
+}
+
+// Get subscription history
+export async function getSubscriptionHistory(academyId?: string): Promise<SubscriptionHistory[]> {
+  try {
+    const url = academyId 
+      ? `${BASE_URL}/subscriptions/history?academyId=${academyId}`
+      : `${BASE_URL}/subscriptions/history`;
+      
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getAuthToken()}`,
+      },
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to get subscription history');
+    }
+    
+    return result.data.history;
+  } catch (error) {
+    console.error('Error getting subscription history:', error);
+    throw error;
+  }
+}
+
+// Process cash payment (Admin only)
+export async function processCashPayment(paymentData: {
+  paymentId: string;
+  status: 'COMPLETED' | 'FAILED';
+  processedBy: string;
+  notes?: string;
+}): Promise<{
+  payment: {
+    id: string;
+    status: string;
+    amount: number;
+    paymentDate: string;
+  };
+}> {
+  try {
+    const response = await fetch(`${BASE_URL}/subscriptions/process-payment`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getAuthToken()}`,
+      },
+      body: JSON.stringify(paymentData),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to process payment');
+    }
+    
+    return result.data;
+  } catch (error) {
+    console.error('Error processing cash payment:', error);
+    throw error;
+  }
+}
+
+// Cancel subscription
+export async function cancelSubscription(reason?: string): Promise<{
+  subscription: {
+    id: string;
+    status: string;
+    autoRenew: boolean;
+    endDate: string;
+  };
+}> {
+  try {
+    const response = await fetch(`${BASE_URL}/subscriptions/cancel`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getAuthToken()}`,
+      },
+      body: JSON.stringify({ reason }),
+    });
+
+    const result = await response.json();
+    
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to cancel subscription');
+    }
+    
+    return result.data;
+  } catch (error) {
+    console.error('Error canceling subscription:', error);
+    throw error;
+  }
+}
+
+// Helper function to get auth token
+function getAuthToken(): string {
+  const sessionData = localStorage.getItem('ipims_auth_session');
+  if (!sessionData) return '';
+  
+  try {
+    const session = JSON.parse(sessionData);
+    return session.tokens?.accessToken || '';
+  } catch {
+    return '';
+  }
 }

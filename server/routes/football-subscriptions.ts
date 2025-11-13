@@ -9,7 +9,6 @@ const mockSubscriptionPlans = [
     currency: 'USD',
     billingCycle: 'MONTHLY',
     playerLimit: 50,
-    storageLimit: 5368709120, // 5GB
     features: ['Basic player management', 'Document storage', 'Email support'],
     isActive: true
   },
@@ -20,7 +19,6 @@ const mockSubscriptionPlans = [
     currency: 'USD',
     billingCycle: 'MONTHLY',
     playerLimit: 200,
-    storageLimit: 10737418240, // 10GB
     features: ['Advanced player management', 'Analytics dashboard', 'Priority support', 'Custom reports'],
     isActive: true
   },
@@ -31,7 +29,6 @@ const mockSubscriptionPlans = [
     currency: 'USD',
     billingCycle: 'MONTHLY',
     playerLimit: 1000,
-    storageLimit: 53687091200, // 50GB
     features: ['Unlimited features', 'API access', '24/7 support', 'White-label options'],
     isActive: true
   }

@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { clearSession } from '@/lib/auth';
+import { getCurrentSubscription, getSubscriptionHistory } from '@/lib/api';
 import { 
   Trophy, 
   Users, 
@@ -40,7 +42,14 @@ import {
   ArrowDownRight,
   Search,
   Plus,
-  Minus
+  Minus,
+  Edit,
+  Trash2,
+  Loader2,
+  Save,
+  Phone,
+  Upload,
+  Crown
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -50,12 +59,21 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
 import ThemeToggle from '@/components/navigation/ThemeToggle';
 import ComplianceDocuments from './ComplianceDocuments';
+import PlayerManagement from '@/components/players/PlayerManagement';
+import FinancialTransactionsManager from '@/components/FinancialTransactionsManager';
+import PaymentMethodSelector from '@/components/PaymentMethodSelector';
+import { Api, Player, Transfer, getTransfers, createTransfer, updateTransfer, deleteTransfer, getAcademyDashboardStats } from '@/lib/api';
 
 // Mock data for academy dashboard
 const academyData = {
-  id: "ACD001",
+  id: "550e8400-e29b-41d4-a716-446655440000", // Valid UUID format
   name: "Elite Football Academy",
   location: "Lusaka, Zambia",
   established: "2018",
@@ -69,12 +87,31 @@ const academyData = {
   }
 };
 
+// Player positions for dropdown
+const playerPositions = [
+  "Goalkeeper",
+  "Defender",
+  "Midfielder",
+  "Forward",
+  "Winger",
+  "Striker",
+  "Center Back",
+  "Full Back",
+  "Defensive Midfielder",
+  "Attacking Midfielder"
+];
+
 const playersData = [
-  { id: 1, name: "John Mwanza", age: 16, position: "Forward", status: "active", rating: 85 },
-  { id: 2, name: "Sarah Phiri", age: 15, position: "Midfielder", status: "active", rating: 82 },
-  { id: 3, name: "David Tembo", age: 17, position: "Defender", status: "active", rating: 78 },
-  { id: 4, name: "Grace Lungu", age: 16, position: "Goalkeeper", status: "injured", rating: 88 },
-  { id: 5, name: "Peter Zulu", age: 15, position: "Winger", status: "active", rating: 80 }
+  { id: 1, name: "John Mwanza", age: 16, position: "Forward", status: "active", rating: 85, currentClub: "Elite Football Academy" },
+  { id: 2, name: "Sarah Phiri", age: 15, position: "Midfielder", status: "active", rating: 82, currentClub: "Elite Football Academy" },
+  { id: 3, name: "David Tembo", age: 17, position: "Defender", status: "active", rating: 78, currentClub: "Elite Football Academy" },
+  { id: 4, name: "Grace Lungu", age: 16, position: "Goalkeeper", status: "injured", rating: 88, currentClub: "Elite Football Academy" },
+  { id: 5, name: "Peter Zulu", age: 15, position: "Winger", status: "active", rating: 80, currentClub: "Elite Football Academy" },
+  { id: 6, name: "Michael Banda", age: 17, position: "Forward", status: "active", rating: 87, currentClub: "Youth Stars FC" },
+  { id: 7, name: "Alice Mulenga", age: 16, position: "Midfielder", status: "active", rating: 84, currentClub: "Rising Eagles" },
+  { id: 8, name: "Joseph Chisanga", age: 15, position: "Defender", status: "active", rating: 79, currentClub: "Future Champions" },
+  { id: 9, name: "Ruth Kasonde", age: 17, position: "Winger", status: "active", rating: 83, currentClub: "Dream Team Academy" },
+  { id: 10, name: "Emmanuel Mwale", age: 16, position: "Goalkeeper", status: "active", rating: 86, currentClub: "Victory Sports Club" }
 ];
 
 const recentTransfers = [
@@ -96,13 +133,6 @@ const recentTransfers = [
     date: "2024-01-10",
     status: "pending"
   }
-];
-
-const upcomingEvents = [
-  { date: "2024-01-25", title: "Youth League Match", type: "match" },
-  { date: "2024-01-28", title: "Training Camp", type: "training" },
-  { date: "2024-02-01", title: "FIFA Inspection", type: "inspection" },
-  { date: "2024-02-05", title: "Parent Meeting", type: "meeting" }
 ];
 
 const statsData = {
@@ -236,9 +266,702 @@ export default function AcademyDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState("main");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isEditingSettings, setIsEditingSettings] = useState(false);
+  const [settingsFormData, setSettingsFormData] = useState({
+    name: "",
+    location: "",
+    established: "",
+    email: "",
+    phone: "",
+    directorName: "",
+    directorEmail: "",
+    directorPhone: ""
+  });
+  const navigate = useNavigate();
+  const { toast } = useToast();
+
+  // Transfer management state
+  const [transfers, setTransfers] = useState<Transfer[]>([]);
+  const [isLoadingTransfers, setIsLoadingTransfers] = useState(false);
+  const [isAddingTransfer, setIsAddingTransfer] = useState(false);
+  const [editingTransfer, setEditingTransfer] = useState<Transfer | null>(null);
+  const [transferFormData, setTransferFormData] = useState({
+    id: "",
+    player_name: "",
+    from_club: "",
+    to_club: "",
+    transfer_amount: 0,
+    currency: "USD",
+    transfer_date: "",
+    status: "pending" as const,
+    transfer_type: "permanent" as const,
+    priority: "medium" as const
+  });
+
+  // Player search state for live search functionality
+  const [playerSearchQuery, setPlayerSearchQuery] = useState("");
+  const [playerSearchResults, setPlayerSearchResults] = useState<any[]>([]);
+  const [showPlayerDropdown, setShowPlayerDropdown] = useState(false);
+  const [selectedPlayer, setSelectedPlayer] = useState<any | null>(null);
+  const playerSearchRef = useRef<HTMLDivElement>(null);
+
+  // Authenticated academy data
+  const [academyInfo, setAcademyInfo] = useState<any | null>(null);
+  
+  // Dashboard stats state
+  const [dashboardStats, setDashboardStats] = useState({
+    totalPlayers: 0,
+    activeTransfers: 0,
+    monthlyRevenue: 0,
+    recentTransfers: []
+  });
+  const [isLoadingStats, setIsLoadingStats] = useState(false);
+
+  // Subscription state
+  const [subscriptionData, setSubscriptionData] = useState<any>(null);
+  const [subscriptionHistory, setSubscriptionHistory] = useState<any[]>([]);
+  const [availablePlans, setAvailablePlans] = useState<any[]>([]);
+  const [isLoadingSubscription, setIsLoadingSubscription] = useState(false);
+  const [isUpgrading, setIsUpgrading] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPlanForUpgrade, setSelectedPlanForUpgrade] = useState<any>(null);
+
+  // Scroll to plan management function
+  const scrollToPlanManagement = () => {
+    const element = document.getElementById('plan-management');
+    if (element) {
+      // First switch to subscription tab
+      setActiveTab("subscription");
+      // Then scroll to the plan management section with a slight delay
+      setTimeout(() => {
+        element.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'start',
+          inline: 'nearest'
+        });
+      }, 100);
+    }
+  };
+
+  useEffect(() => {
+    const raw = localStorage.getItem('academy_data');
+    if (raw) {
+      try {
+        setAcademyInfo(JSON.parse(raw));
+      } catch {
+        setAcademyInfo(null);
+      }
+    }
+  }, []);
+
+  // Load transfers from database
+  const loadTransfers = async () => {
+    if (!academyInfo?.id) return;
+    
+    setIsLoadingTransfers(true);
+    try {
+      const result = await getTransfers(academyInfo.id);
+      if (result.success) {
+        setTransfers(result.data);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to load transfers",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error loading transfers:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load transfers",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingTransfers(false);
+    }
+  };
+
+  // Load dashboard stats from database
+  const loadDashboardStats = async () => {
+    if (!academyInfo?.id) return;
+    
+    setIsLoadingStats(true);
+    try {
+      const result = await getAcademyDashboardStats(academyInfo.id);
+      if (result.success) {
+        setDashboardStats(result.data);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to load dashboard statistics",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error loading dashboard stats:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard statistics",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingStats(false);
+    }
+  };
+
+  // Load subscription data from API
+  const loadSubscriptionData = async () => {
+    if (!academyInfo?.id) return;
+    
+    setIsLoadingSubscription(true);
+    try {
+      // Import the API function at the top of the file
+      const data = await getCurrentSubscription(academyInfo.id);
+      if (data) {
+        // Map the API response to the UI model
+        setSubscriptionData({
+          id: data.subscription?.id,
+          status: data.subscription?.status?.toLowerCase() || 'active',
+          planName: data.subscription?.planName,
+          price: data.subscription?.price || 0,
+          billingCycle: 'month',
+          startDate: data.subscription?.startDate,
+          endDate: data.subscription?.endDate,
+          autoRenew: data.subscription?.autoRenew,
+          daysRemaining: data.subscription?.daysRemaining,
+          playerLimit: data.limits?.playerLimit,
+          storageLimit: data.limits?.storageLimit,
+          playerCount: data.usage?.playerCount,
+          playerUsagePercentage: data.usage?.playerUsagePercentage,
+          storageUsed: data.usage?.storageUsed,
+          storageUsagePercentage: data.usage?.storageUsagePercentage
+        });
+      } else {
+        // Handle case when no subscription is found
+        console.log("No active subscription found - using default free plan");
+        // Set default free plan data
+        setSubscriptionData({
+          id: "free-default",
+          status: "active",
+          planName: "Free Plan",
+          price: 0,
+          billingCycle: 'month',
+          startDate: new Date().toISOString(),
+          endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
+          autoRenew: true,
+          daysRemaining: 365,
+          playerLimit: 2,
+          storageLimit: 1,
+          playerCount: 0,
+          playerUsagePercentage: 0,
+          storageUsed: 0,
+          storageUsagePercentage: 0
+        });
+      }
+    } catch (error) {
+      console.error('Error loading subscription data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load subscription data",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoadingSubscription(false);
+    }
+  };
+
+  // Load subscription history
+  const loadSubscriptionHistory = async () => {
+    if (!academyInfo?.id) return;
+    
+    try {
+      const history = await getSubscriptionHistory(academyInfo.id);
+      setSubscriptionHistory(history || []);
+    } catch (error) {
+      console.error('Error loading subscription history:', error);
+    }
+  };
+
+  // Load available plans
+  const loadAvailablePlans = async () => {
+    try {
+      console.log('Loading available plans...');
+      const response = await fetch('/api/subscriptions/plans');
+      const result = await response.json();
+      console.log('Plans API response:', result);
+      
+      if (result.success) {
+        setAvailablePlans(result.data || []);
+        console.log('Available plans set:', result.data);
+      } else {
+        console.error('Failed to load plans:', result.error);
+      }
+    } catch (error) {
+      console.error('Error loading available plans:', error);
+    }
+  };
+
+  // Handle plan upgrade
+  const handleUpgradePlan = async (planId: string) => {
+    if (!academyInfo?.id) return;
+    
+    // Find the selected plan
+    const selectedPlan = availablePlans.find(plan => plan.id === planId);
+    if (!selectedPlan) {
+      toast({
+        title: "Error",
+        description: "Selected plan not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Set the selected plan and show payment modal
+    setSelectedPlanForUpgrade({
+      id: selectedPlan.id,
+      name: selectedPlan.name,
+      price: selectedPlan.price,
+      isFree: selectedPlan.price === 0
+    });
+    setShowPaymentModal(true);
+  };
+
+  // Handle successful payment/upgrade
+  const handleUpgradeSuccess = () => {
+    // Reload subscription data
+    loadSubscriptionData();
+    loadSubscriptionHistory();
+    setSelectedPlanForUpgrade(null);
+  };
+
+  // Handle subscription cancellation
+  const handleCancelSubscription = async () => {
+    if (!academyInfo?.id) return;
+    
+    setIsCancelling(true);
+    try {
+      const response = await fetch('/api/subscriptions/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          academyId: academyInfo.id
+        }),
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Subscription cancelled successfully",
+        });
+        // Reload subscription data
+        loadSubscriptionData();
+        loadSubscriptionHistory();
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to cancel subscription",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error cancelling subscription:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel subscription",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
+  // Load transfers when academy info is available
+  useEffect(() => {
+    if (academyInfo?.id) {
+      loadTransfers();
+      loadDashboardStats();
+      loadSubscriptionData();
+      loadSubscriptionHistory();
+      loadAvailablePlans();
+    }
+  }, [academyInfo?.id]);
+
+  // Click outside handler for player search dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (playerSearchRef.current && !playerSearchRef.current.contains(event.target as Node)) {
+        setShowPlayerDropdown(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Initialize settings form data
+  useEffect(() => {
+    const currentData = academyInfo || academyData;
+    setSettingsFormData({
+      name: currentData.name || "",
+      location: currentData.location || "",
+      established: currentData.established || "",
+      email: currentData.email || "",
+      phone: currentData.phone || "",
+      directorName: currentData.director?.name || "",
+      directorEmail: currentData.director?.email || "",
+      directorPhone: currentData.director?.phone || ""
+    });
+  }, [academyInfo]);
+
+  const displayAcademyName = academyInfo?.name || academyData.name;
+  const displayName = academyInfo?.contactPerson || academyInfo?.name || academyData.director.name;
+  const getInitials = (name: string) => (name || '')
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map(n => n[0]?.toUpperCase())
+    .join('') || academyData.name.substring(0, 2).toUpperCase();
+
+  // Filter functions for different tabs
+  const filteredTransactions = financialData.recentTransactions.filter(transaction =>
+    searchQuery === "" || 
+    transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    transaction.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    transaction.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    transaction.amount.toString().includes(searchQuery)
+  );
+
+  const filteredComplianceAreas = complianceData.areas.filter(area =>
+    searchQuery === "" ||
+    area.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    area.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    area.status.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredActionItems = complianceData.actionItems.filter(item =>
+    searchQuery === "" ||
+    item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.priority.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    item.assignee.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const handleLogout = () => {
-    console.log("Logout clicked - auth disabled for UI development");
+    clearSession();
+    navigate("/login");
+  };
+
+  // Settings form handlers
+  const handleEditSettings = () => {
+    setIsEditingSettings(true);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditingSettings(false);
+    // Reset form data to original values
+    const currentData = academyInfo || academyData;
+    setSettingsFormData({
+      name: currentData.name || "",
+      location: currentData.location || "",
+      established: currentData.established || "",
+      email: currentData.email || "",
+      phone: currentData.phone || "",
+      directorName: currentData.director?.name || "",
+      directorEmail: currentData.director?.email || "",
+      directorPhone: currentData.director?.phone || ""
+    });
+  };
+
+  const handleSaveSettings = async () => {
+    try {
+      // Update local storage with new data
+      const updatedAcademyData = {
+        ...academyInfo,
+        name: settingsFormData.name,
+        location: settingsFormData.location,
+        established: settingsFormData.established,
+        email: settingsFormData.email,
+        phone: settingsFormData.phone,
+        director: {
+          name: settingsFormData.directorName,
+          email: settingsFormData.directorEmail,
+          phone: settingsFormData.directorPhone
+        }
+      };
+
+      localStorage.setItem('academy_data', JSON.stringify(updatedAcademyData));
+      setAcademyInfo(updatedAcademyData);
+      setIsEditingSettings(false);
+      
+      toast({
+        title: "Settings Updated",
+        description: "Academy information has been successfully updated.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update academy information. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleInputChange = (field: string, value: string) => {
+    setSettingsFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Transfer CRUD handlers
+  const handleAddTransfer = () => {
+    setTransferFormData({
+      id: "",
+      player_name: "",
+      from_club: "",
+      to_club: "",
+      transfer_amount: 0,
+      currency: "USD",
+      transfer_date: new Date().toISOString().split('T')[0],
+      status: "pending",
+      transfer_type: "permanent",
+      priority: "medium"
+    });
+    setEditingTransfer(null);
+    setSelectedPlayer(null);
+    setPlayerSearchQuery("");
+    setPlayerSearchResults([]);
+    setShowPlayerDropdown(false);
+    setIsAddingTransfer(true);
+  };
+
+  const handleEditTransfer = (transfer: Transfer) => {
+    setTransferFormData({
+      id: transfer.id,
+      player_name: transfer.player_name,
+      from_club: transfer.from_club,
+      to_club: transfer.to_club,
+      transfer_amount: transfer.transfer_amount || 0,
+      currency: transfer.currency,
+      transfer_date: transfer.transfer_date,
+      status: transfer.status,
+      transfer_type: transfer.transfer_type,
+      priority: transfer.priority
+    });
+    setEditingTransfer(transfer);
+    setIsAddingTransfer(true);
+  };
+
+  const handleDeleteTransfer = async (transferId: string) => {
+    try {
+      const result = await deleteTransfer(transferId);
+      if (result.success) {
+        setTransfers(prev => prev.filter(t => t.id !== transferId));
+        toast({
+          title: "Transfer Deleted",
+          description: "Transfer record has been successfully deleted.",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to delete transfer",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting transfer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete transfer",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveTransfer = async () => {
+    if (!academyInfo?.id) {
+      toast({
+        title: "Error",
+        description: "Academy information not available",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate required fields
+    if (!transferFormData.player_name || transferFormData.player_name.trim() === '') {
+      toast({
+        title: "Validation Error",
+        description: "Player name is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!transferFormData.from_club || transferFormData.from_club.trim() === '') {
+      toast({
+        title: "Validation Error", 
+        description: "From club is required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!transferFormData.to_club || transferFormData.to_club.trim() === '') {
+      toast({
+        title: "Validation Error",
+        description: "To club is required", 
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      if (editingTransfer) {
+        // Update existing transfer
+        const result = await updateTransfer(editingTransfer.id, transferFormData);
+        if (result.success) {
+          setTransfers(prev => prev.map(t => 
+            t.id === editingTransfer.id ? result.data : t
+          ));
+          toast({
+            title: "Transfer Updated",
+            description: "Transfer record has been successfully updated.",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to update transfer",
+            variant: "destructive",
+          });
+          return;
+        }
+      } else {
+        // Add new transfer
+        const transferData = {
+          ...transferFormData,
+          academyId: academyInfo.id,
+          createdBy: academyInfo.id // Use academy ID as creator for now
+        };
+        
+        console.log('Transfer data being sent:', transferData);
+        console.log('Form data:', transferFormData);
+        
+        const result = await createTransfer(transferData);
+        if (result.success) {
+          setTransfers(prev => [result.data, ...prev]);
+          toast({
+            title: "Transfer Added",
+            description: "New transfer record has been successfully created.",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to create transfer",
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+      
+      setIsAddingTransfer(false);
+      setEditingTransfer(null);
+    } catch (error) {
+      console.error('Error saving transfer:', error);
+      toast({
+        title: "Error",
+        description: "Failed to save transfer. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCancelTransfer = () => {
+    setIsAddingTransfer(false);
+    setEditingTransfer(null);
+    setSelectedPlayer(null);
+    setPlayerSearchQuery("");
+    setPlayerSearchResults([]);
+    setShowPlayerDropdown(false);
+    setTransferFormData({
+      id: "",
+      player_name: "",
+      from_club: "",
+      to_club: "",
+      transfer_amount: 0,
+      currency: "USD",
+      transfer_date: "",
+      status: "pending",
+      transfer_type: "permanent",
+      priority: "medium"
+    });
+  };
+
+  const handleTransferInputChange = (field: string, value: string | number) => {
+    setTransferFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Player search functionality
+  const handlePlayerSearch = async (query: string) => {
+    setPlayerSearchQuery(query);
+    
+    if (query.length < 2) {
+      setPlayerSearchResults([]);
+      setShowPlayerDropdown(false);
+      return;
+    }
+
+    try {
+      // Get academy ID from session
+      const session = JSON.parse(localStorage.getItem("ipims_auth_session") || "{}");
+      const academyId = session?.schoolId || session?.academyId;
+      
+      // Search players using the API
+      const response = await Api.searchPlayers(query, academyId, 10);
+      
+      if (response.success && response.data) {
+        setPlayerSearchResults(response.data);
+        setShowPlayerDropdown(true);
+      } else {
+        setPlayerSearchResults([]);
+        setShowPlayerDropdown(false);
+      }
+    } catch (error) {
+      console.error('Error searching players:', error);
+      setPlayerSearchResults([]);
+      setShowPlayerDropdown(false);
+    }
+  };
+
+  const handlePlayerSelect = (player: any) => {
+    setSelectedPlayer(player);
+    setPlayerSearchQuery(player.name);
+    setTransferFormData(prev => ({
+      ...prev,
+      player_name: player.name,
+      from_club: player.currentClub
+    }));
+    setShowPlayerDropdown(false);
+  };
+
+  const handlePlayerInputChange = (value: string) => {
+    setTransferFormData(prev => ({
+      ...prev,
+      player_name: value
+    }));
+    handlePlayerSearch(value);
   };
 
   const sidebarItems = [
@@ -277,7 +1000,7 @@ export default function AcademyDashboard() {
                 </div>
                 <div>
                   <h1 className="text-lg font-bold text-slate-900 dark:text-white">
-                    {academyData.name}
+                    {displayAcademyName}
                   </h1>
                   <p className="text-sm text-slate-600 dark:text-slate-400">Academy Dashboard</p>
                 </div>
@@ -291,6 +1014,8 @@ export default function AcademyDashboard() {
                 <input
                   type="text"
                   placeholder="Search players, transactions, documents..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
@@ -304,17 +1029,17 @@ export default function AcademyDashboard() {
               <ThemeToggle />
               <div className="flex items-center gap-3">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={academyData.logo} />
-                  <AvatarFallback className="bg-blue-600 text-white font-bold">{academyData.name.substring(0, 2)}</AvatarFallback>
-                </Avatar>
-                <div className="hidden sm:block">
-                  <p className="text-sm font-medium text-slate-900 dark:text-white">
-                    {academyData.director.name}
-                  </p>
-                  <p className="text-xs text-slate-600 dark:text-slate-400">
-                    Academy Director
-                  </p>
-                </div>
+                <AvatarImage src={academyInfo?.logo || academyData.logo} />
+                <AvatarFallback className="bg-blue-600 text-white font-bold">{getInitials(displayName)}</AvatarFallback>
+              </Avatar>
+              <div className="hidden sm:block">
+                <p className="text-sm font-medium text-slate-900 dark:text-white">
+                  {displayName}
+                </p>
+                <p className="text-xs text-slate-600 dark:text-slate-400">
+                  Academy Director
+                </p>
+              </div>
               </div>
               <Button variant="ghost" size="sm" onClick={handleLogout}>
                 <LogOut className="h-5 w-5" />
@@ -383,15 +1108,15 @@ export default function AcademyDashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                    Welcome to {academyData.name}
-                  </h2>
+            Welcome to {displayAcademyName}
+          </h2>
                   <p className="text-slate-600 dark:text-slate-400">
                     Academy management dashboard overview
                   </p>
                 </div>
                 <Badge variant="secondary" className="text-sm">
-                  {academyData.id}
-                </Badge>
+          {academyInfo?.id || academyData.id}
+        </Badge>
               </div>
 
               {/* Quick Stats */}
@@ -401,7 +1126,13 @@ export default function AcademyDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-slate-600 dark:text-slate-400">Total Players</p>
-                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{statsData.totalPlayers}</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                          {isLoadingStats ? (
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                          ) : (
+                            dashboardStats.totalPlayers
+                          )}
+                        </p>
                       </div>
                       <Users className="h-8 w-8 text-[#005391]" />
                     </div>
@@ -413,7 +1144,13 @@ export default function AcademyDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-slate-600 dark:text-slate-400">Active Transfers</p>
-                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{statsData.activeTransfers}</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                          {isLoadingStats ? (
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                          ) : (
+                            dashboardStats.activeTransfers
+                          )}
+                        </p>
                       </div>
                       <TrendingUp className="h-8 w-8 text-green-600" />
                     </div>
@@ -425,7 +1162,13 @@ export default function AcademyDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-slate-600 dark:text-slate-400">Monthly Revenue</p>
-                        <p className="text-2xl font-bold text-slate-900 dark:text-white">${statsData.monthlyRevenue.toLocaleString()}</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                          {isLoadingStats ? (
+                            <Loader2 className="h-6 w-6 animate-spin" />
+                          ) : (
+                            `$${dashboardStats.monthlyRevenue.toLocaleString()}`
+                          )}
+                        </p>
                       </div>
                       <DollarSign className="h-8 w-8 text-green-600" />
                     </div>
@@ -449,43 +1192,138 @@ export default function AcademyDashboard() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-slate-600 dark:text-slate-400">Subscription</p>
-                        <p className="text-lg font-bold text-slate-900 dark:text-white">Professional</p>
+                        <p className="text-lg font-bold text-slate-900 dark:text-white">
+                          {isLoadingSubscription ? (
+                            <Loader2 className="h-5 w-5 animate-spin" />
+                          ) : (
+                            subscriptionData?.planName || "Free Plan"
+                          )}
+                        </p>
                       </div>
                       <div className="flex flex-col items-end">
                         <Star className="h-6 w-6 text-yellow-500 mb-1" />
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
-                          Active
-                        </Badge>
+                        {subscriptionData && (
+                          <Badge 
+                            variant="outline" 
+                            className={`${
+                              subscriptionData.status === 'active' 
+                                ? 'bg-green-50 text-green-700 border-green-200' 
+                                : 'bg-red-50 text-red-700 border-red-200'
+                            } text-xs`}
+                          >
+                            {subscriptionData.status === 'active' ? 'Active' : 'Inactive'}
+                          </Badge>
+                        )}
                       </div>
                     </div>
                   </CardContent>
                 </Card>
               </div>
 
-              {/* Recent Activity and Upcoming Events */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Calendar className="h-5 w-5" />
-                      Upcoming Events
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {upcomingEvents.map((event, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
-                        <div>
-                          <p className="font-medium text-slate-900 dark:text-white">{event.title}</p>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">{event.date}</p>
+              {/* Monthly Financial Performance Chart */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BarChart3 className="h-5 w-5" />
+                    Monthly Financial Performance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingStats ? (
+                    <div className="flex items-center justify-center h-64">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Legend */}
+                      <div className="flex items-center justify-center gap-6 text-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                          <span>Revenue</span>
                         </div>
-                        <Badge variant={event.type === 'inspection' ? 'destructive' : 'secondary'}>
-                          {event.type}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                          <span>Expenses</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                          <span>Profit</span>
+                        </div>
                       </div>
-                    ))}
-                  </CardContent>
-                </Card>
 
+                      {/* Chart */}
+                      <div className="flex items-end justify-between gap-4 h-64 px-4">
+                        {dashboardStats.monthlyFinancialPerformance?.map((monthData, index) => {
+                          // Calculate heights based on the maximum value for proper scaling
+                          const maxValue = Math.max(
+                            ...dashboardStats.monthlyFinancialPerformance.map(m => 
+                              Math.max(m.revenue, m.expenses, Math.abs(m.profit))
+                            )
+                          );
+                          const chartHeight = 192; // 48 * 4 (h-48 in pixels)
+                          
+                          const revenueHeight = maxValue > 0 ? Math.max(8, (monthData.revenue / maxValue) * chartHeight) : 8;
+                          const expensesHeight = maxValue > 0 ? Math.max(4, (monthData.expenses / maxValue) * chartHeight) : 4;
+                          const profitHeight = maxValue > 0 && monthData.profit > 0 ? Math.max(4, (monthData.profit / maxValue) * chartHeight) : 4;
+                          
+                          return (
+                            <div key={index} className="flex flex-col items-center gap-2 flex-1">
+                              <div className="relative w-full max-w-12 h-48 bg-gray-100 rounded-sm overflow-hidden">
+                                {/* Revenue bar (green) */}
+                                <div 
+                                  className="absolute bottom-0 w-full bg-green-500" 
+                                  style={{ height: `${revenueHeight}px` }}
+                                  title={`Revenue: $${monthData.revenue.toLocaleString()}`}
+                                ></div>
+                                {/* Expenses bar (red) */}
+                                <div 
+                                  className="absolute bottom-0 w-full bg-red-500" 
+                                  style={{ height: `${expensesHeight}px` }}
+                                  title={`Expenses: $${monthData.expenses.toLocaleString()}`}
+                                ></div>
+                                {/* Profit bar (blue) - only show if positive */}
+                                {monthData.profit > 0 && (
+                                  <div 
+                                    className="absolute bottom-0 w-full bg-blue-500" 
+                                    style={{ height: `${profitHeight}px` }}
+                                    title={`Profit: $${monthData.profit.toLocaleString()}`}
+                                  ></div>
+                                )}
+                              </div>
+                              <span className="text-xs text-slate-600">{monthData.month}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Summary */}
+                      <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                        <div className="text-center">
+                          <div className="text-sm text-slate-600">Total Revenue</div>
+                          <div className="text-lg font-semibold text-green-600">
+                            ${dashboardStats.monthlyFinancialPerformance?.reduce((sum, month) => sum + month.revenue, 0).toLocaleString() || '0'}
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-sm text-slate-600">Total Expenses</div>
+                          <div className="text-lg font-semibold text-red-600">
+                            ${dashboardStats.monthlyFinancialPerformance?.reduce((sum, month) => sum + month.expenses, 0).toLocaleString() || '0'}
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-sm text-slate-600">Net Profit</div>
+                          <div className="text-lg font-semibold text-blue-600">
+                            ${dashboardStats.monthlyFinancialPerformance?.reduce((sum, month) => sum + month.profit, 0).toLocaleString() || '0'}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Recent Transfers */}
+              <div className="grid grid-cols-1 gap-6">
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -494,17 +1332,28 @@ export default function AcademyDashboard() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    {recentTransfers.map((transfer) => (
-                      <div key={transfer.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
-                        <div>
-                          <p className="font-medium text-slate-900 dark:text-white">{transfer.player}</p>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">{transfer.to} - {transfer.amount}</p>
-                        </div>
-                        <Badge variant={transfer.status === 'completed' ? 'default' : 'secondary'}>
-                          {transfer.status}
-                        </Badge>
+                    {isLoadingStats ? (
+                      <div className="flex items-center justify-center p-4">
+                        <Loader2 className="h-6 w-6 animate-spin" />
                       </div>
-                    ))}
+                    ) : dashboardStats.recentTransfers.length > 0 ? (
+                      dashboardStats.recentTransfers.map((transfer) => (
+                        <div key={transfer.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
+                          <div>
+                            <p className="font-medium text-slate-900 dark:text-white">{transfer.player}</p>
+                            <p className="text-sm text-slate-600 dark:text-slate-400">{transfer.from} → {transfer.to} - {transfer.amount}</p>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">{transfer.date}</p>
+                          </div>
+                          <Badge variant={transfer.status === 'completed' ? 'default' : 'secondary'}>
+                            {transfer.status}
+                          </Badge>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-center p-4 text-slate-500 dark:text-slate-400">
+                        No recent transfers found
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -512,72 +1361,15 @@ export default function AcademyDashboard() {
 
             {/* Players Tab */}
             <TabsContent value="players" className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Player Management</h2>
-                <Button>
-                  <Users className="h-4 w-4 mr-2" />
-                  Add Player
-                </Button>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Registered Players</CardTitle>
-                  <CardDescription>Manage your academy players and their information</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Age</TableHead>
-                        <TableHead>Position</TableHead>
-                        <TableHead>Rating</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {playersData.map((player) => (
-                        <TableRow key={player.id}>
-                          <TableCell className="font-medium">{player.name}</TableCell>
-                          <TableCell>{player.age}</TableCell>
-                          <TableCell>{player.position}</TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              <Progress value={player.rating} className="w-16 h-2" />
-                              <span className="text-sm">{player.rating}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={player.status === 'active' ? 'default' : 'destructive'}>
-                              {player.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex gap-2">
-                              <Button variant="ghost" size="sm">
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm">
-                                <FileText className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+              <PlayerManagement searchQuery={searchQuery} />
             </TabsContent>
 
             {/* Other tabs would be implemented similarly */}
             <TabsContent value="transfers" className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Transfer Management</h2>
-                <Button>
-                  <TrendingUp className="h-4 w-4 mr-2" />
+                <Button onClick={handleAddTransfer}>
+                  <Plus className="h-4 w-4 mr-2" />
                   New Transfer
                 </Button>
               </div>
@@ -592,30 +1384,232 @@ export default function AcademyDashboard() {
               <Card>
                 <CardHeader>
                   <CardTitle>Transfer History</CardTitle>
+                  <CardDescription>
+                    Manage all player transfers and track their status
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {recentTransfers.map((transfer) => (
-                      <div key={transfer.id} className="p-4 border rounded-lg">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <h3 className="font-semibold">{transfer.player}</h3>
-                            <p className="text-sm text-slate-600">From: {transfer.from}</p>
-                            <p className="text-sm text-slate-600">To: {transfer.to}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-bold text-green-600">{transfer.amount}</p>
-                            <p className="text-sm text-slate-600">{transfer.date}</p>
-                            <Badge variant={transfer.status === 'completed' ? 'default' : 'secondary'}>
-                              {transfer.status}
-                            </Badge>
+                    {isLoadingTransfers ? (
+                      <div className="text-center py-8">
+                        <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin" />
+                        <p>Loading transfers...</p>
+                      </div>
+                    ) : transfers.length === 0 ? (
+                      <div className="text-center py-8 text-slate-500">
+                        <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>No transfers found. Click "New Transfer" to add one.</p>
+                      </div>
+                    ) : (
+                      transfers.map((transfer) => (
+                        <div key={transfer.id} className="p-4 border rounded-lg hover:shadow-md transition-shadow">
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-lg">{transfer.player_name}</h3>
+                              <div className="grid grid-cols-2 gap-4 mt-2 text-sm text-slate-600">
+                                <p><span className="font-medium">From:</span> {transfer.from_club}</p>
+                                <p><span className="font-medium">To:</span> {transfer.to_club}</p>
+                                <p><span className="font-medium">Date:</span> {new Date(transfer.transfer_date).toLocaleDateString()}</p>
+                                <p><span className="font-medium">Amount:</span> {transfer.transfer_amount ? `${transfer.currency} ${transfer.transfer_amount.toLocaleString()}` : 'N/A'}</p>
+                                <p><span className="font-medium">Type:</span> {transfer.transfer_type}</p>
+                                <p><span className="font-medium">Priority:</span> {transfer.priority}</p>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Badge variant={transfer.status === 'completed' ? 'default' : 'secondary'}>
+                                {transfer.status}
+                              </Badge>
+                              <div className="flex gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleEditTransfer(transfer)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleDeleteTransfer(transfer.id)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      ))
+                    )}
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Transfer Form Dialog */}
+              <Dialog open={isAddingTransfer} onOpenChange={setIsAddingTransfer}>
+                <DialogContent className="sm:max-w-[600px]">
+                  <DialogHeader>
+                    <DialogTitle>
+                      {editingTransfer ? 'Edit Transfer' : 'Add New Transfer'}
+                    </DialogTitle>
+                    <DialogDescription>
+                      {editingTransfer 
+                        ? 'Update the transfer information below.' 
+                        : 'Enter the details for the new player transfer.'
+                      }
+                    </DialogDescription>
+                  </DialogHeader>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+                    <div className="space-y-2 relative" ref={playerSearchRef}>
+                      <Label htmlFor="player-name">Player Name</Label>
+                      <Input
+                        id="player-name"
+                        value={transferFormData.player_name}
+                        onChange={(e) => handlePlayerInputChange(e.target.value)}
+                        placeholder="Search for player name..."
+                        autoComplete="off"
+                      />
+                      {showPlayerDropdown && playerSearchResults.length > 0 && (
+                        <div className="absolute top-full left-0 right-0 z-50 bg-white border border-slate-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+                          {playerSearchResults.map((player) => (
+                            <div
+                              key={player.id}
+                              className="px-3 py-2 hover:bg-slate-100 cursor-pointer border-b border-slate-100 last:border-b-0"
+                              onClick={() => handlePlayerSelect(player)}
+                            >
+                              <div className="font-medium text-sm">{player.name}</div>
+                              <div className="text-xs text-slate-500">
+                                {player.position} • {player.currentClub}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="transfer-amount">Transfer Amount</Label>
+                      <Input
+                        id="transfer-amount"
+                        type="number"
+                        value={transferFormData.transfer_amount || ''}
+                        onChange={(e) => handleTransferInputChange('transfer_amount', parseFloat(e.target.value) || 0)}
+                        placeholder="15000"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="currency">Currency</Label>
+                      <Select 
+                        value={transferFormData.currency} 
+                        onValueChange={(value) => handleTransferInputChange('currency', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select currency" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="USD">USD</SelectItem>
+                          <SelectItem value="EUR">EUR</SelectItem>
+                          <SelectItem value="GBP">GBP</SelectItem>
+                          <SelectItem value="NGN">NGN</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="from-club">From Club</Label>
+                      <Input
+                        id="from-club"
+                        value={transferFormData.from_club}
+                        onChange={(e) => handleTransferInputChange('from_club', e.target.value)}
+                        placeholder="Enter source club"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="to-club">To Club</Label>
+                      <Input
+                        id="to-club"
+                        value={transferFormData.to_club}
+                        onChange={(e) => handleTransferInputChange('to_club', e.target.value)}
+                        placeholder="Enter destination club"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="transfer-date">Transfer Date</Label>
+                      <Input
+                        id="transfer-date"
+                        type="date"
+                        value={transferFormData.transfer_date}
+                        onChange={(e) => handleTransferInputChange('transfer_date', e.target.value)}
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="transfer-type">Transfer Type</Label>
+                      <Select 
+                        value={transferFormData.transfer_type} 
+                        onValueChange={(value) => handleTransferInputChange('transfer_type', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="permanent">Permanent</SelectItem>
+                          <SelectItem value="loan">Loan</SelectItem>
+                          <SelectItem value="free">Free Transfer</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="priority">Priority</Label>
+                      <Select 
+                        value={transferFormData.priority} 
+                        onValueChange={(value) => handleTransferInputChange('priority', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select priority" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="transfer-status">Status</Label>
+                      <Select 
+                        value={transferFormData.status} 
+                        onValueChange={(value) => handleTransferInputChange('status', value)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="approved">Approved</SelectItem>
+                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="rejected">Rejected</SelectItem>
+                          <SelectItem value="cancelled">Cancelled</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  
+                  <DialogFooter>
+                    <Button variant="outline" onClick={handleCancelTransfer}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleSaveTransfer}>
+                      {editingTransfer ? 'Update Transfer' : 'Add Transfer'}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
             </TabsContent>
 
             {/* Compliance Tab */}
@@ -710,34 +1704,41 @@ export default function AcademyDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      {complianceData.areas.map((area) => (
-                        <div key={area.id} className="border rounded-lg p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-3">
-                              {area.status === 'compliant' ? (
-                                <CheckCircle className="h-5 w-5 text-green-600" />
-                              ) : (
-                                <AlertCircle className="h-5 w-5 text-yellow-600" />
+                      {filteredComplianceAreas.length > 0 ? (
+                        filteredComplianceAreas.map((area) => (
+                          <div key={area.id} className="border rounded-lg p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-3">
+                                {area.status === 'compliant' ? (
+                                  <CheckCircle className="h-5 w-5 text-green-600" />
+                                ) : (
+                                  <AlertCircle className="h-5 w-5 text-yellow-600" />
+                                )}
+                                <span className="font-medium">{area.name}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-sm font-medium">{area.score}%</span>
+                                <Badge variant={area.status === 'compliant' ? 'default' : 'secondary'}>
+                                  {area.status === 'compliant' ? 'Compliant' : 'Review Required'}
+                                </Badge>
+                              </div>
+                            </div>
+                            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{area.description}</p>
+                            <div className="flex items-center justify-between text-xs text-slate-500">
+                              <span>Last checked: {area.lastCheck}</span>
+                              {area.issues > 0 && (
+                                <span className="text-orange-600">{area.issues} issue{area.issues > 1 ? 's' : ''}</span>
                               )}
-                              <span className="font-medium">{area.name}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium">{area.score}%</span>
-                              <Badge variant={area.status === 'compliant' ? 'default' : 'secondary'}>
-                                {area.status === 'compliant' ? 'Compliant' : 'Review Required'}
-                              </Badge>
-                            </div>
+                            <Progress value={area.score} className="mt-2 h-2" />
                           </div>
-                          <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{area.description}</p>
-                          <div className="flex items-center justify-between text-xs text-slate-500">
-                            <span>Last checked: {area.lastCheck}</span>
-                            {area.issues > 0 && (
-                              <span className="text-orange-600">{area.issues} issue{area.issues > 1 ? 's' : ''}</span>
-                            )}
-                          </div>
-                          <Progress value={area.score} className="mt-2 h-2" />
+                        ))
+                      ) : searchQuery && (
+                        <div className="text-center py-8 text-slate-500">
+                          <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p>No compliance areas found matching "{searchQuery}"</p>
                         </div>
-                      ))}
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -750,29 +1751,36 @@ export default function AcademyDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-3">
-                      {complianceData.actionItems.map((item) => (
-                        <div key={item.id} className="border rounded-lg p-3">
-                          <div className="flex items-start justify-between mb-2">
-                            <h4 className="font-medium text-sm">{item.title}</h4>
-                            <Badge 
-                              variant={
-                                item.priority === 'high' ? 'destructive' : 
-                                item.priority === 'medium' ? 'secondary' : 'outline'
-                              }
-                              className="text-xs"
-                            >
-                              {item.priority}
-                            </Badge>
+                      {filteredActionItems.length > 0 ? (
+                        filteredActionItems.map((item) => (
+                          <div key={item.id} className="border rounded-lg p-3">
+                            <div className="flex items-start justify-between mb-2">
+                              <h4 className="font-medium text-sm">{item.title}</h4>
+                              <Badge 
+                                variant={
+                                  item.priority === 'high' ? 'destructive' : 
+                                  item.priority === 'medium' ? 'secondary' : 'outline'
+                                }
+                                className="text-xs"
+                              >
+                                {item.priority}
+                              </Badge>
+                            </div>
+                            <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">{item.description}</p>
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-slate-500">Due: {item.dueDate}</span>
+                              <Badge variant="outline" className="text-xs">
+                                {item.status.replace('_', ' ')}
+                              </Badge>
+                            </div>
                           </div>
-                          <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">{item.description}</p>
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="text-slate-500">Due: {item.dueDate}</span>
-                            <Badge variant="outline" className="text-xs">
-                              {item.status.replace('_', ' ')}
-                            </Badge>
-                          </div>
+                        ))
+                      ) : searchQuery && (
+                        <div className="text-center py-8 text-slate-500">
+                          <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                          <p>No action items found matching "{searchQuery}"</p>
                         </div>
-                      ))}
+                      )}
                     </div>
                     <Button className="w-full mt-4" variant="outline">
                       <ClipboardCheck className="h-4 w-4 mr-2" />
@@ -866,561 +1874,441 @@ export default function AcademyDashboard() {
 
             {/* Finances Tab */}
             <TabsContent value="finances" className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Financial Management</h2>
-                <div className="flex gap-2">
-                  <Button variant="outline">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Generate Report
-                  </Button>
-                  <Button variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export Data
-                  </Button>
-                  <Button>
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Transaction
-                  </Button>
-                </div>
-              </div>
-
-              {/* Financial Overview Cards */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Revenue</p>
-                        <p className="text-2xl font-bold text-green-600">${financialData.overview.totalRevenue.toLocaleString()}</p>
-                        <p className="text-xs text-green-600 flex items-center mt-1">
-                          <ArrowUpRight className="h-3 w-3 mr-1" />
-                          +{financialData.overview.monthlyGrowth}% from last month
-                        </p>
-                      </div>
-                      <TrendingUp className="h-8 w-8 text-green-600" />
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Total Expenses</p>
-                        <p className="text-2xl font-bold text-red-600">${financialData.overview.totalExpenses.toLocaleString()}</p>
-                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Monthly operational costs</p>
-                      </div>
-                      <TrendingDown className="h-8 w-8 text-red-600" />
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Net Profit</p>
-                        <p className="text-2xl font-bold text-[#005391]">${financialData.overview.netProfit.toLocaleString()}</p>
-                        <p className="text-xs text-[#005391] flex items-center mt-1">
-                          <ArrowUpRight className="h-3 w-3 mr-1" />
-                          {financialData.overview.profitMargin}% margin
-                        </p>
-                      </div>
-                      <Calculator className="h-8 w-8 text-[#005391]" />
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Transfer Revenue</p>
-                        <p className="text-2xl font-bold text-purple-600">${financialData.revenue.playerTransfers.toLocaleString()}</p>
-                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Player sales income</p>
-                      </div>
-                      <Users className="h-8 w-8 text-purple-600" />
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Academy Fees</p>
-                        <p className="text-2xl font-bold text-orange-600">${financialData.revenue.academyFees.toLocaleString()}</p>
-                        <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Monthly tuition fees</p>
-                      </div>
-                      <GraduationCap className="h-8 w-8 text-orange-600" />
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Revenue & Expense Breakdown */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <PieChart className="h-5 w-5 mr-2" />
-                      Revenue Breakdown
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-3 h-3 bg-green-500 rounded-full mr-3"></div>
-                          <span className="text-sm">Player Transfers</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-semibold">${financialData.revenue.playerTransfers.toLocaleString()}</span>
-                          <div className="text-xs text-slate-600">52%</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-3 h-3 bg-blue-500 rounded-full mr-3"></div>
-                          <span className="text-sm">Academy Fees</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-semibold">${financialData.revenue.academyFees.toLocaleString()}</span>
-                          <div className="text-xs text-slate-600">28%</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-3 h-3 bg-purple-500 rounded-full mr-3"></div>
-                          <span className="text-sm">Sponsorships</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-semibold">${financialData.revenue.sponsorships.toLocaleString()}</span>
-                          <div className="text-xs text-slate-600">12%</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-3 h-3 bg-orange-500 rounded-full mr-3"></div>
-                          <span className="text-sm">Merchandise</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-semibold">${financialData.revenue.merchandise.toLocaleString()}</span>
-                          <div className="text-xs text-slate-600">6%</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-3 h-3 bg-gray-500 rounded-full mr-3"></div>
-                          <span className="text-sm">Other</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-semibold">${financialData.revenue.other.toLocaleString()}</span>
-                          <div className="text-xs text-slate-600">2%</div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <BarChart3 className="h-5 w-5 mr-2" />
-                      Expense Breakdown
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-3 h-3 bg-red-500 rounded-full mr-3"></div>
-                          <span className="text-sm">Staff Salaries</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-semibold">${financialData.expenses.salaries.toLocaleString()}</span>
-                          <div className="text-xs text-slate-600">51%</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-3 h-3 bg-yellow-500 rounded-full mr-3"></div>
-                          <span className="text-sm">Facilities</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-semibold">${financialData.expenses.facilities.toLocaleString()}</span>
-                          <div className="text-xs text-slate-600">20%</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-3 h-3 bg-indigo-500 rounded-full mr-3"></div>
-                          <span className="text-sm">Equipment</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-semibold">${financialData.expenses.equipment.toLocaleString()}</span>
-                          <div className="text-xs text-slate-600">13%</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-3 h-3 bg-pink-500 rounded-full mr-3"></div>
-                          <span className="text-sm">Travel</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-semibold">${financialData.expenses.travel.toLocaleString()}</span>
-                          <div className="text-xs text-slate-600">9%</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="w-3 h-3 bg-teal-500 rounded-full mr-3"></div>
-                          <span className="text-sm">Marketing</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="font-semibold">${financialData.expenses.marketing.toLocaleString()}</span>
-                          <div className="text-xs text-slate-600">4%</div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Recent Transactions & Budget Tracking */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center justify-between">
-                      <div className="flex items-center">
-                        <Receipt className="h-5 w-5 mr-2" />
-                        Recent Transactions
-                      </div>
-                      <Button variant="outline" size="sm">
-                        <Eye className="h-4 w-4 mr-2" />
-                        View All
-                      </Button>
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {financialData.recentTransactions.map((transaction) => (
-                        <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
-                          <div className="flex items-center">
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
-                              transaction.type === 'income' ? 'bg-blue-100 text-[#005391]' : 'bg-red-100 text-red-600'
-                            }`}>
-                              {transaction.type === 'income' ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
-                            </div>
-                            <div>
-                              <p className="font-medium text-sm">{transaction.description}</p>
-                              <p className="text-xs text-slate-600">{transaction.date} • {transaction.category}</p>
-                            </div>
-                          </div>
-                          <div className={`font-semibold ${
-                            transaction.type === 'income' ? 'text-[#005391]' : 'text-red-600'
-                          }`}>
-                            {transaction.type === 'income' ? '+' : '-'}${transaction.amount.toLocaleString()}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center">
-                      <Wallet className="h-5 w-5 mr-2" />
-                      Budget Tracking
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {financialData.budgetCategories.map((category) => (
-                        <div key={category.id} className="space-y-2">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium">{category.name}</span>
-                            <span className="text-sm text-slate-600">
-                              ${category.spent.toLocaleString()} / ${category.budgeted.toLocaleString()}
-                            </span>
-                          </div>
-                          <div className="w-full bg-slate-200 rounded-full h-2">
-                            <div 
-                              className={`h-2 rounded-full ${
-                                category.percentage >= 90 ? 'bg-red-500' : 
-                                category.percentage >= 75 ? 'bg-yellow-500' : 'bg-[#005391]'
-                              }`}
-                              style={{ width: `${category.percentage}%` }}
-                            ></div>
-                          </div>
-                          <div className="flex items-center justify-between text-xs">
-                            <span className={`${
-                              category.percentage >= 90 ? 'text-red-600' : 
-                              category.percentage >= 75 ? 'text-yellow-600' : 'text-[#005391]'
-                            }`}>
-                              {category.percentage}% used
-                            </span>
-                            <span className="text-slate-600">
-                              ${category.remaining.toLocaleString()} remaining
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Monthly Performance Chart */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <BarChart3 className="h-5 w-5 mr-2" />
-                    Monthly Financial Performance
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-center space-x-6 text-sm">
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 bg-green-500 rounded-full mr-2"></div>
-                        <span>Revenue</span>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 bg-red-500 rounded-full mr-2"></div>
-                        <span>Expenses</span>
-                      </div>
-                      <div className="flex items-center">
-                        <div className="w-3 h-3 bg-blue-500 rounded-full mr-2"></div>
-                        <span>Profit</span>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-6 gap-4 h-64">
-                      {financialData.monthlyData.map((month, index) => (
-                        <div key={index} className="flex flex-col items-center justify-end space-y-1">
-                          <div className="flex flex-col items-center justify-end h-48 space-y-1">
-                            <div 
-                              className="w-6 bg-green-500 rounded-t"
-                              style={{ height: `${(month.revenue / 25000) * 100}%` }}
-                              title={`Revenue: $${month.revenue.toLocaleString()}`}
-                            ></div>
-                            <div 
-                              className="w-6 bg-red-500"
-                              style={{ height: `${(month.expenses / 25000) * 100}%` }}
-                              title={`Expenses: $${month.expenses.toLocaleString()}`}
-                            ></div>
-                            <div 
-                              className={`w-6 rounded-b ${month.profit >= 0 ? 'bg-blue-500' : 'bg-orange-500'}`}
-                              style={{ height: `${Math.abs(month.profit / 25000) * 100}%` }}
-                              title={`Profit: $${month.profit.toLocaleString()}`}
-                            ></div>
-                          </div>
-                          <span className="text-xs font-medium">{month.month}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Financial Alerts */}
-              <Alert>
-                <DollarSign className="h-4 w-4" />
-                <AlertDescription>
-                  <strong>Budget Alert:</strong> Staff Salaries category is at 90% of budget. Consider reviewing expenses or adjusting budget allocation for next month.
-                </AlertDescription>
-              </Alert>
+              <FinancialTransactionsManager academyId={academyInfo?.id || academyData.id} />
             </TabsContent>
 
             {/* Subscription Tab */}
             <TabsContent value="subscription" className="space-y-6">
               <div className="flex items-center justify-between">
                 <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Subscription Management</h2>
-                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                  Active Plan
-                </Badge>
+                {subscriptionData && (
+                  <Badge variant="outline" className={`${
+                    subscriptionData.status === 'active' 
+                      ? 'bg-green-50 text-green-700 border-green-200' 
+                      : 'bg-red-50 text-red-700 border-red-200'
+                  }`}>
+                    {subscriptionData.status === 'active' ? 'Active Plan' : 'Inactive'}
+                  </Badge>
+                )}
               </div>
               
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {/* Current Plan */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Star className="h-5 w-5 text-yellow-500" />
-                      Current Plan
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-semibold">Professional Plan</span>
-                      <Badge className="bg-blue-600 text-white">$99/month</Badge>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Next billing date:</span>
-                        <span className="font-medium">March 15, 2024</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Plan started:</span>
-                        <span className="font-medium">January 15, 2024</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Status:</span>
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          Active
+              {isLoadingSubscription ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                  <span className="ml-2">Loading subscription data...</span>
+                </div>
+              ) : subscriptionData ? (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Current Plan */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Star className="h-5 w-5 text-yellow-500" />
+                        Current Plan
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center justify-between">
+                        <span className="text-lg font-semibold">{subscriptionData.planName}</span>
+                        <Badge className="bg-blue-600 text-white">
+                          ${subscriptionData.price}/{subscriptionData.billingCycle || 'month'}
                         </Badge>
                       </div>
-                    </div>
-                    <div className="pt-4 border-t">
-                      <h4 className="font-medium mb-2">Plan Features:</h4>
-                      <ul className="text-sm space-y-1 text-slate-600">
-                        <li>• Up to 500 players</li>
-                        <li>• Advanced analytics</li>
-                        <li>• Priority support</li>
-                        <li>• Custom reports</li>
-                        <li>• API access</li>
-                      </ul>
-                    </div>
-                  </CardContent>
-                </Card>
+                      <div className="space-y-2">
+                        {subscriptionData.endDate && (
+                          <div className="flex justify-between text-sm">
+                            <span>Next billing date:</span>
+                            <span className="font-medium">
+                              {new Date(subscriptionData.endDate).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
+                        {subscriptionData.startDate && (
+                          <div className="flex justify-between text-sm">
+                            <span>Plan started:</span>
+                            <span className="font-medium">
+                              {new Date(subscriptionData.startDate).toLocaleDateString()}
+                            </span>
+                          </div>
+                        )}
+                        <div className="flex justify-between text-sm">
+                          <span>Status:</span>
+                          <Badge variant="outline" className={`${
+                            subscriptionData.status === 'active' 
+                              ? 'bg-green-50 text-green-700 border-green-200' 
+                              : 'bg-red-50 text-red-700 border-red-200'
+                          }`}>
+                            {subscriptionData.status}
+                          </Badge>
+                        </div>
+                        {subscriptionData.daysRemaining !== undefined && (
+                          <div className="flex justify-between text-sm">
+                            <span>Days remaining:</span>
+                            <span className="font-medium">{subscriptionData.daysRemaining} days</span>
+                          </div>
+                        )}
+                      </div>
+                      {subscriptionData.features && (
+                        <div className="pt-4 border-t">
+                          <h4 className="font-medium mb-2">Plan Features:</h4>
+                          <ul className="text-sm space-y-1 text-slate-600">
+                            {subscriptionData.features.map((feature: string, index: number) => (
+                              <li key={index}>• {feature}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
 
-                {/* Usage Statistics */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <BarChart3 className="h-5 w-5 text-blue-600" />
-                      Usage Statistics
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      <div>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>Players</span>
-                          <span>287 / 500</span>
-                        </div>
-                        <div className="w-full bg-slate-200 rounded-full h-2">
-                          <div className="bg-blue-600 h-2 rounded-full" style={{width: '57%'}}></div>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>Storage</span>
-                          <span>12.4 GB / 50 GB</span>
-                        </div>
-                        <div className="w-full bg-slate-200 rounded-full h-2">
-                          <div className="bg-green-500 h-2 rounded-full" style={{width: '25%'}}></div>
-                        </div>
-                      </div>
-                      <div>
-                        <div className="flex justify-between text-sm mb-1">
-                          <span>API Calls</span>
-                          <span>8,432 / 50,000</span>
-                        </div>
-                        <div className="w-full bg-slate-200 rounded-full h-2">
-                          <div className="bg-yellow-500 h-2 rounded-full" style={{width: '17%'}}></div>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Billing History */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Receipt className="h-5 w-5 text-slate-600" />
-                      Billing History
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {[
-                        { date: "Feb 15, 2024", amount: "$99.00", status: "Paid", invoice: "INV-2024-002" },
-                        { date: "Jan 15, 2024", amount: "$99.00", status: "Paid", invoice: "INV-2024-001" },
-                        { date: "Dec 15, 2023", amount: "$99.00", status: "Paid", invoice: "INV-2023-012" }
-                      ].map((bill, index) => (
-                        <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                  {/* Usage Statistics */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <BarChart3 className="h-5 w-5 text-blue-600" />
+                        Usage Statistics
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-3">
+                        {subscriptionData.playerLimit && (
                           <div>
-                            <div className="font-medium">{bill.date}</div>
-                            <div className="text-sm text-slate-600">{bill.invoice}</div>
+                            <div className="flex justify-between text-sm mb-1">
+                              <span>Players</span>
+                              <span>{subscriptionData.playerCount || 0} / {subscriptionData.playerLimit}</span>
+                            </div>
+                            <div className="w-full bg-slate-200 rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full ${
+                                  ((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) >= 1 
+                                    ? 'bg-red-600' 
+                                    : ((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) >= 0.8 
+                                    ? 'bg-yellow-600' 
+                                    : 'bg-blue-600'
+                                }`}
+                                style={{
+                                  width: `${Math.min(((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) * 100, 100)}%`
+                                }}
+                              ></div>
+                            </div>
+                            {((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) >= 0.8 && (
+                              <div className="mt-2">
+                                <Button
+                                  size="sm"
+                                  onClick={scrollToPlanManagement}
+                                  className={`w-full ${
+                                    ((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) >= 1
+                                      ? 'bg-red-600 hover:bg-red-700 text-white'
+                                      : 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                                  }`}
+                                >
+                                  <Crown className="h-4 w-4 mr-2" />
+                                  {((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) >= 1
+                                    ? 'Upgrade Required - Limit Reached'
+                                    : 'Upgrade Plan - Near Limit'
+                                  }
+                                </Button>
+                              </div>
+                            )}
                           </div>
-                          <div className="text-right">
-                            <div className="font-medium">{bill.amount}</div>
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs">
-                              {bill.status}
-                            </Badge>
+                        )}
+                        {subscriptionData.storageLimit && (
+                          <div>
+                            <div className="flex justify-between text-sm mb-1">
+                              <span>Storage</span>
+                              <span>{subscriptionData.storageUsed || 0}GB / {subscriptionData.storageLimit}GB</span>
+                            </div>
+                            <div className="w-full bg-slate-200 rounded-full h-2">
+                              <div 
+                                className={`h-2 rounded-full ${
+                                  ((subscriptionData.storageUsed || 0) / subscriptionData.storageLimit) >= 1 
+                                    ? 'bg-red-600' 
+                                    : ((subscriptionData.storageUsed || 0) / subscriptionData.storageLimit) >= 0.8 
+                                    ? 'bg-yellow-600' 
+                                    : 'bg-green-600'
+                                }`}
+                                style={{
+                                  width: `${Math.min(((subscriptionData.storageUsed || 0) / subscriptionData.storageLimit) * 100, 100)}%`
+                                }}
+                              ></div>
+                            </div>
+                            {((subscriptionData.storageUsed || 0) / subscriptionData.storageLimit) >= 0.8 && (
+                              <div className="mt-2">
+                                <Button
+                                  size="sm"
+                                  onClick={scrollToPlanManagement}
+                                  className={`w-full ${
+                                    ((subscriptionData.storageUsed || 0) / subscriptionData.storageLimit) >= 1
+                                      ? 'bg-red-600 hover:bg-red-700 text-white'
+                                      : 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                                  }`}
+                                >
+                                  <Crown className="h-4 w-4 mr-2" />
+                                  {((subscriptionData.storageUsed || 0) / subscriptionData.storageLimit) >= 1
+                                    ? 'Upgrade Required - Storage Full'
+                                    : 'Upgrade Plan - Storage Near Limit'
+                                  }
+                                </Button>
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
 
-                {/* Plan Management */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Settings className="h-5 w-5 text-slate-600" />
-                      Plan Management
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-3">
-                      <Button className="w-full bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#004080] hover:to-[#0052a3] text-white">
-                        Upgrade Plan
-                      </Button>
-                      <Button variant="outline" className="w-full">
-                        Change Payment Method
-                      </Button>
-                      <Button variant="outline" className="w-full">
-                        Download Invoice
-                      </Button>
-                      <Button variant="outline" className="w-full text-red-600 border-red-200 hover:bg-red-50">
-                        Cancel Subscription
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                  {/* Billing History */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Receipt className="h-5 w-5 text-slate-600" />
+                        Billing History
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {subscriptionHistory.length > 0 ? (
+                          subscriptionHistory.slice(0, 5).map((record: any, index: number) => (
+                            <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                              <div>
+                                <div className="font-medium">
+                                  {new Date(record.createdAt).toLocaleDateString()}
+                                </div>
+                                <div className="text-sm text-slate-600">{record.action}</div>
+                                {record.notes && (
+                                  <div className="text-xs text-slate-500">{record.notes}</div>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                {record.newPlanName && (
+                                  <div className="font-medium">{record.newPlanName}</div>
+                                )}
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                                  {record.action}
+                                </Badge>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="text-center text-slate-500 py-4">
+                            No billing history available
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Plan Management */}
+                  <Card id="plan-management">
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Settings className="h-5 w-5 text-slate-600" />
+                        Plan Management
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-3">
+                        {availablePlans.length > 0 && (
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button 
+                                className="w-full bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#004080] hover:to-[#0052a3] text-white"
+                                disabled={isUpgrading}
+                              >
+                                {isUpgrading ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Upgrading...
+                                  </>
+                                ) : (
+                                  'Select Plan'
+                                )}
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Select a Plan</DialogTitle>
+                                <DialogDescription>
+                                  Choose a subscription plan for your academy.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                {availablePlans.map((plan: any) => (
+                                  <Card 
+                                    key={plan.id} 
+                                    className={`cursor-pointer hover:bg-slate-50 ${
+                                      subscriptionData?.planName === plan.name 
+                                        ? 'border-2 border-blue-500' 
+                                        : ''
+                                    }`}
+                                    onClick={() => handleUpgradePlan(plan.id)}
+                                  >
+                                    <CardContent className="p-4">
+                                      <div className="flex justify-between items-center">
+                                        <div>
+                                          <h3 className="font-semibold">{plan.name}</h3>
+                                          <p className="text-sm text-slate-600">{plan.description}</p>
+                                          {subscriptionData?.planName === plan.name && (
+                                            <Badge className="mt-1 bg-blue-100 text-blue-800 border-blue-200">
+                                              Current Plan
+                                            </Badge>
+                                          )}
+                                        </div>
+                                        <div className="text-right">
+                                          <div className="font-bold">${plan.price}/month</div>
+                                          <div className="text-sm text-slate-600">
+                                            {plan.playerLimit} players
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        )}
+                        
+                        <Button variant="outline" className="w-full">
+                          Change Payment Method
+                        </Button>
+                        <Button variant="outline" className="w-full">
+                          Download Invoice
+                        </Button>
+                        
+                        {subscriptionData.status === 'active' && (
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button 
+                                variant="outline" 
+                                className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                                disabled={isCancelling}
+                              >
+                                {isCancelling ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Cancelling...
+                                  </>
+                                ) : (
+                                  'Cancel Subscription'
+                                )}
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent>
+                              <DialogHeader>
+                                <DialogTitle>Cancel Subscription</DialogTitle>
+                                <DialogDescription>
+                                  Are you sure you want to cancel your subscription? This action cannot be undone.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <DialogFooter>
+                                <Button variant="outline">Keep Subscription</Button>
+                                <Button 
+                                  variant="destructive" 
+                                  onClick={handleCancelSubscription}
+                                  disabled={isCancelling}
+                                >
+                                  {isCancelling ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                      Cancelling...
+                                    </>
+                                  ) : (
+                                    'Yes, Cancel'
+                                  )}
+                                </Button>
+                              </DialogFooter>
+                            </DialogContent>
+                          </Dialog>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className="text-slate-500 mb-4">No subscription data available</div>
+                  <Button 
+                    onClick={loadSubscriptionData}
+                    variant="outline"
+                  >
+                    Retry Loading
+                  </Button>
+                </div>
+              )}
             </TabsContent>
 
             {/* Settings Tab */}
             <TabsContent value="settings" className="space-y-6">
-              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Academy Settings</h2>
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Academy Settings</h2>
+                <div className="flex gap-2">
+                  {isEditingSettings ? (
+                    <>
+                      <Button variant="outline" onClick={handleCancelEdit}>
+                        <X className="h-4 w-4 mr-2" />
+                        Cancel
+                      </Button>
+                      <Button onClick={handleSaveSettings}>
+                        <Save className="h-4 w-4 mr-2" />
+                        Save Changes
+                      </Button>
+                    </>
+                  ) : (
+                    <Button onClick={handleEditSettings}>
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Information
+                    </Button>
+                  )}
+                </div>
+              </div>
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                 <Card>
                   <CardHeader>
-                    <CardTitle>Academy Information</CardTitle>
+                    <CardTitle className="flex items-center">
+                      <Building className="h-5 w-5 mr-2" />
+                      Academy Information
+                    </CardTitle>
+                    <CardDescription>
+                      Basic information about your football academy
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <label className="text-sm font-medium">Academy Name</label>
-                      <input 
+                      <Label htmlFor="academy-name" className="text-sm font-medium">Academy Name</Label>
+                      <Input
+                        id="academy-name"
                         type="text" 
-                        value={academyData.name}
-                        className="w-full mt-1 p-2 border rounded-lg"
-                        readOnly
+                        value={settingsFormData.name}
+                        onChange={(e) => handleInputChange('name', e.target.value)}
+                        className="mt-1"
+                        disabled={!isEditingSettings}
+                        placeholder="Enter academy name"
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium">Location</label>
-                      <input 
+                      <Label htmlFor="location" className="text-sm font-medium">Location</Label>
+                      <Input
+                        id="location"
                         type="text" 
-                        value={academyData.location}
-                        className="w-full mt-1 p-2 border rounded-lg"
-                        readOnly
+                        value={settingsFormData.location}
+                        onChange={(e) => handleInputChange('location', e.target.value)}
+                        className="mt-1"
+                        disabled={!isEditingSettings}
+                        placeholder="Enter academy location"
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium">Established</label>
-                      <input 
+                      <Label htmlFor="established" className="text-sm font-medium">Year Established</Label>
+                      <Input
+                        id="established"
                         type="text" 
-                        value={academyData.established}
-                        className="w-full mt-1 p-2 border rounded-lg"
-                        readOnly
+                        value={settingsFormData.established}
+                        onChange={(e) => handleInputChange('established', e.target.value)}
+                        className="mt-1"
+                        disabled={!isEditingSettings}
+                        placeholder="Enter year established"
                       />
                     </div>
                   </CardContent>
@@ -1428,41 +2316,153 @@ export default function AcademyDashboard() {
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Contact Information</CardTitle>
+                    <CardTitle className="flex items-center">
+                      <Phone className="h-5 w-5 mr-2" />
+                      Contact Information
+                    </CardTitle>
+                    <CardDescription>
+                      Primary contact details for the academy
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div>
-                      <label className="text-sm font-medium">Email</label>
-                      <input 
+                      <Label htmlFor="email" className="text-sm font-medium">Academy Email</Label>
+                      <Input
+                        id="email"
                         type="email" 
-                        value={academyData.email}
-                        className="w-full mt-1 p-2 border rounded-lg"
-                        readOnly
+                        value={settingsFormData.email}
+                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        className="mt-1"
+                        disabled={!isEditingSettings}
+                        placeholder="Enter academy email"
                       />
                     </div>
                     <div>
-                      <label className="text-sm font-medium">Phone</label>
-                      <input 
+                      <Label htmlFor="phone" className="text-sm font-medium">Academy Phone</Label>
+                      <Input
+                        id="phone"
                         type="tel" 
-                        value={academyData.phone}
-                        className="w-full mt-1 p-2 border rounded-lg"
-                        readOnly
+                        value={settingsFormData.phone}
+                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                        className="mt-1"
+                        disabled={!isEditingSettings}
+                        placeholder="Enter academy phone number"
                       />
                     </div>
-                    <div>
-                      <label className="text-sm font-medium">Director</label>
-                      <input 
-                        type="text" 
-                        value={academyData.director.name}
-                        className="w-full mt-1 p-2 border rounded-lg"
-                        readOnly
-                      />
+                  </CardContent>
+                </Card>
+
+                <Card className="lg:col-span-2">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <User className="h-5 w-5 mr-2" />
+                      Director Information
+                    </CardTitle>
+                    <CardDescription>
+                      Contact details for the academy director
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div>
+                        <Label htmlFor="director-name" className="text-sm font-medium">Director Name</Label>
+                        <Input
+                          id="director-name"
+                          type="text" 
+                          value={settingsFormData.directorName}
+                          onChange={(e) => handleInputChange('directorName', e.target.value)}
+                          className="mt-1"
+                          disabled={!isEditingSettings}
+                          placeholder="Enter director name"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="director-email" className="text-sm font-medium">Director Email</Label>
+                        <Input
+                          id="director-email"
+                          type="email" 
+                          value={settingsFormData.directorEmail}
+                          onChange={(e) => handleInputChange('directorEmail', e.target.value)}
+                          className="mt-1"
+                          disabled={!isEditingSettings}
+                          placeholder="Enter director email"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="director-phone" className="text-sm font-medium">Director Phone</Label>
+                        <Input
+                          id="director-phone"
+                          type="tel" 
+                          value={settingsFormData.directorPhone}
+                          onChange={(e) => handleInputChange('directorPhone', e.target.value)}
+                          className="mt-1"
+                          disabled={!isEditingSettings}
+                          placeholder="Enter director phone"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Additional Settings Card */}
+                <Card className="lg:col-span-2">
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Settings className="h-5 w-5 mr-2" />
+                      System Settings
+                    </CardTitle>
+                    <CardDescription>
+                      Additional configuration options
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-sm">Notifications</h4>
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm">Email notifications</span>
+                            <Button variant="outline" size="sm">Configure</Button>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm">SMS notifications</span>
+                            <Button variant="outline" size="sm">Configure</Button>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-sm">Data Management</h4>
+                        <div className="space-y-2">
+                          <Button variant="outline" size="sm" className="w-full">
+                            <Download className="h-4 w-4 mr-2" />
+                            Export Academy Data
+                          </Button>
+                          <Button variant="outline" size="sm" className="w-full">
+                            <Upload className="h-4 w-4 mr-2" />
+                            Import Player Data
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
               </div>
             </TabsContent>
           </Tabs>
+        )}
+
+        {/* Payment Method Selection Modal */}
+        {showPaymentModal && selectedPlanForUpgrade && (
+          <PaymentMethodSelector
+            isOpen={showPaymentModal}
+            onClose={() => {
+              setShowPaymentModal(false);
+              setSelectedPlanForUpgrade(null);
+            }}
+            selectedPlan={selectedPlanForUpgrade}
+            academyId={academyInfo?.id || ''}
+            onSuccess={handleUpgradeSuccess}
+          />
         )}
         </main>
       </div>

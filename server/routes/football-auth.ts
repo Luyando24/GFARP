@@ -1,27 +1,10 @@
-import { Router, Request, Response } from 'express';
+import express, { Request, Response } from 'express';
+import { Router } from 'express';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
+import { query, transaction, hashPassword, verifyPassword } from '../lib/db';
 
-// Mock data for development - replace with actual Prisma calls when database is connected
-const mockAcademies = [
-  {
-    id: 'academy-1',
-    name: 'Elite Football Academy',
-    email: 'admin@elitefootball.com',
-    password: '$2b$10$hashedpassword', // This would be a real hashed password
-    isActive: true,
-    isVerified: true
-  }
-];
-
-const mockAdmins = [
-  {
-    id: 'admin-1',
-    email: 'superadmin@platform.com',
-    password: '$2b$10$hashedpassword', // This would be a real hashed password
-    role: 'SUPER_ADMIN'
-  }
-];
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Academy Registration
@@ -36,9 +19,7 @@ export async function handleAcademyRegister(req: Request, res: Response) {
       address,
       city,
       country,
-      licenseNumber,
       foundedYear,
-      website,
       description,
       subscriptionPlan
     } = req.body;
@@ -52,111 +33,168 @@ export async function handleAcademyRegister(req: Request, res: Response) {
     }
 
     // Check if academy already exists
-    const existingAcademy = await prisma.academy.findUnique({
-      where: { email }
-    });
-
-    if (existingAcademy) {
+    const existingAcademyResult = await query('SELECT * FROM academies WHERE email = $1', [email]);
+    if (existingAcademyResult.rows.length > 0) {
       return res.status(409).json({
         success: false,
         message: 'Academy with this email already exists'
       });
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    // Use transaction to ensure all operations succeed or fail together
+    const result = await transaction(async (client) => {
+      // Hash password
+      const hashedPassword = await hashPassword(password);
+      
+      // Generate UUID for academy
+      const academyId = uuidv4();
+      
+      // Create academy code
+      const academyCode = (name || 'academy')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '') + '-' + Math.random().toString(36).slice(2, 8);
 
-    // Get subscription plan
-    const plan = await prisma.subscriptionPlan.findUnique({
-      where: { name: subscriptionPlan || 'Basic' }
-    });
+      // Insert academy using the correct table structure
+      const academyInsertQuery = `
+        INSERT INTO academies (
+          id, name, code, email, address, district, province, phone, website,
+          academy_type, status, director_name, director_email, director_phone, 
+          founded_year, password_hash
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        RETURNING id, name, email, code
+      `;
 
-    if (!plan) {
-      return res.status(400).json({
-        success: false,
-        message: 'Invalid subscription plan'
-      });
-    }
-
-    // Create academy
-    const academy = await prisma.academy.create({
-      data: {
+      const academyInsertValues = [
+        academyId,
         name,
+        academyCode,
         email,
-        password: hashedPassword,
-        contactPerson,
-        phone,
-        address,
-        city,
-        country,
-        licenseNumber,
-        foundedYear: foundedYear ? parseInt(foundedYear) : null,
-        website,
-        description,
-        isActive: true,
-        isVerified: false
-      }
-    });
+        address || null,
+        city || null,
+        country || null,
+        phone || null,
+        null, // website
+        'youth',
+        'active',
+        contactPerson || null,
+        email || null,
+        phone || null,
+        foundedYear ? parseInt(foundedYear.toString()) : null,
+        hashedPassword
+      ];
 
-    // Create subscription
-    const subscription = await prisma.subscription.create({
-      data: {
-        academyId: academy.id,
-        planId: plan.id,
-        status: 'ACTIVE',
-        startDate: new Date(),
-        endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000), // 1 year
-        autoRenew: true
-      }
-    });
+      const academyResult = await client.query(academyInsertQuery, academyInsertValues);
+      const academy = academyResult.rows[0];
 
-    // Log activity
-    await prisma.activity.create({
-      data: {
-        academyId: academy.id,
-        action: 'academy_registered',
-        description: `Academy ${name} registered successfully`,
-        metadata: { plan: subscriptionPlan || 'Basic' },
-        ipAddress: req.ip
-      }
-    });
+      // Map plan IDs to plan names
+      const planIdToName = {
+        'free': 'Free Plan',
+        'basic': 'Basic Plan', 
+        'pro': 'Pro Plan',
+        'elite': 'Elite Plan'
+      };
 
+      // Get the subscription plan (default to 'free' if not provided)
+      const selectedPlanId = subscriptionPlan || 'free';
+      const selectedPlanName = planIdToName[selectedPlanId] || 'Free Plan';
+      
+      // Get subscription plan details
+      const planQuery = `SELECT * FROM subscription_plans WHERE name = $1`;
+      const planResult = await client.query(planQuery, [selectedPlanName]);
+      
+      if (planResult.rows.length === 0) {
+        throw new Error(`Subscription plan '${selectedPlanName}' not found`);
+      }
+      
+      const plan = planResult.rows[0];
+      
+      // Create academy subscription
+      const subscriptionId = uuidv4();
+      const subscriptionQuery = `
+        INSERT INTO academy_subscriptions (
+          id, academy_id, plan_id, status, start_date, end_date, 
+          auto_renew, created_at, updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        RETURNING id, status, start_date, end_date
+      `;
+      
+      const startDate = new Date();
+      const endDate = new Date();
+      endDate.setMonth(endDate.getMonth() + 1); // 1 month subscription
+      
+      const subscriptionValues = [
+        subscriptionId,
+        academyId,
+        plan.id,
+        'ACTIVE',
+        startDate,
+        endDate,
+        true
+      ];
+      
+      const subscriptionResult = await client.query(subscriptionQuery, subscriptionValues);
+      const subscription = subscriptionResult.rows[0];
+      
+      // Log subscription history
+      const historyId = uuidv4();
+      const historyQuery = `
+        INSERT INTO subscription_history (
+          id, subscription_id, action, old_plan_id, new_plan_id, 
+          notes, created_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      `;
+      
+      await client.query(historyQuery, [
+        historyId,
+        subscriptionId,
+        'ACTIVATED',
+        null,
+        plan.id,
+        'Initial subscription on academy registration'
+      ]);
+
+      return { academy, subscription, plan };
+    });
+    
     // Generate JWT token
     const token = jwt.sign(
-      { 
-        id: academy.id, 
-        email: academy.email, 
-        type: 'academy' 
-      },
+      { id: result.academy.id, email: result.academy.email, role: 'ACADEMY_ADMIN' },
       JWT_SECRET,
-      { expiresIn: '7d' }
+      { expiresIn: '24h' }
     );
 
-    res.status(201).json({
+    return res.status(201).json({
       success: true,
       message: 'Academy registered successfully',
       data: {
         academy: {
-          id: academy.id,
-          name: academy.name,
-          email: academy.email,
-          contactPerson: academy.contactPerson,
-          isVerified: academy.isVerified
+          id: result.academy.id,
+          name: result.academy.name,
+          email: result.academy.email
         },
         subscription: {
-          plan: plan.name,
-          status: subscription.status,
-          endDate: subscription.endDate
+          id: result.subscription.id,
+          plan: result.plan.name,
+          status: result.subscription.status,
+          playerLimit: result.plan.player_limit,
+          storageLimit: result.plan.storage_limit,
+          startDate: result.subscription.start_date,
+          endDate: result.subscription.end_date,
+          autoRenew: result.subscription.auto_renew
         },
         token
       }
     });
-
-  } catch (error) {
+  } catch (error: any) {
     console.error('Academy registration error:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
-      message: 'Internal server error'
+      message: 'Failed to register academy',
+      error: error.message || 'Unknown error'
     });
   }
 }
@@ -164,80 +202,45 @@ export async function handleAcademyRegister(req: Request, res: Response) {
 // Academy Login
 export async function handleAcademyLogin(req: Request, res: Response) {
   try {
-    const { email, password } = req.body;
-
+    const { email, password } = req.body as { email?: string; password?: string };
     if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email and password are required'
+      return res.status(400).json({ success: false, message: 'Email and password are required' });
+    }
+    
+    // Find academy by email and verify password
+    const academyResult = await query(`
+      SELECT id, name, email, address, district, province, phone, director_name, password_hash
+      FROM academies
+      WHERE email = $1 AND status = 'active'
+      LIMIT 1
+    `, [email]);
+
+    if (academyResult.rows.length === 0) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    const academy = academyResult.rows[0];
+    
+    // Check if password_hash exists, if not, this academy needs to set up authentication
+    if (!academy.password_hash) {
+      return res.status(401).json({ 
+        success: false, 
+        message: 'Academy authentication not set up. Please contact support.' 
       });
     }
 
-    // Find academy
-    const academy = await prisma.academy.findUnique({
-      where: { email },
-      include: {
-        subscriptions: {
-          include: {
-            plan: true
-          },
-          orderBy: {
-            createdAt: 'desc'
-          },
-          take: 1
-        }
-      }
-    });
-
-    if (!academy) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
+    const isValid = await verifyPassword(password, academy.password_hash);
+    if (!isValid) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    // Check if academy is active
-    if (!academy.isActive) {
-      return res.status(403).json({
-        success: false,
-        message: 'Academy account is deactivated'
-      });
-    }
-
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, academy.password);
-    if (!isValidPassword) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
-
-    // Generate JWT token
     const token = jwt.sign(
-      { 
-        id: academy.id, 
-        email: academy.email, 
-        type: 'academy' 
-      },
+      { id: academy.id, email: academy.email, role: 'ACADEMY_ADMIN' },
       JWT_SECRET,
       { expiresIn: '7d' }
     );
 
-    // Log activity
-    await prisma.activity.create({
-      data: {
-        academyId: academy.id,
-        action: 'academy_login',
-        description: `Academy ${academy.name} logged in`,
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent')
-      }
-    });
-
-    const currentSubscription = academy.subscriptions[0];
-
-    res.json({
+    return res.json({
       success: true,
       message: 'Login successful',
       data: {
@@ -245,197 +248,25 @@ export async function handleAcademyLogin(req: Request, res: Response) {
           id: academy.id,
           name: academy.name,
           email: academy.email,
-          contactPerson: academy.contactPerson,
-          isVerified: academy.isVerified,
-          storageUsed: academy.storageUsed
+          contactPerson: academy.director_name,
+          phone: academy.phone,
+          address: academy.address,
+          city: academy.district,
+          country: academy.province
         },
-        subscription: currentSubscription ? {
-          plan: currentSubscription.plan.name,
-          status: currentSubscription.status,
-          playerLimit: currentSubscription.plan.playerLimit,
-          storageLimit: currentSubscription.plan.storageLimit,
-          endDate: currentSubscription.endDate
-        } : null,
         token
       }
     });
-
-  } catch (error) {
+  } catch (error: any) {
     console.error('Academy login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    return res.status(500).json({ success: false, message: 'Login failed', error: error.message || 'Unknown error' });
   }
 }
 
-// Admin Login
-export async function handleAdminLogin(req: Request, res: Response) {
-  try {
-    const { email, password } = req.body;
+// Define the router and routes
+const footballAuthRouter = Router();
+footballAuthRouter.post('/academy/register', handleAcademyRegister);
+footballAuthRouter.post('/academy/login', handleAcademyLogin);
 
-    if (!email || !password) {
-      return res.status(400).json({
-        success: false,
-        message: 'Email and password are required'
-      });
-    }
-
-    // Find admin
-    const admin = await prisma.admin.findUnique({
-      where: { email }
-    });
-
-    if (!admin) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
-
-    // Check if admin is active
-    if (!admin.isActive) {
-      return res.status(403).json({
-        success: false,
-        message: 'Admin account is deactivated'
-      });
-    }
-
-    // Verify password
-    const isValidPassword = await bcrypt.compare(password, admin.password);
-    if (!isValidPassword) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid credentials'
-      });
-    }
-
-    // Update last login
-    await prisma.admin.update({
-      where: { id: admin.id },
-      data: { lastLoginAt: new Date() }
-    });
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        id: admin.id, 
-        email: admin.email, 
-        type: 'admin',
-        role: admin.role
-      },
-      JWT_SECRET,
-      { expiresIn: '24h' }
-    );
-
-    // Log activity
-    await prisma.activity.create({
-      data: {
-        adminId: admin.id,
-        action: 'admin_login',
-        description: `Admin ${admin.firstName} ${admin.lastName} logged in`,
-        metadata: { role: admin.role },
-        ipAddress: req.ip,
-        userAgent: req.get('User-Agent')
-      }
-    });
-
-    res.json({
-      success: true,
-      message: 'Admin login successful',
-      data: {
-        admin: {
-          id: admin.id,
-          email: admin.email,
-          firstName: admin.firstName,
-          lastName: admin.lastName,
-          role: admin.role
-        },
-        token
-      }
-    });
-
-  } catch (error) {
-    console.error('Admin login error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-}
-
-// Get Subscription Plans
-export async function handleGetSubscriptionPlans(req: Request, res: Response) {
-  try {
-    const plans = await prisma.subscriptionPlan.findMany({
-      where: { isActive: true },
-      orderBy: { price: 'asc' }
-    });
-
-    res.json({
-      success: true,
-      data: plans
-    });
-
-  } catch (error) {
-    console.error('Get subscription plans error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
-  }
-}
-
-// Middleware to verify JWT token
-export function verifyToken(req: Request, res: Response, next: any) {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-
-  if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: 'Access denied. No token provided.'
-    });
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    (req as any).user = decoded;
-    next();
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: 'Invalid token.'
-    });
-  }
-}
-
-// Middleware to verify admin token
-export function verifyAdminToken(req: Request, res: Response, next: any) {
-  const token = req.header('Authorization')?.replace('Bearer ', '');
-
-  if (!token) {
-    return res.status(401).json({
-      success: false,
-      message: 'Access denied. No token provided.'
-    });
-  }
-
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET) as any;
-    
-    if (decoded.type !== 'admin') {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. Admin privileges required.'
-      });
-    }
-
-    (req as any).user = decoded;
-    next();
-  } catch (error) {
-    res.status(400).json({
-      success: false,
-      message: 'Invalid token.'
-    });
-  }
-}
+// Export the router as the default export
+export default footballAuthRouter;

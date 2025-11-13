@@ -1,34 +1,37 @@
--- PostgreSQL schema for School Management System (Zambia)
+-- PostgreSQL schema for Soccer Academy Management System (Zambia)
 -- Requires: pgcrypto for encryption utilities and citext for case-insensitive text
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS citext;
 
--- Schools
-CREATE TABLE IF NOT EXISTS schools (
+-- Soccer Academies
+CREATE TABLE IF NOT EXISTS academies (
   id UUID PRIMARY KEY,
   name TEXT NOT NULL,
   code TEXT NOT NULL UNIQUE,
   email TEXT,
+  password_hash TEXT, -- password hash for academy login
   address TEXT,
   district TEXT,
   province TEXT,
   phone TEXT,
   website TEXT,
-  school_type TEXT CHECK (school_type IN ('primary', 'secondary', 'combined')),
+  academy_type TEXT CHECK (academy_type IN ('youth', 'professional', 'community', 'elite')),
   status TEXT DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'suspended')),
-  principal_name TEXT,
-  principal_email TEXT,
-  principal_phone TEXT,
+  director_name TEXT,
+  director_email TEXT,
+  director_phone TEXT,
+  founded_year INTEGER,
+  facilities TEXT[], -- array of facilities like 'grass_field', 'artificial_turf', 'gym', 'dormitory'
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- Staff Users (RBAC)
 DROP TYPE IF EXISTS user_role CASCADE;
-CREATE TYPE user_role AS ENUM ('superadmin', 'admin', 'teacher', 'staff');
+CREATE TYPE user_role AS ENUM ('superadmin', 'academy_admin', 'head_coach', 'coach', 'trainer', 'staff');
 CREATE TABLE IF NOT EXISTS staff_users (
   id UUID PRIMARY KEY,
-  school_id UUID REFERENCES schools(id) ON DELETE SET NULL,
+  academy_id UUID REFERENCES academies(id) ON DELETE SET NULL,
   email CITEXT NOT NULL UNIQUE,
   password_hash TEXT NOT NULL,
   role user_role NOT NULL,
@@ -40,11 +43,12 @@ CREATE TABLE IF NOT EXISTS staff_users (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Students: PII columns stored encrypted-at-rest (ciphertext)
-CREATE TABLE IF NOT EXISTS students (
+-- Players: PII columns stored encrypted-at-rest (ciphertext)
+CREATE TABLE IF NOT EXISTS players (
   id UUID PRIMARY KEY,
-  -- Student ID card (6 unique characters) for secure authentication
-  student_card_id TEXT NOT NULL UNIQUE CHECK (LENGTH(student_card_id) = 6),
+  academy_id UUID REFERENCES academies(id) ON DELETE SET NULL,
+  -- Player ID card (6 unique characters) for secure authentication
+  player_card_id TEXT NOT NULL UNIQUE CHECK (LENGTH(player_card_id) = 6),
   
   -- NRC stored as salted hash for lookups without exposing raw NRC
   nrc_hash TEXT NOT NULL UNIQUE,
@@ -65,12 +69,16 @@ CREATE TABLE IF NOT EXISTS students (
   guardian_contact_name_cipher BYTEA,
   guardian_contact_phone_cipher BYTEA,
   
-  -- Additional student details
-  grade_level TEXT,
-  enrollment_date DATE,
+  -- Player-specific details
+  position TEXT, -- goalkeeper, defender, midfielder, forward
+  preferred_foot TEXT CHECK (preferred_foot IN ('left', 'right', 'both')),
+  height_cm INTEGER,
+  weight_kg DECIMAL(5,2),
+  jersey_number INTEGER,
+  registration_date DATE,
   guardian_info_cipher BYTEA,
-  health_info_cipher BYTEA,
-  academic_history_cipher BYTEA,
+  medical_info_cipher BYTEA,
+  playing_history_cipher BYTEA,
   emergency_contact_cipher BYTEA,
 
   -- Digital card
@@ -80,21 +88,20 @@ CREATE TABLE IF NOT EXISTS students (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_students_card_id ON students(card_id);
+CREATE INDEX IF NOT EXISTS idx_players_card_id ON players(card_id);
 
--- Teachers (extends staff_users with teacher-specific information)
-CREATE TABLE IF NOT EXISTS teachers (
+-- Coaches (extends staff_users with coach-specific information)
+CREATE TABLE IF NOT EXISTS coaches (
   id UUID PRIMARY KEY,
   staff_user_id UUID NOT NULL REFERENCES staff_users(id) ON DELETE CASCADE,
-  school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+  academy_id UUID NOT NULL REFERENCES academies(id) ON DELETE CASCADE,
   employee_id TEXT NOT NULL UNIQUE,
   
-  -- Teacher-specific information
-  subject TEXT NOT NULL,
-  qualification TEXT,
+  -- Coach-specific information
+  specialization TEXT NOT NULL, -- youth_development, goalkeeping, fitness, tactics
+  license_level TEXT, -- CAF C, CAF B, CAF A, CAF Pro
   experience_years INTEGER DEFAULT 0,
-  specialization TEXT,
-  department TEXT,
+  playing_background TEXT,
   
   -- Contact and personal details
   date_of_birth DATE,
@@ -103,7 +110,7 @@ CREATE TABLE IF NOT EXISTS teachers (
   
   -- Status and availability
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  is_head_teacher BOOLEAN NOT NULL DEFAULT FALSE,
+  is_head_coach BOOLEAN NOT NULL DEFAULT FALSE,
   
   -- Additional information
   bio TEXT,
@@ -113,135 +120,152 @@ CREATE TABLE IF NOT EXISTS teachers (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   
-  -- Ensure one teacher record per staff user
+  -- Ensure one coach record per staff user
   UNIQUE(staff_user_id)
 );
-CREATE INDEX IF NOT EXISTS idx_teachers_school ON teachers(school_id);
-CREATE INDEX IF NOT EXISTS idx_teachers_staff_user ON teachers(staff_user_id);
-CREATE INDEX IF NOT EXISTS idx_teachers_employee_id ON teachers(employee_id);
-CREATE INDEX IF NOT EXISTS idx_teachers_subject ON teachers(subject);
+CREATE INDEX IF NOT EXISTS idx_coaches_academy ON coaches(academy_id);
+CREATE INDEX IF NOT EXISTS idx_coaches_staff_user ON coaches(staff_user_id);
+CREATE INDEX IF NOT EXISTS idx_coaches_employee_id ON coaches(employee_id);
+CREATE INDEX IF NOT EXISTS idx_coaches_specialization ON coaches(specialization);
 
--- Subjects
-CREATE TABLE IF NOT EXISTS subjects (
+-- Teams
+CREATE TABLE IF NOT EXISTS teams (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+  academy_id UUID NOT NULL REFERENCES academies(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
-  code TEXT NOT NULL,
-  description TEXT,
-  grade TEXT,
-  is_core BOOLEAN NOT NULL DEFAULT TRUE,
-  is_active BOOLEAN NOT NULL DEFAULT TRUE,
-  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-  UNIQUE(school_id, code)
-);
-CREATE INDEX IF NOT EXISTS idx_subjects_school ON subjects(school_id);
-CREATE INDEX IF NOT EXISTS idx_subjects_code ON subjects(code);
-CREATE INDEX IF NOT EXISTS idx_subjects_active ON subjects(is_active);
-
--- Classes
-CREATE TABLE IF NOT EXISTS classes (
-  id UUID PRIMARY KEY,
-  school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
-  class_name TEXT NOT NULL,
-  grade_level TEXT NOT NULL,
-  section TEXT, -- e.g., 'A', 'B', 'C' for multiple sections of same grade
-  subject TEXT,
-  teacher_id UUID REFERENCES teachers(id) ON DELETE SET NULL,
-  room_number TEXT,
-  capacity INTEGER DEFAULT 30,
-  current_enrollment INTEGER DEFAULT 0,
-  academic_year TEXT NOT NULL,
-  term TEXT, -- e.g., 'Term 1', 'Term 2', 'Term 3'
-  schedule JSONB, -- class schedule with days and times
-  description TEXT,
+  age_group TEXT NOT NULL, -- U10, U12, U14, U16, U18, Senior
+  division TEXT, -- Premier, First Division, etc.
+  season TEXT NOT NULL,
+  head_coach_id UUID REFERENCES coaches(id) ON DELETE SET NULL,
+  assistant_coaches UUID[], -- array of coach IDs
+  max_players INTEGER DEFAULT 25,
+  current_players INTEGER DEFAULT 0,
+  team_color TEXT,
+  home_ground TEXT,
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   
-  -- Ensure unique class per school, grade, section, subject, and academic year
-  UNIQUE(school_id, grade_level, section, subject, academic_year)
+  -- Ensure unique team per academy, age group, and season
+  UNIQUE(academy_id, age_group, season)
 );
-CREATE INDEX IF NOT EXISTS idx_classes_school ON classes(school_id);
-CREATE INDEX IF NOT EXISTS idx_classes_teacher ON classes(teacher_id);
-CREATE INDEX IF NOT EXISTS idx_classes_grade_level ON classes(grade_level);
-CREATE INDEX IF NOT EXISTS idx_classes_academic_year ON classes(academic_year);
+CREATE INDEX IF NOT EXISTS idx_teams_academy ON teams(academy_id);
+CREATE INDEX IF NOT EXISTS idx_teams_coach ON teams(head_coach_id);
+CREATE INDEX IF NOT EXISTS idx_teams_age_group ON teams(age_group);
+CREATE INDEX IF NOT EXISTS idx_teams_season ON teams(season);
 
--- Assignments
-CREATE TABLE IF NOT EXISTS assignments (
+-- Training Sessions
+CREATE TABLE IF NOT EXISTS training_sessions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
-  assignment_number TEXT NOT NULL UNIQUE,
-  teacher_id UUID REFERENCES teachers(id) ON DELETE SET NULL,
-  class_id UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-  subject_id UUID NOT NULL REFERENCES subjects(id) ON DELETE CASCADE,
+  academy_id UUID NOT NULL REFERENCES academies(id) ON DELETE CASCADE,
+  session_number TEXT NOT NULL UNIQUE,
+  coach_id UUID REFERENCES coaches(id) ON DELETE SET NULL,
+  team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   description TEXT,
-  instructions TEXT,
-  category TEXT NOT NULL CHECK (category IN ('homework','project','test','exam','quiz','other')),
-  priority TEXT NOT NULL DEFAULT 'medium' CHECK (priority IN ('low','medium','high','urgent')),
-  status TEXT NOT NULL DEFAULT 'assigned' CHECK (status IN ('assigned','in_progress','submitted','graded','returned')),
-  due_date TIMESTAMPTZ,
-  total_marks INTEGER,
-  related_files TEXT[],
+  objectives TEXT,
+  session_type TEXT NOT NULL CHECK (session_type IN ('technical','tactical','physical','mental','match_preparation','recovery')),
+  intensity TEXT NOT NULL DEFAULT 'medium' CHECK (intensity IN ('low','medium','high','very_high')),
+  status TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled','in_progress','completed','cancelled')),
+  session_date TIMESTAMPTZ NOT NULL,
+  duration_minutes INTEGER DEFAULT 90,
+  location TEXT,
+  equipment_needed TEXT[],
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_assignments_school ON assignments(school_id);
-CREATE INDEX IF NOT EXISTS idx_assignments_teacher ON assignments(teacher_id);
-CREATE INDEX IF NOT EXISTS idx_assignments_class ON assignments(class_id);
-CREATE INDEX IF NOT EXISTS idx_assignments_subject ON assignments(subject_id);
-CREATE INDEX IF NOT EXISTS idx_assignments_due_date ON assignments(due_date);
+CREATE INDEX IF NOT EXISTS idx_training_sessions_academy ON training_sessions(academy_id);
+CREATE INDEX IF NOT EXISTS idx_training_sessions_coach ON training_sessions(coach_id);
+CREATE INDEX IF NOT EXISTS idx_training_sessions_team ON training_sessions(team_id);
+CREATE INDEX IF NOT EXISTS idx_training_sessions_date ON training_sessions(session_date);
 
--- Class Enrollments (Many-to-Many relationship between students and classes)
-CREATE TABLE IF NOT EXISTS class_enrollments (
+-- Team Memberships (Many-to-Many relationship between players and teams)
+CREATE TABLE IF NOT EXISTS team_memberships (
   id UUID PRIMARY KEY,
-  class_id UUID NOT NULL REFERENCES classes(id) ON DELETE CASCADE,
-  student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-  enrollment_date DATE NOT NULL DEFAULT CURRENT_DATE,
-  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'transferred', 'completed')),
+  team_id UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+  player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  join_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  jersey_number INTEGER,
+  position TEXT,
+  is_captain BOOLEAN DEFAULT FALSE,
+  is_vice_captain BOOLEAN DEFAULT FALSE,
+  status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'inactive', 'transferred', 'released')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   
-  -- Ensure a student can only be enrolled once per class
-  UNIQUE(class_id, student_id)
+  -- Ensure a player can only be in one team per season (handled at application level)
+  UNIQUE(team_id, player_id)
 );
-CREATE INDEX IF NOT EXISTS idx_class_enrollments_class ON class_enrollments(class_id);
-CREATE INDEX IF NOT EXISTS idx_class_enrollments_student ON class_enrollments(student_id);
+CREATE INDEX IF NOT EXISTS idx_team_memberships_team ON team_memberships(team_id);
+CREATE INDEX IF NOT EXISTS idx_team_memberships_player ON team_memberships(player_id);
 
--- Academic Records
-CREATE TABLE IF NOT EXISTS academic_records (
+-- Player Performance Records
+CREATE TABLE IF NOT EXISTS player_performance (
   id UUID PRIMARY KEY,
-  student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-  school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
-  subject TEXT NOT NULL,
-  grade TEXT,
-  term TEXT,
-  year INTEGER,
-  teacher_notes TEXT,
+  player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  academy_id UUID NOT NULL REFERENCES academies(id) ON DELETE CASCADE,
+  session_id UUID REFERENCES training_sessions(id) ON DELETE SET NULL,
+  performance_type TEXT NOT NULL CHECK (performance_type IN ('training', 'match', 'assessment')),
+  date DATE NOT NULL,
+  technical_rating INTEGER CHECK (technical_rating BETWEEN 1 AND 10),
+  tactical_rating INTEGER CHECK (tactical_rating BETWEEN 1 AND 10),
+  physical_rating INTEGER CHECK (physical_rating BETWEEN 1 AND 10),
+  mental_rating INTEGER CHECK (mental_rating BETWEEN 1 AND 10),
+  overall_rating INTEGER CHECK (overall_rating BETWEEN 1 AND 10),
+  coach_notes TEXT,
+  goals_scored INTEGER DEFAULT 0,
+  assists INTEGER DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_academic_records_student ON academic_records(student_id, year DESC);
+CREATE INDEX IF NOT EXISTS idx_player_performance_player ON player_performance(player_id, date DESC);
 
--- Attendance Records
-CREATE TABLE IF NOT EXISTS attendance (
+-- Training Attendance
+CREATE TABLE IF NOT EXISTS training_attendance (
   id UUID PRIMARY KEY,
-  student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
-  school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
-  date DATE NOT NULL,
-  status TEXT NOT NULL CHECK (status IN ('present', 'absent', 'late', 'excused')),
+  player_id UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+  session_id UUID NOT NULL REFERENCES training_sessions(id) ON DELETE CASCADE,
+  academy_id UUID NOT NULL REFERENCES academies(id) ON DELETE CASCADE,
+  status TEXT NOT NULL CHECK (status IN ('present', 'absent', 'late', 'excused', 'injured')),
+  arrival_time TIMESTAMPTZ,
+  departure_time TIMESTAMPTZ,
   notes TEXT,
   recorded_by UUID REFERENCES staff_users(id),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_attendance_student_date ON attendance(student_id, date DESC);
+CREATE INDEX IF NOT EXISTS idx_training_attendance_player ON training_attendance(player_id);
+CREATE INDEX IF NOT EXISTS idx_training_attendance_session ON training_attendance(session_id);
+
+-- Matches/Games
+CREATE TABLE IF NOT EXISTS matches (
+  id UUID PRIMARY KEY,
+  academy_id UUID NOT NULL REFERENCES academies(id) ON DELETE CASCADE,
+  home_team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
+  away_team TEXT NOT NULL, -- opponent team name
+  match_type TEXT NOT NULL CHECK (match_type IN ('friendly', 'league', 'cup', 'tournament')),
+  competition_name TEXT,
+  match_date TIMESTAMPTZ NOT NULL,
+  venue TEXT NOT NULL,
+  is_home_match BOOLEAN NOT NULL DEFAULT TRUE,
+  home_score INTEGER DEFAULT 0,
+  away_score INTEGER DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'live', 'completed', 'cancelled', 'postponed')),
+  referee TEXT,
+  weather_conditions TEXT,
+  attendance_count INTEGER,
+  match_report TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_matches_academy ON matches(academy_id);
+CREATE INDEX IF NOT EXISTS idx_matches_team ON matches(home_team_id);
+CREATE INDEX IF NOT EXISTS idx_matches_date ON matches(match_date);
 
 -- Offline sync queue (server side ingestion auditing)
 CREATE TABLE IF NOT EXISTS sync_ingest (
   id UUID PRIMARY KEY,
-  source_school_id UUID REFERENCES schools(id) ON DELETE SET NULL,
+  source_academy_id UUID REFERENCES academies(id) ON DELETE SET NULL,
   source_device_id TEXT,
   op_type TEXT NOT NULL CHECK (op_type IN ('create','update','delete')),
   entity TEXT NOT NULL,
@@ -253,14 +277,14 @@ CREATE TABLE IF NOT EXISTS sync_ingest (
 );
 CREATE INDEX IF NOT EXISTS idx_sync_ingest_processed ON sync_ingest(processed_at);
 
--- School Website Builder Tables
+-- Academy Website Builder Tables
 
--- Website configurations for each school
-CREATE TABLE IF NOT EXISTS school_websites (
+-- Website configurations for each academy
+CREATE TABLE IF NOT EXISTS academy_websites (
   id UUID PRIMARY KEY,
-  school_id UUID NOT NULL REFERENCES schools(id) ON DELETE CASCADE,
+  academy_id UUID NOT NULL REFERENCES academies(id) ON DELETE CASCADE,
   domain_name TEXT UNIQUE, -- custom domain or subdomain
-  subdomain TEXT NOT NULL UNIQUE, -- flova subdomain like "school-name.flova.com"
+  subdomain TEXT NOT NULL UNIQUE, -- sofwan subdomain like "academy-name.sofwan.com"
   title TEXT NOT NULL,
   description TEXT,
   logo_url TEXT,
@@ -276,10 +300,10 @@ CREATE TABLE IF NOT EXISTS school_websites (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_school_websites_school ON school_websites(school_id);
-CREATE INDEX IF NOT EXISTS idx_school_websites_subdomain ON school_websites(subdomain);
+CREATE INDEX IF NOT EXISTS idx_academy_websites_academy ON academy_websites(academy_id);
+CREATE INDEX IF NOT EXISTS idx_academy_websites_subdomain ON academy_websites(subdomain);
 
--- Pre-built themes for school websites
+-- Pre-built themes for academy websites
 CREATE TABLE IF NOT EXISTS website_themes (
   id UUID PRIMARY KEY,
   name TEXT NOT NULL,
@@ -294,11 +318,11 @@ CREATE TABLE IF NOT EXISTS website_themes (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Website pages (home, about, programs, contact, etc.)
+-- Website pages (home, about, teams, coaches, contact, etc.)
 CREATE TABLE IF NOT EXISTS website_pages (
   id UUID PRIMARY KEY,
-  website_id UUID NOT NULL REFERENCES school_websites(id) ON DELETE CASCADE,
-  slug TEXT NOT NULL, -- URL slug like "about", "programs"
+  website_id UUID NOT NULL REFERENCES academy_websites(id) ON DELETE CASCADE,
+  slug TEXT NOT NULL, -- URL slug like "about", "teams", "coaches"
   title TEXT NOT NULL,
   meta_description TEXT,
   content JSONB NOT NULL, -- page content in structured format
@@ -310,11 +334,11 @@ CREATE TABLE IF NOT EXISTS website_pages (
 );
 CREATE INDEX IF NOT EXISTS idx_website_pages_website ON website_pages(website_id, sort_order);
 
--- Website components/sections (hero, programs, testimonials, etc.)
+-- Website components/sections (hero, teams, coaches, matches, etc.)
 CREATE TABLE IF NOT EXISTS website_components (
   id UUID PRIMARY KEY,
   page_id UUID NOT NULL REFERENCES website_pages(id) ON DELETE CASCADE,
-  component_type TEXT NOT NULL, -- "hero", "programs", "testimonials", "contact_form"
+  component_type TEXT NOT NULL, -- "hero", "teams", "coaches", "matches", "contact_form"
   component_data JSONB NOT NULL, -- component-specific data
   sort_order INTEGER NOT NULL DEFAULT 0,
   is_visible BOOLEAN NOT NULL DEFAULT TRUE,
@@ -326,7 +350,7 @@ CREATE INDEX IF NOT EXISTS idx_website_components_page ON website_components(pag
 -- Website media/assets
 CREATE TABLE IF NOT EXISTS website_media (
   id UUID PRIMARY KEY,
-  website_id UUID NOT NULL REFERENCES school_websites(id) ON DELETE CASCADE,
+  website_id UUID NOT NULL REFERENCES academy_websites(id) ON DELETE CASCADE,
   filename TEXT NOT NULL,
   original_filename TEXT NOT NULL,
   file_path TEXT NOT NULL,
@@ -337,4 +361,4 @@ CREATE TABLE IF NOT EXISTS website_media (
 );
 CREATE INDEX IF NOT EXISTS idx_website_media_website ON website_media(website_id);
 
--- Helper function concept (Laravel should implement application-level encryption using key rotation).
+-- Helper function concept (Application should implement application-level encryption using key rotation).

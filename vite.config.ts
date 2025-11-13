@@ -1,7 +1,6 @@
 import { defineConfig, Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
-import { createServer } from "./server";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
@@ -23,19 +22,57 @@ export default defineConfig(({ mode }) => ({
       "@shared": path.resolve(__dirname, "./shared"),
     },
   },
+  optimizeDeps: {
+    exclude: ['@prisma/client', '@prisma/engines', '../../generated/prisma']
+  },
+  ssr: {
+    noExternal: [],
+    external: ['@prisma/client', '@prisma/engines', '../../generated/prisma']
+  },
+  define: {
+    global: 'globalThis'
+  }
 }));
 
 function expressPlugin(): Plugin {
+  let expressApp: any = null;
+  
   return {
     name: "express-plugin",
     apply: "serve", // Only apply during development (serve mode)
     configureServer(server) {
       console.log("Configuring Express server middleware...");
-      const app = createServer();
-
-      // Add Express app as middleware to Vite dev server
-      server.middlewares.use(app);
-      console.log("Express server middleware configured.");
+      
+      // Proxy ALL requests to our Express app, not just /api
+      server.middlewares.use(async (req, res, next) => {
+        try {
+          // Skip non-API requests
+          if (!req.url?.startsWith('/api')) {
+            return next();
+          }
+          
+          // Create Express app only once and cache it
+          if (!expressApp) {
+            console.log("Creating Express server...");
+            const { createServer } = await import('./server/index.ts');
+            expressApp = createServer();
+          }
+          
+          // Pass the request as-is to the Express app
+          expressApp(req, res, next);
+        } catch (error: any) {
+          console.error('Error loading server:', error);
+          res.statusCode = 500;
+          res.setHeader('Content-Type', 'application/json');
+          res.end(JSON.stringify({ 
+            success: false, 
+            message: 'Internal server error',
+            error: error?.message || 'Unknown error'
+          }));
+        }
+      });
+      
+      console.log("Express server middleware configured with /api prefix.");
     },
   };
 }
