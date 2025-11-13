@@ -1,6 +1,6 @@
 import express, { Request, Response } from 'express';
 import { Router } from 'express';
-import bcrypt from 'bcrypt';
+// bcrypt usage is centralized in lib/db; avoid importing here
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { query, transaction, hashPassword, verifyPassword } from '../lib/db';

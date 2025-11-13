@@ -1,6 +1,6 @@
 import pkg from 'pg';
 const { Pool } = pkg;
-import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
 
 // Database connection pool using DATABASE_URL
 const pool = new Pool({
