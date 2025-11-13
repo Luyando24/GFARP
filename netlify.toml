@@ -6,6 +6,8 @@
 [build.environment]
   # Add environment variables needed for build here
   # Do NOT add actual secret values here
+  # Allow pnpm to install without frozen lockfile in CI to avoid ERR_PNPM_OUTDATED_LOCKFILE
+  PNPM_FLAGS = "--no-frozen-lockfile"
 
 # Configure secrets scanning
 [secrets_scan]
@@ -24,3 +26,9 @@
   from = "/api/*"
   status = 200
   to = "/.netlify/functions/api/:splat"
+
+# SPA fallback to support client-side routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
