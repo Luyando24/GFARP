@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: gfarp-web
+    env: node
+    plan: free
+    buildCommand: corepack enable && pnpm install --no-frozen-lockfile && pnpm run build
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: NRC_SALT
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: CLIENT_URL
+        value: https://YOUR-SERVICE.onrender.com
