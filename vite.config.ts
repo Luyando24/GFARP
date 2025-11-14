@@ -23,11 +23,11 @@ export default defineConfig(({ mode }) => ({
     },
   },
   optimizeDeps: {
-    exclude: ['@prisma/client', '@prisma/engines', '../../generated/prisma']
+    exclude: []
   },
   ssr: {
     noExternal: [],
-    external: ['@prisma/client', '@prisma/engines', '../../generated/prisma']
+    external: []
   },
   define: {
     global: 'globalThis'

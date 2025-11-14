@@ -401,29 +401,6 @@ export const Api = {
 };
 
 // Lightweight in-browser mock for development and offline demo
-import QRCode from "qrcode";
-
-async function createCardQr(resident: Resident): Promise<string> {
-  // In production, backend signs payload; here we encode opaque data for demo only
-  return QRCode.toDataURL(JSON.stringify({ cardId: resident.cardId }));
-}
-
-function slugify(input: string) {
-  return input
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)+/g, "")
-    .slice(0, 20);
-}
-
-function generateNationalCardId(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let result = "";
-  for (let i = 0; i < 8; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
 
 const mock = {
   async login({ email, password, userType }: LoginRequest & { userType?: string }): Promise<AuthSession> {

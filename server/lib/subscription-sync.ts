@@ -1,4 +1,4 @@
-import { stripe } from './stripe.js';
+import { stripe } from './stripe';
 import { query, transaction } from './db.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -272,7 +272,11 @@ export class SubscriptionSyncService {
             (invoice.amount_paid || 0) / 100,
             invoice.currency.toUpperCase(),
             'CARD',
-            typeof invoice.payment_intent === 'string' ? invoice.payment_intent : invoice.payment_intent?.id,
+            ((): string => {
+              const pi: any = (invoice as any).payment_intent;
+              if (!pi) return invoice.id;
+              return typeof pi === 'string' ? pi : pi.id ?? invoice.id;
+            })(),
             invoice.id,
             'COMPLETED',
             'Synced from Stripe'
@@ -320,9 +324,12 @@ export class SubscriptionSyncService {
             );
           }
           
-          // Compare dates
-          const stripeStart = new Date(stripeSubscription.current_period_start * 1000);
-          const stripeEnd = new Date(stripeSubscription.current_period_end * 1000);
+          // Compare dates (support different SDK return shapes)
+          const subAny: any = stripeSubscription as any;
+          const startUnix = subAny.current_period_start ?? subAny.data?.current_period_start;
+          const endUnix = subAny.current_period_end ?? subAny.data?.current_period_end;
+          const stripeStart = new Date((startUnix as number) * 1000);
+          const stripeEnd = new Date((endUnix as number) * 1000);
           
           if (Math.abs(new Date(subscription.start_date).getTime() - stripeStart.getTime()) > 1000) {
             issues.push(

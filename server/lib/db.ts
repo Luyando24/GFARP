@@ -202,12 +202,7 @@ export function hashNrc(nrc: string): string {
   return bcrypt.hashSync(nrc + fixedSalt, 10);
 }
 
-// National ID hashing utilities for resident lookup
-export function hashNationalId(nationalId: string): string {
-  // Use a fixed salt for National ID hashing to ensure consistent lookups
-  const fixedSalt = process.env.NRC_SALT || 'sofwan_nrc_salt_2024';
-  return bcrypt.hashSync(nationalId + fixedSalt, 10);
-}
+// National ID hashing removed: identity/resident features not part of this project
 
 // Graceful shutdown
 process.on('SIGINT', async () => {

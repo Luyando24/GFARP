@@ -334,7 +334,7 @@ export async function handleResetSystemSettings(req: Request, res: Response) {
 // GET /api/system-settings/backup - Export settings as backup
 export async function handleExportSystemSettings(req: Request, res: Response) {
   try {
-    const result = await query('SELECT key, value, description FROM system_settings');
+    const result = await query('SELECT key, value FROM system_settings');
     const settings = result.rows;
 
     const backup = {
@@ -342,8 +342,7 @@ export async function handleExportSystemSettings(req: Request, res: Response) {
       version: "1.0",
       settings: settings.map(setting => ({
         key: setting.key,
-        value: setting.value,
-        description: setting.description
+        value: setting.value
       }))
     };
 
@@ -368,7 +367,7 @@ export async function handleRestoreSystemSettings(req: Request, res: Response) {
     await query('DELETE FROM system_settings');
 
     const restorePromises = settings.map((setting: any) =>
-      setSettingValue(setting.key, setting.value, setting.description)
+      setSettingValue(setting.key, setting.value)
     );
 
     await Promise.all(restorePromises);
