@@ -1,7 +1,11 @@
 {
   "version": 2,
   "buildCommand": "npm run build",
-  "outputDirectory": "dist/spa",
+  "outputDirectory": "dist",
+  "builds": [
+    { "src": "package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } },
+    { "src": "api/server/node-build.js", "use": "@vercel/node" }
+  ],
   "routes": [
     {
       "src": "/api/(.*)",
@@ -16,11 +20,13 @@
     }
   ],
   "env": {
-    "DATABASE_URL": "postgresql://postgres:kvIJFwZHElEXHwrd@db.lpsujzvospfaomgkrcew.supabase.co:5432/postgres",
+    "DATABASE_URL": "postgresql://postgres.lpsujzvospfaomgkrcew@aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require",
     "VITE_SUPABASE_URL": "https://lpsujzvospfaomgkrcew.supabase.co",
     "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxwc3VqenZvc3BmYW9tZ2tyY2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzEwMTQsImV4cCI6MjA3NjYwNzAxNH0.5Q210arv1Xd0ab87OM5VYklq1yoML6CpmIuzEQRjRdE",
     "REACT_APP_SUPABASE_URL": "https://lpsujzvospfaomgkrcew.supabase.co",
     "REACT_APP_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxwc3VqenZvc3BmYW9tZ2tyY2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzEwMTQsImV4cCI6MjA3NjYwNzAxNH0.5Q210arv1Xd0ab87OM5VYklq1yoML6CpmIuzEQRjRdE",
+    "DB_RUNTIME_GUARDS": "off",
+    "PGSSLMODE": "require",
     "NRC_SALT": "your_secure_salt_value"
   },
   "functions": {

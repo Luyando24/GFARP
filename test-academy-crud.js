@@ -2,7 +2,7 @@
 // This file tests all CRUD operations for the academy management module
 
 import fetch from 'node-fetch';
-const BASE_URL = 'http://localhost:8080/api';
+const BASE_URL = process.env.VITE_API_BASE || '/api';
 
 // Test data for academy creation
 const testAcademy = {

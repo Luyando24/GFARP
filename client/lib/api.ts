@@ -637,7 +637,7 @@ export async function enqueueSync(op: Parameters<typeof db.syncQueue.add>[0]) {
 }
 
 // Transfer API functions
-const BASE_URL = 'http://localhost:8080/api';
+const BASE_URL = import.meta.env.VITE_API_BASE || '/api';
 
 export async function getTransfers(academyId?: string, limit = 50, offset = 0, status?: string): Promise<{ success: boolean; data: Transfer[]; total: number }> {
   try {
