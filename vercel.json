@@ -1,15 +1,16 @@
 {
   "version": 2,
-  "buildCommand": "npm run build",
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm run build",
   "outputDirectory": "dist",
   "builds": [
     { "src": "package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } },
-    { "src": "api/server/node-build.js", "use": "@vercel/node" }
+    { "src": "api/server/index.ts", "use": "@vercel/node" }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/api/server/node-build.js"
+      "dest": "/api/server"
     },
     {
       "handle": "filesystem"
