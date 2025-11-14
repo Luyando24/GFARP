@@ -1,13 +1,13 @@
-import express from 'express';
+import express, { type RequestHandler } from 'express';
 import { pool } from '../lib/db.js';
 
 const router = express.Router();
 
 // Get all notifications (with filtering options)
-router.get('/', async (req, res) => {
+router.get('/', (async (req, res) => {
   try {
     const { type, status, limit = 20, offset = 0 } = req.query;
-    const userId = req.user?.id; // From auth middleware
+    const userId = (req as any).user?.id;
     
     let query = `
       SELECT n.*, 
@@ -52,21 +52,21 @@ router.get('/', async (req, res) => {
       notifications: rows,
       pagination: {
         total: totalCount,
-        limit: parseInt(limit),
-        offset: parseInt(offset)
+        limit: parseInt(String(limit)),
+        offset: parseInt(String(offset))
       }
     });
   } catch (error) {
     console.error('Error fetching notifications:', error);
     res.status(500).json({ error: 'Failed to fetch notifications' });
   }
-});
+}) as RequestHandler);
 
 // Get a specific notification
-router.get('/:id', async (req, res) => {
+router.get('/:id', (async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id; // From auth middleware
+    const userId = (req as any).user?.id;
     
     const query = `
       SELECT n.*, 
@@ -87,10 +87,10 @@ router.get('/:id', async (req, res) => {
     console.error('Error fetching notification:', error);
     res.status(500).json({ error: 'Failed to fetch notification' });
   }
-});
+}) as RequestHandler);
 
 // Create a new notification
-router.post('/', async (req, res) => {
+router.post('/', (async (req, res) => {
   const client = await pool.connect();
   
   try {
@@ -180,13 +180,13 @@ router.post('/', async (req, res) => {
   } finally {
     client.release();
   }
-});
+}) as RequestHandler);
 
 // Mark a notification as read
-router.post('/:id/read', async (req, res) => {
+router.post('/:id/read', (async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = req.user?.id; // From auth middleware
+    const userId = (req as any).user?.id;
     
     if (!userId) {
       return res.status(401).json({ error: 'User not authenticated' });
@@ -226,10 +226,10 @@ router.post('/:id/read', async (req, res) => {
     console.error('Error marking notification as read:', error);
     res.status(500).json({ error: 'Failed to mark notification as read' });
   }
-});
+}) as RequestHandler);
 
 // Delete a notification
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', (async (req, res) => {
   const client = await pool.connect();
   
   try {
@@ -260,10 +260,10 @@ router.delete('/:id', async (req, res) => {
   } finally {
     client.release();
   }
-});
+}) as RequestHandler);
 
 // Get notification templates
-router.get('/templates', async (req, res) => {
+router.get('/templates', (async (_req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM notification_templates ORDER BY name');
     res.json(rows);
@@ -271,10 +271,10 @@ router.get('/templates', async (req, res) => {
     console.error('Error fetching notification templates:', error);
     res.status(500).json({ error: 'Failed to fetch notification templates' });
   }
-});
+}) as RequestHandler);
 
 // Get notification events
-router.get('/events', async (req, res) => {
+router.get('/events', (async (_req, res) => {
   try {
     const { rows } = await pool.query('SELECT * FROM notification_events ORDER BY name');
     res.json(rows);
@@ -282,6 +282,6 @@ router.get('/events', async (req, res) => {
     console.error('Error fetching notification events:', error);
     res.status(500).json({ error: 'Failed to fetch notification events' });
   }
-});
+}) as RequestHandler);
 
 export default router;

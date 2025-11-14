@@ -1,12 +1,12 @@
-import { Request, Response, Router } from 'express';
+import { Request, Response, Router, type RequestHandler } from 'express';
 import { query, transaction } from '../lib/db';
 import { v4 as uuidv4 } from 'uuid';
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 // Get Academy Subscription Details
-export async function handleGetSubscription(req: AuthenticatedRequest, res: Response) {
+export const handleGetSubscription: RequestHandler = async (req, res) => {
   try {
-    const academyId = req.user?.id;
+    const academyId = (req as any).user?.id;
     
     if (!academyId) {
       return res.status(401).json({
@@ -77,7 +77,7 @@ export async function handleGetSubscription(req: AuthenticatedRequest, res: Resp
       error: error.message
     });
   }
-}
+};
 
 // Get Available Subscription Plans
 export async function handleGetPlans(req: Request, res: Response) {

@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, type RequestHandler } from 'express';
 import Stripe from 'stripe';
 import { subscriptionSync } from '../lib/subscription-sync.js';
 import { authenticateToken } from '../middleware/auth.js';
@@ -12,9 +12,9 @@ router.use(authenticateToken);
 /**
  * Sync subscriptions for the authenticated academy
  */
-router.post('/sync', async (req: Request, res: Response) => {
+router.post('/sync', (async (req, res) => {
   try {
-    const academyId = req.user?.academyId;
+    const academyId = (req as any).user?.academyId;
     
     if (!academyId) {
       return res.status(400).json({ error: 'Academy ID not found' });
@@ -47,14 +47,14 @@ router.post('/sync', async (req: Request, res: Response) => {
       message: error.message
     });
   }
-});
+}) as RequestHandler);
 
 /**
  * Validate subscription consistency for the authenticated academy
  */
-router.get('/validate', async (req: Request, res: Response) => {
+router.get('/validate', (async (req, res) => {
   try {
-    const academyId = req.user?.academyId;
+    const academyId = (req as any).user?.academyId;
     
     if (!academyId) {
       return res.status(400).json({ error: 'Academy ID not found' });
@@ -78,14 +78,14 @@ router.get('/validate', async (req: Request, res: Response) => {
       message: error.message
     });
   }
-});
+}) as RequestHandler);
 
 /**
  * Get subscription status and details
  */
-router.get('/status', async (req: Request, res: Response) => {
+router.get('/status', (async (req, res) => {
   try {
-    const academyId = req.user?.academyId;
+    const academyId = (req as any).user?.academyId;
     
     if (!academyId) {
       return res.status(400).json({ error: 'Academy ID not found' });
@@ -147,14 +147,14 @@ router.get('/status', async (req: Request, res: Response) => {
       message: error.message
     });
   }
-});
+}) as RequestHandler);
 
 /**
  * Get subscription history and events
  */
-router.get('/history', async (req: Request, res: Response) => {
+router.get('/history', (async (req, res) => {
   try {
-    const academyId = req.user?.academyId;
+    const academyId = (req as any).user?.academyId;
     
     if (!academyId) {
       return res.status(400).json({ error: 'Academy ID not found' });
@@ -195,14 +195,14 @@ router.get('/history', async (req: Request, res: Response) => {
       message: error.message
     });
   }
-});
+}) as RequestHandler);
 
 /**
  * Force refresh subscription data from Stripe
  */
-router.post('/refresh', async (req: Request, res: Response) => {
+router.post('/refresh', (async (req, res) => {
   try {
-    const academyId = req.user?.academyId;
+    const academyId = (req as any).user?.academyId;
     
     if (!academyId) {
       return res.status(400).json({ error: 'Academy ID not found' });
@@ -237,7 +237,7 @@ router.post('/refresh', async (req: Request, res: Response) => {
       message: error.message
     });
   }
-});
+}) as RequestHandler);
 
 export default router;
 
@@ -246,7 +246,7 @@ export default router;
 // --------------------
 
 // Get Stripe settings (secret key presence and webhook secret)
-router.get('/settings', async (req: Request, res: Response) => {
+router.get('/settings', (async (req, res) => {
   try {
     const result = await query(
       `SELECT key, value, is_secret FROM system_settings WHERE key IN ('stripe.secret_key','stripe.webhook_secret')`
@@ -270,10 +270,10 @@ router.get('/settings', async (req: Request, res: Response) => {
     console.error('Error fetching Stripe settings:', error);
     res.status(500).json({ error: 'Failed to fetch Stripe settings', message: error.message });
   }
-});
+}) as RequestHandler);
 
 // Update Stripe settings
-router.put('/settings', async (req: Request, res: Response) => {
+router.put('/settings', (async (req, res) => {
   try {
     const { secretKey, webhookSecret } = req.body || {};
 
@@ -299,10 +299,10 @@ router.put('/settings', async (req: Request, res: Response) => {
     console.error('Error updating Stripe settings:', error);
     res.status(500).json({ error: 'Failed to update Stripe settings', message: error.message });
   }
-});
+}) as RequestHandler);
 
 // List subscription plans with Stripe mapping
-router.get('/plans', async (_req: Request, res: Response) => {
+router.get('/plans', (async (_req, res) => {
   try {
     const plansResult = await query(
       `SELECT id, name, description, price, currency, billing_cycle, is_active, is_free, stripe_product_id, stripe_price_id
@@ -314,10 +314,10 @@ router.get('/plans', async (_req: Request, res: Response) => {
     console.error('Error listing plans:', error);
     res.status(500).json({ error: 'Failed to list plans', message: error.message });
   }
-});
+}) as RequestHandler);
 
 // Create or update Stripe Product/Price for a plan
-router.post('/plans/:planId/price', async (req: Request, res: Response) => {
+router.post('/plans/:planId/price', (async (req, res) => {
   try {
     const { planId } = req.params;
     const { amount, currency, interval } = req.body;
@@ -340,7 +340,7 @@ router.post('/plans/:planId/price', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Stripe secret key not configured' });
     }
 
-    const stripe = new Stripe(secretKey, { apiVersion: '2024-12-18.acacia', typescript: true });
+    const stripe = new Stripe(secretKey, { apiVersion: '2025-10-29.clover', typescript: true });
 
     const resolvedCurrency = currency || plan.currency || 'USD';
     const resolvedAmount = typeof amount === 'number' ? amount : Number(plan.price);
@@ -379,4 +379,4 @@ router.post('/plans/:planId/price', async (req: Request, res: Response) => {
     console.error('Error creating/updating Stripe price:', error);
     res.status(500).json({ error: 'Failed to create/update Stripe price', message: error.message });
   }
-});
+}) as RequestHandler);

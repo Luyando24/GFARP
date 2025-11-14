@@ -594,46 +594,76 @@ router.patch('/:id/activate', async (req: Request, res: Response) => {
 router.patch('/:id/verify', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { isVerified, reason, adminEmail } = req.body;
+    const { isVerified, reason } = req.body;
+    const adminEmail = (req as any).user?.email;
 
-    if (typeof isVerified !== 'boolean') {
-      return res.status(400).json({
-        success: false,
-        error: 'isVerified must be a boolean value'
-      });
+    // Get current status
+    const academyResult = await query('SELECT is_verified FROM academies WHERE id = $1', [id]);
+    if (academyResult.rows.length === 0) {
+      return res.status(404).json({ success: false, error: 'Academy not found' });
     }
+    const previousStatus = academyResult.rows[0].is_verified;
 
-    // Check if academy exists
-    const existingAcademyResult = await query(
-      'SELECT * FROM academies WHERE id = $1',
-      [id]
-    );
-
-    if (existingAcademyResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        error: 'Academy not found'
-      });
-    }
-
-    // Update academy verification status
+    // Update academy status
     const result = await query(
-      'UPDATE academies SET is_verified = $1, updated_at = $2 WHERE id = $3 RETURNING *',
-      [isVerified, new Date(), id]
+      'UPDATE academies SET is_verified = $1, verified_at = $2, updated_at = NOW() WHERE id = $3 RETURNING *',
+      [isVerified, new Date().toISOString(), id]
     );
 
-    const academy = result.rows[0];
+    // Log activation history
+    await logActivationHistory(
+      academyId,
+      actionType,
+      previousStatus,
+      newStatus,
+      adminEmail,
+      reason,
+      ipAddress,
+      userAgent
+    );
 
-    res.json({
-      success: true,
-      data: {
-        id: academy.id,
-        name: academy.name,
-        email: academy.email,
-        isVerified: academy.is_verified
-      },
-      message: `Academy ${isVerified ? 'verified' : 'unverified'} successfully`
-    });
+    // Send email notifications
+    try {
+      // Get academy details for email
+      const academyResult = await query('SELECT name, email FROM academies WHERE id = $1', [academyId]);
+      if (academyResult.rows.length > 0) {
+        const academy = academyResult.rows[0];
+        
+        // Send email to academy
+        if (actionType === 'activate' || actionType === 'deactivate') {
+          await emailService.sendAcademyActivationEmail(
+            academy.email,
+            academy.name,
+            newStatus,
+            adminEmail || 'system@sofwan.com',
+            reason
+          );
+        } else if (actionType === 'verify' || actionType === 'unverify') {
+          await emailService.sendAcademyVerificationEmail(
+            academy.email,
+            academy.name,
+            newStatus,
+            adminEmail || 'system@sofwan.com',
+            reason
+          );
+        }
+
+        // Send admin notification if adminEmail is provided
+        if (adminEmail) {
+          await emailService.sendAdminNotificationEmail(
+            adminEmail,
+            academy.name,
+            actionType,
+            previousStatus || false,
+            newStatus,
+            reason
+          );
+        }
+      }
+    } catch (emailError) {
+      console.error('Error sending email notifications:', emailError);
+      // Don't throw error to avoid breaking the main operation
+    }
   } catch (error) {
     console.error('Error updating academy verification:', error);
     res.status(500).json({

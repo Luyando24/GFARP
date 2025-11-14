@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { RequestHandler } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import multer from 'multer';
 
@@ -19,7 +19,7 @@ const demoFiles: Record<string, { buffer: Buffer; mimeType: string; originalName
 /**
  * Upload a player document (demo mode)
  */
-export const handleDemoUploadPlayerDocument = async (req: Request, res: Response) => {
+export const handleDemoUploadPlayerDocument: RequestHandler = async (req, res) => {
   try {
     const { playerId, documentType } = req.body;
     const file = req.file;
@@ -76,7 +76,7 @@ export const handleDemoUploadPlayerDocument = async (req: Request, res: Response
 /**
  * Serve a demo file by ID
  */
-export const handleServeDemoFile = async (req: Request, res: Response) => {
+export const handleServeDemoFile: RequestHandler = async (req, res) => {
   try {
     const { fileId } = req.params;
 
@@ -110,7 +110,7 @@ export const handleServeDemoFile = async (req: Request, res: Response) => {
 /**
  * Get player documents (demo mode)
  */
-export const handleDemoGetPlayerDocuments = async (req: Request, res: Response) => {
+export const handleDemoGetPlayerDocuments: RequestHandler = async (req, res) => {
   try {
     const { playerId } = req.params;
 
@@ -132,7 +132,7 @@ export const handleDemoGetPlayerDocuments = async (req: Request, res: Response) 
 /**
  * Delete a player document (demo mode)
  */
-export const handleDemoDeletePlayerDocument = async (req: Request, res: Response) => {
+export const handleDemoDeletePlayerDocument: RequestHandler = async (req, res) => {
   try {
     const { documentId } = req.params;
 

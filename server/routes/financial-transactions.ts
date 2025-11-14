@@ -281,6 +281,7 @@ router.get('/:academyId/summary', async (req: Request, res: Response) => {
   try {
     const { academyId } = req.params;
     const { period = 'monthly', year = new Date().getFullYear() } = req.query;
+    const resolvedYear = typeof year === 'string' ? Number(year) : Number(year);
 
     // Get total revenue and expenses
     const summaryResult = await query(`
@@ -293,7 +294,7 @@ router.get('/:academyId/summary', async (req: Request, res: Response) => {
         AND status = 'completed'
         AND EXTRACT(YEAR FROM transaction_date) = $2
       GROUP BY transaction_type
-    `, [academyId, year]);
+    `, [academyId, resolvedYear]);
 
     // Get category breakdown
     const categoryResult = await query(`
@@ -308,7 +309,7 @@ router.get('/:academyId/summary', async (req: Request, res: Response) => {
         AND EXTRACT(YEAR FROM transaction_date) = $2
       GROUP BY transaction_type, category
       ORDER BY total_amount DESC
-    `, [academyId, year]);
+    `, [academyId, resolvedYear]);
 
     // Get monthly breakdown
     const monthlyResult = await query(`
@@ -322,7 +323,7 @@ router.get('/:academyId/summary', async (req: Request, res: Response) => {
         AND EXTRACT(YEAR FROM transaction_date) = $2
       GROUP BY EXTRACT(MONTH FROM transaction_date), transaction_type
       ORDER BY month
-    `, [academyId, year]);
+    `, [academyId, resolvedYear]);
 
     const summary = summaryResult.rows.reduce((acc, row) => {
       acc[row.transaction_type] = {
@@ -364,6 +365,7 @@ router.get('/:academyId/budget-categories', async (req: Request, res: Response) 
   try {
     const { academyId } = req.params;
     const { year = new Date().getFullYear() } = req.query;
+    const resolvedYear2 = typeof year === 'string' ? Number(year) : Number(year);
 
     const result = await query(`
       SELECT 
@@ -383,7 +385,7 @@ router.get('/:academyId/budget-categories', async (req: Request, res: Response) 
         AND bc.is_active = true
       GROUP BY bc.id
       ORDER BY bc.category_type, bc.category_name
-    `, [academyId, year]);
+    `, [academyId, resolvedYear2]);
 
     const categories = result.rows.map(row => ({
       ...row,

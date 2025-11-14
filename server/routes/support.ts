@@ -180,7 +180,7 @@ router.post('/tickets', async (req, res) => {
     }
 
     const ticketId = uuidv4();
-    const createdBy = req.user?.id || 'anonymous'; // Assuming user info is available in req.user
+    const createdBy = (req as any).user?.id || 'anonymous';
     
     const result = await pool.query(
       `INSERT INTO support_tickets (
@@ -330,7 +330,7 @@ router.post('/tickets/:id/responses', async (req, res) => {
     }
 
     const responseId = uuidv4();
-    const createdBy = req.user?.id || 'anonymous';
+    const createdBy = (req as any).user?.id || 'anonymous';
     
     const result = await pool.query(
       `INSERT INTO ticket_responses (

@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, type RequestHandler } from 'express';
 import { 
   stripe, 
   createStripeCustomer, 
@@ -10,14 +10,14 @@ import {
 } from '../lib/stripe.js';
 import { query, transaction } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
-import { authenticateToken, AuthenticatedRequest } from '../middleware/auth.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = Router();
 
 // Create Stripe customer for academy
-router.post('/create-customer', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/create-customer', authenticateToken, (async (req, res) => {
   try {
-    const academyId = req.user?.id;
+    const academyId = (req as any).user?.id;
     
     if (!academyId) {
       return res.status(401).json({
@@ -80,12 +80,12 @@ router.post('/create-customer', authenticateToken, async (req: AuthenticatedRequ
       error: error.message
     });
   }
-});
+}) as RequestHandler);
 
 // Create subscription with Stripe
-router.post('/create-subscription', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/create-subscription', authenticateToken, (async (req, res) => {
   try {
-    const academyId = req.user?.id;
+    const academyId = (req as any).user?.id;
     const { planId } = req.body;
 
     if (!academyId || !planId) {
@@ -196,6 +196,7 @@ router.post('/create-subscription', authenticateToken, async (req: Authenticated
         plan.stripe_price_id,
         { academyId, planId }
       );
+      const subData: any = (stripeSubscription as any)?.data ?? stripeSubscription;
 
       // Create local subscription record
       const subscriptionId = uuidv4();
@@ -211,12 +212,19 @@ router.post('/create-subscription', authenticateToken, async (req: Authenticated
         planId,
         stripeSubscription.id,
         'PENDING',
-        new Date(stripeSubscription.current_period_start * 1000),
-        new Date(stripeSubscription.current_period_end * 1000),
+        new Date(((subData.current_period_start ?? Math.floor(Date.now() / 1000)) * 1000)),
+        new Date(((subData.current_period_end ?? Math.floor(Date.now() / 1000)) * 1000)),
         true
       ]);
 
-      const clientSecret = stripeSubscription.latest_invoice?.payment_intent?.client_secret;
+      let clientSecret: string | null = null;
+      const latestInvoice: any = (subData.latest_invoice ?? stripeSubscription.latest_invoice);
+      if (typeof latestInvoice !== 'string') {
+        const paymentIntent: any = latestInvoice.payment_intent;
+        if (typeof paymentIntent !== 'string') {
+          clientSecret = paymentIntent?.client_secret ?? null;
+        }
+      }
 
       return {
         type: 'paid',
@@ -239,12 +247,12 @@ router.post('/create-subscription', authenticateToken, async (req: Authenticated
       error: error.message
     });
   }
-});
+}) as RequestHandler);
 
 // Upgrade subscription
-router.post('/upgrade-subscription', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/upgrade-subscription', authenticateToken, (async (req, res) => {
   try {
-    const academyId = req.user?.id;
+    const academyId = (req as any).user?.id;
     const { newPlanId } = req.body;
 
     if (!academyId || !newPlanId) {
@@ -290,6 +298,7 @@ router.post('/upgrade-subscription', authenticateToken, async (req: Authenticate
           currentSubscription.stripe_subscription_id,
           newPlan.stripe_price_id
         );
+        const updatedData: any = (updatedStripeSubscription as any)?.data ?? updatedStripeSubscription;
 
         // Update local subscription
         await client.query(`
@@ -301,14 +310,14 @@ router.post('/upgrade-subscription', authenticateToken, async (req: Authenticate
           WHERE id = $3
         `, [
           newPlanId,
-          new Date(updatedStripeSubscription.current_period_end * 1000),
+          new Date(((updatedData.current_period_end ?? Math.floor(Date.now() / 1000)) * 1000)),
           currentSubscription.id
         ]);
 
         return {
           type: 'stripe_upgrade',
           subscriptionId: currentSubscription.id,
-          stripeSubscriptionId: updatedStripeSubscription.id
+          stripeSubscriptionId: updatedData.id
         };
       } else {
         // Handle local subscription upgrade (e.g., from free to paid)
@@ -340,12 +349,12 @@ router.post('/upgrade-subscription', authenticateToken, async (req: Authenticate
       error: error.message
     });
   }
-});
+}) as RequestHandler);
 
 // Cancel subscription
-router.post('/cancel-subscription', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/cancel-subscription', authenticateToken, (async (req, res) => {
   try {
-    const academyId = req.user?.id;
+    const academyId = (req as any).user?.id;
     const { immediately = false } = req.body;
 
     if (!academyId) {
@@ -406,12 +415,12 @@ router.post('/cancel-subscription', authenticateToken, async (req: Authenticated
       error: error.message
     });
   }
-});
+}) as RequestHandler);
 
 // Create payment intent for one-time payments
-router.post('/create-payment-intent', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.post('/create-payment-intent', authenticateToken, (async (req, res) => {
   try {
-    const academyId = req.user?.id;
+    const academyId = (req as any).user?.id;
     const { amount, currency = 'usd', description } = req.body;
 
     if (!academyId || !amount) {
@@ -459,12 +468,12 @@ router.post('/create-payment-intent', authenticateToken, async (req: Authenticat
       error: error.message
     });
   }
-});
+}) as RequestHandler);
 
 // Get subscription status
-router.get('/subscription-status', authenticateToken, async (req: AuthenticatedRequest, res: Response) => {
+router.get('/subscription-status', authenticateToken, (async (req, res) => {
   try {
-    const academyId = req.user?.id;
+    const academyId = (req as any).user?.id;
 
     if (!academyId) {
       return res.status(401).json({
@@ -499,10 +508,11 @@ router.get('/subscription-status', authenticateToken, async (req: AuthenticatedR
     if (subscription.stripe_subscription_id) {
       try {
         const stripeSubscription = await getStripeSubscription(subscription.stripe_subscription_id);
+        const subData: any = (stripeSubscription as any)?.data ?? stripeSubscription;
         stripeStatus = {
-          status: stripeSubscription.status,
-          currentPeriodEnd: new Date(stripeSubscription.current_period_end * 1000),
-          cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end
+          status: subData.status,
+          currentPeriodEnd: new Date(((subData.current_period_end ?? Math.floor(Date.now() / 1000)) * 1000)),
+          cancelAtPeriodEnd: subData.cancel_at_period_end
         };
       } catch (error) {
         console.error('Error fetching Stripe subscription:', error);
@@ -534,6 +544,6 @@ router.get('/subscription-status', authenticateToken, async (req: AuthenticatedR
       error: error.message
     });
   }
-});
+}) as RequestHandler);
 
 export default router;

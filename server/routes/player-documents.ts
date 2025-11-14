@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import type { RequestHandler } from 'express';
 import multer from 'multer';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
@@ -38,7 +38,7 @@ const VALID_DOCUMENT_TYPES = ['passport_id', 'player_photo', 'proof_of_training'
 /**
  * Upload a player document
  */
-export const handleUploadPlayerDocument = async (req: Request, res: Response) => {
+export const handleUploadPlayerDocument: RequestHandler = async (req, res) => {
   try {
     const { playerId, documentType } = req.body;
     const file = req.file;
@@ -101,7 +101,7 @@ export const handleUploadPlayerDocument = async (req: Request, res: Response) =>
       filePath,
       file.size,
       file.mimetype,
-      req.user?.id || null // Assuming user info is available in req.user
+      (req as any).user?.id || null
     ]);
 
     const document = insertResult.rows[0];
@@ -133,7 +133,7 @@ export const handleUploadPlayerDocument = async (req: Request, res: Response) =>
 /**
  * Get player documents
  */
-export const handleGetPlayerDocuments = async (req: Request, res: Response) => {
+export const handleGetPlayerDocuments: RequestHandler = async (req, res) => {
   try {
     const { playerId } = req.params;
 
@@ -186,7 +186,7 @@ export const handleGetPlayerDocuments = async (req: Request, res: Response) => {
 /**
  * Delete a player document
  */
-export const handleDeletePlayerDocument = async (req: Request, res: Response) => {
+export const handleDeletePlayerDocument: RequestHandler = async (req, res) => {
   try {
     const { documentId } = req.params;
 

@@ -256,7 +256,7 @@ export const handleGetSubscriptions: RequestHandler = async (req, res) => {
       plan: 'basic' as const,
       status: 'active' as const,
       startDate: row.created_at,
-      endDate: new Date(new Date(row.created_at).getTime() + 365 * 24 * 60 * 60 * 1000), // 1 year from start
+      endDate: new Date(new Date(row.created_at).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from start
       userCount: parseInt(row.user_count) || 0,
       monthlyRevenue: 99 // Fixed monthly revenue for basic plan
     }));

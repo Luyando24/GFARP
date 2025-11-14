@@ -1,19 +1,11 @@
-import { Request as ExpressRequest, Response as ExpressResponse, NextFunction } from 'express';
+import type { RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-export interface AuthenticatedRequest extends ExpressRequest {
-  user?: {
-    id: string;
-    email: string;
-    name: string;
-  };
-}
-
-export function authenticateToken(req: AuthenticatedRequest, res: ExpressResponse, next: NextFunction) {
-  const authHeader = req.get('authorization');
-  const token = authHeader && authHeader.split(' ')[1];
+export const authenticateToken: RequestHandler = (req, res, next) => {
+  const authHeader = req.header('authorization');
+  const token = authHeader?.split(' ')[1];
 
   if (!token) {
     return res.status(401).json({
@@ -24,16 +16,17 @@ export function authenticateToken(req: AuthenticatedRequest, res: ExpressRespons
 
   try {
     const decoded: any = jwt.verify(token, JWT_SECRET);
-    req.user = decoded as {
+    // Attach decoded user onto request (module augmentation ensures typing)
+    (req as any).user = decoded as {
       id: string;
       email: string;
       name: string;
     };
-    return next();
+    next();
   } catch (err) {
     return res.status(403).json({
       success: false,
       message: 'Invalid or expired token'
     });
   }
-}
+};
