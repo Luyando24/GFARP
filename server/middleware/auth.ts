@@ -13,7 +13,7 @@ export interface AuthenticatedRequest extends Request {
 
 export function authenticateToken(req: AuthenticatedRequest, res: Response, next: NextFunction) {
   const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
+  const token = authHeader && authHeader.split(' ')[1];
 
   if (!token) {
     return res.status(401).json({
@@ -30,7 +30,11 @@ export function authenticateToken(req: AuthenticatedRequest, res: Response, next
       });
     }
 
-    req.user = decoded;
+    req.user = decoded as {
+      id: string;
+      email: string;
+      name: string;
+    };
     next();
   });
 }

@@ -272,7 +272,7 @@ export class SubscriptionSyncService {
             (invoice.amount_paid || 0) / 100,
             invoice.currency.toUpperCase(),
             'CARD',
-            invoice.payment_intent,
+            typeof invoice.payment_intent === 'string' ? invoice.payment_intent : invoice.payment_intent?.id,
             invoice.id,
             'COMPLETED',
             'Synced from Stripe'
@@ -324,13 +324,13 @@ export class SubscriptionSyncService {
           const stripeStart = new Date(stripeSubscription.current_period_start * 1000);
           const stripeEnd = new Date(stripeSubscription.current_period_end * 1000);
           
-          if (Math.abs(subscription.start_date.getTime() - stripeStart.getTime()) > 1000) {
+          if (Math.abs(new Date(subscription.start_date).getTime() - stripeStart.getTime()) > 1000) {
             issues.push(
               `Subscription ${subscription.id}: Start date mismatch`
             );
           }
           
-          if (Math.abs(subscription.end_date.getTime() - stripeEnd.getTime()) > 1000) {
+          if (Math.abs(new Date(subscription.end_date).getTime() - stripeEnd.getTime()) > 1000) {
             issues.push(
               `Subscription ${subscription.id}: End date mismatch`
             );
