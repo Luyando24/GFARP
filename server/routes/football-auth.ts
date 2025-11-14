@@ -7,6 +7,146 @@ import { query, transaction, hashPassword, verifyPassword, pool } from '../lib/d
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
+// Ensure subscription schema exists with basic seed data (runtime safeguard)
+async function ensureSubscriptionSchema(client: any) {
+  // Create tables if missing (no UUID default to avoid extension requirements)
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS subscription_plans (
+      id UUID PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      description TEXT,
+      price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      billing_cycle TEXT NOT NULL CHECK (billing_cycle IN ('MONTHLY', 'YEARLY', 'LIFETIME')),
+      player_limit INTEGER NOT NULL DEFAULT 2,
+      storage_limit BIGINT NOT NULL DEFAULT 1073741824,
+      features JSONB NOT NULL DEFAULT '[]',
+      is_active BOOLEAN NOT NULL DEFAULT TRUE,
+      is_free BOOLEAN NOT NULL DEFAULT FALSE,
+      sort_order INTEGER NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS academy_subscriptions (
+      id UUID PRIMARY KEY,
+      academy_id UUID NOT NULL REFERENCES academies(id) ON DELETE CASCADE,
+      plan_id UUID NOT NULL REFERENCES subscription_plans(id) ON DELETE RESTRICT,
+      status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACTIVE', 'EXPIRED', 'CANCELLED', 'SUSPENDED')),
+      start_date TIMESTAMPTZ,
+      end_date TIMESTAMPTZ,
+      auto_renew BOOLEAN NOT NULL DEFAULT FALSE,
+      payment_method TEXT CHECK (payment_method IN ('CASH', 'BANK_TRANSFER', 'MOBILE_MONEY', 'CARD', 'PAYPAL')),
+      payment_status TEXT NOT NULL DEFAULT 'PENDING' CHECK (payment_status IN ('PENDING', 'PAID', 'FAILED', 'REFUNDED')),
+      amount_paid DECIMAL(10,2),
+      payment_reference TEXT,
+      notes TEXT,
+      activated_by UUID,
+      activated_at TIMESTAMPTZ,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS subscription_history (
+      id UUID PRIMARY KEY,
+      subscription_id UUID NOT NULL REFERENCES academy_subscriptions(id) ON DELETE CASCADE,
+      action TEXT NOT NULL CHECK (action IN ('CREATED', 'ACTIVATED', 'RENEWED', 'UPGRADED', 'DOWNGRADED', 'SUSPENDED', 'CANCELLED', 'EXPIRED')),
+      old_status TEXT,
+      new_status TEXT,
+      old_plan_id UUID REFERENCES subscription_plans(id),
+      new_plan_id UUID REFERENCES subscription_plans(id),
+      performed_by UUID,
+      notes TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS subscription_payments (
+      id UUID PRIMARY KEY,
+      subscription_id UUID NOT NULL REFERENCES academy_subscriptions(id) ON DELETE CASCADE,
+      amount DECIMAL(10,2) NOT NULL,
+      currency TEXT NOT NULL DEFAULT 'USD',
+      payment_method TEXT NOT NULL CHECK (payment_method IN ('CASH', 'BANK_TRANSFER', 'MOBILE_MONEY', 'CARD', 'PAYPAL')),
+      payment_reference TEXT,
+      payment_date TIMESTAMPTZ,
+      status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'COMPLETED', 'FAILED', 'REFUNDED')),
+      processed_by UUID,
+      notes TEXT,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+
+  // Indexes
+  await client.query(`CREATE INDEX IF NOT EXISTS idx_subscription_plans_active ON subscription_plans(is_active, sort_order);`);
+  await client.query(`CREATE INDEX IF NOT EXISTS idx_academy_subscriptions_academy ON academy_subscriptions(academy_id);`);
+  await client.query(`CREATE INDEX IF NOT EXISTS idx_academy_subscriptions_status ON academy_subscriptions(status);`);
+
+  // Seed default plans if missing
+  const { rows: planRows } = await client.query(`SELECT COUNT(*)::int AS count FROM subscription_plans`);
+  if ((planRows[0]?.count ?? 0) === 0) {
+    const makePlan = (name: string, desc: string, price: number, cycle: 'MONTHLY' | 'YEARLY' | 'LIFETIME', players: number, storage: number, features: any[], isFree: boolean, order: number) => ({
+      id: uuidv4(), name, description: desc, price, currency: 'USD', billing_cycle: cycle, player_limit: players, storage_limit: storage, features: JSON.stringify(features), is_active: true, is_free: isFree, sort_order: order,
+    });
+    const plans = [
+      makePlan('Free Plan', 'Perfect for small academies getting started', 0.00, 'LIFETIME', 2, 1073741824, [
+        'Basic player management', 'Document storage (1GB)', 'Email support', 'Basic reporting'
+      ], true, 1),
+      makePlan('Basic Plan', 'Great for growing academies', 29.99, 'MONTHLY', 50, 5368709120, [
+        'Advanced player management', 'Document storage (5GB)', 'Email support', 'Advanced reporting', 'Player analytics'
+      ], false, 2),
+      makePlan('Pro Plan', 'For established academies', 59.99, 'MONTHLY', 200, 10737418240, [
+        'Unlimited player management', 'Document storage (10GB)', 'Priority support', 'Advanced analytics', 'Custom reports', 'API access'
+      ], false, 3),
+      makePlan('Elite Plan', 'For large academies and organizations', 99.99, 'MONTHLY', 1000, 53687091200, [
+        'Unlimited features', 'Document storage (50GB)', '24/7 support', 'White-label options', 'Multi-academy management', 'Advanced integrations'
+      ], false, 4),
+    ];
+    for (const p of plans) {
+      await client.query(
+        `INSERT INTO subscription_plans (id, name, description, price, currency, billing_cycle, player_limit, storage_limit, features, is_active, is_free, sort_order)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+         ON CONFLICT (name) DO NOTHING`,
+        [p.id, p.name, p.description, p.price, p.currency, p.billing_cycle, p.player_limit, p.storage_limit, p.features, p.is_active, p.is_free, p.sort_order]
+      );
+    }
+  }
+}
+
+// Ensure academies table exists with expected columns
+async function ensureAcademiesSchema(client: any) {
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS academies (
+      id UUID PRIMARY KEY,
+      name TEXT NOT NULL,
+      code TEXT NOT NULL UNIQUE,
+      email TEXT,
+      password_hash TEXT,
+      address TEXT,
+      district TEXT,
+      province TEXT,
+      phone TEXT,
+      website TEXT,
+      academy_type TEXT CHECK (academy_type IN ('youth','professional','community','elite')),
+      status TEXT DEFAULT 'active' CHECK (status IN ('active','inactive','suspended')),
+      director_name TEXT,
+      director_email TEXT,
+      director_phone TEXT,
+      founded_year INTEGER,
+      facilities TEXT[],
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    );
+  `);
+  // Ensure storage_used column exists
+  await client.query(`ALTER TABLE academies ADD COLUMN IF NOT EXISTS storage_used BIGINT DEFAULT 0;`);
+}
+
 // Academy Registration
 export async function handleAcademyRegister(req: Request, res: Response) {
   try {
@@ -153,6 +293,10 @@ export async function handleAcademyRegister(req: Request, res: Response) {
 
     // Use transaction to ensure all operations succeed or fail together
     const result = await transaction(async (client) => {
+      // Ensure subscription schema exists and plans are seeded
+      await ensureSubscriptionSchema(client);
+      // Ensure academies schema exists
+      await ensureAcademiesSchema(client);
       // Hash password
       const hashedPassword = await hashPassword(password);
       
@@ -322,10 +466,11 @@ export async function handleAcademyRegister(req: Request, res: Response) {
     });
   } catch (error: any) {
     console.error('Academy registration error:', error);
+    const reason = error?.message || 'Unknown error';
     return res.status(500).json({
       success: false,
-      message: 'Failed to register academy',
-      error: error.message || 'Unknown error'
+      message: `Failed to register academy: ${reason}`,
+      error: reason
     });
   }
 }
