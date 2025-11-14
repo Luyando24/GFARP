@@ -8,6 +8,9 @@ function resolveConnectionString(): string | undefined {
   const direct =
     process.env.DATABASE_URL ||
     process.env.SUPABASE_DB_URL ||
+    process.env.SUPABASE_DB_POOL_URL ||
+    process.env.SUPABASE_POOLED_DATABASE_URL ||
+    process.env.SUPABASE_PGBOUNCER_URL ||
     process.env.SUPABASE_DATABASE_URL ||
     process.env.POSTGRES_URL ||
     process.env.POSTGRES_PRISMA_URL ||
@@ -40,7 +43,11 @@ const pool: pkg.Pool | null = resolvedConnectionString
   ? new Pool({
       connectionString: resolvedConnectionString,
       ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-      max: 20,
+      max: parseInt(process.env.DB_POOL_MAX || '5'),
+      connectionTimeoutMillis: parseInt(process.env.DB_CONNECT_TIMEOUT_MS || '8000'),
+      idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS || '0'),
+      keepAlive: true,
+      keepAliveInitialDelayMillis: 10000,
     })
   : null;
 
