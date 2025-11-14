@@ -223,7 +223,45 @@ export async function handleAcademyRegister(req: Request, res: Response) {
 // Academy Login
 export async function handleAcademyLogin(req: Request, res: Response) {
   try {
-    const { email, password } = req.body as { email?: string; password?: string };
+    // Robust body parsing to support serverless environments and edge cases
+    let email: string | undefined;
+    let password: string | undefined;
+
+    // Prefer JSON-parsed body
+    const incomingBody: any = (req as any).body;
+    if (incomingBody) {
+      if (typeof incomingBody === 'string') {
+        try {
+          const parsed = JSON.parse(incomingBody);
+          email = parsed?.email;
+          password = parsed?.password;
+        } catch (_) {
+          // ignore JSON parse error
+        }
+      } else if (typeof incomingBody === 'object') {
+        email = incomingBody?.email;
+        password = incomingBody?.password;
+      }
+    }
+
+    // Fallback: attempt to parse raw body if present
+    if ((!email || !password) && (req as any).rawBody && typeof (req as any).rawBody === 'string') {
+      try {
+        const parsed = JSON.parse((req as any).rawBody);
+        email = email || parsed?.email;
+        password = password || parsed?.password;
+      } catch (_) {
+        // ignore
+      }
+    }
+
+    // Fallback: accept query parameters in emergency cases
+    if (!email || !password) {
+      const q: any = (req as any).query || {};
+      if (typeof q.email === 'string') email = email || q.email;
+      if (typeof q.password === 'string') password = password || q.password;
+    }
+
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
