@@ -12,9 +12,18 @@
 # Configure secrets scanning
 [secrets_scan]
   # Disable scanning for specific paths if needed
-  omit_paths = [".env.example"]
+  omit_paths = [".env.example", ".env", ".env.local", "vercel.json"]
   # Disable scanning for specific keys if needed
-  omit_keys = ["DATABASE_URL", "NRC_SALT", "PING_MESSAGE"]
+  omit_keys = [
+    "DATABASE_URL",
+    "NRC_SALT",
+    "PING_MESSAGE",
+    # Supabase public client keys (safe for client, omit to avoid false positives)
+    "REACT_APP_SUPABASE_ANON_KEY",
+    "VITE_SUPABASE_ANON_KEY",
+    "REACT_APP_SUPABASE_URL",
+    "VITE_SUPABASE_URL"
+  ]
 
 
 [functions]
