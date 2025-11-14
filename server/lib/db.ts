@@ -37,12 +37,44 @@ function resolveConnectionString(): string | undefined {
 
 const resolvedConnectionString = resolveConnectionString();
 
+// Determine appropriate SSL option. Supabase (including pooler.supabase.com)
+// requires TLS and can present a certificate chain that breaks strict
+// verification in some environments. We relax verification specifically
+// for Supabase/pooler hosts and when sslmode=require is present.
+function computeSslOption(urlStr: string | undefined): any {
+  if (!urlStr) {
+    return process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false;
+  }
+  try {
+    const u = new URL(urlStr);
+    const host = (u.hostname || '').toLowerCase();
+    const sslmode = (u.searchParams.get('sslmode') || '').toLowerCase();
+
+    const isSupabaseHost =
+      host.endsWith('supabase.co') ||
+      host.endsWith('supabase.com') ||
+      host.includes('pooler.supabase.com');
+
+    const envSslRequire = ['require', 'prefer'].includes((process.env.PGSSLMODE || '').toLowerCase())
+      || (process.env.DB_SSL === 'true')
+      || (process.env.DB_SSL_MODE || '').toLowerCase() === 'require';
+
+    if (isSupabaseHost || sslmode === 'require' || envSslRequire) {
+      return { rejectUnauthorized: false };
+    }
+
+    return process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false;
+  } catch {
+    return process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false;
+  }
+}
+
 // Only create a pool if we have a valid connection string.
 // This prevents implicit localhost (127.0.0.1:5432) connections on Netlify.
 const pool: pkg.Pool | null = resolvedConnectionString
   ? new Pool({
       connectionString: resolvedConnectionString,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      ssl: computeSslOption(resolvedConnectionString),
       max: parseInt(process.env.DB_POOL_MAX || '5'),
       connectionTimeoutMillis: parseInt(process.env.DB_CONNECT_TIMEOUT_MS || '8000'),
       idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS || '0'),
@@ -179,15 +211,25 @@ export function hashNationalId(nationalId: string): string {
 
 // Graceful shutdown
 process.on('SIGINT', async () => {
-  console.log('Closing database pool...');
-  await pool.end();
-  process.exit(0);
+  try {
+    if (pool) {
+      console.log('Closing database pool...');
+      await pool.end();
+    }
+  } finally {
+    process.exit(0);
+  }
 });
 
 process.on('SIGTERM', async () => {
-  console.log('Closing database pool...');
-  await pool.end();
-  process.exit(0);
+  try {
+    if (pool) {
+      console.log('Closing database pool...');
+      await pool.end();
+    }
+  } finally {
+    process.exit(0);
+  }
 });
 
 export { pool };

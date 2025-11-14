@@ -18,7 +18,11 @@ function loadEnv() {
 }
 
 function supabaseSsl(url) {
-  return url && /supabase\.co/.test(url) ? { rejectUnauthorized: false } : undefined;
+  // Supabase pooler uses supabase.com, REST/DB hosts use supabase.co.
+  // Node 'pg' expects ssl option; recognize both domains and enable TLS.
+  return url && /(supabase\.co|supabase\.com)/.test(url)
+    ? { rejectUnauthorized: false }
+    : undefined;
 }
 
 (async () => {
@@ -37,7 +41,12 @@ function supabaseSsl(url) {
     } catch {}
     console.log(`Connecting to ${hostInfo}`);
 
-    const client = new Client({ connectionString: url, ssl: supabaseSsl(url) });
+    const sslCfg = supabaseSsl(url);
+    if (sslCfg) {
+      // As a safety net for Node TLS in some environments
+      process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    }
+    const client = new Client({ connectionString: url, ssl: sslCfg });
     await client.connect();
 
     const info = await client.query(
