@@ -223,6 +223,22 @@ export async function handleAcademyRegister(req: Request, res: Response) {
 // Academy Login
 export async function handleAcademyLogin(req: Request, res: Response) {
   try {
+    // Guard: database connection must be configured in production/serverless
+    const dbConn = process.env.DATABASE_URL
+      || process.env.SUPABASE_DB_URL
+      || process.env.POSTGRES_URL
+      || process.env.POSTGRES_PRISMA_URL
+      || process.env.PG_CONNECTION_STRING;
+    if (!dbConn) {
+      return res.status(503).json({
+        success: false,
+        message: 'Service unavailable: database not configured',
+        details: {
+          hint: 'Set DATABASE_URL (or SUPABASE_DB_URL) in Netlify environment variables',
+        }
+      });
+    }
+
     // Debug instrumentation to inspect incoming request shape
     const ct = req.headers['content-type'];
     const method = req.method;

@@ -2,17 +2,37 @@ import pkg from 'pg';
 const { Pool } = pkg;
 import bcrypt from 'bcryptjs';
 
-// Database connection pool using DATABASE_URL
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 20, // Maximum number of connections in the pool
-});
+// Resolve database connection string for production/serverless environments
+const resolvedConnectionString =
+  process.env.DATABASE_URL ||
+  process.env.SUPABASE_DB_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.PG_CONNECTION_STRING ||
+  undefined;
+
+// Only create a pool if we have a valid connection string.
+// This prevents implicit localhost (127.0.0.1:5432) connections on Netlify.
+const pool: pkg.Pool | null = resolvedConnectionString
+  ? new Pool({
+      connectionString: resolvedConnectionString,
+      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
+      max: 20,
+    })
+  : null;
 
 // Helper function to execute queries
 import { QueryResultRow } from 'pg';
 
 export async function query(text: string, params?: (string | number | boolean | null)[]): Promise<{ rows: QueryResultRow[] }> {
+  if (!pool) {
+    const details = {
+      message: 'Database connection string not configured',
+      expectedEnv: ['DATABASE_URL', 'SUPABASE_DB_URL', 'POSTGRES_URL', 'POSTGRES_PRISMA_URL', 'PG_CONNECTION_STRING'],
+    };
+    console.error('[DB] Unavailable:', details);
+    throw new Error('Database unavailable: set DATABASE_URL (or SUPABASE_DB_URL)');
+  }
   const client = await pool.connect();
   try {
     const result = await client.query(text, params);
@@ -77,6 +97,9 @@ export async function query(text: string, params?: (string | number | boolean | 
 
 // Helper function to execute transactions
 export async function transaction<T>(callback: (client: any) => Promise<T>): Promise<T> {
+  if (!pool) {
+    throw new Error('Database unavailable: set DATABASE_URL (or SUPABASE_DB_URL)');
+  }
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
