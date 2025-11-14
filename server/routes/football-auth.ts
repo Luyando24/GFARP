@@ -10,19 +10,129 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 // Academy Registration
 export async function handleAcademyRegister(req: Request, res: Response) {
   try {
-    const {
-      name,
-      email,
-      password,
-      contactPerson,
-      phone,
-      address,
-      city,
-      country,
-      foundedYear,
-      description,
-      subscriptionPlan
-    } = req.body;
+    // Guard: database pool must be initialized
+    if (!pool) {
+      return res.status(503).json({
+        success: false,
+        message: 'Service unavailable: database not configured',
+        details: {
+          acceptedEnv: [
+            'DATABASE_URL',
+            'SUPABASE_DB_URL',
+            'SUPABASE_DATABASE_URL',
+            'POSTGRES_URL',
+            'POSTGRES_PRISMA_URL',
+            'PG_CONNECTION_STRING',
+            'PGHOST/PGUSER/PGPASSWORD/PGDATABASE/PGPORT'
+          ],
+          hint: 'Configure one of the accepted variables in Netlify Site settings → Environment variables',
+        }
+      });
+    }
+
+    // Debug instrumentation to inspect incoming request shape
+    const ct = req.headers['content-type'];
+    const method = req.method;
+    const url = req.url;
+    const bodyType = typeof (req as any).body;
+    let safePreview: any = undefined;
+    try {
+      const b: any = (req as any).body;
+      if (b && typeof b === 'object') {
+        safePreview = {
+          keys: Object.keys(b),
+          name: b.name,
+          email: b.email,
+          contactPerson: b.contactPerson,
+        };
+      } else if (typeof b === 'string') {
+        safePreview = `${b.slice(0, 120)}...`;
+      }
+    } catch (_) { /* ignore */ }
+    console.log('[academy/register] req debug', { method, url, ct, bodyType, bodyPreview: safePreview });
+
+    // Robust body parsing to support serverless environments and edge cases
+    let name: string | undefined;
+    let email: string | undefined;
+    let password: string | undefined;
+    let contactPerson: string | undefined;
+    let phone: string | undefined;
+    let address: string | undefined;
+    let city: string | undefined;
+    let country: string | undefined;
+    let foundedYear: number | string | undefined;
+    let description: string | undefined;
+    let subscriptionPlan: string | undefined;
+
+    const assignFrom = (src: any) => {
+      if (!src || typeof src !== 'object') return;
+      name = name ?? src.name;
+      email = email ?? src.email;
+      password = password ?? src.password;
+      contactPerson = contactPerson ?? (src.contactPerson || src.directorName);
+      phone = phone ?? src.phone;
+      address = address ?? src.address;
+      city = city ?? (src.city || src.district);
+      country = country ?? (src.country || src.province);
+      foundedYear = foundedYear ?? (src.foundedYear ?? src.establishedYear);
+      description = description ?? src.description;
+      subscriptionPlan = subscriptionPlan ?? (src.subscriptionPlan ?? src.selectedPlan);
+    };
+
+    // Prefer JSON-parsed body
+    const incomingBody: any = (req as any).body;
+    if (incomingBody) {
+      if (typeof incomingBody === 'string') {
+        try { assignFrom(JSON.parse(incomingBody)); } catch (_) {}
+      } else if (Buffer.isBuffer(incomingBody)) {
+        try { assignFrom(JSON.parse(incomingBody.toString('utf8'))); } catch (_) {}
+      } else if (typeof incomingBody === 'object') {
+        assignFrom(incomingBody);
+      }
+    }
+
+    // Fallback: parse raw body if present
+    const rawBody: any = (req as any).rawBody;
+    if ((!name || !email) && rawBody) {
+      try {
+        if (typeof rawBody === 'string') {
+          assignFrom(JSON.parse(rawBody));
+        } else if (Buffer.isBuffer(rawBody)) {
+          assignFrom(JSON.parse(rawBody.toString('utf8')));
+        }
+      } catch (_) {}
+    }
+
+    // Fallback: read request stream
+    if (!name || !email || !password) {
+      const chunks: Buffer[] = [];
+      try {
+        await new Promise<void>((resolve) => {
+          const onData = (chunk: Buffer) => chunks.push(chunk);
+          const onEnd = () => {
+            req.off('data', onData);
+            req.off('end', onEnd);
+            resolve();
+          };
+          req.on('data', onData);
+          req.on('end', onEnd);
+        });
+        const raw = Buffer.concat(chunks).toString('utf8');
+        if (raw) { try { assignFrom(JSON.parse(raw)); } catch (_) {} }
+      } catch (_) {}
+    }
+
+    // Netlify/serverless: read original event body if present
+    if (!name || !email || !password) {
+      try {
+        const event: any = (req as any).event || (req as any).apiGateway || (req as any).requestContext?.event;
+        const bodyFromEvent = event?.body;
+        if (bodyFromEvent) {
+          const raw = event.isBase64Encoded ? Buffer.from(bodyFromEvent, 'base64').toString('utf8') : bodyFromEvent;
+          assignFrom(JSON.parse(raw));
+        }
+      } catch (_) {}
+    }
 
     // Validate required fields
     if (!name || !email || !password || !contactPerson || !phone || !address || !city || !country) {
