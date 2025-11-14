@@ -100,28 +100,185 @@ export async function handleGetPlans(req: Request, res: Response) {
       WHERE is_active = true 
       ORDER BY sort_order ASC
     `;
-    
-    const result = await query(plansQuery);
-    
-    const plans = result.rows.map(plan => ({
-      id: plan.id,
-      name: plan.name,
-      description: plan.description,
-      price: parseFloat(plan.price),
-      currency: plan.currency,
-      billingCycle: plan.billing_cycle,
-      playerLimit: plan.player_limit,
-      storageLimit: plan.storage_limit,
-      features: plan.features,
-      isActive: plan.is_active,
-      isFree: plan.is_free,
-      sortOrder: plan.sort_order
-    }));
+    try {
+      const result = await query(plansQuery);
 
-    res.json({
-      success: true,
-      data: plans
-    });
+      let plans = result.rows.map(plan => ({
+        id: plan.id,
+        name: plan.name,
+        description: plan.description,
+        price: parseFloat(plan.price),
+        currency: plan.currency,
+        billingCycle: plan.billing_cycle,
+        playerLimit: plan.player_limit,
+        storageLimit: plan.storage_limit,
+        features: plan.features,
+        isActive: plan.is_active,
+        isFree: plan.is_free,
+        sortOrder: plan.sort_order
+      }));
+
+      // Fallback: if no active plans are available, provide a safe default set
+      if (!plans || plans.length === 0) {
+        console.warn('No active subscription plans found in DB. Returning fallback plans.');
+        plans = [
+          {
+            id: 'free',
+            name: 'Free Plan',
+            description: 'Get started with core features for small academies.',
+            price: 0,
+            currency: 'USD',
+            billingCycle: 'MONTHLY',
+            playerLimit: 25,
+            storageLimit: 1024,
+            features: [
+              'Basic player management',
+              'Limited storage',
+              'Community support'
+            ],
+            isActive: true,
+            isFree: true,
+            sortOrder: 1
+          },
+          {
+            id: 'basic',
+            name: 'Basic Plan',
+            description: 'Essential tools for growing academies.',
+            price: 19.99,
+            currency: 'USD',
+            billingCycle: 'MONTHLY',
+            playerLimit: 100,
+            storageLimit: 5120,
+            features: [
+              'Advanced player tracking',
+              'Priority support',
+              'Expanded storage'
+            ],
+            isActive: true,
+            isFree: false,
+            sortOrder: 2
+          },
+          {
+            id: 'pro',
+            name: 'Pro Plan',
+            description: 'Professional features for established academies.',
+            price: 49.99,
+            currency: 'USD',
+            billingCycle: 'MONTHLY',
+            playerLimit: 500,
+            storageLimit: 20480,
+            features: [
+              'Advanced analytics',
+              'Priority support',
+              'High storage limits'
+            ],
+            isActive: true,
+            isFree: false,
+            sortOrder: 3
+          },
+          {
+            id: 'elite',
+            name: 'Elite Plan',
+            description: 'All features unlocked for large academies.',
+            price: 99.99,
+            currency: 'USD',
+            billingCycle: 'MONTHLY',
+            playerLimit: 2000,
+            storageLimit: 51200,
+            features: [
+              'Full analytics suite',
+              'Dedicated support',
+              'Maximum storage limits'
+            ],
+            isActive: true,
+            isFree: false,
+            sortOrder: 4
+          }
+        ];
+      }
+
+      return res.json({
+        success: true,
+        data: plans
+      });
+    } catch (dbError: any) {
+      console.error('Get plans DB error, returning fallback:', dbError);
+      const plans = [
+        {
+          id: 'free',
+          name: 'Free Plan',
+          description: 'Get started with core features for small academies.',
+          price: 0,
+          currency: 'USD',
+          billingCycle: 'MONTHLY',
+          playerLimit: 25,
+          storageLimit: 1024,
+          features: [
+            'Basic player management',
+            'Limited storage',
+            'Community support'
+          ],
+          isActive: true,
+          isFree: true,
+          sortOrder: 1
+        },
+        {
+          id: 'basic',
+          name: 'Basic Plan',
+          description: 'Essential tools for growing academies.',
+          price: 19.99,
+          currency: 'USD',
+          billingCycle: 'MONTHLY',
+          playerLimit: 100,
+          storageLimit: 5120,
+          features: [
+            'Advanced player tracking',
+            'Priority support',
+            'Expanded storage'
+          ],
+          isActive: true,
+          isFree: false,
+          sortOrder: 2
+        },
+        {
+          id: 'pro',
+          name: 'Pro Plan',
+          description: 'Professional features for established academies.',
+          price: 49.99,
+          currency: 'USD',
+          billingCycle: 'MONTHLY',
+          playerLimit: 500,
+          storageLimit: 20480,
+          features: [
+            'Advanced analytics',
+            'Priority support',
+            'High storage limits'
+          ],
+          isActive: true,
+          isFree: false,
+          sortOrder: 3
+        },
+        {
+          id: 'elite',
+          name: 'Elite Plan',
+          description: 'All features unlocked for large academies.',
+          price: 99.99,
+          currency: 'USD',
+          billingCycle: 'MONTHLY',
+          playerLimit: 2000,
+          storageLimit: 51200,
+          features: [
+            'Full analytics suite',
+            'Dedicated support',
+            'Maximum storage limits'
+          ],
+          isActive: true,
+          isFree: false,
+          sortOrder: 4
+        }
+      ];
+      return res.json({ success: true, data: plans });
+    }
   } catch (error: any) {
     console.error('Get plans error:', error);
     res.status(500).json({

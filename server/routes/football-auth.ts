@@ -97,18 +97,39 @@ export async function handleAcademyRegister(req: Request, res: Response) {
       };
 
       // Get the subscription plan (default to 'free' if not provided)
-      const selectedPlanId = subscriptionPlan || 'free';
-      const selectedPlanName = planIdToName[selectedPlanId] || 'Free Plan';
-      
-      // Get subscription plan details
-      const planQuery = `SELECT * FROM subscription_plans WHERE name = $1`;
-      const planResult = await client.query(planQuery, [selectedPlanName]);
-      
-      if (planResult.rows.length === 0) {
-        throw new Error(`Subscription plan '${selectedPlanName}' not found`);
+      const selectedPlanInput = subscriptionPlan || 'free';
+      let plan: any = null;
+
+      if (planIdToName[selectedPlanInput]) {
+        // Input is a known slug; look up by name
+        const selectedPlanName = planIdToName[selectedPlanInput];
+        const planByName = await client.query(
+          `SELECT * FROM subscription_plans WHERE name = $1 AND is_active = true`,
+          [selectedPlanName]
+        );
+        if (planByName.rows.length === 0) {
+          throw new Error(`Subscription plan '${selectedPlanName}' not found`);
+        }
+        plan = planByName.rows[0];
+      } else {
+        // Input may be a UUID; try by id first, then fallback to Free Plan
+        const planById = await client.query(
+          `SELECT * FROM subscription_plans WHERE id = $1 AND is_active = true`,
+          [selectedPlanInput]
+        );
+        if (planById.rows.length > 0) {
+          plan = planById.rows[0];
+        } else {
+          const freePlan = await client.query(
+            `SELECT * FROM subscription_plans WHERE name = $1 AND is_active = true`,
+            ['Free Plan']
+          );
+          if (freePlan.rows.length === 0) {
+            throw new Error(`Subscription plan lookup failed and no active Free Plan is configured`);
+          }
+          plan = freePlan.rows[0];
+        }
       }
-      
-      const plan = planResult.rows[0];
       
       // Create academy subscription
       const subscriptionId = uuidv4();
