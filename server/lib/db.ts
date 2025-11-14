@@ -3,13 +3,35 @@ const { Pool } = pkg;
 import bcrypt from 'bcryptjs';
 
 // Resolve database connection string for production/serverless environments
-const resolvedConnectionString =
-  process.env.DATABASE_URL ||
-  process.env.SUPABASE_DB_URL ||
-  process.env.POSTGRES_URL ||
-  process.env.POSTGRES_PRISMA_URL ||
-  process.env.PG_CONNECTION_STRING ||
-  undefined;
+function resolveConnectionString(): string | undefined {
+  // Common single-variable connection strings
+  const direct =
+    process.env.DATABASE_URL ||
+    process.env.SUPABASE_DB_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.PG_CONNECTION_STRING;
+
+  if (direct) return direct;
+
+  // Support PG* environment variables (often used in CI/deployments)
+  const host = process.env.PGHOST;
+  const user = process.env.PGUSER;
+  const password = process.env.PGPASSWORD;
+  const database = process.env.PGDATABASE;
+  const port = process.env.PGPORT || '5432';
+
+  if (host && user && password && database) {
+    // Construct a standard Postgres connection URL
+    const encodedPassword = encodeURIComponent(password);
+    const url = `postgresql://${user}:${encodedPassword}@${host}:${port}/${database}`;
+    return url;
+  }
+
+  return undefined;
+}
+
+const resolvedConnectionString = resolveConnectionString();
 
 // Only create a pool if we have a valid connection string.
 // This prevents implicit localhost (127.0.0.1:5432) connections on Netlify.
@@ -28,7 +50,14 @@ export async function query(text: string, params?: (string | number | boolean | 
   if (!pool) {
     const details = {
       message: 'Database connection string not configured',
-      expectedEnv: ['DATABASE_URL', 'SUPABASE_DB_URL', 'POSTGRES_URL', 'POSTGRES_PRISMA_URL', 'PG_CONNECTION_STRING'],
+      expectedEnv: [
+        'DATABASE_URL',
+        'SUPABASE_DB_URL',
+        'POSTGRES_URL',
+        'POSTGRES_PRISMA_URL',
+        'PG_CONNECTION_STRING',
+        'PGHOST/PGUSER/PGPASSWORD/PGDATABASE/PGPORT'
+      ],
     };
     console.error('[DB] Unavailable:', details);
     throw new Error('Database unavailable: set DATABASE_URL (or SUPABASE_DB_URL)');

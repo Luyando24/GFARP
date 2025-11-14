@@ -3,7 +3,7 @@ import { Router } from 'express';
 // bcrypt usage is centralized in lib/db; avoid importing here
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import { query, transaction, hashPassword, verifyPassword } from '../lib/db';
+import { query, transaction, hashPassword, verifyPassword, pool } from '../lib/db';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -223,18 +223,21 @@ export async function handleAcademyRegister(req: Request, res: Response) {
 // Academy Login
 export async function handleAcademyLogin(req: Request, res: Response) {
   try {
-    // Guard: database connection must be configured in production/serverless
-    const dbConn = process.env.DATABASE_URL
-      || process.env.SUPABASE_DB_URL
-      || process.env.POSTGRES_URL
-      || process.env.POSTGRES_PRISMA_URL
-      || process.env.PG_CONNECTION_STRING;
-    if (!dbConn) {
+    // Guard: database pool must be initialized (avoids implicit localhost connection)
+    if (!pool) {
       return res.status(503).json({
         success: false,
         message: 'Service unavailable: database not configured',
         details: {
-          hint: 'Set DATABASE_URL (or SUPABASE_DB_URL) in Netlify environment variables',
+          acceptedEnv: [
+            'DATABASE_URL',
+            'SUPABASE_DB_URL',
+            'POSTGRES_URL',
+            'POSTGRES_PRISMA_URL',
+            'PG_CONNECTION_STRING',
+            'PGHOST/PGUSER/PGPASSWORD/PGDATABASE/PGPORT'
+          ],
+          hint: 'Configure one of the accepted variables in Netlify Site settings → Environment variables',
         }
       });
     }
