@@ -306,11 +306,38 @@ export async function handleAcademyRegister(req: Request, res: Response) {
 
     // Use transaction to ensure all operations succeed or fail together
     const result = await transaction(async (client) => {
-      // Ensure academies schema exists (first, so we can detect id type)
-      await ensureAcademiesSchema(client);
+      const runtimeSchemaGuards = (process.env.DB_RUNTIME_GUARDS || 'on').toLowerCase() === 'on';
+
+      // In development we can auto-create missing tables; in production prefer explicit migrations
+      if (runtimeSchemaGuards) {
+        await ensureAcademiesSchema(client);
+      } else {
+        const { rows: [existsRow] } = await client.query(
+          `SELECT EXISTS (
+             SELECT 1 FROM information_schema.tables 
+             WHERE table_schema = 'public' AND table_name = 'academies'
+           ) AS exists`
+        );
+        if (!existsRow?.exists) {
+          throw new Error('Database schema missing: academies table is not present. Disable DB_RUNTIME_GUARDS only after running migrations.');
+        }
+      }
+
       const academyIdType = await getAcademiesIdType(client);
-      // Ensure subscription schema exists and plans are seeded with correct FK type
-      await ensureSubscriptionSchema(client, academyIdType);
+
+      if (runtimeSchemaGuards) {
+        await ensureSubscriptionSchema(client, academyIdType);
+      } else {
+        const { rows: [existsSub] } = await client.query(
+          `SELECT EXISTS (
+             SELECT 1 FROM information_schema.tables 
+             WHERE table_schema = 'public' AND table_name = 'subscription_plans'
+           ) AS exists`
+        );
+        if (!existsSub?.exists) {
+          throw new Error('Database schema missing: subscription tables are not present. Disable DB_RUNTIME_GUARDS only after running migrations.');
+        }
+      }
       // Hash password
       const hashedPassword = await hashPassword(password);
       
