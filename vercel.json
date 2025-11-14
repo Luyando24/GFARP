@@ -5,7 +5,7 @@
   "outputDirectory": "dist",
   "builds": [
     { "src": "package.json", "use": "@vercel/static-build", "config": { "distDir": "dist" } },
-    { "src": "api/server/index.ts", "use": "@vercel/node" }
+    { "src": "api/server/index.ts", "use": "@vercel/node", "config": { "maxDuration": 30 } }
   ],
   "routes": [
     {
@@ -30,10 +30,5 @@
     "PGSSLMODE": "require",
     "NRC_SALT": "your_secure_salt_value",
     "PNPM_CONFIG_PREFER_FROZEN_LOCKFILE": "false"
-  },
-  "functions": {
-    "api/server/node-build.js": {
-      "maxDuration": 30
-    }
   }
 }
