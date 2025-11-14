@@ -7,8 +7,20 @@ import { query, transaction, hashPassword, verifyPassword, pool } from '../lib/d
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
+// Determine academies.id column type to align FKs
+async function getAcademiesIdType(client: any): Promise<'uuid' | 'integer'> {
+  const res = await client.query(`
+    SELECT data_type
+    FROM information_schema.columns
+    WHERE table_name = 'academies' AND column_name = 'id'
+  `);
+  const t = res.rows[0]?.data_type?.toLowerCase();
+  if (t === 'integer' || t === 'bigint') return 'integer';
+  return 'uuid';
+}
+
 // Ensure subscription schema exists with basic seed data (runtime safeguard)
-async function ensureSubscriptionSchema(client: any) {
+async function ensureSubscriptionSchema(client: any, academyIdType: 'uuid' | 'integer' = 'uuid') {
   // Create tables if missing (no UUID default to avoid extension requirements)
   await client.query(`
     CREATE TABLE IF NOT EXISTS subscription_plans (
@@ -20,7 +32,7 @@ async function ensureSubscriptionSchema(client: any) {
       billing_cycle TEXT NOT NULL CHECK (billing_cycle IN ('MONTHLY', 'YEARLY', 'LIFETIME')),
       player_limit INTEGER NOT NULL DEFAULT 2,
       storage_limit BIGINT NOT NULL DEFAULT 1073741824,
-      features JSONB NOT NULL DEFAULT '[]',
+      features JSONB NOT NULL DEFAULT '[]'::jsonb,
       is_active BOOLEAN NOT NULL DEFAULT TRUE,
       is_free BOOLEAN NOT NULL DEFAULT FALSE,
       sort_order INTEGER NOT NULL DEFAULT 0,
@@ -29,10 +41,11 @@ async function ensureSubscriptionSchema(client: any) {
     );
   `);
 
+  const academyIdColumn = academyIdType === 'integer' ? 'INTEGER' : 'UUID';
   await client.query(`
     CREATE TABLE IF NOT EXISTS academy_subscriptions (
       id UUID PRIMARY KEY,
-      academy_id UUID NOT NULL REFERENCES academies(id) ON DELETE CASCADE,
+      academy_id ${academyIdColumn} NOT NULL REFERENCES academies(id) ON DELETE CASCADE,
       plan_id UUID NOT NULL REFERENCES subscription_plans(id) ON DELETE RESTRICT,
       status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACTIVE', 'EXPIRED', 'CANCELLED', 'SUSPENDED')),
       start_date TIMESTAMPTZ,
@@ -293,15 +306,17 @@ export async function handleAcademyRegister(req: Request, res: Response) {
 
     // Use transaction to ensure all operations succeed or fail together
     const result = await transaction(async (client) => {
-      // Ensure subscription schema exists and plans are seeded
-      await ensureSubscriptionSchema(client);
-      // Ensure academies schema exists
+      // Ensure academies schema exists (first, so we can detect id type)
       await ensureAcademiesSchema(client);
+      const academyIdType = await getAcademiesIdType(client);
+      // Ensure subscription schema exists and plans are seeded with correct FK type
+      await ensureSubscriptionSchema(client, academyIdType);
       // Hash password
       const hashedPassword = await hashPassword(password);
       
-      // Generate UUID for academy
-      const academyId = uuidv4();
+      // Generate academy id depending on schema type
+      const isUuidId = academyIdType === 'uuid';
+      const academyId = isUuidId ? uuidv4() : null;
       
       // Create academy code
       const academyCode = (name || 'academy')
@@ -310,18 +325,42 @@ export async function handleAcademyRegister(req: Request, res: Response) {
         .replace(/(^-|-$)/g, '') + '-' + Math.random().toString(36).slice(2, 8);
 
       // Insert academy using the correct table structure
-      const academyInsertQuery = `
+      const academyInsertQuery = isUuidId ? `
         INSERT INTO academies (
           id, name, code, email, address, district, province, phone, website,
-          academy_type, status, director_name, director_email, director_phone, 
+          academy_type, status, director_name, director_email, director_phone,
           founded_year, password_hash
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         RETURNING id, name, email, code
+      ` : `
+        INSERT INTO academies (
+          name, code, email, address, district, province, phone, website,
+          academy_type, status, director_name, director_email, director_phone,
+          founded_year, password_hash
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        RETURNING id, name, email, code
       `;
 
-      const academyInsertValues = [
+      const academyInsertValues = isUuidId ? [
         academyId,
+        name,
+        academyCode,
+        email,
+        address || null,
+        city || null,
+        country || null,
+        phone || null,
+        null, // website
+        'youth',
+        'active',
+        contactPerson || null,
+        email || null,
+        phone || null,
+        foundedYear ? parseInt(foundedYear.toString()) : null,
+        hashedPassword
+      ] : [
         name,
         academyCode,
         email,
@@ -361,6 +400,7 @@ export async function handleAcademyRegister(req: Request, res: Response) {
           `SELECT * FROM subscription_plans WHERE name = $1 AND is_active = true`,
           [selectedPlanName]
         );
+        console.log('[academy/register] plan lookup by name', { selectedPlanInput, selectedPlanName, found: planByName.rows[0]?.id });
         if (planByName.rows.length === 0) {
           throw new Error(`Subscription plan '${selectedPlanName}' not found`);
         }
@@ -371,6 +411,7 @@ export async function handleAcademyRegister(req: Request, res: Response) {
           `SELECT * FROM subscription_plans WHERE id = $1 AND is_active = true`,
           [selectedPlanInput]
         );
+        console.log('[academy/register] plan lookup by id', { selectedPlanInput, found: planById.rows[0]?.id });
         if (planById.rows.length > 0) {
           plan = planById.rows[0];
         } else {
@@ -378,6 +419,7 @@ export async function handleAcademyRegister(req: Request, res: Response) {
             `SELECT * FROM subscription_plans WHERE name = $1 AND is_active = true`,
             ['Free Plan']
           );
+          console.log('[academy/register] plan fallback to Free Plan', { found: freePlan.rows[0]?.id });
           if (freePlan.rows.length === 0) {
             throw new Error(`Subscription plan lookup failed and no active Free Plan is configured`);
           }
@@ -402,7 +444,7 @@ export async function handleAcademyRegister(req: Request, res: Response) {
       
       const subscriptionValues = [
         subscriptionId,
-        academyId,
+        academy.id,
         plan.id,
         'ACTIVE',
         startDate,
@@ -465,12 +507,23 @@ export async function handleAcademyRegister(req: Request, res: Response) {
       }
     });
   } catch (error: any) {
-    console.error('Academy registration error:', error);
-    const reason = error?.message || 'Unknown error';
+    const details = {
+      message: error?.message,
+      code: error?.code,
+      detail: error?.detail,
+      constraint: error?.constraint,
+      table: error?.table,
+      schema: error?.schema,
+      stack: error?.stack?.split('\n').slice(0, 3).join(' | '),
+    };
+    console.error('Academy registration error:', details);
+    const reason = details.message || error?.toString?.() || 'Unknown error';
+    const msgSuffix = [details.code, details.constraint, details.detail].filter(Boolean).join(' | ');
     return res.status(500).json({
       success: false,
-      message: `Failed to register academy: ${reason}`,
-      error: reason
+      message: `Failed to register academy: ${reason}${msgSuffix ? ' - ' + msgSuffix : ''}`,
+      error: reason,
+      details
     });
   }
 }
