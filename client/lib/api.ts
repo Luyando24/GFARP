@@ -80,9 +80,8 @@ export interface Transfer {
 
 const API_BASE = (() => {
   if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
-  // In dev on Windows, port 8080 may be occupied on IPv4 by another service.
-  // Prefer IPv6 loopback explicitly to reach the Vite server correctly.
-  if (import.meta.env.DEV) return "http://[::1]:8080/api";
+  // Use same-origin relative base in dev to avoid cross-host CORS quirks
+  if (import.meta.env.DEV) return "/api";
   return "/api";
 })();
 const USE_MOCK =

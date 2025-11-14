@@ -223,6 +223,28 @@ export async function handleAcademyRegister(req: Request, res: Response) {
 // Academy Login
 export async function handleAcademyLogin(req: Request, res: Response) {
   try {
+    // Debug instrumentation to inspect incoming request shape
+    const ct = req.headers['content-type'];
+    const method = req.method;
+    const url = req.url;
+    const bodyType = typeof (req as any).body;
+    let safePreview: any = undefined;
+    try {
+      const b: any = (req as any).body;
+      if (b && typeof b === 'object') {
+        safePreview = {
+          keys: Object.keys(b),
+          email: b.email,
+          password: b.password ? '<redacted>' : undefined,
+        };
+      } else if (typeof b === 'string') {
+        safePreview = `${b.slice(0, 100)}...`;
+      }
+    } catch (_) {
+      // ignore
+    }
+    console.log('[academy/login] req debug', { method, url, ct, bodyType, bodyPreview: safePreview });
+
     // Robust body parsing to support serverless environments and edge cases
     let email: string | undefined;
     let password: string | undefined;
@@ -250,6 +272,35 @@ export async function handleAcademyLogin(req: Request, res: Response) {
         const parsed = JSON.parse((req as any).rawBody);
         email = email || parsed?.email;
         password = password || parsed?.password;
+      } catch (_) {
+        // ignore
+      }
+    }
+
+    // Fallback: try to read request stream directly if body parsers failed
+    if (!email || !password) {
+      const chunks: Buffer[] = [];
+      try {
+        await new Promise<void>((resolve) => {
+          const onData = (chunk: Buffer) => chunks.push(chunk);
+          const onEnd = () => {
+            req.off('data', onData);
+            req.off('end', onEnd);
+            resolve();
+          };
+          req.on('data', onData);
+          req.on('end', onEnd);
+        });
+        const raw = Buffer.concat(chunks).toString('utf8');
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            email = email || parsed?.email;
+            password = password || parsed?.password;
+          } catch (_) {
+            // ignore
+          }
+        }
       } catch (_) {
         // ignore
       }
