@@ -8,6 +8,7 @@ function resolveConnectionString(): string | undefined {
   const direct =
     process.env.DATABASE_URL ||
     process.env.SUPABASE_DB_URL ||
+    process.env.SUPABASE_DATABASE_URL ||
     process.env.POSTGRES_URL ||
     process.env.POSTGRES_PRISMA_URL ||
     process.env.PG_CONNECTION_STRING;
@@ -53,6 +54,7 @@ export async function query(text: string, params?: (string | number | boolean | 
       expectedEnv: [
         'DATABASE_URL',
         'SUPABASE_DB_URL',
+        'SUPABASE_DATABASE_URL',
         'POSTGRES_URL',
         'POSTGRES_PRISMA_URL',
         'PG_CONNECTION_STRING',

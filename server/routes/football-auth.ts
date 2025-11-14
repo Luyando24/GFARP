@@ -232,6 +232,7 @@ export async function handleAcademyLogin(req: Request, res: Response) {
           acceptedEnv: [
             'DATABASE_URL',
             'SUPABASE_DB_URL',
+            'SUPABASE_DATABASE_URL',
             'POSTGRES_URL',
             'POSTGRES_PRISMA_URL',
             'PG_CONNECTION_STRING',
