@@ -260,6 +260,14 @@ export async function handleAcademyLogin(req: Request, res: Response) {
         } catch (_) {
           // ignore JSON parse error
         }
+      } else if (Buffer.isBuffer(incomingBody)) {
+        try {
+          const parsed = JSON.parse(incomingBody.toString('utf8'));
+          email = parsed?.email;
+          password = parsed?.password;
+        } catch (_) {
+          // ignore
+        }
       } else if (typeof incomingBody === 'object') {
         email = incomingBody?.email;
         password = incomingBody?.password;
@@ -267,11 +275,18 @@ export async function handleAcademyLogin(req: Request, res: Response) {
     }
 
     // Fallback: attempt to parse raw body if present
-    if ((!email || !password) && (req as any).rawBody && typeof (req as any).rawBody === 'string') {
+    const rawBody: any = (req as any).rawBody;
+    if ((!email || !password) && rawBody) {
       try {
-        const parsed = JSON.parse((req as any).rawBody);
-        email = email || parsed?.email;
-        password = password || parsed?.password;
+        if (typeof rawBody === 'string') {
+          const parsed = JSON.parse(rawBody);
+          email = email || parsed?.email;
+          password = password || parsed?.password;
+        } else if (Buffer.isBuffer(rawBody)) {
+          const parsed = JSON.parse(rawBody.toString('utf8'));
+          email = email || parsed?.email;
+          password = password || parsed?.password;
+        }
       } catch (_) {
         // ignore
       }
@@ -311,6 +326,22 @@ export async function handleAcademyLogin(req: Request, res: Response) {
       const q: any = (req as any).query || {};
       if (typeof q.email === 'string') email = email || q.email;
       if (typeof q.password === 'string') password = password || q.password;
+    }
+
+    // Netlify/serverless specific: try to read the original event body
+    if (!email || !password) {
+      try {
+        const event: any = (req as any).event || (req as any).apiGateway || (req as any).requestContext?.event;
+        const bodyFromEvent = event?.body;
+        if (bodyFromEvent) {
+          const raw = event.isBase64Encoded ? Buffer.from(bodyFromEvent, 'base64').toString('utf8') : bodyFromEvent;
+          const parsed = JSON.parse(raw);
+          email = email || parsed?.email;
+          password = password || parsed?.password;
+        }
+      } catch (_) {
+        // ignore
+      }
     }
 
     if (!email || !password) {
