@@ -1,4 +1,5 @@
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
+import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 import { query } from '../lib/db';
 
 const router = Router();
@@ -182,7 +183,7 @@ function flattenSettings(settings: SystemSettingsData): Record<string, string> {
 }
 
 // GET /api/system-settings - Get all system settings
-export async function handleGetSystemSettings(req: Request, res: Response) {
+export async function handleGetSystemSettings(req: ExpressRequest, res: ExpressResponse) {
   try {
     const result = await query('SELECT key, value FROM system_settings');
     const settings = result.rows;
@@ -213,7 +214,7 @@ export async function handleGetSystemSettings(req: Request, res: Response) {
 }
 
 // PUT /api/system-settings - Update system settings
-export async function handleUpdateSystemSettings(req: Request, res: Response) {
+export async function handleUpdateSystemSettings(req: ExpressRequest, res: ExpressResponse) {
   try {
     const settingsData: SystemSettingsData = req.body;
 
@@ -241,7 +242,7 @@ export async function handleUpdateSystemSettings(req: Request, res: Response) {
 }
 
 // GET /api/system-settings/:category - Get settings for a specific category
-export async function handleGetSystemSettingsByCategory(req: Request, res: Response) {
+export async function handleGetSystemSettingsByCategory(req: ExpressRequest, res: ExpressResponse) {
   try {
     const { category } = req.params;
 
@@ -276,7 +277,7 @@ export async function handleGetSystemSettingsByCategory(req: Request, res: Respo
 }
 
 // PUT /api/system-settings/:category - Update settings for a specific category
-export async function handleUpdateSystemSettingsByCategory(req: Request, res: Response) {
+export async function handleUpdateSystemSettingsByCategory(req: ExpressRequest, res: ExpressResponse) {
   try {
     const { category } = req.params;
     const categoryData = req.body;
@@ -310,7 +311,7 @@ export async function handleUpdateSystemSettingsByCategory(req: Request, res: Re
 }
 
 // DELETE /api/system-settings/reset - Reset all settings to defaults
-export async function handleResetSystemSettings(req: Request, res: Response) {
+export async function handleResetSystemSettings(req: ExpressRequest, res: ExpressResponse) {
   try {
     await query('DELETE FROM system_settings');
 
@@ -332,7 +333,7 @@ export async function handleResetSystemSettings(req: Request, res: Response) {
 }
 
 // GET /api/system-settings/backup - Export settings as backup
-export async function handleExportSystemSettings(req: Request, res: Response) {
+export async function handleExportSystemSettings(req: ExpressRequest, res: ExpressResponse) {
   try {
     const result = await query('SELECT key, value FROM system_settings');
     const settings = result.rows;
@@ -346,8 +347,8 @@ export async function handleExportSystemSettings(req: Request, res: Response) {
       }))
     };
 
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="system-settings-backup-${new Date().toISOString().split('T')[0]}.json"`);
+    res.set('Content-Type', 'application/json');
+    res.set('Content-Disposition', `attachment; filename="system-settings-backup-${new Date().toISOString().split('T')[0]}.json"`);
     res.json(backup);
   } catch (error) {
     console.error('Error exporting system settings:', error);
@@ -356,7 +357,7 @@ export async function handleExportSystemSettings(req: Request, res: Response) {
 }
 
 // POST /api/system-settings/restore - Restore settings from backup
-export async function handleRestoreSystemSettings(req: Request, res: Response) {
+export async function handleRestoreSystemSettings(req: ExpressRequest, res: ExpressResponse) {
   try {
     const { settings } = req.body;
 
