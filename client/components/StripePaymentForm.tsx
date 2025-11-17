@@ -7,7 +7,7 @@ import {
   PaymentElement
 } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
-import { STRIPE_CONFIG, formatCurrency, dollarsToCents } from '../lib/stripe';
+import { STRIPE_CONFIG, formatCurrency, dollarsToCents } from '@/lib/stripe';
 
 // Load Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);

@@ -96,6 +96,9 @@ interface AcademyData {
   foundedYear?: number;
   website?: string;
   description?: string;
+  directorName?: string;
+  directorEmail?: string;
+  directorPhone?: string;
 }
 
 // GET /api/academies - Get all academies with pagination and filtering
@@ -431,7 +434,7 @@ router.put('/:id', async (req: Request, res: Response) => {
 
     // Always update the updated_at timestamp
     updateFields.push(`updated_at = $${paramCount++}`);
-    updateValues.push(new Date());
+    updateValues.push(new Date().toISOString());
 
     // Add the ID for the WHERE clause
     updateValues.push(id);
@@ -511,7 +514,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
       // Soft delete - set status to inactive
       const result = await query(
         'UPDATE academies SET status = $1, updated_at = $2 WHERE id = $3 RETURNING *',
-        ['inactive', new Date(), id]
+        ['inactive', new Date().toISOString(), id]
       );
       
       const academy = result.rows[0];
@@ -567,7 +570,7 @@ router.patch('/:id/activate', async (req: Request, res: Response) => {
     // Update academy status
     const result = await query(
       'UPDATE academies SET status = $1, updated_at = $2 WHERE id = $3 RETURNING *',
-      [newStatus, new Date(), id]
+      [newStatus, new Date().toISOString(), id]
     );
 
     const academy = result.rows[0];
@@ -593,21 +596,25 @@ router.patch('/:id/activate', async (req: Request, res: Response) => {
 // PATCH /api/academies/:id/verify - Verify academy
 router.patch('/:id/verify', async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { id: academyId } = req.params;
     const { isVerified, reason } = req.body;
     const adminEmail = (req as any).user?.email;
+    const ipAddress = req.ip || req.connection?.remoteAddress || null;
+    const userAgent = req.get('User-Agent') || null;
 
     // Get current status
-    const academyResult = await query('SELECT is_verified FROM academies WHERE id = $1', [id]);
+    const academyResult = await query('SELECT is_verified FROM academies WHERE id = $1', [academyId]);
     if (academyResult.rows.length === 0) {
       return res.status(404).json({ success: false, error: 'Academy not found' });
     }
     const previousStatus = academyResult.rows[0].is_verified;
+    const newStatus = isVerified;
+    const actionType = isVerified ? 'verify' : 'unverify';
 
     // Update academy status
     const result = await query(
       'UPDATE academies SET is_verified = $1, verified_at = $2, updated_at = NOW() WHERE id = $3 RETURNING *',
-      [isVerified, new Date().toISOString(), id]
+      [isVerified, new Date().toISOString(), academyId]
     );
 
     // Log activation history
@@ -618,52 +625,16 @@ router.patch('/:id/verify', async (req: Request, res: Response) => {
       newStatus,
       adminEmail,
       reason,
-      ipAddress,
-      userAgent
+      req
     );
 
-    // Send email notifications
-    try {
-      // Get academy details for email
-      const academyResult = await query('SELECT name, email FROM academies WHERE id = $1', [academyId]);
-      if (academyResult.rows.length > 0) {
-        const academy = academyResult.rows[0];
-        
-        // Send email to academy
-        if (actionType === 'activate' || actionType === 'deactivate') {
-          await emailService.sendAcademyActivationEmail(
-            academy.email,
-            academy.name,
-            newStatus,
-            adminEmail || 'system@sofwan.com',
-            reason
-          );
-        } else if (actionType === 'verify' || actionType === 'unverify') {
-          await emailService.sendAcademyVerificationEmail(
-            academy.email,
-            academy.name,
-            newStatus,
-            adminEmail || 'system@sofwan.com',
-            reason
-          );
-        }
+    const academy = result.rows[0];
 
-        // Send admin notification if adminEmail is provided
-        if (adminEmail) {
-          await emailService.sendAdminNotificationEmail(
-            adminEmail,
-            academy.name,
-            actionType,
-            previousStatus || false,
-            newStatus,
-            reason
-          );
-        }
-      }
-    } catch (emailError) {
-      console.error('Error sending email notifications:', emailError);
-      // Don't throw error to avoid breaking the main operation
-    }
+    res.json({
+      success: true,
+      data: academy,
+      message: `Academy ${isVerified ? 'verified' : 'unverified'} successfully`
+    });
   } catch (error) {
     console.error('Error updating academy verification:', error);
     res.status(500).json({

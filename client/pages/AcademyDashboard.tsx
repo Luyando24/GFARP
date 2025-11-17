@@ -65,11 +65,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import ThemeToggle from '@/components/navigation/ThemeToggle';
-import ComplianceDocuments from './ComplianceDocuments';
+
 import PlayerManagement from '@/components/players/PlayerManagement';
 import FinancialTransactionsManager from '@/components/FinancialTransactionsManager';
 import PaymentMethodSelector from '@/components/PaymentMethodSelector';
-import { Api, Player, Transfer, getTransfers, createTransfer, updateTransfer, deleteTransfer, getAcademyDashboardStats } from '@/lib/api';
+import { Player, Transfer, getTransfers, createTransfer, updateTransfer, deleteTransfer, getAcademyDashboardStats, Api } from '@/lib/api';
 
 // Mock data for academy dashboard
 const academyData = {
@@ -114,26 +114,7 @@ const playersData = [
   { id: 10, name: "Emmanuel Mwale", age: 16, position: "Goalkeeper", status: "active", rating: 86, currentClub: "Victory Sports Club" }
 ];
 
-const recentTransfers = [
-  { 
-    id: 1, 
-    player: "James Sakala", 
-    from: "Elite Football Academy", 
-    to: "Nkana FC", 
-    amount: "$15,000", 
-    date: "2024-01-15",
-    status: "completed"
-  },
-  { 
-    id: 2, 
-    player: "Mary Chanda", 
-    from: "Elite Football Academy", 
-    to: "Green Buffaloes", 
-    amount: "$12,000", 
-    date: "2024-01-10",
-    status: "pending"
-  }
-];
+
 
 const statsData = {
   totalPlayers: 45,
@@ -640,20 +621,7 @@ export default function AcademyDashboard() {
     transaction.amount.toString().includes(searchQuery)
   );
 
-  const filteredComplianceAreas = complianceData.areas.filter(area =>
-    searchQuery === "" ||
-    area.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    area.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    area.status.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
-  const filteredActionItems = complianceData.actionItems.filter(item =>
-    searchQuery === "" ||
-    item.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.priority.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.assignee.toLowerCase().includes(searchQuery.toLowerCase())
-  );
 
   const handleLogout = () => {
     clearSession();
@@ -715,12 +683,7 @@ export default function AcademyDashboard() {
     }
   };
 
-  const handleInputChange = (field: string, value: string) => {
-    setSettingsFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+
 
   // Transfer CRUD handlers
   const handleAddTransfer = () => {
@@ -968,7 +931,6 @@ export default function AcademyDashboard() {
     { id: "dashboard", label: "Dashboard", icon: Home },
     { id: "players", label: "Players", icon: Users },
     { id: "transfers", label: "Transfers", icon: TrendingUp },
-    { id: "compliance", label: "FIFA Compliance", icon: Shield },
     { id: "finances", label: "Finances", icon: DollarSign },
     { id: "settings", label: "Settings", icon: Settings }
   ];
@@ -1097,7 +1059,6 @@ export default function AcademyDashboard() {
               <TabsList className="grid w-full grid-cols-6">
                 <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
                 <TabsTrigger value="players">Players</TabsTrigger>
-                <TabsTrigger value="compliance">Compliance</TabsTrigger>
                 <TabsTrigger value="finances">Finances</TabsTrigger>
                 <TabsTrigger value="subscription">Subscription</TabsTrigger>
                 <TabsTrigger value="settings">Settings</TabsTrigger>
@@ -1175,17 +1136,7 @@ export default function AcademyDashboard() {
                   </CardContent>
                 </Card>
 
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">FIFA Compliance</p>
-                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{statsData.complianceScore}%</p>
-                      </div>
-                      <Shield className="h-8 w-8 text-purple-600" />
-                    </div>
-                  </CardContent>
-                </Card>
+
 
                 <Card>
                   <CardContent className="p-6">

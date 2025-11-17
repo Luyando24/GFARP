@@ -212,8 +212,8 @@ router.post('/create-subscription', authenticateToken, (async (req, res) => {
         planId,
         stripeSubscription.id,
         'PENDING',
-        new Date(((subData.current_period_start ?? Math.floor(Date.now() / 1000)) * 1000)),
-        new Date(((subData.current_period_end ?? Math.floor(Date.now() / 1000)) * 1000)),
+        new Date((subData.current_period_start ?? Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+        new Date((subData.current_period_end ?? Math.floor(Date.now() / 1000)) * 1000).toISOString(),
         true
       ]);
 
@@ -310,7 +310,7 @@ router.post('/upgrade-subscription', authenticateToken, (async (req, res) => {
           WHERE id = $3
         `, [
           newPlanId,
-          new Date(((updatedData.current_period_end ?? Math.floor(Date.now() / 1000)) * 1000)),
+          new Date((updatedData.current_period_end ?? Math.floor(Date.now() / 1000)) * 1000).toISOString(),
           currentSubscription.id
         ]);
 
@@ -511,7 +511,7 @@ router.get('/subscription-status', authenticateToken, (async (req, res) => {
         const subData: any = (stripeSubscription as any)?.data ?? stripeSubscription;
         stripeStatus = {
           status: subData.status,
-          currentPeriodEnd: new Date(((subData.current_period_end ?? Math.floor(Date.now() / 1000)) * 1000)),
+          currentPeriodEnd: new Date((subData.current_period_end ?? Math.floor(Date.now() / 1000)) * 1000).toISOString(),
           cancelAtPeriodEnd: subData.cancel_at_period_end
         };
       } catch (error) {

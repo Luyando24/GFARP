@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import StripePaymentForm from './StripePaymentForm';
-import { formatCurrency } from '../lib/stripe';
+import { formatCurrency } from '@/lib/stripe';
 
 interface SubscriptionPlan {
   id: string;

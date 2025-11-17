@@ -5,27 +5,19 @@ const STORAGE_KEY_PREFIX = 'player_documents_';
 
 export interface DocumentUploadResult {
   success: boolean;
-  document?: {
-    id: string;
-    documentType: string;
-    originalFilename: string;
-    fileSize: number;
-    mimeType: string;
-    uploadDate: string;
-    url: string;
-  };
+  document?: PlayerDocument;
   error?: string;
 }
 
 export interface PlayerDocument {
   id: string;
-  document_type: 'passport_id' | 'player_photo' | 'proof_of_training' | 'birth_certificate';
-  original_filename: string;
-  file_size: number;
-  mime_type: string;
-  uploaded_at: string;
-  uploaded_by?: string;
-  file_url: string;
+  documentType: 'passport_id' | 'player_photo' | 'proof_of_training' | 'birth_certificate';
+  originalFilename: string;
+  fileSize: number;
+  mimeType: string;
+  uploadedAt: string;
+  uploadedBy?: string;
+  fileUrl: string;
 }
 
 /**
@@ -35,7 +27,7 @@ const saveDocumentToLocalStorage = (playerId: string, document: PlayerDocument) 
   try {
     const existingDocs = getDocumentsFromLocalStorage(playerId);
     // Replace any existing document of the same type with the new one
-    const filtered = existingDocs.filter(doc => doc.document_type !== document.document_type);
+    const filtered = existingDocs.filter(doc => doc.documentType !== document.documentType);
     const updatedDocs = [...filtered, document];
     localStorage.setItem(`${STORAGE_KEY_PREFIX}${playerId}`, JSON.stringify(updatedDocs));
   } catch (error) {
@@ -123,11 +115,10 @@ export const uploadPlayerDocument = async (
       }
 
       const result = await response.json();
-      const uiDoc = toUIFromServer(result.document);
-      saveDocumentToLocalStorage(playerId, uiDoc);
+      saveDocumentToLocalStorage(playerId, result.document);
       return {
         success: true,
-        document: uiDoc
+        document: result.document
       };
     } catch (error) {
       console.log('Falling back to demo endpoint for document upload');
@@ -151,11 +142,10 @@ export const uploadPlayerDocument = async (
         }
 
         const demoResult = await demoResponse.json();
-        const uiDemoDoc = toUIFromServer(demoResult.document);
-        saveDocumentToLocalStorage(playerId, uiDemoDoc);
+        saveDocumentToLocalStorage(playerId, demoResult.document);
         return {
           success: true,
-          document: uiDemoDoc
+          document: demoResult.document
         };
       } catch (demoError) {
         return {
@@ -211,7 +201,7 @@ export const getPlayerDocuments = async (
       }
       
       const demoData = await demoResponse.json();
-      const demoDocuments = (demoData.documents || []).map((d: any) => toUIFromServer(d));
+      const demoDocuments = demoData.documents || [];
       demoDocuments.forEach((doc: PlayerDocument) => saveDocumentToLocalStorage(playerId, doc));
       return { success: true, documents: demoDocuments };
     }
@@ -306,32 +296,6 @@ const normalizeDocumentType = (docType: string): 'passport_id' | 'player_photo' 
     playerPhoto: 'player_photo',
     proofOfTraining: 'proof_of_training',
     birthCertificate: 'birth_certificate',
-    passport_id: 'passport_id',
-    player_photo: 'player_photo',
-    proof_of_training: 'proof_of_training',
-    birth_certificate: 'birth_certificate',
   };
   return map[docType] || 'passport_id';
-};
-
-const toUIFromServer = (doc: {
-  id: string;
-  documentType: string;
-  originalFilename: string;
-  fileSize: number;
-  mimeType: string;
-  uploadDate: string;
-  uploadedBy?: string;
-  url: string;
-}): PlayerDocument => {
-  return {
-    id: doc.id,
-    document_type: doc.documentType as PlayerDocument['document_type'],
-    original_filename: doc.originalFilename,
-    file_size: doc.fileSize,
-    mime_type: doc.mimeType,
-    uploaded_at: doc.uploadDate,
-    uploaded_by: doc.uploadedBy,
-    file_url: doc.url,
-  };
 };

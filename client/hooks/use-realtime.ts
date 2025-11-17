@@ -54,8 +54,8 @@ export const useRealtime = <T = any>(
       .on('postgres_changes', changesConfig, (payload: RealtimePostgresChangesPayload<T>) => {
         const realtimeData: RealtimeData<T> = {
           eventType: payload.eventType as RealtimeEvent,
-          new: payload.new || null,
-          old: payload.old || null,
+          new: (payload.new as T) || null,
+          old: (payload.old as T) || null,
           errors: payload.errors || null
         }
 

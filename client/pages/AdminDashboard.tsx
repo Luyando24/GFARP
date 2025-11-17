@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth, clearSession, isAdmin } from '@/lib/auth';
-import { useToast } from '../hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import AcademyManagement from '../components/academy/AcademyManagement';
 import { 
   Trophy, 
@@ -687,7 +687,7 @@ export default function AdminDashboard() {
 
   const saveSystemSettings = async () => {
     try {
-      const res = await fetch('/system-settings', {
+      const res = await fetch('/api/system-settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -708,7 +708,7 @@ export default function AdminDashboard() {
 
   const resetSystemSettings = async () => {
     try {
-      const res = await fetch('/system-settings/reset', {
+      const res = await fetch('/api/system-settings/reset', {
         method: 'POST',
       });
       
@@ -1343,7 +1343,7 @@ export default function AdminDashboard() {
 
             {/* Academy Management Tab */}
             <TabsContent value="academies" className="space-y-6">
-              <AcademyManagement />
+
             </TabsContent>
             <TabsContent value="compliance" className="space-y-6">
               {/* Compliance Statistics */}
@@ -1895,7 +1895,7 @@ export default function AdminDashboard() {
                           Enable to restrict access during maintenance
                         </p>
                       </div>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => handleSystemSettingsChange('general', 'maintenanceMode', !systemSettings.general.maintenanceMode)}>
                         {systemSettings.general.maintenanceMode ? (
                           <ToggleRight className="h-4 w-4 text-green-600" />
                         ) : (
@@ -1925,7 +1925,7 @@ export default function AdminDashboard() {
                           Require 2FA for admin accounts
                         </p>
                       </div>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => handleSystemSettingsChange('security', 'twoFactorAuth', !systemSettings.security.twoFactorAuth)}>
                         {systemSettings.security.twoFactorAuth ? (
                           <ToggleRight className="h-4 w-4 text-green-600" />
                         ) : (
@@ -2068,7 +2068,7 @@ export default function AdminDashboard() {
                           Automatically backup system data
                         </p>
                       </div>
-                      <Button variant="outline" size="sm">
+                      <Button variant="outline" size="sm" onClick={() => handleSystemSettingsChange('backup', 'autoBackup', !systemSettings.backup.autoBackup)}>
                         {systemSettings.backup.autoBackup ? (
                           <ToggleRight className="h-4 w-4 text-green-600" />
                         ) : (
