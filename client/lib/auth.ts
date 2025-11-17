@@ -67,3 +67,28 @@ export function canAccessReports(session: AuthSession | null): boolean {
 export function canAccessSupportManagement(session: AuthSession | null): boolean {
   return isAdmin(session);
 }
+
+// School module access controls used in SchoolSidebar
+export function canAccessStudentManagement(session: AuthSession | null): boolean {
+  return isAdmin(session);
+}
+
+export function canAccessTeacherManagement(session: AuthSession | null): boolean {
+  return isAdmin(session);
+}
+
+export function canAccessAcademicManagement(session: AuthSession | null): boolean {
+  return isAdmin(session);
+}
+
+export function canAccessFinanceManagement(session: AuthSession | null): boolean {
+  return isAdmin(session);
+}
+
+export function canAccessSchoolSettings(session: AuthSession | null): boolean {
+  return isAdmin(session);
+}
+
+export function canAccessCommunications(session: AuthSession | null): boolean {
+  return isAdmin(session);
+}
