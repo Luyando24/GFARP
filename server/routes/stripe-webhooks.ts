@@ -4,7 +4,7 @@ import { stripe, STRIPE_WEBHOOK_SECRET } from '../lib/stripe.js';
 import { query, transaction } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
 
-const router: Router = Router();
+const router = Router();
 
 // Webhook signature verification middleware
 const verifyWebhookSignature: RequestHandler = (req, res, next) => {

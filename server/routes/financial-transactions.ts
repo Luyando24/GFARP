@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+import { Router, RequestHandler } from 'express';
 import { query } from '../lib/db';
 
 const router = Router();
@@ -32,18 +32,18 @@ interface BudgetCategory {
 }
 
 // GET /api/financial-transactions/:academyId - Get all transactions for an academy
-router.get('/:academyId', async (req: Request, res: Response) => {
+const handleGetTransactions: RequestHandler = async (req, res) => {
   try {
     const { academyId } = req.params;
-    const { 
-      page = 1, 
-      limit = 50, 
-      type, 
-      category, 
-      status, 
-      dateFrom, 
+    const {
+      page = 1,
+      limit = 50,
+      type,
+      category,
+      status,
+      dateFrom,
       dateTo,
-      search 
+      search
     } = req.query;
 
     let whereConditions = ['academy_id = $1'];
@@ -87,7 +87,7 @@ router.get('/:academyId', async (req: Request, res: Response) => {
     }
 
     const offset = (Number(page) - 1) * Number(limit);
-    
+
     const countQuery = `
       SELECT COUNT(*) as total
       FROM financial_transactions 
@@ -142,15 +142,17 @@ router.get('/:academyId', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error fetching financial transactions:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch financial transactions' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch financial transactions'
     });
   }
-});
+};
+
+router.get('/:academyId', handleGetTransactions);
 
 // POST /api/financial-transactions - Create a new transaction
-router.post('/', async (req: Request, res: Response) => {
+const handleCreateTransaction: RequestHandler = async (req, res) => {
   try {
     const transaction: FinancialTransaction = req.body;
 
@@ -182,15 +184,17 @@ router.post('/', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error creating financial transaction:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to create financial transaction' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create financial transaction'
     });
   }
-});
+};
+
+router.post('/', handleCreateTransaction);
 
 // PUT /api/financial-transactions/:id - Update a transaction
-router.put('/:id', async (req: Request, res: Response) => {
+const handleUpdateTransaction: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
     const transaction: Partial<FinancialTransaction> = req.body;
@@ -238,15 +242,17 @@ router.put('/:id', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error updating financial transaction:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to update financial transaction' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update financial transaction'
     });
   }
-});
+};
+
+router.put('/:id', handleUpdateTransaction);
 
 // DELETE /api/financial-transactions/:id - Delete a transaction
-router.delete('/:id', async (req: Request, res: Response) => {
+const handleDeleteTransaction: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -269,15 +275,17 @@ router.delete('/:id', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error deleting financial transaction:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to delete financial transaction' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete financial transaction'
     });
   }
-});
+};
+
+router.delete('/:id', handleDeleteTransaction);
 
 // GET /api/financial-transactions/:academyId/summary - Get financial summary
-router.get('/:academyId/summary', async (req: Request, res: Response) => {
+const handleGetSummary: RequestHandler = async (req, res) => {
   try {
     const { academyId } = req.params;
     const { period = 'monthly', year = new Date().getFullYear() } = req.query;
@@ -351,17 +359,19 @@ router.get('/:academyId/summary', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error fetching financial summary:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch financial summary' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch financial summary'
     });
   }
-});
+};
+
+router.get('/:academyId/summary', handleGetSummary);
 
 // Budget Categories Routes
 
 // GET /api/financial-transactions/:academyId/budget-categories - Get budget categories
-router.get('/:academyId/budget-categories', async (req: Request, res: Response) => {
+const handleGetBudgetCategories: RequestHandler = async (req, res) => {
   try {
     const { academyId } = req.params;
     const { year = new Date().getFullYear() } = req.query;
@@ -392,7 +402,7 @@ router.get('/:academyId/budget-categories', async (req: Request, res: Response) 
       spent_amount: parseFloat(row.spent_amount),
       budgeted_amount: parseFloat(row.budgeted_amount),
       remaining_amount: parseFloat(row.budgeted_amount) - parseFloat(row.spent_amount),
-      percentage_used: parseFloat(row.budgeted_amount) > 0 
+      percentage_used: parseFloat(row.budgeted_amount) > 0
         ? ((parseFloat(row.spent_amount) / parseFloat(row.budgeted_amount)) * 100).toFixed(2)
         : 0
     }));
@@ -403,15 +413,17 @@ router.get('/:academyId/budget-categories', async (req: Request, res: Response) 
     });
   } catch (error) {
     console.error('Error fetching budget categories:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch budget categories' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch budget categories'
     });
   }
-});
+};
+
+router.get('/:academyId/budget-categories', handleGetBudgetCategories);
 
 // POST /api/financial-transactions/:academyId/budget-categories - Create budget category
-router.post('/:academyId/budget-categories', async (req: Request, res: Response) => {
+const handleCreateBudgetCategory: RequestHandler = async (req, res) => {
   try {
     const { academyId } = req.params;
     const category: BudgetCategory = { ...req.body, academy_id: academyId }; // Fixed: Use academyId as string UUID
@@ -438,15 +450,17 @@ router.post('/:academyId/budget-categories', async (req: Request, res: Response)
     });
   } catch (error) {
     console.error('Error creating budget category:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to create budget category' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create budget category'
     });
   }
-});
+};
+
+router.post('/:academyId/budget-categories', handleCreateBudgetCategory);
 
 // PUT /api/financial-transactions/budget-categories/:id - Update budget category
-router.put('/budget-categories/:id', async (req: Request, res: Response) => {
+const handleUpdateBudgetCategory: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
     const category: Partial<BudgetCategory> = req.body;
@@ -486,15 +500,17 @@ router.put('/budget-categories/:id', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error updating budget category:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to update budget category' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update budget category'
     });
   }
-});
+};
+
+router.put('/budget-categories/:id', handleUpdateBudgetCategory);
 
 // DELETE /api/financial-transactions/budget-categories/:id - Delete budget category
-router.delete('/budget-categories/:id', async (req: Request, res: Response) => {
+const handleDeleteBudgetCategory: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -517,11 +533,13 @@ router.delete('/budget-categories/:id', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error deleting budget category:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to delete budget category' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete budget category'
     });
   }
-});
+};
+
+router.delete('/budget-categories/:id', handleDeleteBudgetCategory);
 
 export default router;

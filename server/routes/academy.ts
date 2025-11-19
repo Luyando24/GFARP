@@ -2,7 +2,7 @@ import { Router, RequestHandler } from 'express';
 import { query, hashPassword, verifyPassword } from '../lib/db';
 import { emailService } from '../lib/email-service';
 
-const router: Router = Router();
+const router = Router();
 
 // Helper function to log activation history
 async function logActivationHistory(
