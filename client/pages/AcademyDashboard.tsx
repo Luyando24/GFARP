@@ -295,7 +295,8 @@ export default function AcademyDashboard() {
     totalPlayers: 0,
     activeTransfers: 0,
     monthlyRevenue: 0,
-    recentTransfers: []
+    recentTransfers: [],
+    monthlyFinancialPerformance: []
   });
   const [isLoadingStats, setIsLoadingStats] = useState(false);
 

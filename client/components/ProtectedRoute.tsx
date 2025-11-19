@@ -24,7 +24,9 @@ export const ProtectedRoute = ({
     switch (session.role) {
       case "superadmin":
         return <Navigate to="/admin" replace />;
-      case "school":
+      case "admin":
+        return <Navigate to="/dashboard" replace />;
+      case "headteacher":
         return <Navigate to="/dashboard" replace />;
       case "teacher":
         return <Navigate to="/teacher" replace />;

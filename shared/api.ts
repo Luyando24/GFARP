@@ -155,6 +155,100 @@ export interface AuthSession {
   tokens: AuthTokens;
 }
 
+export interface AuthResponse {
+  success: boolean;
+  message: string;
+  session: AuthSession;
+}
+
+export interface CreateStudentRequest {
+  firstName: string;
+  lastName: string;
+  dateOfBirth: string;
+  gender: "male" | "female";
+  studentNumber?: string;
+  currentGrade?: string;
+  currentClass?: string;
+  enrollmentDate?: string;
+  guardianName?: string;
+  guardianPhone?: string;
+  guardianEmail?: string;
+  address?: string;
+  district?: string;
+  province?: string;
+  nrcNumber?: string;
+  emisId?: string;
+  schoolId: UUID;
+  campusId?: UUID;
+}
+
+export interface CreateStudentResponse {
+  success: boolean;
+  message: string;
+  student: Student;
+}
+
+export interface ListStudentsResponse {
+  success: boolean;
+  message: string;
+  students: Student[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface CreateTaskRequest {
+  title: string;
+  description?: string;
+  assigneeId: UUID;
+  schoolId: UUID;
+  category: "assignment" | "exam" | "project" | "meeting" | "other";
+  priority: "low" | "medium" | "high" | "urgent";
+  dueDate?: string;
+  status?: "pending" | "in_progress" | "completed" | "cancelled";
+}
+
+export interface CreateTaskResponse {
+  success: boolean;
+  message: string;
+  task: TaskRecord;
+}
+
+export interface ListTasksResponse {
+  success: boolean;
+  message: string;
+  tasks: TaskRecord[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface SchoolUser {
+  id: UUID;
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: UserRole;
+  schoolId: UUID;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskRecord {
+  id: string;
+  assigneeId: string;
+  schoolId: string;
+  taskNumber: string;
+  title: string;
+  description?: string;
+  category?: string;
+  priority?: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface LoginRequest {
   email: string;
   password: string;

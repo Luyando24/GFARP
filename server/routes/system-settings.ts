@@ -1,8 +1,7 @@
-import { Router } from 'express';
-import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
+import { Router, type Request as ExpressRequest, type Response as ExpressResponse } from 'express';
 import { query } from '../lib/db';
 
-const router = Router();
+const router: Router = Router();
 
 // System Settings interfaces
 interface SystemSettingsData {

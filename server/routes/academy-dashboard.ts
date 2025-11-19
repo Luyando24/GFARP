@@ -1,6 +1,5 @@
 import { RequestHandler } from 'express';
 import { query } from '../lib/db';
-import { decrypt } from '../lib/encryption';
 
 export interface AcademyDashboardStats {
   totalPlayers: number;
