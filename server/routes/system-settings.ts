@@ -1,7 +1,7 @@
-import { Router, type Request as ExpressRequest, type Response as ExpressResponse } from 'express';
+import { Router, RequestHandler } from 'express';
 import { query } from '../lib/db';
 
-const router: Router = Router();
+const router = Router();
 
 // System Settings interfaces
 interface SystemSettingsData {
@@ -150,8 +150,8 @@ function structureSettings(settings: Record<string, string>): SystemSettingsData
     const parts = key.split('.');
     if (parts.length === 2) {
       const [category, field] = parts;
-      if (structured[category as keyof SystemSettingsData] && 
-          typeof structured[category as keyof SystemSettingsData] === 'object') {
+      if (structured[category as keyof SystemSettingsData] &&
+        typeof structured[category as keyof SystemSettingsData] === 'object') {
         try {
           // Try to parse as JSON for complex types
           const parsedValue = JSON.parse(value);
@@ -182,7 +182,7 @@ function flattenSettings(settings: SystemSettingsData): Record<string, string> {
 }
 
 // GET /api/system-settings - Get all system settings
-export async function handleGetSystemSettings(req: ExpressRequest, res: ExpressResponse) {
+export const handleGetSystemSettings: RequestHandler = async (req, res) => {
   try {
     const result = await query('SELECT key, value FROM system_settings');
     const settings = result.rows;
@@ -213,7 +213,7 @@ export async function handleGetSystemSettings(req: ExpressRequest, res: ExpressR
 }
 
 // PUT /api/system-settings - Update system settings
-export async function handleUpdateSystemSettings(req: ExpressRequest, res: ExpressResponse) {
+export const handleUpdateSystemSettings: RequestHandler = async (req, res) => {
   try {
     const settingsData: SystemSettingsData = req.body;
 
@@ -241,7 +241,7 @@ export async function handleUpdateSystemSettings(req: ExpressRequest, res: Expre
 }
 
 // GET /api/system-settings/:category - Get settings for a specific category
-export async function handleGetSystemSettingsByCategory(req: ExpressRequest, res: ExpressResponse) {
+export const handleGetSystemSettingsByCategory: RequestHandler = async (req, res) => {
   try {
     const { category } = req.params;
 
@@ -276,7 +276,7 @@ export async function handleGetSystemSettingsByCategory(req: ExpressRequest, res
 }
 
 // PUT /api/system-settings/:category - Update settings for a specific category
-export async function handleUpdateSystemSettingsByCategory(req: ExpressRequest, res: ExpressResponse) {
+export const handleUpdateSystemSettingsByCategory: RequestHandler = async (req, res) => {
   try {
     const { category } = req.params;
     const categoryData = req.body;
@@ -298,8 +298,8 @@ export async function handleUpdateSystemSettingsByCategory(req: ExpressRequest, 
 
     await Promise.all(updatePromises);
 
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: `${category} settings updated successfully`,
       settings: categoryData
     });
@@ -310,7 +310,7 @@ export async function handleUpdateSystemSettingsByCategory(req: ExpressRequest, 
 }
 
 // DELETE /api/system-settings/reset - Reset all settings to defaults
-export async function handleResetSystemSettings(req: ExpressRequest, res: ExpressResponse) {
+export const handleResetSystemSettings: RequestHandler = async (req, res) => {
   try {
     await query('DELETE FROM system_settings');
 
@@ -332,7 +332,7 @@ export async function handleResetSystemSettings(req: ExpressRequest, res: Expres
 }
 
 // GET /api/system-settings/backup - Export settings as backup
-export async function handleExportSystemSettings(req: ExpressRequest, res: ExpressResponse) {
+export const handleExportSystemSettings: RequestHandler = async (req, res) => {
   try {
     const result = await query('SELECT key, value FROM system_settings');
     const settings = result.rows;
@@ -356,7 +356,7 @@ export async function handleExportSystemSettings(req: ExpressRequest, res: Expre
 }
 
 // POST /api/system-settings/restore - Restore settings from backup
-export async function handleRestoreSystemSettings(req: ExpressRequest, res: ExpressResponse) {
+export const handleRestoreSystemSettings: RequestHandler = async (req, res) => {
   try {
     const { settings } = req.body;
 
