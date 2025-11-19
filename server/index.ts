@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { handleDemo } from "./routes/demo";
+import { handleDemo } from "./routes/demo.js";
 import authRouter, {
   handleLogin,
   handleRegisterSchool,
@@ -9,7 +9,7 @@ import authRouter, {
   handleListSuperAdmins,
   handleDeleteSuperAdmin,
   handleListStaffUsers
-} from "./routes/auth";
+} from "./routes/auth.js";
 import {
   handleGetDashboardStats,
   handleGetNewAccounts,
@@ -54,10 +54,10 @@ export function createServer() {
 
   // Middleware
   app.use(cors());
-  
+
   // Stripe webhooks need raw body, so add this before express.json()
   app.use("/api/stripe/webhooks", express.raw({ type: 'application/json' }), stripeWebhooksRouter);
-  
+
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
@@ -135,7 +135,7 @@ export function createServer() {
   api.post("/player-documents/upload", uploadMiddleware, handleUploadPlayerDocument);
   api.get("/player-documents/:playerId", handleGetPlayerDocuments);
   api.delete("/player-documents/:documentId", handleDeletePlayerDocument);
-  
+
   // Demo player documents routes (for when database is unavailable)
   api.post("/demo-player-documents/upload", demoUploadMiddleware, handleDemoUploadPlayerDocument);
   api.get("/demo-player-documents/:playerId", handleDemoGetPlayerDocuments);
