@@ -8,7 +8,7 @@ import {
   RegisterStaffRequest,
   AuthSession,
   RegisterStaffResponse,
-} from "@shared/api";
+} from "../../shared/api";
 import { query, hashPassword, verifyPassword } from "../lib/db";
 
 // Create router
