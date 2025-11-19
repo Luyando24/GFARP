@@ -1,29 +1,15 @@
 import express from 'express';
-import { Pool } from 'pg';
 import { v4 as uuidv4 } from 'uuid';
+import { query } from '../lib/db';
 
 const router = express.Router();
-
-// Database connection: prefer DATABASE_URL, fallback to individual env vars
-const pool = process.env.DATABASE_URL
-  ? new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    })
-  : new Pool({
-      user: process.env.DB_USER || 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      database: process.env.DB_NAME || 'sofwan_db',
-      password: process.env.DB_PASSWORD || 'password',
-      port: parseInt(process.env.DB_PORT || '5432'),
-    });
 
 // GET /api/support/tickets - Get all support tickets
 router.get('/tickets', async (req, res) => {
   try {
     const { status, priority, category, created_by, assigned_to, school_id } = req.query;
-    
-    let query = `
+
+    let sql = `
       SELECT 
         st.*,
         a.name as academy_name,
@@ -35,54 +21,54 @@ router.get('/tickets', async (req, res) => {
       LEFT JOIN staff_users assignee ON st.assigned_to = assignee.id
       WHERE 1=1
     `;
-    
+
     const params: any[] = [];
     let paramCount = 0;
 
     if (status) {
       paramCount++;
-      query += ` AND st.status = $${paramCount}`;
+      sql += ` AND st.status = $${paramCount}`;
       params.push(status);
     }
 
     if (priority) {
       paramCount++;
-      query += ` AND st.priority = $${paramCount}`;
+      sql += ` AND st.priority = $${paramCount}`;
       params.push(priority);
     }
 
     if (category) {
       paramCount++;
-      query += ` AND st.category = $${paramCount}`;
+      sql += ` AND st.category = $${paramCount}`;
       params.push(category);
     }
 
     if (created_by) {
       paramCount++;
-      query += ` AND st.created_by = $${paramCount}`;
+      sql += ` AND st.created_by = $${paramCount}`;
       params.push(created_by);
     }
 
     if (assigned_to) {
       paramCount++;
-      query += ` AND st.assigned_to = $${paramCount}`;
+      sql += ` AND st.assigned_to = $${paramCount}`;
       params.push(assigned_to);
     }
 
     if (school_id) {
       paramCount++;
-      query += ` AND st.school_id = $${paramCount}`;
+      sql += ` AND st.school_id = $${paramCount}`;
       params.push(school_id);
     }
 
-    query += ` ORDER BY st.created_at DESC`;
+    sql += ` ORDER BY st.created_at DESC`;
 
-    const result = await pool.query(query, params);
-    
+    const result = await query(sql, params);
+
     // Get responses for each ticket
     const ticketsWithResponses = await Promise.all(
       result.rows.map(async (ticket) => {
-        const responsesResult = await pool.query(
+        const responsesResult = await query(
           `SELECT 
             tr.*,
             u.username as created_by_username,
@@ -94,7 +80,7 @@ router.get('/tickets', async (req, res) => {
           ORDER BY tr.created_at ASC`,
           [ticket.id]
         );
-        
+
         return {
           ...ticket,
           created_by: ticket.created_by_username || ticket.created_by,
@@ -118,8 +104,8 @@ router.get('/tickets', async (req, res) => {
 router.get('/tickets/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
-    const ticketResult = await pool.query(
+
+    const ticketResult = await query(
       `SELECT 
         st.*,
         a.name as academy_name,
@@ -140,7 +126,7 @@ router.get('/tickets/:id', async (req, res) => {
     const ticket = ticketResult.rows[0];
 
     // Get responses for the ticket
-    const responsesResult = await pool.query(
+    const responsesResult = await query(
       `SELECT 
         tr.*,
         u.username as created_by_username,
@@ -174,15 +160,15 @@ router.get('/tickets/:id', async (req, res) => {
 router.post('/tickets', async (req, res) => {
   try {
     const { title, description, priority, category, school_id } = req.body;
-    
+
     if (!title || !description) {
       return res.status(400).json({ error: 'Title and description are required' });
     }
 
     const ticketId = uuidv4();
     const createdBy = (req as any).user?.id || 'anonymous';
-    
-    const result = await pool.query(
+
+    const result = await query(
       `INSERT INTO support_tickets (
         id, title, description, status, priority, category, 
         created_by, school_id, created_at, updated_at
@@ -192,7 +178,7 @@ router.post('/tickets', async (req, res) => {
     );
 
     // Get the created ticket with related data
-    const ticketResult = await pool.query(
+    const ticketResult = await query(
       `SELECT 
         st.*,
         a.name as academy_name,
@@ -222,7 +208,7 @@ router.patch('/tickets/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const { status, priority, assigned_to, title, description, category } = req.body;
-    
+
     const updates: string[] = [];
     const params: any[] = [];
     let paramCount = 0;
@@ -271,14 +257,14 @@ router.patch('/tickets/:id', async (req, res) => {
     updates.push(`updated_at = NOW()`);
     params.push(id);
 
-    const query = `
+    const sql = `
       UPDATE support_tickets 
       SET ${updates.join(', ')}
       WHERE id = $${paramCount}
       RETURNING *
     `;
 
-    const result = await pool.query(query, params);
+    const result = await query(sql, params);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Ticket not found' });
@@ -295,12 +281,12 @@ router.patch('/tickets/:id', async (req, res) => {
 router.delete('/tickets/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     // First delete all responses
-    await pool.query('DELETE FROM ticket_responses WHERE ticket_id = $1', [id]);
-    
+    await query('DELETE FROM ticket_responses WHERE ticket_id = $1', [id]);
+
     // Then delete the ticket
-    const result = await pool.query('DELETE FROM support_tickets WHERE id = $1 RETURNING *', [id]);
+    const result = await query('DELETE FROM support_tickets WHERE id = $1 RETURNING *', [id]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Ticket not found' });
@@ -318,21 +304,21 @@ router.post('/tickets/:id/responses', async (req, res) => {
   try {
     const { id } = req.params;
     const { message } = req.body;
-    
+
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
     // Check if ticket exists
-    const ticketResult = await pool.query('SELECT id FROM support_tickets WHERE id = $1', [id]);
+    const ticketResult = await query('SELECT id FROM support_tickets WHERE id = $1', [id]);
     if (ticketResult.rows.length === 0) {
       return res.status(404).json({ error: 'Ticket not found' });
     }
 
     const responseId = uuidv4();
     const createdBy = (req as any).user?.id || 'anonymous';
-    
-    const result = await pool.query(
+
+    const result = await query(
       `INSERT INTO ticket_responses (
         id, ticket_id, message, created_by, created_at
       ) VALUES ($1, $2, $3, $4, NOW())
@@ -341,10 +327,10 @@ router.post('/tickets/:id/responses', async (req, res) => {
     );
 
     // Update ticket's updated_at timestamp
-    await pool.query('UPDATE support_tickets SET updated_at = NOW() WHERE id = $1', [id]);
+    await query('UPDATE support_tickets SET updated_at = NOW() WHERE id = $1', [id]);
 
     // Get the response with user info
-    const responseResult = await pool.query(
+    const responseResult = await query(
       `SELECT 
         tr.*,
         u.username as created_by_username,
@@ -372,8 +358,8 @@ router.post('/tickets/:id/responses', async (req, res) => {
 router.get('/tickets/:id/responses', async (req, res) => {
   try {
     const { id } = req.params;
-    
-    const result = await pool.query(
+
+    const result = await query(
       `SELECT 
         tr.*,
         u.username as created_by_username,
@@ -401,7 +387,7 @@ router.get('/tickets/:id/responses', async (req, res) => {
 // GET /api/support/stats - Get support statistics
 router.get('/stats', async (req, res) => {
   try {
-    const statsResult = await pool.query(`
+    const statsResult = await query(`
       SELECT 
         COUNT(*) as total_tickets,
         COUNT(CASE WHEN status = 'open' THEN 1 END) as open_tickets,
@@ -414,7 +400,7 @@ router.get('/stats', async (req, res) => {
       FROM support_tickets
     `);
 
-    const categoryStatsResult = await pool.query(`
+    const categoryStatsResult = await query(`
       SELECT 
         category,
         COUNT(*) as count
@@ -423,14 +409,14 @@ router.get('/stats', async (req, res) => {
       ORDER BY count DESC
     `);
 
-    const recentTicketsResult = await pool.query(`
+    const recentTicketsResult = await query(`
       SELECT 
         DATE(created_at) as date,
         COUNT(*) as count
       FROM support_tickets
       WHERE created_at >= NOW() - INTERVAL '30 days'
       GROUP BY DATE(created_at)
-      ORDER BY date DESC
+      ORDER BY DATE(created_at) DESC
     `);
 
     res.json({

@@ -1,27 +1,13 @@
 import express from 'express';
-import { Pool } from 'pg';
 import { RequestHandler } from 'express';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
+import { query } from '../lib/db';
 
 const router = express.Router();
 const execAsync = promisify(exec);
-
-// Database connection: prefer DATABASE_URL, fallback to individual env vars
-const pool = process.env.DATABASE_URL
-  ? new Pool({
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    })
-  : new Pool({
-      user: process.env.DB_USER || 'postgres',
-      host: process.env.DB_HOST || 'localhost',
-      database: process.env.DB_NAME || 'sofwan_db',
-      password: process.env.DB_PASSWORD || 'password',
-      port: parseInt(process.env.DB_PORT || '5432'),
-    });
 
 // Database schema information interfaces
 export interface TableInfo {
@@ -54,38 +40,38 @@ export interface BackupInfo {
 export const handleGetDatabaseStats: RequestHandler = async (req, res) => {
   try {
     // Get database version
-    const versionResult = await pool.query('SELECT version()');
+    const versionResult = await query('SELECT version()');
     const version = versionResult.rows[0].version;
 
     // Get database size
-    const sizeResult = await pool.query(`
+    const sizeResult = await query(`
       SELECT 
         pg_size_pretty(pg_database_size(current_database())) as size,
         pg_database_size(current_database()) as size_bytes
     `);
 
     // Get table count
-    const tableCountResult = await pool.query(`
+    const tableCountResult = await query(`
       SELECT COUNT(*) as count 
       FROM information_schema.tables 
       WHERE table_schema = 'public'
     `);
 
     // Get total row count (approximate)
-    const rowCountResult = await pool.query(`
+    const rowCountResult = await query(`
       SELECT SUM(n_tup_ins + n_tup_upd) as total_rows
       FROM pg_stat_user_tables
     `);
 
     // Get connection count
-    const connectionResult = await pool.query(`
+    const connectionResult = await query(`
       SELECT COUNT(*) as count 
       FROM pg_stat_activity 
       WHERE state = 'active'
     `);
 
     // Get uptime
-    const uptimeResult = await pool.query(`
+    const uptimeResult = await query(`
       SELECT EXTRACT(EPOCH FROM (now() - pg_postmaster_start_time())) as uptime_seconds
     `);
 
@@ -108,7 +94,7 @@ export const handleGetDatabaseStats: RequestHandler = async (req, res) => {
 // GET /api/database/tables - Get table information
 export const handleGetTables: RequestHandler = async (req, res) => {
   try {
-    const result = await pool.query(`
+    const result = await query(`
       SELECT 
         t.table_name,
         t.table_schema,
@@ -143,8 +129,8 @@ export const handleGetTables: RequestHandler = async (req, res) => {
 export const handleGetTableSchema: RequestHandler = async (req, res) => {
   try {
     const { tableName } = req.params;
-    
-    const result = await pool.query(`
+
+    const result = await query(`
       SELECT 
         column_name,
         data_type,
@@ -178,18 +164,18 @@ export const handleCreateBackup: RequestHandler = async (req, res) => {
 
     // Create backup using pg_dump
     const dbUrl = `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'password'}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '5432'}/${process.env.DB_NAME || 'sofwan_db'}`;
-    
+
     const command = `pg_dump "${dbUrl}" > "${backupPath}"`;
-    
+
     try {
       await execAsync(command);
-      
+
       // Get file size
       const stats = await fs.stat(backupPath);
       const sizeMb = Math.round(stats.size / (1024 * 1024) * 100) / 100;
 
       // Store backup info in database
-      const backupInfo = await pool.query(`
+      const backupInfo = await query(`
         INSERT INTO database_backups (filename, size_mb, type, description, status)
         VALUES ($1, $2, $3, $4, 'completed')
         RETURNING *
@@ -219,7 +205,7 @@ export const handleCreateBackup: RequestHandler = async (req, res) => {
 // GET /api/database/backups - List database backups
 export const handleGetBackups: RequestHandler = async (req, res) => {
   try {
-    const result = await pool.query(`
+    const result = await query(`
       SELECT * FROM database_backups 
       ORDER BY created_at DESC 
       LIMIT 50
@@ -246,9 +232,9 @@ export const handleGetBackups: RequestHandler = async (req, res) => {
 export const handleRestoreBackup: RequestHandler = async (req, res) => {
   try {
     const { backupId } = req.body;
-    
+
     // Get backup info
-    const backupResult = await pool.query(`
+    const backupResult = await query(`
       SELECT * FROM database_backups WHERE id = $1
     `, [backupId]);
 
@@ -268,9 +254,9 @@ export const handleRestoreBackup: RequestHandler = async (req, res) => {
 
     // Restore database using psql
     const dbUrl = `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || 'password'}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || '5432'}/${process.env.DB_NAME || 'sofwan_db'}`;
-    
+
     const command = `psql "${dbUrl}" < "${backupPath}"`;
-    
+
     try {
       await execAsync(command);
       res.json({ success: true, message: 'Database restored successfully' });
@@ -288,16 +274,16 @@ export const handleRestoreBackup: RequestHandler = async (req, res) => {
 export const handleOptimizeDatabase: RequestHandler = async (req, res) => {
   try {
     // Run VACUUM and ANALYZE on all tables
-    const tablesResult = await pool.query(`
+    const tablesResult = await query(`
       SELECT table_name FROM information_schema.tables 
       WHERE table_schema = 'public'
     `);
 
     const results = [];
-    
+
     for (const table of tablesResult.rows) {
       try {
-        await pool.query(`VACUUM ANALYZE ${table.table_name}`);
+        await query(`VACUUM ANALYZE ${table.table_name}`);
         results.push({ table: table.table_name, status: 'optimized' });
       } catch (error) {
         results.push({ table: table.table_name, status: 'failed', error: error.message });
@@ -315,7 +301,7 @@ export const handleOptimizeDatabase: RequestHandler = async (req, res) => {
 export const handleGetPerformanceMetrics: RequestHandler = async (req, res) => {
   try {
     // Get slow queries
-    const slowQueriesResult = await pool.query(`
+    const slowQueriesResult = await query(`
       SELECT 
         query,
         calls,
@@ -328,7 +314,7 @@ export const handleGetPerformanceMetrics: RequestHandler = async (req, res) => {
     `);
 
     // Get table statistics
-    const tableStatsResult = await pool.query(`
+    const tableStatsResult = await query(`
       SELECT 
         relname as table_name,
         seq_scan,
@@ -344,7 +330,7 @@ export const handleGetPerformanceMetrics: RequestHandler = async (req, res) => {
     `);
 
     // Get index usage
-    const indexUsageResult = await pool.query(`
+    const indexUsageResult = await query(`
       SELECT 
         schemaname,
         tablename,
