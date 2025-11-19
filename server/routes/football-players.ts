@@ -1,4 +1,4 @@
-import { Request, Response, Router } from 'express';
+import { Router, RequestHandler } from 'express';
 import { query } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
 import crypto from 'crypto';
@@ -18,7 +18,7 @@ const decrypt = (buffer: Buffer) => {
 };
 
 // Create Player
-export async function handleCreatePlayer(req: Request, res: Response) {
+export const handleCreatePlayer: RequestHandler = async (req, res) => {
   try {
     const {
       firstName,
@@ -78,9 +78,9 @@ export async function handleCreatePlayer(req: Request, res: Response) {
         ORDER BY asub.created_at DESC
         LIMIT 1
       `;
-      
+
       const subscriptionResult = await query(subscriptionQuery, [academyId]);
-      
+
       let subscription;
       // Check if there's no subscription at all
       if (subscriptionResult.rows.length === 0) {
@@ -92,7 +92,7 @@ export async function handleCreatePlayer(req: Request, res: Response) {
           LIMIT 1
         `;
         const freePlanResult = await query(freePlanQuery);
-        
+
         if (freePlanResult.rows.length > 0) {
           const freePlan = freePlanResult.rows[0];
           subscription = {
@@ -107,17 +107,17 @@ export async function handleCreatePlayer(req: Request, res: Response) {
             message: 'No free plan configured. Please contact support.'
           });
         }
-        
+
         // Check if they've already reached the free plan limit
         const playerCountQuery = `
           SELECT COUNT(*) as player_count 
           FROM players 
           WHERE academy_id = $1 AND is_active = true
         `;
-        
+
         const playerCountResult = await query(playerCountQuery, [academyId]);
         const currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
-        
+
         if (currentPlayerCount >= subscription.player_limit) {
           return res.status(403).json({
             success: false,
@@ -129,12 +129,12 @@ export async function handleCreatePlayer(req: Request, res: Response) {
             }
           });
         }
-        
+
         // If they haven't reached the limit, allow them to continue
       } else {
         // Use the active subscription
         subscription = subscriptionResult.rows[0];
-        
+
         // If player limit is not unlimited (-1), check current player count
         if (subscription.player_limit !== -1) {
           const playerCountQuery = `
@@ -142,10 +142,10 @@ export async function handleCreatePlayer(req: Request, res: Response) {
             FROM players 
             WHERE academy_id = $1 AND is_active = true
           `;
-          
+
           const playerCountResult = await query(playerCountQuery, [academyId]);
           const currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
-          
+
           if (currentPlayerCount >= subscription.player_limit) {
             return res.status(403).json({
               success: false,
@@ -165,7 +165,7 @@ export async function handleCreatePlayer(req: Request, res: Response) {
     const playerCardId = Math.random().toString(36).substr(2, 6).toUpperCase(); // Exactly 6 characters
     const cardId = `CARD-${Date.now()}`;
     const cardQrSignature = `QR-${playerId}`;
-    
+
     // Simple encryption simulation (in production, use proper encryption)
     const encrypt = (text: string) => Buffer.from(text || '', 'utf8');
     const nrcHash = nrc ? Buffer.from(nrc).toString('base64') : `HASH-${playerId}`;
@@ -260,20 +260,10 @@ export async function handleCreatePlayer(req: Request, res: Response) {
   }
 }
 
-// Mount routes
-router.get('/', handleGetAcademyPlayers);
-router.get('/search', handleSearchPlayers);
-router.get('/statistics', handleGetPlayerStatistics);
-router.get('/:playerId', handleGetPlayerDetails);
-router.post('/', handleCreatePlayer);
-router.put('/:playerId', handleUpdatePlayer);
-router.delete('/:playerId', handleDeletePlayer);
-router.post('/bulk-import', handleBulkImportPlayers);
 
-export default router;
 
 // Get Academy Players
-export async function handleGetAcademyPlayers(req: Request, res: Response) {
+export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -303,7 +293,7 @@ export async function handleGetAcademyPlayers(req: Request, res: Response) {
     }
 
     const orderLimitClause = ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-    
+
     const baseQuery = baseSelect + whereClause + orderLimitClause;
     const finalParams = [...params, limit, offset];
 
@@ -351,7 +341,7 @@ export async function handleGetAcademyPlayers(req: Request, res: Response) {
 }
 
 // Search Players
-export async function handleSearchPlayers(req: Request, res: Response) {
+export const handleSearchPlayers: RequestHandler = async (req, res) => {
   try {
     const query_param = req.query.q as string;
     const academyId = (req.query.academyId as string) || undefined;
@@ -390,7 +380,7 @@ export async function handleSearchPlayers(req: Request, res: Response) {
         const firstName = decrypt(p.first_name_cipher) || '';
         const lastName = decrypt(p.last_name_cipher) || '';
         const currentClub = decrypt(p.current_club_cipher) || '';
-        
+
         return {
           id: p.id,
           name: `${firstName} ${lastName}`.trim(),
@@ -402,7 +392,7 @@ export async function handleSearchPlayers(req: Request, res: Response) {
           updatedAt: p.updated_at ? new Date(p.updated_at).toISOString() : null,
         };
       })
-      .filter((player: any) => 
+      .filter((player: any) =>
         player.name.toLowerCase().includes(searchTerm) ||
         player.firstName.toLowerCase().includes(searchTerm) ||
         player.lastName.toLowerCase().includes(searchTerm)
@@ -420,7 +410,7 @@ export async function handleSearchPlayers(req: Request, res: Response) {
 }
 
 // Get Player Details
-export async function handleGetPlayerDetails(req: Request, res: Response) {
+export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
   try {
     const { playerId } = req.params;
 
@@ -444,14 +434,14 @@ export async function handleGetPlayerDetails(req: Request, res: Response) {
                                 created_at, updated_at
                          FROM players WHERE id = $1`;
     const playerResult = await query(playerQuery, [playerId]);
-    
+
     if (playerResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Player not found'
       });
     }
-    
+
     const player = playerResult.rows[0];
 
     res.json({
@@ -508,7 +498,7 @@ export async function handleGetPlayerDetails(req: Request, res: Response) {
 }
 
 // Update Player
-export async function handleUpdatePlayer(req: Request, res: Response) {
+export const handleUpdatePlayer: RequestHandler = async (req, res) => {
   try {
     const { playerId } = req.params;
     const updateData = req.body;
@@ -516,11 +506,11 @@ export async function handleUpdatePlayer(req: Request, res: Response) {
     // Check if player exists
     const checkQuery = 'SELECT * FROM players WHERE id = $1';
     const existingResult = await query(checkQuery, [playerId]);
-    
+
     if (existingResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Player not found' });
     }
-    
+
     const existing = existingResult.rows[0];
 
     // Build update query
@@ -603,13 +593,13 @@ export async function handleUpdatePlayer(req: Request, res: Response) {
       values.push(updateData.preferredFoot ? updateData.preferredFoot.toLowerCase() : null);
     }
     if (updateData.jerseyNumber !== undefined) {
-       updates.push(`jersey_number = $${paramCount++}`);
-       values.push(updateData.jerseyNumber ? parseInt(updateData.jerseyNumber) : null);
-     }
-     if (updateData.gender !== undefined) {
-       updates.push(`gender = $${paramCount++}`);
-       values.push(updateData.gender || null);
-     }
+      updates.push(`jersey_number = $${paramCount++}`);
+      values.push(updateData.jerseyNumber ? parseInt(updateData.jerseyNumber) : null);
+    }
+    if (updateData.gender !== undefined) {
+      updates.push(`gender = $${paramCount++}`);
+      values.push(updateData.gender || null);
+    }
     if (updateData.registrationDate !== undefined) {
       updates.push(`registration_date = $${paramCount++}`);
       values.push(updateData.registrationDate ? new Date(updateData.registrationDate) : null);
@@ -658,10 +648,10 @@ export async function handleUpdatePlayer(req: Request, res: Response) {
     // Add updated_at timestamp
     updates.push(`updated_at = $${paramCount++}`);
     values.push(new Date());
-    
+
     // Add player ID as the last parameter
     values.push(playerId);
-    
+
     // Execute update query if there are fields to update
     if (updates.length > 0) {
       const updateQuery = `
@@ -670,7 +660,7 @@ export async function handleUpdatePlayer(req: Request, res: Response) {
         WHERE id = $${paramCount}
         RETURNING *
       `;
-      
+
       const result = await query(updateQuery, values);
       const player = result.rows[0];
 
@@ -750,14 +740,14 @@ export async function handleUpdatePlayer(req: Request, res: Response) {
 }
 
 // Delete Player
-export async function handleDeletePlayer(req: Request, res: Response) {
+export const handleDeletePlayer: RequestHandler = async (req, res) => {
   try {
     const { playerId } = req.params;
 
     // Check if player exists and get encrypted data
     const checkQuery = 'SELECT id, first_name_cipher, last_name_cipher FROM players WHERE id = $1';
     const existingResult = await query(checkQuery, [playerId]);
-    
+
     if (existingResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Player not found' });
     }
@@ -794,20 +784,20 @@ export async function handleDeletePlayer(req: Request, res: Response) {
 }
 
 // Get Player Statistics
-export async function handleGetPlayerStatistics(req: Request, res: Response) {
+export const handleGetPlayerStatistics: RequestHandler = async (req, res) => {
   try {
     const academyId = (req as any).user?.id || req.query.academyId;
-    
+
     if (!academyId) {
       return res.status(400).json({ success: false, message: 'Academy ID is required' });
     }
 
     // Total players count
     const totalPlayersQuery = 'SELECT COUNT(*) as count FROM players WHERE academy_id = $1';
-    
+
     // Active players count (same as total since we don't have is_active column yet)
     const activePlayersQuery = 'SELECT COUNT(*) as count FROM players WHERE academy_id = $1';
-    
+
     // Position statistics
     const positionStatsQuery = `
       SELECT position, COUNT(*) as count 
@@ -816,7 +806,7 @@ export async function handleGetPlayerStatistics(req: Request, res: Response) {
       GROUP BY position 
       ORDER BY count DESC
     `;
-    
+
     // Age groups statistics
     const ageGroupsQuery = `
       SELECT 
@@ -832,7 +822,7 @@ export async function handleGetPlayerStatistics(req: Request, res: Response) {
       GROUP BY age_group
       ORDER BY count DESC
     `;
-    
+
     // Recent players (using encrypted columns)
     const recentPlayersQuery = `
       SELECT id, first_name_cipher, last_name_cipher, position, created_at
@@ -841,7 +831,7 @@ export async function handleGetPlayerStatistics(req: Request, res: Response) {
       ORDER BY created_at DESC
       LIMIT 5
     `;
-    
+
     const [
       totalPlayersResult,
       activePlayersResult,
@@ -855,7 +845,7 @@ export async function handleGetPlayerStatistics(req: Request, res: Response) {
       query(ageGroupsQuery, [academyId]),
       query(recentPlayersQuery, [academyId])
     ]);
-    
+
     const totalPlayers = parseInt(totalPlayersResult.rows[0].count);
     const activePlayers = parseInt(activePlayersResult.rows[0].count);
     const positionStats = positionStatsResult.rows.map(row => ({
@@ -873,7 +863,7 @@ export async function handleGetPlayerStatistics(req: Request, res: Response) {
       position: player.position,
       createdAt: player.created_at.toISOString()
     }));
-    
+
     res.json({
       success: true,
       data: {
@@ -893,7 +883,7 @@ export async function handleGetPlayerStatistics(req: Request, res: Response) {
 
 
 // Bulk Import Players
-export async function handleBulkImportPlayers(req: Request, res: Response) {
+export const handleBulkImportPlayers: RequestHandler = async (req, res) => {
   try {
     const academyId = (req as any).user.id;
     const { players } = req.body;
@@ -919,9 +909,9 @@ export async function handleBulkImportPlayers(req: Request, res: Response) {
       ORDER BY asub.created_at DESC
       LIMIT 1
     `;
-    
+
     const academyResult = await query(academyQuery, [academyId]);
-    
+
     if (academyResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
@@ -930,7 +920,7 @@ export async function handleBulkImportPlayers(req: Request, res: Response) {
     }
 
     const academy = academyResult.rows[0];
-    
+
     if (!academy.subscription_id) {
       return res.status(403).json({
         success: false,
@@ -957,7 +947,7 @@ export async function handleBulkImportPlayers(req: Request, res: Response) {
     // Process each player
     for (let i = 0; i < players.length; i++) {
       const playerData = players[i];
-      
+
       try {
         // Validate required fields
         if (!playerData.firstName || !playerData.lastName || !playerData.dateOfBirth || !playerData.position) {
@@ -977,9 +967,9 @@ export async function handleBulkImportPlayers(req: Request, res: Response) {
             AND jersey_number = $2 
             AND is_active = true
           `;
-          
+
           const jerseyResult = await query(jerseyNumberQuery, [
-            academyId, 
+            academyId,
             parseInt(playerData.jerseyNumber)
           ]);
 
@@ -1007,7 +997,7 @@ export async function handleBulkImportPlayers(req: Request, res: Response) {
             $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, NOW(), NOW()
           ) RETURNING id, first_name, last_name, position, jersey_number
         `;
-        
+
         const playerValues = [
           playerId,
           academyId,
@@ -1033,7 +1023,7 @@ export async function handleBulkImportPlayers(req: Request, res: Response) {
           playerData.notes || null,
           true
         ];
-        
+
         const playerResult = await query(createPlayerQuery, playerValues);
         const player = playerResult.rows[0];
 
@@ -1065,13 +1055,13 @@ export async function handleBulkImportPlayers(req: Request, res: Response) {
         $1, $2, $3, $4, $5, $6, NOW()
       )
     `;
-    
+
     await query(logActivityQuery, [
       uuidv4(),
       academyId,
       'players_bulk_imported',
       `Bulk import completed: ${results.successful.length} successful, ${results.failed.length} failed`,
-      JSON.stringify({ 
+      JSON.stringify({
         totalAttempted: players.length,
         successful: results.successful.length,
         failed: results.failed.length
@@ -1093,3 +1083,15 @@ export async function handleBulkImportPlayers(req: Request, res: Response) {
     });
   }
 }
+
+// Mount routes
+router.get('/', handleGetAcademyPlayers);
+router.get('/search', handleSearchPlayers);
+router.get('/statistics', handleGetPlayerStatistics);
+router.get('/:playerId', handleGetPlayerDetails);
+router.post('/', handleCreatePlayer);
+router.put('/:playerId', handleUpdatePlayer);
+router.delete('/:playerId', handleDeletePlayer);
+router.post('/bulk-import', handleBulkImportPlayers);
+
+export default router;
