@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import express, { RequestHandler } from 'express';
 import { Router } from 'express';
 // bcrypt usage is centralized in lib/db; avoid importing here
 import jwt from 'jsonwebtoken';
@@ -161,7 +161,7 @@ async function ensureAcademiesSchema(client: any) {
 }
 
 // Academy Registration
-export async function handleAcademyRegister(req: Request, res: Response) {
+export const handleAcademyRegister: RequestHandler = async (req, res) => {
   try {
     // Guard: database pool must be initialized
     if (!pool) {
@@ -236,9 +236,9 @@ export async function handleAcademyRegister(req: Request, res: Response) {
     const incomingBody: any = (req as any).body;
     if (incomingBody) {
       if (typeof incomingBody === 'string') {
-        try { assignFrom(JSON.parse(incomingBody)); } catch (_) {}
+        try { assignFrom(JSON.parse(incomingBody)); } catch (_) { }
       } else if (Buffer.isBuffer(incomingBody)) {
-        try { assignFrom(JSON.parse(incomingBody.toString('utf8'))); } catch (_) {}
+        try { assignFrom(JSON.parse(incomingBody.toString('utf8'))); } catch (_) { }
       } else if (typeof incomingBody === 'object') {
         assignFrom(incomingBody);
       }
@@ -253,7 +253,7 @@ export async function handleAcademyRegister(req: Request, res: Response) {
         } else if (Buffer.isBuffer(rawBody)) {
           assignFrom(JSON.parse(rawBody.toString('utf8')));
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // Fallback: read request stream
@@ -271,8 +271,8 @@ export async function handleAcademyRegister(req: Request, res: Response) {
           req.on('end', onEnd);
         });
         const raw = Buffer.concat(chunks).toString('utf8');
-        if (raw) { try { assignFrom(JSON.parse(raw)); } catch (_) {} }
-      } catch (_) {}
+        if (raw) { try { assignFrom(JSON.parse(raw)); } catch (_) { } }
+      } catch (_) { }
     }
 
     // Netlify/serverless: read original event body if present
@@ -284,7 +284,7 @@ export async function handleAcademyRegister(req: Request, res: Response) {
           const raw = event.isBase64Encoded ? Buffer.from(bodyFromEvent, 'base64').toString('utf8') : bodyFromEvent;
           assignFrom(JSON.parse(raw));
         }
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // Validate required fields
@@ -340,11 +340,11 @@ export async function handleAcademyRegister(req: Request, res: Response) {
       }
       // Hash password
       const hashedPassword = await hashPassword(password);
-      
+
       // Generate academy id depending on schema type
       const isUuidId = academyIdType === 'uuid';
       const academyId = isUuidId ? uuidv4() : null;
-      
+
       // Create academy code
       const academyCode = (name || 'academy')
         .toLowerCase()
@@ -411,7 +411,7 @@ export async function handleAcademyRegister(req: Request, res: Response) {
       // Map plan IDs to plan names
       const planIdToName = {
         'free': 'Free Plan',
-        'basic': 'Basic Plan', 
+        'basic': 'Basic Plan',
         'pro': 'Pro Plan',
         'elite': 'Elite Plan'
       };
@@ -453,7 +453,7 @@ export async function handleAcademyRegister(req: Request, res: Response) {
           plan = freePlan.rows[0];
         }
       }
-      
+
       // Create academy subscription
       const subscriptionId = uuidv4();
       const subscriptionQuery = `
@@ -464,11 +464,11 @@ export async function handleAcademyRegister(req: Request, res: Response) {
         VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
         RETURNING id, status, start_date, end_date
       `;
-      
+
       const startDate = new Date();
       const endDate = new Date();
       endDate.setMonth(endDate.getMonth() + 1); // 1 month subscription
-      
+
       const subscriptionValues = [
         subscriptionId,
         academy.id,
@@ -478,10 +478,10 @@ export async function handleAcademyRegister(req: Request, res: Response) {
         endDate,
         true
       ];
-      
+
       const subscriptionResult = await client.query(subscriptionQuery, subscriptionValues);
       const subscription = subscriptionResult.rows[0];
-      
+
       // Log subscription history
       const historyId = uuidv4();
       const historyQuery = `
@@ -491,7 +491,7 @@ export async function handleAcademyRegister(req: Request, res: Response) {
         )
         VALUES ($1, $2, $3, $4, $5, $6, NOW())
       `;
-      
+
       await client.query(historyQuery, [
         historyId,
         subscriptionId,
@@ -503,7 +503,7 @@ export async function handleAcademyRegister(req: Request, res: Response) {
 
       return { academy, subscription, plan };
     });
-    
+
     // Generate JWT token
     const token = jwt.sign(
       { id: result.academy.id, email: result.academy.email, role: 'ACADEMY_ADMIN' },
@@ -556,7 +556,7 @@ export async function handleAcademyRegister(req: Request, res: Response) {
 }
 
 // Academy Login
-export async function handleAcademyLogin(req: Request, res: Response) {
+export const handleAcademyLogin: RequestHandler = async (req, res) => {
   try {
     // Guard: database pool must be initialized (avoids implicit localhost connection)
     if (!pool) {
@@ -702,7 +702,7 @@ export async function handleAcademyLogin(req: Request, res: Response) {
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
-    
+
     // Find academy by email and verify password
     const academyResult = await query(`
       SELECT id, name, email, address, district, province, phone, director_name, password_hash
@@ -716,12 +716,12 @@ export async function handleAcademyLogin(req: Request, res: Response) {
     }
 
     const academy = academyResult.rows[0];
-    
+
     // Check if password_hash exists, if not, this academy needs to set up authentication
     if (!academy.password_hash) {
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Academy authentication not set up. Please contact support.' 
+      return res.status(401).json({
+        success: false,
+        message: 'Academy authentication not set up. Please contact support.'
       });
     }
 
