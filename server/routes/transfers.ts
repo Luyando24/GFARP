@@ -1,4 +1,4 @@
-import { Request, Response, Router } from 'express';
+import { Router, RequestHandler } from 'express';
 import { query } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -8,7 +8,7 @@ const router = Router();
 async function createFinancialTransactionsForTransfer(transfer: any, isUpdate: boolean = false) {
   try {
     const transactions = [];
-    
+
     // Create income transaction for transfer amount (if receiving player)
     if (transfer.transfer_amount && transfer.transfer_amount > 0) {
       const transferTransaction = {
@@ -25,7 +25,7 @@ async function createFinancialTransactionsForTransfer(transfer: any, isUpdate: b
         notes: `Auto-generated from transfer ID: ${transfer.id}`,
         created_by: transfer.created_by
       };
-      
+
       const result = await query(`
         INSERT INTO financial_transactions (
           academy_id, transaction_type, category, subcategory, amount, 
@@ -47,10 +47,10 @@ async function createFinancialTransactionsForTransfer(transfer: any, isUpdate: b
         transferTransaction.notes,
         transferTransaction.created_by
       ]);
-      
+
       transactions.push(result.rows[0]);
     }
-    
+
     // Create expense transaction for agent fee (if applicable)
     if (transfer.agent_fee && transfer.agent_fee > 0) {
       const agentFeeTransaction = {
@@ -67,7 +67,7 @@ async function createFinancialTransactionsForTransfer(transfer: any, isUpdate: b
         notes: `Auto-generated from transfer ID: ${transfer.id}`,
         created_by: transfer.created_by
       };
-      
+
       const result = await query(`
         INSERT INTO financial_transactions (
           academy_id, transaction_type, category, subcategory, amount, 
@@ -89,10 +89,10 @@ async function createFinancialTransactionsForTransfer(transfer: any, isUpdate: b
         agentFeeTransaction.notes,
         agentFeeTransaction.created_by
       ]);
-      
+
       transactions.push(result.rows[0]);
     }
-    
+
     return transactions;
   } catch (error) {
     console.error('Error creating financial transactions for transfer:', error);
@@ -101,10 +101,10 @@ async function createFinancialTransactionsForTransfer(transfer: any, isUpdate: b
 }
 
 // Get all transfers for an academy
-export async function handleGetTransfers(req: Request, res: Response) {
+export const handleGetTransfers: RequestHandler = async (req, res) => {
   try {
     const { academyId, limit = 50, offset = 0, status } = req.query;
-    
+
     let sql = `
       SELECT 
         id,
@@ -133,29 +133,29 @@ export async function handleGetTransfers(req: Request, res: Response) {
         updated_at
       FROM transfers
     `;
-    
+
     const params: any[] = [];
     const conditions: string[] = [];
-    
+
     if (academyId) {
       conditions.push(`academy_id = $${params.length + 1}`);
       params.push(academyId);
     }
-    
+
     if (status) {
       conditions.push(`status = $${params.length + 1}`);
       params.push(status);
     }
-    
+
     if (conditions.length > 0) {
       sql += ` WHERE ${conditions.join(' AND ')}`;
     }
-    
+
     sql += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
     params.push(limit, offset);
-    
+
     const result = await query(sql, params);
-    
+
     res.json({
       success: true,
       data: result.rows,
@@ -171,22 +171,22 @@ export async function handleGetTransfers(req: Request, res: Response) {
 }
 
 // Get a single transfer by ID
-export async function handleGetTransfer(req: Request, res: Response) {
+export const handleGetTransfer: RequestHandler = async (req, res) => {
   try {
     const { transferId } = req.params;
-    
+
     const result = await query(
       `SELECT * FROM transfers WHERE id = $1`,
       [transferId]
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'Transfer not found'
       });
     }
-    
+
     res.json({
       success: true,
       data: result.rows[0]
@@ -201,7 +201,7 @@ export async function handleGetTransfer(req: Request, res: Response) {
 }
 
 // Create a new transfer
-export async function handleCreateTransfer(req: Request, res: Response) {
+export const handleCreateTransfer: RequestHandler = async (req, res) => {
   try {
     const {
       academyId,
@@ -223,9 +223,9 @@ export async function handleCreateTransfer(req: Request, res: Response) {
       documents = [],
       createdBy
     } = req.body;
-    
+
     const transferId = uuidv4();
-    
+
     const result = await query(
       `INSERT INTO transfers (
         id, academy_id, player_id, player_name, from_club, to_club,
@@ -242,9 +242,9 @@ export async function handleCreateTransfer(req: Request, res: Response) {
         agentFee, notes, JSON.stringify(documents), createdBy
       ]
     );
-    
+
     const createdTransfer = result.rows[0];
-    
+
     // Automatically create financial transactions for this transfer
     try {
       const financialTransactions = await createFinancialTransactionsForTransfer(createdTransfer);
@@ -253,7 +253,7 @@ export async function handleCreateTransfer(req: Request, res: Response) {
       console.error('Failed to create financial transactions for transfer:', financialError);
       // Don't fail the transfer creation if financial transaction creation fails
     }
-    
+
     res.status(201).json({
       success: true,
       data: createdTransfer
@@ -268,7 +268,7 @@ export async function handleCreateTransfer(req: Request, res: Response) {
 }
 
 // Update a transfer
-export async function handleUpdateTransfer(req: Request, res: Response) {
+export const handleUpdateTransfer: RequestHandler = async (req, res) => {
   try {
     const { transferId } = req.params;
     const {
@@ -291,22 +291,22 @@ export async function handleUpdateTransfer(req: Request, res: Response) {
       fifaClearanceDate,
       approvedBy
     } = req.body;
-    
+
     // Get the current transfer to compare status changes
     const currentTransferResult = await query(
       `SELECT * FROM transfers WHERE id = $1`,
       [transferId]
     );
-    
+
     if (currentTransferResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'Transfer not found'
       });
     }
-    
+
     const currentTransfer = currentTransferResult.rows[0];
-    
+
     const result = await query(
       `UPDATE transfers SET
         player_name = COALESCE($2, player_name),
@@ -333,14 +333,14 @@ export async function handleUpdateTransfer(req: Request, res: Response) {
       [
         transferId, playerName, fromClub, toClub, transferAmount, currency,
         transferDate, contractStartDate, contractEndDate, status, transferType,
-        priority, agentName, agentFee, notes, 
+        priority, agentName, agentFee, notes,
         documents ? JSON.stringify(documents) : null,
         fifaClearanceStatus, fifaClearanceDate, approvedBy
       ]
     );
-    
+
     const updatedTransfer = result.rows[0];
-    
+
     // Update financial transactions if status changed to 'completed' or if amounts changed
     if (status && (status !== currentTransfer.status || transferAmount !== currentTransfer.transfer_amount || agentFee !== currentTransfer.agent_fee)) {
       try {
@@ -362,7 +362,7 @@ export async function handleUpdateTransfer(req: Request, res: Response) {
           );
           console.log(`Updated financial transaction status to cancelled for transfer ${transferId}`);
         }
-        
+
         // If amounts changed significantly, we might want to create new transactions
         // For now, we'll just log this case
         if (transferAmount !== currentTransfer.transfer_amount || agentFee !== currentTransfer.agent_fee) {
@@ -373,7 +373,7 @@ export async function handleUpdateTransfer(req: Request, res: Response) {
         // Don't fail the transfer update if financial transaction update fails
       }
     }
-    
+
     res.json({
       success: true,
       data: updatedTransfer
@@ -388,22 +388,22 @@ export async function handleUpdateTransfer(req: Request, res: Response) {
 }
 
 // Delete a transfer
-export async function handleDeleteTransfer(req: Request, res: Response) {
+export const handleDeleteTransfer: RequestHandler = async (req, res) => {
   try {
     const { transferId } = req.params;
-    
+
     const result = await query(
       `DELETE FROM transfers WHERE id = $1 RETURNING id`,
       [transferId]
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
         error: 'Transfer not found'
       });
     }
-    
+
     res.json({
       success: true,
       message: 'Transfer deleted successfully'
@@ -418,10 +418,10 @@ export async function handleDeleteTransfer(req: Request, res: Response) {
 }
 
 // Sync existing transfers with financial transactions
-export async function handleSyncTransfersWithFinances(req: Request, res: Response) {
+export const handleSyncTransfersWithFinances: RequestHandler = async (req, res) => {
   try {
     const { academyId } = req.params;
-    
+
     // Get all completed transfers that might not have financial transactions
     const transfersResult = await query(
       `SELECT * FROM transfers 
@@ -430,10 +430,10 @@ export async function handleSyncTransfersWithFinances(req: Request, res: Respons
        AND (transfer_amount > 0 OR agent_fee > 0)`,
       [academyId]
     );
-    
+
     let syncedCount = 0;
     const errors = [];
-    
+
     for (const transfer of transfersResult.rows) {
       try {
         // Check if financial transactions already exist for this transfer
@@ -442,7 +442,7 @@ export async function handleSyncTransfersWithFinances(req: Request, res: Respons
            WHERE reference_number IN ($1, $2)`,
           [`TRF-${transfer.id}`, `AGT-${transfer.id}`]
         );
-        
+
         if (existingTransactions.rows[0].count === 0) {
           // No existing financial transactions, create them
           await createFinancialTransactionsForTransfer(transfer);
@@ -455,7 +455,7 @@ export async function handleSyncTransfersWithFinances(req: Request, res: Respons
         });
       }
     }
-    
+
     res.json({
       success: true,
       message: `Synced ${syncedCount} transfers with financial transactions`,
@@ -472,18 +472,18 @@ export async function handleSyncTransfersWithFinances(req: Request, res: Respons
 }
 
 // Get transfer statistics
-export async function handleGetTransferStats(req: Request, res: Response) {
+export const handleGetTransferStats: RequestHandler = async (req, res) => {
   try {
     const { academyId } = req.query;
-    
+
     let whereClause = '';
     const params: any[] = [];
-    
+
     if (academyId) {
       whereClause = 'WHERE academy_id = $1';
       params.push(academyId);
     }
-    
+
     const result = await query(
       `SELECT 
         COUNT(*) as total_transfers,
@@ -495,7 +495,7 @@ export async function handleGetTransferStats(req: Request, res: Response) {
       FROM transfers ${whereClause}`,
       params
     );
-    
+
     res.json({
       success: true,
       data: result.rows[0]
