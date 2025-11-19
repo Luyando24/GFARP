@@ -1,4 +1,4 @@
-import { Router, type Request as ExpressRequest, type Response as ExpressResponse } from 'express';
+import { Router, RequestHandler } from 'express';
 import Stripe from 'stripe';
 import { stripe, STRIPE_WEBHOOK_SECRET } from '../lib/stripe.js';
 import { query, transaction } from '../lib/db.js';
@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 const router: Router = Router();
 
 // Webhook signature verification middleware
-const verifyWebhookSignature = (req: ExpressRequest, res: ExpressResponse, next: any) => {
+const verifyWebhookSignature: RequestHandler = (req, res, next) => {
   const sig = req.headers['stripe-signature'];
 
   if (!sig) {
@@ -31,7 +31,7 @@ const verifyWebhookSignature = (req: ExpressRequest, res: ExpressResponse, next:
 };
 
 // Main webhook handler (mounted at /api/stripe/webhooks)
-router.post('/', verifyWebhookSignature, async (req: ExpressRequest, res: ExpressResponse) => {
+const handleWebhook: RequestHandler = async (req, res) => {
   const event = req.body as Stripe.Event;
 
   console.log(`Received Stripe webhook: ${event.type}`);
@@ -82,7 +82,10 @@ router.post('/', verifyWebhookSignature, async (req: ExpressRequest, res: Expres
       message: error.message
     });
   }
-});
+};
+
+// Register route
+router.post('/', verifyWebhookSignature, handleWebhook);
 
 async function handleSubscriptionCreated(subscription: any) {
   console.log('Processing subscription created:', subscription.id);
