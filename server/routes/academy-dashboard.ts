@@ -1,5 +1,5 @@
 import { RequestHandler } from 'express';
-import { query } from '../lib/db';
+import { query } from '../lib/db.js';
 
 export interface AcademyDashboardStats {
   totalPlayers: number;
@@ -25,11 +25,11 @@ export interface AcademyDashboardStats {
 export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) => {
   try {
     const { academyId } = req.query;
-    
+
     if (!academyId) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Academy ID is required' 
+      return res.status(400).json({
+        success: false,
+        error: 'Academy ID is required'
       });
     }
 
@@ -52,7 +52,7 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
     const currentMonth = new Date();
     const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
     const lastDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
-    
+
     // Get revenue from transfers
     const transferRevenueResult = await query(
       `SELECT COALESCE(SUM(transfer_amount), 0) as revenue 
@@ -104,11 +104,11 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
       player: transfer.player_name || 'Unknown Player',
       from: transfer.from_club || 'Unknown Club',
       to: transfer.to_club || 'Unknown Club',
-      amount: transfer.transfer_amount 
-        ? `${transfer.currency || '$'}${transfer.transfer_amount.toLocaleString()}` 
+      amount: transfer.transfer_amount
+        ? `${transfer.currency || '$'}${transfer.transfer_amount.toLocaleString()}`
         : '$0',
-      date: transfer.transfer_date 
-        ? new Date(transfer.transfer_date).toLocaleDateString() 
+      date: transfer.transfer_date
+        ? new Date(transfer.transfer_date).toLocaleDateString()
         : new Date().toLocaleDateString(),
       status: transfer.status || 'pending'
     }));
@@ -146,12 +146,12 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
     // Create monthly financial performance array with last 6 months
     const monthlyFinancialPerformance = [];
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    
+
     for (let i = 5; i >= 0; i--) {
       const date = new Date();
       date.setMonth(date.getMonth() - i);
       const monthName = months[date.getMonth()];
-      
+
       // Find transfer data for this month
       const transferData = monthlyFinancialResult.rows.find(row => {
         const rowMonth = new Date(row.month);
@@ -163,7 +163,7 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
         const rowMonth = new Date(row.month);
         return rowMonth.getMonth() === date.getMonth() && rowMonth.getFullYear() === date.getFullYear();
       });
-      
+
       // Combine revenue from both sources
       const transferRevenue = transferData ? parseFloat(transferData.revenue) || 0 : 0;
       const financialIncome = financialData ? parseFloat(financialData.income) || 0 : 0;
@@ -174,9 +174,9 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
       const financialExpenses = financialData ? parseFloat(financialData.expenses) || 0 : 0;
       const combinedExpenses = transferExpenses + financialExpenses;
       const totalExpenses = combinedExpenses > 0 ? combinedExpenses : Math.max(0, totalRevenue * 0.15); // Default 15% expenses if no expenses recorded
-      
+
       const profit = totalRevenue - totalExpenses;
-      
+
       monthlyFinancialPerformance.push({
         month: monthName,
         revenue: totalRevenue,
@@ -200,9 +200,9 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
 
   } catch (error) {
     console.error('Error fetching academy dashboard stats:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch academy dashboard statistics' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch academy dashboard statistics'
     });
   }
 };

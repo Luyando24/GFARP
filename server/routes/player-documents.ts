@@ -2,8 +2,8 @@ import type { RequestHandler } from 'express';
 import multer from 'multer';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
-import { supabase } from '../lib/supabase';
-import { query } from '../lib/db';
+import { supabase } from '../lib/supabase.js';
+import { query } from '../lib/db.js';
 
 // Configure multer for file uploads
 const storage = multer.memoryStorage();
@@ -16,14 +16,14 @@ const upload = multer({
     // Allowed file types for player documents
     const allowedTypes = [
       'image/jpeg',
-      'image/jpg', 
+      'image/jpg',
       'image/png',
       'image/webp',
       'application/pdf',
       'image/heic',
       'image/heif'
     ];
-    
+
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {

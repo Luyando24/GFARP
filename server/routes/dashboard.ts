@@ -1,5 +1,5 @@
 import { RequestHandler, Router } from 'express';
-import { query } from '../lib/db';
+import { query } from '../lib/db.js';
 
 export interface DashboardStats {
   totalAcademies: number;
@@ -121,7 +121,7 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
         AND status = 'completed'
       `);
       monthlyRevenue = parseFloat(revenueResult.rows[0].total) || 0;
-      
+
       // Add subscription revenue if available
       const subscriptionResult = await query(`
         SELECT SUM(s.price) as total FROM subscriptions sub
@@ -145,7 +145,7 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
       'SELECT COUNT(*) as count FROM academies WHERE created_at >= $1',
       [lastMonth.toISOString()]
     );
-    
+
     const previousMonthAcademies = await query(
       'SELECT COUNT(*) as count FROM academies WHERE created_at >= $1 AND created_at < $2',
       [twoMonthsAgo.toISOString(), lastMonth.toISOString()]
@@ -317,8 +317,8 @@ export const handleGetNewAccounts: RequestHandler = async (req, res) => {
 
     const thisMonthCount = parseInt(monthResult.rows[0].count);
     const previousMonthCount = parseInt(previousMonthResult.rows[0].count);
-    const growthRate = previousMonthCount > 0 
-      ? ((thisMonthCount - previousMonthCount) / previousMonthCount) * 100 
+    const growthRate = previousMonthCount > 0
+      ? ((thisMonthCount - previousMonthCount) / previousMonthCount) * 100
       : thisMonthCount > 0 ? 100 : 0;
 
     const newAccounts: NewAccount[] = result.rows.map(row => ({
@@ -359,10 +359,10 @@ export const handleGetCountryDistribution: RequestHandler = async (req, res) => 
       GROUP BY COALESCE(NULLIF(TRIM(province), ''), 'Unknown')
       ORDER BY academy_count DESC
     `;
-    
+
     const result = await query(countryQuery);
     const totalAcademies = result.rows.reduce((sum, row) => sum + parseInt(row.academy_count), 0);
-    
+
     // Country flags mapping (basic set)
     const countryFlags: { [key: string]: string } = {
       'Zambia': '🇿🇲',
@@ -377,11 +377,11 @@ export const handleGetCountryDistribution: RequestHandler = async (req, res) => 
       'Malawi': '🇲🇼',
       'Unknown': '🌍'
     };
-    
+
     const countryDistribution: CountryDistribution[] = result.rows.map(row => {
       const academyCount = parseInt(row.academy_count);
       const percentage = totalAcademies > 0 ? Math.round((academyCount / totalAcademies) * 100 * 10) / 10 : 0;
-      
+
       return {
         country: row.country,
         academyCount: academyCount,
@@ -447,10 +447,10 @@ export const handleGetFinancialGrowth: RequestHandler = async (req, res) => {
     `;
 
     const result = await query(financialQuery);
-    
+
     // If no real data, provide mock data for development
     let financialData: FinancialGrowthData[];
-    
+
     if (result.rows.length === 0) {
       // Mock data for development
       const months = ['Jan 2024', 'Feb 2024', 'Mar 2024', 'Apr 2024', 'May 2024', 'Jun 2024'];
@@ -472,7 +472,7 @@ export const handleGetFinancialGrowth: RequestHandler = async (req, res) => {
     // Calculate statistics
     const totalRevenue = financialData.reduce((sum, data) => sum + data.revenue, 0);
     const totalSubscriptions = financialData.reduce((sum, data) => sum + data.subscriptions, 0);
-    const averageGrowth = financialData.length > 1 
+    const averageGrowth = financialData.length > 1
       ? financialData.slice(1).reduce((sum, data) => sum + data.growth, 0) / (financialData.length - 1)
       : 0;
     const averageRevenuePerSubscription = totalSubscriptions > 0 ? totalRevenue / totalSubscriptions : 0;

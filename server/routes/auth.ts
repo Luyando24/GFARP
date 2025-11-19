@@ -8,8 +8,8 @@ import {
   RegisterStaffRequest,
   AuthSession,
   RegisterStaffResponse,
-} from "../../shared/api";
-import { query, hashPassword, verifyPassword } from "../lib/db";
+} from "../../shared/api.js";
+import { query, hashPassword, verifyPassword } from "../lib/db.js";
 
 // Create router
 const router = Router();

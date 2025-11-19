@@ -3,7 +3,7 @@ import { Router } from 'express';
 // bcrypt usage is centralized in lib/db; avoid importing here
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import { query, transaction, hashPassword, verifyPassword } from '../lib/db';
+import { query, transaction, hashPassword, verifyPassword } from '../lib/db.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 

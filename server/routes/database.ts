@@ -4,7 +4,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import fs from 'fs/promises';
 import path from 'path';
-import { query } from '../lib/db';
+import { query } from '../lib/db.js';
 
 const router = express.Router();
 const execAsync = promisify(exec);

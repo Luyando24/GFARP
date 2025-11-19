@@ -1,6 +1,6 @@
 import { Router, RequestHandler } from 'express';
-import { query, hashPassword, verifyPassword } from '../lib/db';
-import { emailService } from '../lib/email-service';
+import { query, hashPassword, verifyPassword } from '../lib/db.js';
+import { emailService } from '../lib/email-service.js';
 
 const router = Router();
 

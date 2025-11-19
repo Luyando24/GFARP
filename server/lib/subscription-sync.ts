@@ -1,4 +1,4 @@
-import { getStripe } from './stripe';
+import { getStripe } from './stripe.js';
 import { query, transaction } from './db.js';
 import { v4 as uuidv4 } from 'uuid';
 

@@ -1,5 +1,5 @@
 import { Request, Response, Router, type RequestHandler } from 'express';
-import { query, transaction } from '../lib/db';
+import { query, transaction } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
 import { authenticateToken } from '../middleware/auth.js';
 
