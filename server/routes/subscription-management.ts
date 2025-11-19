@@ -7,7 +7,7 @@ import { authenticateToken } from '../middleware/auth.js';
 export const handleGetSubscription: RequestHandler = async (req, res) => {
   try {
     const academyId = (req as any).user?.id;
-    
+
     if (!academyId) {
       return res.status(401).json({
         success: false,
@@ -80,7 +80,7 @@ export const handleGetSubscription: RequestHandler = async (req, res) => {
 };
 
 // Get Available Subscription Plans
-export async function handleGetPlans(req: Request, res: Response) {
+export const handleGetPlans: RequestHandler = async (req, res) => {
   try {
     const plansQuery = `
       SELECT 
@@ -290,7 +290,7 @@ export async function handleGetPlans(req: Request, res: Response) {
 }
 
 // Upgrade Subscription Plan
-export async function handleUpgradePlan(req: Request, res: Response) {
+export const handleUpgradePlan: RequestHandler = async (req, res) => {
   try {
     const { academyId, newPlanId, paymentMethod, paymentReference, notes } = req.body;
 
@@ -361,7 +361,7 @@ export async function handleUpgradePlan(req: Request, res: Response) {
       // Log subscription history
       const historyId = uuidv4();
       const action = currentSubscription ? 'UPGRADED' : 'CREATED';
-      const notes = currentSubscription 
+      const notes = currentSubscription
         ? `Plan upgraded from ${currentSubscription.current_plan_name} to ${newPlan.name}`
         : `Initial subscription created with ${newPlan.name} plan`;
 
@@ -383,7 +383,7 @@ export async function handleUpgradePlan(req: Request, res: Response) {
       // Create payment record for all plans (including free plans)
       let paymentId = null;
       paymentId = uuidv4();
-      
+
       if (newPlan.price > 0) {
         // For paid plans, use the provided payment method
         await client.query(`
@@ -437,7 +437,7 @@ export async function handleUpgradePlan(req: Request, res: Response) {
           endDate: result.newSubscription.end_date
         },
         paymentId: result.paymentId,
-        paymentStatus: result.newPlan.price > 0 
+        paymentStatus: result.newPlan.price > 0
           ? (paymentMethod === 'CASH' ? 'PENDING' : 'COMPLETED')
           : 'NOT_REQUIRED'
       }
@@ -453,7 +453,7 @@ export async function handleUpgradePlan(req: Request, res: Response) {
 }
 
 // Process Cash Payment (Admin only)
-export async function handleProcessCashPayment(req: Request, res: Response) {
+export const handleProcessCashPayment: RequestHandler = async (req, res) => {
   try {
     const { paymentId, status, processedBy, notes } = req.body;
 
@@ -527,10 +527,10 @@ export async function handleProcessCashPayment(req: Request, res: Response) {
 }
 
 // Get Subscription History
-export async function handleGetSubscriptionHistory(req: Request, res: Response) {
+export const handleGetSubscriptionHistory: RequestHandler = async (req, res) => {
   try {
     const academyId = req.query.academyId as string;
-    
+
     if (!academyId) {
       return res.status(400).json({
         success: false,
@@ -578,7 +578,7 @@ export async function handleGetSubscriptionHistory(req: Request, res: Response) 
 }
 
 // Cancel Subscription
-export async function handleCancelSubscription(req: Request, res: Response) {
+export const handleCancelSubscription: RequestHandler = async (req, res) => {
   try {
     const { academyId, reason } = req.body;
 
@@ -598,9 +598,9 @@ export async function handleCancelSubscription(req: Request, res: Response) {
       ORDER BY s.created_at DESC
       LIMIT 1
     `;
-    
+
     const currentSubscriptionResult = await query(currentSubscriptionQuery, [academyId]);
-    
+
     if (currentSubscriptionResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
@@ -617,7 +617,7 @@ export async function handleCancelSubscription(req: Request, res: Response) {
       WHERE id = $1
       RETURNING *
     `;
-    
+
     const cancelResult = await query(cancelSubscriptionQuery, [currentSubscription.id]);
     const cancelledSubscription = cancelResult.rows[0];
 
@@ -629,7 +629,7 @@ export async function handleCancelSubscription(req: Request, res: Response) {
       )
       VALUES ($1, $2, $3, $4, $5, NOW())
     `;
-    
+
     await query(historyQuery, [
       historyId,
       currentSubscription.id,
