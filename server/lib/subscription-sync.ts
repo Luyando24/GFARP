@@ -1,4 +1,4 @@
-import { stripe } from './stripe';
+import { getStripe } from './stripe';
 import { query, transaction } from './db.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -12,41 +12,42 @@ export interface SyncResult {
  * Synchronizes subscription data between Stripe and local database
  */
 export class SubscriptionSyncService {
-  
+
   /**
    * Sync all subscriptions for a specific academy
    */
   async syncAcademySubscriptions(academyId: string): Promise<SyncResult> {
     const result: SyncResult = { success: true, synced: 0, errors: [] };
-    
+
     try {
       // Get academy's Stripe customer ID
       const academyResult = await query(
         'SELECT stripe_customer_id, email FROM academies WHERE id = $1',
         [academyId]
       );
-      
+
       if (academyResult.rows.length === 0) {
         result.errors.push(`Academy ${academyId} not found`);
         result.success = false;
         return result;
       }
-      
+
       const { stripe_customer_id: customerId, email } = academyResult.rows[0];
-      
+
       if (!customerId) {
         result.errors.push(`Academy ${academyId} has no Stripe customer ID`);
         result.success = false;
         return result;
       }
-      
+
       // Fetch subscriptions from Stripe
+      const stripe = getStripe();
       const stripeSubscriptions = await stripe.subscriptions.list({
         customer: customerId,
         limit: 100,
         expand: ['data.items.data.price.product']
       });
-      
+
       // Sync each subscription
       for (const subscription of stripeSubscriptions.data) {
         try {
@@ -57,7 +58,7 @@ export class SubscriptionSyncService {
           result.success = false;
         }
       }
-      
+
       return result;
     } catch (error: any) {
       result.errors.push(`Sync failed: ${error.message}`);
@@ -65,25 +66,25 @@ export class SubscriptionSyncService {
       return result;
     }
   }
-  
+
   /**
    * Sync all subscriptions across all academies
    */
   async syncAllSubscriptions(): Promise<SyncResult> {
     const result: SyncResult = { success: true, synced: 0, errors: [] };
-    
+
     try {
       // Get all academies with Stripe customer IDs
       const academiesResult = await query(
         'SELECT id, stripe_customer_id FROM academies WHERE stripe_customer_id IS NOT NULL'
       );
-      
+
       for (const academy of academiesResult.rows) {
         try {
           const academyResult = await this.syncAcademySubscriptions(academy.id);
           result.synced += academyResult.synced;
           result.errors.push(...academyResult.errors);
-          
+
           if (!academyResult.success) {
             result.success = false;
           }
@@ -92,7 +93,7 @@ export class SubscriptionSyncService {
           result.success = false;
         }
       }
-      
+
       return result;
     } catch (error: any) {
       result.errors.push(`Global sync failed: ${error.message}`);
@@ -100,7 +101,7 @@ export class SubscriptionSyncService {
       return result;
     }
   }
-  
+
   /**
    * Sync a single subscription from Stripe to local database
    */
@@ -111,28 +112,28 @@ export class SubscriptionSyncService {
         'SELECT id, status, start_date, end_date FROM academy_subscriptions WHERE stripe_subscription_id = $1',
         [stripeSubscription.id]
       );
-      
+
       const priceId = stripeSubscription.items.data[0]?.price?.id;
       if (!priceId) {
         throw new Error(`No price ID found for subscription ${stripeSubscription.id}`);
       }
-      
+
       // Find the corresponding plan
       const planResult = await client.query(
         'SELECT id FROM subscription_plans WHERE stripe_price_id = $1',
         [priceId]
       );
-      
+
       if (planResult.rows.length === 0) {
         throw new Error(`No plan found for price ID ${priceId}`);
       }
-      
+
       const planId = planResult.rows[0].id;
       const startDate = new Date(stripeSubscription.current_period_start * 1000);
       const endDate = new Date(stripeSubscription.current_period_end * 1000);
       const status = stripeSubscription.status.toUpperCase();
       const autoRenew = !stripeSubscription.cancel_at_period_end;
-      
+
       if (existingResult.rows.length === 0) {
         // Create new subscription
         const subscriptionId = uuidv4();
@@ -152,7 +153,7 @@ export class SubscriptionSyncService {
           endDate,
           autoRenew
         ]);
-        
+
         // Log creation
         await client.query(`
           INSERT INTO subscription_history (
@@ -170,19 +171,19 @@ export class SubscriptionSyncService {
             sync_date: new Date().toISOString()
           })
         ]);
-        
+
       } else {
         // Update existing subscription
         const localSubscription = existingResult.rows[0];
         const subscriptionId = localSubscription.id;
-        
+
         // Check if update is needed
         const needsUpdate = (
           localSubscription.status !== status ||
           localSubscription.start_date.getTime() !== startDate.getTime() ||
           localSubscription.end_date.getTime() !== endDate.getTime()
         );
-        
+
         if (needsUpdate) {
           await client.query(`
             UPDATE academy_subscriptions 
@@ -200,7 +201,7 @@ export class SubscriptionSyncService {
             autoRenew,
             subscriptionId
           ]);
-          
+
           // Log update
           await client.query(`
             INSERT INTO subscription_history (
@@ -220,42 +221,43 @@ export class SubscriptionSyncService {
           ]);
         }
       }
-      
+
       // Sync recent invoices for this subscription
       await this.syncSubscriptionInvoices(client, stripeSubscription.id);
     });
   }
-  
+
   /**
    * Sync invoices for a specific subscription
    */
   private async syncSubscriptionInvoices(client: any, stripeSubscriptionId: string): Promise<void> {
     try {
       // Get recent invoices from Stripe
+      const stripe = getStripe();
       const invoices = await stripe.invoices.list({
         subscription: stripeSubscriptionId,
         limit: 10
       });
-      
+
       // Find local subscription
       const subscriptionResult = await client.query(
         'SELECT id, academy_id FROM academy_subscriptions WHERE stripe_subscription_id = $1',
         [stripeSubscriptionId]
       );
-      
+
       if (subscriptionResult.rows.length === 0) {
         return;
       }
-      
+
       const { id: subscriptionId, academy_id: academyId } = subscriptionResult.rows[0];
-      
+
       for (const invoice of invoices.data) {
         // Check if payment record exists
         const existingPayment = await client.query(
           'SELECT id FROM subscription_payments WHERE stripe_invoice_id = $1',
           [invoice.id]
         );
-        
+
         if (existingPayment.rows.length === 0 && invoice.status === 'paid') {
           // Create payment record
           const paymentId = uuidv4();
@@ -288,7 +290,7 @@ export class SubscriptionSyncService {
       // Don't throw - invoice sync is not critical
     }
   }
-  
+
   /**
    * Validate subscription data consistency
    */
@@ -297,7 +299,7 @@ export class SubscriptionSyncService {
     issues: string[];
   }> {
     const issues: string[] = [];
-    
+
     try {
       // Get academy's subscriptions
       const subscriptionsResult = await query(`
@@ -309,40 +311,41 @@ export class SubscriptionSyncService {
         JOIN academies a ON s.academy_id = a.id
         WHERE s.academy_id = $1 AND s.stripe_subscription_id IS NOT NULL
       `, [academyId]);
-      
+
       for (const subscription of subscriptionsResult.rows) {
         try {
           // Fetch from Stripe
+          const stripe = getStripe();
           const stripeSubscription = await stripe.subscriptions.retrieve(
             subscription.stripe_subscription_id
           );
-          
+
           // Compare status
           if (subscription.status !== stripeSubscription.status.toUpperCase()) {
             issues.push(
               `Subscription ${subscription.id}: Status mismatch (Local: ${subscription.status}, Stripe: ${stripeSubscription.status})`
             );
           }
-          
+
           // Compare dates (support different SDK return shapes)
           const subAny: any = stripeSubscription as any;
           const startUnix = subAny.current_period_start ?? subAny.data?.current_period_start;
           const endUnix = subAny.current_period_end ?? subAny.data?.current_period_end;
           const stripeStart = new Date((startUnix as number) * 1000);
           const stripeEnd = new Date((endUnix as number) * 1000);
-          
+
           if (Math.abs(new Date(subscription.start_date).getTime() - stripeStart.getTime()) > 1000) {
             issues.push(
               `Subscription ${subscription.id}: Start date mismatch`
             );
           }
-          
+
           if (Math.abs(new Date(subscription.end_date).getTime() - stripeEnd.getTime()) > 1000) {
             issues.push(
               `Subscription ${subscription.id}: End date mismatch`
             );
           }
-          
+
         } catch (error: any) {
           if (error.code === 'resource_missing') {
             issues.push(
@@ -355,12 +358,12 @@ export class SubscriptionSyncService {
           }
         }
       }
-      
+
       return {
         consistent: issues.length === 0,
         issues
       };
-      
+
     } catch (error: any) {
       return {
         consistent: false,

@@ -3,15 +3,20 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is required');
-}
+let stripeInstance: Stripe | null = null;
 
-// Initialize Stripe with the secret key
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-10-29.clover',
-  typescript: true,
-});
+export const getStripe = (): Stripe => {
+  if (!stripeInstance) {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      throw new Error('STRIPE_SECRET_KEY is required');
+    }
+    stripeInstance = new Stripe(process.env.STRIPE_SECRET_KEY, {
+      apiVersion: '2025-10-29.clover',
+      typescript: true,
+    });
+  }
+  return stripeInstance;
+};
 
 // Stripe configuration constants
 export const STRIPE_CONFIG = {
@@ -27,6 +32,7 @@ export const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 // Helper function to create a customer
 export async function createStripeCustomer(email: string, name: string, metadata?: Record<string, string>) {
   try {
+    const stripe = getStripe();
     const customer = await stripe.customers.create({
       email,
       name,
@@ -46,6 +52,7 @@ export async function createStripeSubscription(
   metadata?: Record<string, string>
 ) {
   try {
+    const stripe = getStripe();
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
@@ -69,6 +76,7 @@ export async function createPaymentIntent(
   metadata?: Record<string, string>
 ) {
   try {
+    const stripe = getStripe();
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(amount * 100), // Convert to cents
       currency,
@@ -88,6 +96,7 @@ export async function createPaymentIntent(
 // Helper function to retrieve a subscription
 export async function getStripeSubscription(subscriptionId: string) {
   try {
+    const stripe = getStripe();
     const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
       expand: ['latest_invoice', 'customer'],
     });
@@ -101,6 +110,7 @@ export async function getStripeSubscription(subscriptionId: string) {
 // Helper function to cancel a subscription
 export async function cancelStripeSubscription(subscriptionId: string, immediately: boolean = false) {
   try {
+    const stripe = getStripe();
     if (immediately) {
       const subscription = await stripe.subscriptions.cancel(subscriptionId);
       return subscription;
@@ -123,8 +133,9 @@ export async function updateStripeSubscription(
   prorationBehavior: 'create_prorations' | 'none' = 'create_prorations'
 ) {
   try {
+    const stripe = getStripe();
     const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-    
+
     const updatedSubscription = await stripe.subscriptions.update(subscriptionId, {
       items: [{
         id: subscription.items.data[0].id,
@@ -132,7 +143,7 @@ export async function updateStripeSubscription(
       }],
       proration_behavior: prorationBehavior,
     });
-    
+
     return updatedSubscription;
   } catch (error) {
     console.error('Error updating Stripe subscription:', error);
@@ -145,8 +156,9 @@ export function constructWebhookEvent(body: string | Buffer, signature: string) 
   if (!STRIPE_CONFIG.webhookSecret) {
     throw new Error('STRIPE_WEBHOOK_SECRET is required for webhook verification');
   }
-  
+
   try {
+    const stripe = getStripe();
     const event = stripe.webhooks.constructEvent(body, signature, STRIPE_CONFIG.webhookSecret);
     return event;
   } catch (error) {

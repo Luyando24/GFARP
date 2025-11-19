@@ -1,6 +1,6 @@
 import { Router, RequestHandler } from 'express';
 import Stripe from 'stripe';
-import { stripe, STRIPE_WEBHOOK_SECRET } from '../lib/stripe.js';
+import { getStripe, STRIPE_WEBHOOK_SECRET } from '../lib/stripe.js';
 import { query, transaction } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -21,6 +21,7 @@ const verifyWebhookSignature: RequestHandler = (req, res, next) => {
   }
 
   try {
+    const stripe = getStripe();
     const event = stripe.webhooks.constructEvent(req.body, sig, STRIPE_WEBHOOK_SECRET);
     req.body = event; // Replace raw body with parsed event
     next();

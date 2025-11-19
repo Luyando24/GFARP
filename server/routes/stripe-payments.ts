@@ -1,12 +1,12 @@
 import { Router, type RequestHandler } from 'express';
-import { 
-  stripe, 
-  createStripeCustomer, 
-  createStripeSubscription, 
+import {
+  getStripe,
+  createStripeCustomer,
+  createStripeSubscription,
   createPaymentIntent,
   getStripeSubscription,
   cancelStripeSubscription,
-  updateStripeSubscription 
+  updateStripeSubscription
 } from '../lib/stripe.js';
 import { query, transaction } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
@@ -18,7 +18,7 @@ const router = Router();
 router.post('/create-customer', authenticateToken, (async (req, res) => {
   try {
     const academyId = (req as any).user?.id;
-    
+
     if (!academyId) {
       return res.status(401).json({
         success: false,
@@ -129,7 +129,7 @@ router.post('/create-subscription', authenticateToken, (async (req, res) => {
           { academyId }
         );
         customerId = customer.id;
-        
+
         await client.query(
           'UPDATE academies SET stripe_customer_id = $1, updated_at = NOW() WHERE id = $2',
           [customerId, academyId]

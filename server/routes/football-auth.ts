@@ -3,7 +3,7 @@ import { Router } from 'express';
 // bcrypt usage is centralized in lib/db; avoid importing here
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import { query, transaction, hashPassword, verifyPassword, pool } from '../lib/db';
+import { query, transaction, hashPassword, verifyPassword } from '../lib/db';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
@@ -164,24 +164,8 @@ async function ensureAcademiesSchema(client: any) {
 export const handleAcademyRegister: RequestHandler = async (req, res) => {
   try {
     // Guard: database pool must be initialized
-    if (!pool) {
-      return res.status(503).json({
-        success: false,
-        message: 'Service unavailable: database not configured',
-        details: {
-          acceptedEnv: [
-            'DATABASE_URL',
-            'SUPABASE_DB_URL',
-            'SUPABASE_DATABASE_URL',
-            'POSTGRES_URL',
-            'POSTGRES_PRISMA_URL',
-            'PG_CONNECTION_STRING',
-            'PGHOST/PGUSER/PGPASSWORD/PGDATABASE/PGPORT'
-          ],
-          hint: 'Configure one of the accepted variables in Netlify Site settings → Environment variables',
-        }
-      });
-    }
+    // Guard: database pool must be initialized
+    // (Implicitly handled by query/transaction helpers which throw if DB not configured)
 
     // Debug instrumentation to inspect incoming request shape
     const ct = req.headers['content-type'];
@@ -559,24 +543,8 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
 export const handleAcademyLogin: RequestHandler = async (req, res) => {
   try {
     // Guard: database pool must be initialized (avoids implicit localhost connection)
-    if (!pool) {
-      return res.status(503).json({
-        success: false,
-        message: 'Service unavailable: database not configured',
-        details: {
-          acceptedEnv: [
-            'DATABASE_URL',
-            'SUPABASE_DB_URL',
-            'SUPABASE_DATABASE_URL',
-            'POSTGRES_URL',
-            'POSTGRES_PRISMA_URL',
-            'PG_CONNECTION_STRING',
-            'PGHOST/PGUSER/PGPASSWORD/PGDATABASE/PGPORT'
-          ],
-          hint: 'Configure one of the accepted variables in Netlify Site settings → Environment variables',
-        }
-      });
-    }
+    // Guard: database pool must be initialized (avoids implicit localhost connection)
+    // (Implicitly handled by query helper)
 
     // Debug instrumentation to inspect incoming request shape
     const ct = req.headers['content-type'];

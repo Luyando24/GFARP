@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { pool } from '../lib/db.js';
+import { query } from '../lib/db.js';
 
 const router = Router();
 
@@ -7,8 +7,8 @@ const router = Router();
 router.get('/', async (req, res) => {
   try {
     const { academy_id, status, compliance_type, limit = 50, offset = 0 } = req.query;
-    
-    let query = `
+
+    let sql = `
       SELECT fc.*, 
              COUNT(fcd.id) as document_count,
              COUNT(fca.id) as action_count
@@ -21,31 +21,31 @@ router.get('/', async (req, res) => {
     let paramIndex = 1;
 
     if (academy_id) {
-      query += ` AND fc.academy_id = $${paramIndex}`;
+      sql += ` AND fc.academy_id = $${paramIndex}`;
       params.push(academy_id);
       paramIndex++;
     }
 
     if (status) {
-      query += ` AND fc.status = $${paramIndex}`;
+      sql += ` AND fc.status = $${paramIndex}`;
       params.push(status);
       paramIndex++;
     }
 
     if (compliance_type) {
-      query += ` AND fc.compliance_type = $${paramIndex}`;
+      sql += ` AND fc.compliance_type = $${paramIndex}`;
       params.push(compliance_type);
       paramIndex++;
     }
 
-    query += `
+    sql += `
       GROUP BY fc.id
       ORDER BY fc.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
     params.push(parseInt(limit as string), parseInt(offset as string));
 
-    const result = await pool.query(query, params);
+    const result = await query(sql, params);
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching FIFA compliance records:', error);
@@ -57,8 +57,8 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
-    const result = await pool.query(`
+
+    const result = await query(`
       SELECT fc.*,
              json_agg(DISTINCT fcd.*) FILTER (WHERE fcd.id IS NOT NULL) as documents,
              json_agg(DISTINCT fca.*) FILTER (WHERE fca.id IS NOT NULL) as actions,
@@ -101,7 +101,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: academy_id, compliance_type, title' });
     }
 
-    const result = await pool.query(`
+    const result = await query(`
       INSERT INTO fifa_compliance (
         academy_id, compliance_type, title, description, status, priority, 
         due_date, reviewer_id, reviewer_name, submission_date
@@ -134,7 +134,7 @@ router.put('/:id', async (req, res) => {
       compliance_score
     } = req.body;
 
-    const result = await pool.query(`
+    const result = await query(`
       UPDATE fifa_compliance SET
         title = COALESCE($2, title),
         description = COALESCE($3, description),
@@ -167,9 +167,9 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    
-    const result = await pool.query('DELETE FROM fifa_compliance WHERE id = $1 RETURNING id', [id]);
-    
+
+    const result = await query('DELETE FROM fifa_compliance WHERE id = $1 RETURNING id', [id]);
+
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Compliance record not found' });
     }
@@ -185,8 +185,8 @@ router.delete('/:id', async (req, res) => {
 router.get('/areas/:academy_id', async (req, res) => {
   try {
     const { academy_id } = req.params;
-    
-    const result = await pool.query(`
+
+    const result = await query(`
       SELECT * FROM fifa_compliance_areas 
       WHERE academy_id = $1 
       ORDER BY area_name
@@ -215,7 +215,7 @@ router.post('/areas', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: academy_id, area_name, area_type' });
     }
 
-    const result = await pool.query(`
+    const result = await query(`
       INSERT INTO fifa_compliance_areas (
         academy_id, area_name, area_type, compliance_score, status, description, last_check_date
       ) VALUES ($1, $2, $3, $4, $5, $6, NOW())
@@ -241,8 +241,8 @@ router.post('/areas', async (req, res) => {
 router.get('/documents/:compliance_id', async (req, res) => {
   try {
     const { compliance_id } = req.params;
-    
-    const result = await pool.query(`
+
+    const result = await query(`
       SELECT * FROM fifa_compliance_documents 
       WHERE compliance_id = $1 
       ORDER BY upload_date DESC
@@ -273,7 +273,7 @@ router.post('/documents', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: compliance_id, document_name, document_type' });
     }
 
-    const result = await pool.query(`
+    const result = await query(`
       INSERT INTO fifa_compliance_documents (
         compliance_id, document_name, document_type, file_path, file_size, 
         mime_type, uploaded_by, expiry_date
@@ -293,8 +293,8 @@ router.get('/actions/:academy_id', async (req, res) => {
   try {
     const { academy_id } = req.params;
     const { status, priority } = req.query;
-    
-    let query = `
+
+    let sql = `
       SELECT fca.*, fc.title as compliance_title 
       FROM fifa_compliance_actions fca
       LEFT JOIN fifa_compliance fc ON fca.compliance_id = fc.id
@@ -304,20 +304,20 @@ router.get('/actions/:academy_id', async (req, res) => {
     let paramIndex = 2;
 
     if (status) {
-      query += ` AND fca.status = $${paramIndex}`;
+      sql += ` AND fca.status = $${paramIndex}`;
       params.push(status);
       paramIndex++;
     }
 
     if (priority) {
-      query += ` AND fca.priority = $${paramIndex}`;
+      sql += ` AND fca.priority = $${paramIndex}`;
       params.push(priority);
       paramIndex++;
     }
 
-    query += ` ORDER BY fca.due_date ASC, fca.priority DESC`;
+    sql += ` ORDER BY fca.due_date ASC, fca.priority DESC`;
 
-    const result = await pool.query(query, params);
+    const result = await query(sql, params);
     res.json(result.rows);
   } catch (error) {
     console.error('Error fetching FIFA compliance actions:', error);
@@ -342,7 +342,7 @@ router.post('/actions', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: academy_id, title' });
     }
 
-    const result = await pool.query(`
+    const result = await query(`
       INSERT INTO fifa_compliance_actions (
         compliance_id, academy_id, title, description, priority, assigned_to, due_date
       ) VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -362,7 +362,7 @@ router.put('/actions/:id', async (req, res) => {
     const { id } = req.params;
     const { title, description, priority, status, assigned_to, due_date, completion_date } = req.body;
 
-    const result = await pool.query(`
+    const result = await query(`
       UPDATE fifa_compliance_actions SET
         title = COALESCE($2, title),
         description = COALESCE($3, description),
@@ -391,8 +391,8 @@ router.put('/actions/:id', async (req, res) => {
 router.get('/audits/:academy_id', async (req, res) => {
   try {
     const { academy_id } = req.params;
-    
-    const result = await pool.query(`
+
+    const result = await query(`
       SELECT * FROM fifa_compliance_audits 
       WHERE academy_id = $1 
       ORDER BY audit_date DESC
@@ -424,7 +424,7 @@ router.post('/audits', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: academy_id, audit_type, auditor_name, result' });
     }
 
-    const result_query = await pool.query(`
+    const result_query = await query(`
       INSERT INTO fifa_compliance_audits (
         academy_id, audit_type, auditor_name, auditor_organization, overall_score,
         result, findings, recommendations, next_audit_date, audit_date
@@ -455,7 +455,7 @@ router.post('/comments', async (req, res) => {
       return res.status(400).json({ error: 'Missing required fields: compliance_id, author_name, comment_text' });
     }
 
-    const result = await pool.query(`
+    const result = await query(`
       INSERT INTO fifa_compliance_comments (
         compliance_id, author_id, author_name, author_type, comment_text, is_internal
       ) VALUES ($1, $2, $3, $4, $5, $6)
@@ -473,9 +473,9 @@ router.post('/comments', async (req, res) => {
 router.get('/dashboard/:academy_id', async (req, res) => {
   try {
     const { academy_id } = req.params;
-    
+
     // Get overall compliance statistics
-    const statsResult = await pool.query(`
+    const statsResult = await query(`
       SELECT 
         COUNT(*) as total_records,
         COUNT(*) FILTER (WHERE status = 'approved') as approved_count,
@@ -488,14 +488,14 @@ router.get('/dashboard/:academy_id', async (req, res) => {
     `, [academy_id]);
 
     // Get compliance areas summary
-    const areasResult = await pool.query(`
+    const areasResult = await query(`
       SELECT area_type, compliance_score, status 
       FROM fifa_compliance_areas 
       WHERE academy_id = $1
     `, [academy_id]);
 
     // Get recent actions
-    const actionsResult = await pool.query(`
+    const actionsResult = await query(`
       SELECT * FROM fifa_compliance_actions 
       WHERE academy_id = $1 AND status != 'completed'
       ORDER BY due_date ASC 
@@ -503,7 +503,7 @@ router.get('/dashboard/:academy_id', async (req, res) => {
     `, [academy_id]);
 
     // Get latest audit
-    const auditResult = await pool.query(`
+    const auditResult = await query(`
       SELECT * FROM fifa_compliance_audits 
       WHERE academy_id = $1 
       ORDER BY audit_date DESC 

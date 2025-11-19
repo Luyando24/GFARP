@@ -71,7 +71,7 @@ function computeSslOption(urlStr: string | undefined): any {
 
 // Only create a pool if we have a valid connection string.
 // This prevents implicit localhost (127.0.0.1:5432) connections on Netlify.
-const pool: pkg.Pool | null = resolvedConnectionString
+const pool: any = resolvedConnectionString
   ? new Pool({
     connectionString: resolvedConnectionString,
     ssl: computeSslOption(resolvedConnectionString),
@@ -227,5 +227,5 @@ process.on('SIGTERM', async () => {
   }
 });
 
-export { pool };
-export default pool;
+// export { pool };
+// export default pool;
