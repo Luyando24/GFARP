@@ -1,8 +1,8 @@
-import { Router, Request, Response } from 'express';
+import { Router, RequestHandler } from 'express';
 import { query, hashPassword, verifyPassword } from '../lib/db';
 import { emailService } from '../lib/email-service';
 
-const router = Router();
+const router: Router = Router();
 
 // Helper function to log activation history
 async function logActivationHistory(
@@ -12,7 +12,7 @@ async function logActivationHistory(
   newStatus: boolean,
   adminEmail?: string,
   reason?: string,
-  req?: Request
+  req?: any
 ) {
   try {
     const ipAddress = req?.ip || req?.connection?.remoteAddress || null;
@@ -40,7 +40,7 @@ async function logActivationHistory(
       const academyResult = await query('SELECT name, email FROM academies WHERE id = $1', [academyId]);
       if (academyResult.rows.length > 0) {
         const academy = academyResult.rows[0];
-        
+
         // Send email to academy
         if (actionType === 'activate' || actionType === 'deactivate') {
           await emailService.sendAcademyActivationEmail(
@@ -102,7 +102,7 @@ interface AcademyData {
 }
 
 // GET /api/academies - Get all academies with pagination and filtering
-router.get('/', async (req: Request, res: Response) => {
+const handleGetAcademies: RequestHandler = async (req, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
@@ -174,10 +174,12 @@ router.get('/', async (req: Request, res: Response) => {
       error: 'Failed to fetch academies'
     });
   }
-});
+};
+
+router.get('/', handleGetAcademies);
 
 // GET /api/academies/:id - Get academy by ID
-router.get('/:id', async (req: Request, res: Response) => {
+const handleGetAcademyById: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -260,10 +262,12 @@ router.get('/:id', async (req: Request, res: Response) => {
       error: 'Failed to fetch academy'
     });
   }
-});
+};
+
+router.get('/:id', handleGetAcademyById);
 
 // POST /api/academies - Create new academy
-router.post('/', async (req: Request, res: Response) => {
+const handleCreateAcademy: RequestHandler = async (req, res) => {
   try {
     const academyData: AcademyData = req.body;
 
@@ -352,10 +356,12 @@ router.post('/', async (req: Request, res: Response) => {
       error: 'Failed to create academy'
     });
   }
-});
+};
+
+router.post('/', handleCreateAcademy);
 
 // PUT /api/academies/:id - Update academy
-router.put('/:id', async (req: Request, res: Response) => {
+const handleUpdateAcademy: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
     const academyData: Partial<AcademyData> = req.body;
@@ -482,9 +488,11 @@ router.put('/:id', async (req: Request, res: Response) => {
       error: 'Failed to update academy'
     });
   }
-});
+};
+
+router.put('/:id', handleUpdateAcademy);
 // DELETE /api/academies/:id - Delete academy (soft delete by setting status to inactive)
-router.delete('/:id', async (req: Request, res: Response) => {
+const handleDeleteAcademy: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
     const { permanent } = req.query;
@@ -505,7 +513,7 @@ router.delete('/:id', async (req: Request, res: Response) => {
     if (permanent === 'true') {
       // Permanent delete - remove from database
       await query('DELETE FROM academies WHERE id = $1', [id]);
-      
+
       res.json({
         success: true,
         message: 'Academy permanently deleted'
@@ -516,9 +524,9 @@ router.delete('/:id', async (req: Request, res: Response) => {
         'UPDATE academies SET status = $1, updated_at = $2 WHERE id = $3 RETURNING *',
         ['inactive', new Date().toISOString(), id]
       );
-      
+
       const academy = result.rows[0];
-      
+
       res.json({
         success: true,
         data: {
@@ -537,9 +545,11 @@ router.delete('/:id', async (req: Request, res: Response) => {
       error: 'Failed to delete academy'
     });
   }
-});
+};
+
+router.delete('/:id', handleDeleteAcademy);
 // PATCH /api/academies/:id/activate - Activate/Deactivate academy
-router.patch('/:id/activate', async (req: Request, res: Response) => {
+const handleActivateAcademy: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
     const { isActive, reason, adminEmail } = req.body;
@@ -592,9 +602,11 @@ router.patch('/:id/activate', async (req: Request, res: Response) => {
       error: 'Failed to update academy status'
     });
   }
-});
+};
+
+router.patch('/:id/activate', handleActivateAcademy);
 // PATCH /api/academies/:id/verify - Verify academy
-router.patch('/:id/verify', async (req: Request, res: Response) => {
+const handleVerifyAcademy: RequestHandler = async (req, res) => {
   try {
     const { id: academyId } = req.params;
     const { isVerified, reason } = req.body;
@@ -642,10 +654,12 @@ router.patch('/:id/verify', async (req: Request, res: Response) => {
       error: 'Failed to update academy verification'
     });
   }
-});
+};
+
+router.patch('/:id/verify', handleVerifyAcademy);
 
 // GET /api/academies/stats/overview - Get academy statistics
-router.get('/stats/overview', async (req: Request, res: Response) => {
+const handleGetAcademyStats: RequestHandler = async (req, res) => {
   try {
     // Get total academies count
     const totalAcademiesResult = await query('SELECT COUNT(*) as count FROM academies');
@@ -698,6 +712,8 @@ router.get('/stats/overview', async (req: Request, res: Response) => {
       error: 'Failed to fetch academy statistics'
     });
   }
-});
+};
+
+router.get('/stats/overview', handleGetAcademyStats);
 
 export default router;
