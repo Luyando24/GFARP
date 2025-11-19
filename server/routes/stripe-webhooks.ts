@@ -1,14 +1,15 @@
-import { Router, Request, Response } from 'express';
+import { Router, type Request as ExpressRequest, type Response as ExpressResponse } from 'express';
+import Stripe from 'stripe';
 import { stripe, STRIPE_WEBHOOK_SECRET } from '../lib/stripe.js';
 import { query, transaction } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
 
-const router = Router();
+const router: Router = Router();
 
 // Webhook signature verification middleware
-const verifyWebhookSignature = (req: Request, res: Response, next: any) => {
+const verifyWebhookSignature = (req: ExpressRequest, res: ExpressResponse, next: any) => {
   const sig = req.headers['stripe-signature'];
-  
+
   if (!sig) {
     console.error('Missing Stripe signature header');
     return res.status(400).send('Missing signature');
@@ -30,9 +31,9 @@ const verifyWebhookSignature = (req: Request, res: Response, next: any) => {
 };
 
 // Main webhook handler (mounted at /api/stripe/webhooks)
-router.post('/', verifyWebhookSignature, async (req: Request, res: Response) => {
-  const event = req.body;
-  
+router.post('/', verifyWebhookSignature, async (req: ExpressRequest, res: ExpressResponse) => {
+  const event = req.body as Stripe.Event;
+
   console.log(`Received Stripe webhook: ${event.type}`);
 
   try {
@@ -40,35 +41,35 @@ router.post('/', verifyWebhookSignature, async (req: Request, res: Response) => 
       case 'customer.subscription.created':
         await handleSubscriptionCreated(event.data.object);
         break;
-        
+
       case 'customer.subscription.updated':
         await handleSubscriptionUpdated(event.data.object);
         break;
-        
+
       case 'customer.subscription.deleted':
         await handleSubscriptionDeleted(event.data.object);
         break;
-        
+
       case 'invoice.payment_succeeded':
         await handlePaymentSucceeded(event.data.object);
         break;
-        
+
       case 'invoice.payment_failed':
         await handlePaymentFailed(event.data.object);
         break;
-        
+
       case 'customer.created':
         await handleCustomerCreated(event.data.object);
         break;
-        
+
       case 'payment_intent.succeeded':
         await handlePaymentIntentSucceeded(event.data.object);
         break;
-        
+
       case 'payment_intent.payment_failed':
         await handlePaymentIntentFailed(event.data.object);
         break;
-        
+
       default:
         console.log(`Unhandled event type: ${event.type}`);
     }
@@ -76,16 +77,16 @@ router.post('/', verifyWebhookSignature, async (req: Request, res: Response) => 
     res.json({ received: true });
   } catch (error: any) {
     console.error(`Error processing webhook ${event.type}:`, error);
-    res.status(500).json({ 
+    res.status(500).json({
       error: 'Webhook processing failed',
-      message: error.message 
+      message: error.message
     });
   }
 });
 
 async function handleSubscriptionCreated(subscription: any) {
   console.log('Processing subscription created:', subscription.id);
-  
+
   try {
     await transaction(async (client) => {
       // Find academy by customer ID
@@ -126,7 +127,7 @@ async function handleSubscriptionCreated(subscription: any) {
 
 async function handleSubscriptionUpdated(subscription: any) {
   console.log('Processing subscription updated:', subscription.id);
-  
+
   try {
     await transaction(async (client) => {
       // Update subscription details
@@ -150,7 +151,7 @@ async function handleSubscriptionUpdated(subscription: any) {
 
       if (result.rows.length > 0) {
         console.log(`Subscription ${subscription.id} updated for academy ${result.rows[0].academy_id}`);
-        
+
         // Log subscription history
         await client.query(`
           INSERT INTO subscription_history (
@@ -178,7 +179,7 @@ async function handleSubscriptionUpdated(subscription: any) {
 
 async function handleSubscriptionDeleted(subscription: any) {
   console.log('Processing subscription deleted:', subscription.id);
-  
+
   try {
     await transaction(async (client) => {
       // Update subscription status to cancelled
@@ -194,7 +195,7 @@ async function handleSubscriptionDeleted(subscription: any) {
 
       if (result.rows.length > 0) {
         console.log(`Subscription ${subscription.id} cancelled for academy ${result.rows[0].academy_id}`);
-        
+
         // Log subscription history
         await client.query(`
           INSERT INTO subscription_history (
@@ -221,7 +222,7 @@ async function handleSubscriptionDeleted(subscription: any) {
 
 async function handlePaymentSucceeded(invoice: any) {
   console.log('Processing payment succeeded:', invoice.id);
-  
+
   try {
     await transaction(async (client) => {
       // Find subscription
@@ -267,7 +268,7 @@ async function handlePaymentSucceeded(invoice: any) {
 
 async function handlePaymentFailed(invoice: any) {
   console.log('Processing payment failed:', invoice.id);
-  
+
   try {
     await transaction(async (client) => {
       // Find subscription
@@ -320,7 +321,7 @@ async function handlePaymentFailed(invoice: any) {
 
 async function handleCustomerCreated(customer: any) {
   console.log('Processing customer created:', customer.id);
-  
+
   try {
     // Update academy with customer ID if not already set
     const result = await query(`
@@ -341,7 +342,7 @@ async function handleCustomerCreated(customer: any) {
 
 async function handlePaymentIntentSucceeded(paymentIntent: any) {
   console.log('Processing payment intent succeeded:', paymentIntent.id);
-  
+
   try {
     // This handles one-time payments that aren't part of subscriptions
     if (paymentIntent.metadata?.academyId) {
@@ -378,7 +379,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
 
 async function handlePaymentIntentFailed(paymentIntent: any) {
   console.log('Processing payment intent failed:', paymentIntent.id);
-  
+
   try {
     // Log failed payment attempt
     if (paymentIntent.metadata?.academyId) {
