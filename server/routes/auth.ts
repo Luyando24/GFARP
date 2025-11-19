@@ -1,7 +1,6 @@
 import { RequestHandler } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { Router } from "express";
-import { Pool } from 'pg';
 import {
   LoginRequest,
   StudentLoginRequest,
@@ -11,12 +10,6 @@ import {
   RegisterStaffResponse,
 } from "@shared/api";
 import { query, hashPassword, verifyPassword } from "../lib/db";
-
-// Create database pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-});
 
 // Create router
 const router = Router();
@@ -43,29 +36,29 @@ function generateStudentId(): string {
 export const handleLogin: RequestHandler = async (req, res) => {
   try {
     const { email, password }: LoginRequest = req.body;
-    
+
     // Find admin user by email in Admin table
     const result = await query(
       'SELECT id, email, password_hash, role, first_name, last_name, is_active FROM "Admin" WHERE email = $1',
       [email]
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
-    
+
     const adminUser = result.rows[0];
-    
+
     // Verify password
     const isValidPassword = await verifyPassword(password, adminUser.password_hash);
     if (!isValidPassword) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
-    
+
     if (!adminUser.is_active) {
       return res.status(401).json({ error: "Account is inactive" });
     }
-    
+
     // Update last login time in the database if possible
     try {
       await query(
@@ -76,10 +69,10 @@ export const handleLogin: RequestHandler = async (req, res) => {
       console.error('Could not update last login time:', updateError);
       // Continue with login process even if update fails
     }
-    
+
     // Convert database role (ADMIN/SUPERADMIN) to frontend role (admin/superadmin)
     const frontendRole = adminUser.role.toLowerCase();
-    
+
     const session: AuthSession = {
       userId: adminUser.id,
       role: frontendRole,
@@ -88,7 +81,7 @@ export const handleLogin: RequestHandler = async (req, res) => {
         expiresInSec: 3600,
       },
     };
-    
+
     res.json(session);
   } catch (error) {
     console.error('Login error:', error);
@@ -99,19 +92,19 @@ export const handleLogin: RequestHandler = async (req, res) => {
 export const handleStudentLogin: RequestHandler = async (req, res) => {
   try {
     const { studentId }: StudentLoginRequest = req.body;
-    
+
     // Find student by student ID
     const result = await query(
       'SELECT id, student_id, first_name_cipher, last_name_cipher FROM students WHERE student_id = $1',
       [studentId]
     );
-    
+
     if (result.rows.length === 0) {
       return res.status(401).json({ error: "Invalid student ID" });
     }
-    
+
     const student = result.rows[0];
-    
+
     const session: AuthSession = {
       userId: student.id,
       role: "student",
@@ -121,7 +114,7 @@ export const handleStudentLogin: RequestHandler = async (req, res) => {
         expiresInSec: 3600,
       },
     };
-    
+
     res.json(session);
   } catch (error) {
     console.error('Student login error:', error);
@@ -132,7 +125,7 @@ export const handleStudentLogin: RequestHandler = async (req, res) => {
 export const handleStudentAlternativeLogin: RequestHandler = async (req, res) => {
   try {
     const { email, phone, password }: StudentAlternativeLoginRequest = req.body;
-    
+
     let result;
     if (email) {
       // Find student by email
@@ -149,19 +142,19 @@ export const handleStudentAlternativeLogin: RequestHandler = async (req, res) =>
     } else {
       return res.status(400).json({ error: "Email or phone required" });
     }
-    
+
     if (result.rows.length === 0) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
-    
+
     const student = result.rows[0];
-    
+
     // Verify password
     const isValidPassword = await verifyPassword(password, student.password_hash);
     if (!isValidPassword) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
-    
+
     const session: AuthSession = {
       userId: student.id,
       role: "student",
@@ -171,7 +164,7 @@ export const handleStudentAlternativeLogin: RequestHandler = async (req, res) =>
         expiresInSec: 3600,
       },
     };
-    
+
     res.json(session);
   } catch (error) {
     console.error('Student alternative login error:', error);
@@ -189,42 +182,42 @@ export const handleRegisterStaff: RequestHandler = async (req, res) => {
       lastName,
       role = "admin",
     }: RegisterStaffRequest = req.body;
-    
+
     // Check if email already exists
     const existingUserResult = await query(
       'SELECT id FROM staff_users WHERE email = $1',
       [email]
     );
-    
+
     if (existingUserResult.rows.length > 0) {
       return res.status(400).json({ error: "Email already registered" });
     }
-    
+
     // Create academy
     const academyId = uuidv4();
     const academyCode = createAcademyCode(academyName);
-    
+
     await query(
       `INSERT INTO academies (id, name, code, address, district, province, phone) 
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [academyId, academyName, academyCode, "", "", "", ""]
     );
-    
+
     // Create staff user
     const userId = uuidv4();
     const passwordHash = await hashPassword(password);
-    
+
     await query(
       `INSERT INTO staff_users (id, academy_id, email, password_hash, role, first_name, last_name, phone, is_active) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [userId, academyId, email, passwordHash, role, firstName, lastName, "", true]
     );
-    
+
     const response: RegisterStaffResponse = {
       userId,
       schoolId: academyId, // Keep the same property name for backward compatibility
     };
-    
+
     res.status(201).json(response);
   } catch (error) {
     console.error('Staff registration error:', error);
@@ -244,42 +237,42 @@ export const handleRegisterSchool: RequestHandler = async (req, res) => {
       phoneNumber,
       role = "admin",
     } = req.body;
-    
+
     // Check if email already exists
     const existingUserResult = await query(
       'SELECT id FROM staff_users WHERE email = $1',
       [email]
     );
-    
+
     if (existingUserResult.rows.length > 0) {
       return res.status(400).json({ error: "Email already registered" });
     }
-    
+
     // Create academy (using academies table)
     const academyId = uuidv4();
     const academyCode = createAcademyCode(schoolName);
-    
+
     await query(
       `INSERT INTO academies (id, name, code, address, district, province, phone) 
        VALUES ($1, $2, $3, $4, $5, $6, $7)`,
       [academyId, schoolName, academyCode, "", "", "", phoneNumber || ""]
     );
-    
+
     // Create staff user (academy admin)
     const userId = uuidv4();
     const passwordHash = await hashPassword(password);
-    
+
     await query(
       `INSERT INTO staff_users (id, academy_id, email, password_hash, role, first_name, last_name, phone, is_active) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [userId, academyId, email, passwordHash, role, firstName, lastName, phoneNumber || "", true]
     );
-    
+
     const response = {
       userId,
       schoolId: academyId, // Keep the same property name for backward compatibility
     };
-    
+
     res.status(201).json(response);
   } catch (error) {
     console.error('School registration error:', error);
@@ -295,36 +288,36 @@ export const handleRegisterSuperAdmin: RequestHandler = async (req, res) => {
       firstName,
       lastName,
     } = req.body;
-    
+
     // Check if email already exists
     const existingUserResult = await query(
       'SELECT id FROM staff_users WHERE email = $1',
       [email]
     );
-    
+
     if (existingUserResult.rows.length > 0) {
       return res.status(400).json({ error: "Email already registered" });
     }
-    
+
     // Create super admin user
     const userId = uuidv4();
     const passwordHash = await hashPassword(password);
-    
+
     // Map client-side role to valid database enum value
     const clientRole = req.body.role || "super_admin";
     const dbRole = "superadmin"; // Always use 'superadmin' as the valid enum value
-    
+
     await query(
       `INSERT INTO staff_users (id, school_id, email, password_hash, role, first_name, last_name, phone, is_active) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
       [userId, null, email, passwordHash, dbRole, firstName, lastName, req.body.phoneNumber || "", true]
     );
-    
+
     const response = {
       userId,
       role: clientRole // Return the client-side role for consistency
     };
-    
+
     res.status(201).json(response);
   } catch (error) {
     console.error('Super Admin registration error:', error);
@@ -373,7 +366,7 @@ router.post('/admin/create-user', async (req, res) => {
     }
 
     // Insert the new user into the database
-    const result = await pool.query(
+    const result = await query(
       `INSERT INTO users (name, email, password, role, status, created_at) 
        VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *`,
       [name, email, password, role || 'staff', status || 'active']
@@ -389,23 +382,23 @@ router.post('/admin/create-user', async (req, res) => {
 export const handleDeleteSuperAdmin: RequestHandler = async (req, res) => {
   try {
     const { userId } = req.params;
-    
+
     // Check if user exists
     const userResult = await query(
       'SELECT id FROM staff_users WHERE id = $1 AND role = $2',
       [userId, 'superadmin']
     );
-    
+
     if (userResult.rows.length === 0) {
       return res.status(404).json({ error: "Super admin not found" });
     }
-    
+
     // Delete the user
     await query(
       'DELETE FROM staff_users WHERE id = $1',
       [userId]
     );
-    
+
     res.json({ message: "Super admin deleted successfully" });
   } catch (error) {
     console.error('Delete Super Admin error:', error);

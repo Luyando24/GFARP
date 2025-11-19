@@ -1,5 +1,5 @@
-import pkg from 'pg';
-const { Pool } = pkg;
+import pg from 'pg';
+const { Pool } = pg;
 import bcrypt from 'bcryptjs';
 
 // Resolve database connection string for production/serverless environments
@@ -73,14 +73,14 @@ function computeSslOption(urlStr: string | undefined): any {
 // This prevents implicit localhost (127.0.0.1:5432) connections on Netlify.
 const pool: pkg.Pool | null = resolvedConnectionString
   ? new Pool({
-      connectionString: resolvedConnectionString,
-      ssl: computeSslOption(resolvedConnectionString),
-      max: parseInt(process.env.DB_POOL_MAX || '5'),
-      connectionTimeoutMillis: parseInt(process.env.DB_CONNECT_TIMEOUT_MS || '8000'),
-      idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS || '0'),
-      keepAlive: true,
-      keepAliveInitialDelayMillis: 10000,
-    })
+    connectionString: resolvedConnectionString,
+    ssl: computeSslOption(resolvedConnectionString),
+    max: parseInt(process.env.DB_POOL_MAX || '5'),
+    connectionTimeoutMillis: parseInt(process.env.DB_CONNECT_TIMEOUT_MS || '8000'),
+    idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS || '0'),
+    keepAlive: true,
+    keepAliveInitialDelayMillis: 10000,
+  })
   : null;
 
 // Helper function to execute queries
@@ -109,7 +109,7 @@ export async function query(text: string, params?: (string | number | boolean | 
     return { rows: result.rows };
   } catch (error) {
     console.error('Database query error:', error);
-    
+
     // Handle specific table access for super admin dashboard
     if (text.includes('SELECT COUNT(*) as count FROM academies')) {
       console.log('Attempting to create academies table if it does not exist');
@@ -134,31 +134,31 @@ export async function query(text: string, params?: (string | number | boolean | 
         return { rows: [{ count: 0 }] };
       }
     }
-    
+
     // Handle players table access
     if (text.includes('players') && error.message.includes('does not exist')) {
       console.log('Players table may not exist, using fallback calculation');
       return { rows: [{ count: 0 }] };
     }
-    
+
     // Handle football_transfers table access
     if (text.includes('football_transfers') && error.message.includes('does not exist')) {
       console.log('Football transfers table may not exist, using calculated value');
       return { rows: [{ count: 0 }] };
     }
-    
+
     // Handle subscriptions table access
     if (text.includes('subscriptions') && error.message.includes('does not exist')) {
       console.log('Subscriptions table may not exist, using calculated value');
       return { rows: [{ count: 0 }] };
     }
-    
+
     // Handle users table access
     if (text.includes('users') && error.message.includes('does not exist')) {
       console.log('Users table may not exist, using calculated value');
       return { rows: [{ count: 0 }] };
     }
-    
+
     throw error;
   } finally {
     client.release();
