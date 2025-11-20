@@ -34,24 +34,35 @@ function generateStudentId(): string {
 }
 
 export const handleLogin: RequestHandler = async (req, res) => {
+  const start = Date.now();
+  console.log('[AUTH] Login request started');
   try {
     const { email, password }: LoginRequest = req.body;
 
     // Find admin user by email in Admin table
+    console.log('[AUTH] Querying user...');
+    const queryStart = Date.now();
     const result = await query(
       'SELECT id, email, password_hash, role, first_name, last_name, is_active FROM "Admin" WHERE email = $1',
       [email]
     );
+    console.log(`[AUTH] User query took ${Date.now() - queryStart}ms`);
 
     if (result.rows.length === 0) {
+      console.log('[AUTH] User not found');
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
     const adminUser = result.rows[0];
 
     // Verify password
+    console.log('[AUTH] Verifying password...');
+    const verifyStart = Date.now();
     const isValidPassword = await verifyPassword(password, adminUser.password_hash);
+    console.log(`[AUTH] Password verification took ${Date.now() - verifyStart}ms`);
+
     if (!isValidPassword) {
+      console.log('[AUTH] Invalid password');
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
@@ -61,10 +72,14 @@ export const handleLogin: RequestHandler = async (req, res) => {
 
     // Update last login time in the database if possible
     try {
+      // Don't await this to speed up response? 
+      // In serverless we must await, but let's log it.
+      const updateStart = Date.now();
       await query(
         'UPDATE "Admin" SET updated_at = NOW() WHERE id = $1',
         [adminUser.id]
       );
+      console.log(`[AUTH] Last login update took ${Date.now() - updateStart}ms`);
     } catch (updateError) {
       console.error('Could not update last login time:', updateError);
       // Continue with login process even if update fails
@@ -82,6 +97,7 @@ export const handleLogin: RequestHandler = async (req, res) => {
       },
     };
 
+    console.log(`[AUTH] Login completed in ${Date.now() - start}ms`);
     res.json(session);
   } catch (error) {
     console.error('Login error:', error);
