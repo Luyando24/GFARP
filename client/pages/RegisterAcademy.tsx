@@ -244,8 +244,6 @@ export default function RegisterAcademy() {
         if (!formData.directorName.trim()) newErrors.directorName = 'Director name is required';
         if (!formData.directorEmail.trim()) newErrors.directorEmail = 'Director email is required';
         if (!formData.playerCapacity.trim()) newErrors.playerCapacity = 'Player capacity is required';
-        break;
-      case 4:
         if (!formData.termsAccepted) newErrors.termsAccepted = 'You must accept the terms and conditions';
         if (!formData.fifaCompliance) newErrors.fifaCompliance = 'FIFA compliance agreement is required';
         break;
@@ -257,7 +255,12 @@ export default function RegisterAcademy() {
 
   const handleNext = () => {
     if (validateStep(currentStep)) {
-      setCurrentStep(prev => Math.min(prev + 1, 4));
+      if (currentStep === 3) {
+        // Skip to submission after step 3
+        handleSubmit();
+      } else {
+        setCurrentStep(prev => Math.min(prev + 1, 3));
+      }
     }
   };
 
@@ -266,7 +269,7 @@ export default function RegisterAcademy() {
   };
 
   const handleSubmit = async () => {
-    if (!validateStep(4)) return;
+    if (!validateStep(3)) return;
 
     setIsSubmitting(true);
     try {
@@ -890,120 +893,45 @@ export default function RegisterAcademy() {
                   ))}
                 </div>
               </div>
-            </div>
-          </div>
-        );
 
-      case 4:
-        return (
-          <div className="space-y-6">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-[#005391] to-[#0066b3] rounded-full mb-4">
-                <Trophy className="h-4 w-4 text-white" />
-                <span className="text-white font-bold text-sm">SUBSCRIPTION & TERMS</span>
-              </div>
-              <h2 className="text-2xl font-bold text-[#001a33]">Choose your plan & finalize</h2>
-              <p className="text-gray-600 mt-2">Select a subscription plan and agree to terms</p>
-            </div>
-
-            {/* Subscription Plans */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-              {plansLoading ? (
-                // Loading skeleton
-                Array.from({ length: 3 }).map((_, index) => (
-                  <Card key={index} className="animate-pulse">
-                    <CardHeader className="text-center">
-                      <div className="h-6 bg-gray-200 rounded mb-2"></div>
-                      <div className="h-8 bg-gray-200 rounded"></div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-2">
-                        {Array.from({ length: 4 }).map((_, i) => (
-                          <div key={i} className="h-4 bg-gray-200 rounded"></div>
-                        ))}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : subscriptionPlans.length > 0 ? (
-                subscriptionPlans.map((plan) => (
-                  <Card
-                    key={plan.id}
-                    className={`relative cursor-pointer transition-all duration-300 transform hover:scale-105 ${formData.selectedPlan === plan.id
-                        ? 'ring-4 ring-[#005391] shadow-xl'
-                        : 'hover:shadow-lg'
-                      } ${plan.popular ? 'border-2 border-[#005391]' : ''}`}
-                    onClick={() => handleInputChange('selectedPlan', plan.id)}
-                  >
-                    {plan.popular && (
-                      <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                        <Badge className="bg-gradient-to-r from-[#005391] to-[#0066b3] text-white px-4 py-1">
-                          MOST POPULAR
-                        </Badge>
-                      </div>
-                    )}
-                    <CardHeader className="text-center">
-                      <CardTitle className="text-xl font-bold text-[#001a33]">{plan.name}</CardTitle>
-                      <div className="text-3xl font-black text-[#005391]">
-                        {plan.price}<span className="text-sm text-gray-500">{plan.period}</span>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <ul className="space-y-2">
-                        {plan.features.map((feature, index) => (
-                          <li key={index} className="flex items-center gap-2">
-                            <CheckCircle className="h-4 w-4 text-green-500" />
-                            <span className="text-sm text-gray-700">{feature}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </CardContent>
-                  </Card>
-                ))
-              ) : (
-                <div className="col-span-full text-center py-8">
-                  <p className="text-gray-500">No subscription plans available. Please try again later.</p>
+              {/* Terms and Conditions */}
+              <div className="mt-8 pt-8 border-t space-y-4">
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="terms"
+                    checked={formData.termsAccepted}
+                    onChange={(e) => handleInputChange('termsAccepted', e.target.checked)}
+                    className="w-5 h-5 text-[#005391] border-2 border-gray-300 rounded focus:ring-[#005391] mt-1"
+                  />
+                  <label htmlFor="terms" className="text-sm text-gray-700 cursor-pointer">
+                    I agree to the <span className="text-[#005391] hover:underline font-semibold">Terms and Conditions</span> and <span className="text-[#005391] hover:underline font-semibold">Privacy Policy</span>
+                  </label>
                 </div>
-              )}
-            </div>
+                {errors.termsAccepted && <p className="text-red-500 text-sm">{errors.termsAccepted}</p>}
 
-            {/* Terms and Conditions */}
-            <div className="space-y-4">
-              <div className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  id="terms"
-                  checked={formData.termsAccepted}
-                  onChange={(e) => handleInputChange('termsAccepted', e.target.checked)}
-                  className="w-5 h-5 text-[#005391] border-2 border-gray-300 rounded focus:ring-[#005391] mt-1"
-                />
-                <label htmlFor="terms" className="text-sm text-gray-700 cursor-pointer">
-                  I agree to the <Link to="/terms" className="text-[#005391] hover:underline font-semibold">Terms and Conditions</Link> and <Link to="/privacy" className="text-[#005391] hover:underline font-semibold">Privacy Policy</Link>
-                </label>
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    id="fifa"
+                    checked={formData.fifaCompliance}
+                    onChange={(e) => handleInputChange('fifaCompliance', e.target.checked)}
+                    className="w-5 h-5 text-[#005391] border-2 border-gray-300 rounded focus:ring-[#005391] mt-1"
+                  />
+                  <label htmlFor="fifa" className="text-sm text-gray-700 cursor-pointer">
+                    I agree to comply with FIFA regulations and standards for academy operations
+                  </label>
+                </div>
+                {errors.fifaCompliance && <p className="text-red-500 text-sm">{errors.fifaCompliance}</p>}
+
+                <div className="bg-blue-50 border border-[#005391] rounded-lg p-4 flex items-start gap-3">
+                  <Shield className="h-5 w-5 text-[#005391] mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-[#005391]">
+                    Your academy will be reviewed for FIFA compliance within 5-7 business days after registration.
+                  </p>
+                </div>
               </div>
-              {errors.termsAccepted && <p className="text-red-500 text-sm">{errors.termsAccepted}</p>}
-
-              <div className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  id="fifa"
-                  checked={formData.fifaCompliance}
-                  onChange={(e) => handleInputChange('fifaCompliance', e.target.checked)}
-                  className="w-5 h-5 text-[#005391] border-2 border-gray-300 rounded focus:ring-[#005391] mt-1"
-                />
-                <label htmlFor="fifa" className="text-sm text-gray-700 cursor-pointer">
-                  I agree to comply with FIFA regulations and standards for academy operations
-                </label>
-              </div>
-              {errors.fifaCompliance && <p className="text-red-500 text-sm">{errors.fifaCompliance}</p>}
             </div>
-
-            <Alert className="border-[#005391] bg-blue-50">
-              <Shield className="h-4 w-4 text-[#005391]" />
-              <AlertDescription className="text-[#005391]">
-                Your academy will be reviewed for FIFA compliance within 5-7 business days after registration.
-              </AlertDescription>
-            </Alert>
           </div>
         );
 
@@ -1042,13 +970,13 @@ export default function RegisterAcademy() {
       <div className="bg-white border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-semibold text-[#001a33]">Step {currentStep} of 4</span>
-            <span className="text-sm text-gray-500">{Math.round((currentStep / 4) * 100)}% Complete</span>
+            <span className="text-sm font-semibold text-[#001a33]">Step {currentStep} of 3</span>
+            <span className="text-sm text-gray-500">{Math.round((currentStep / 3) * 100)}% Complete</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-2">
             <div
               className="bg-gradient-to-r from-[#005391] to-[#0066b3] h-2 rounded-full transition-all duration-500"
-              style={{ width: `${(currentStep / 4) * 100}%` }}
+              style={{ width: `${(currentStep / 3) * 100}%` }}
             />
           </div>
         </div>
@@ -1073,33 +1001,31 @@ export default function RegisterAcademy() {
                   Previous
                 </Button>
 
-                {currentStep < 4 ? (
-                  <Button
-                    onClick={handleNext}
-                    className="px-8 py-3 bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#0066b3] hover:to-[#005391] text-white font-bold shadow-lg hover:shadow-xl transition-all duration-300"
-                  >
-                    Next Step
-                    <Target className="h-4 w-4 ml-2" />
-                  </Button>
-                ) : (
-                  <Button
-                    onClick={handleSubmit}
-                    disabled={isSubmitting}
-                    className="px-8 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold shadow-lg hover:shadow-xl transition-all duration-300"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                        Registering...
-                      </>
-                    ) : (
-                      <>
-                        Complete Registration
-                        <Award className="h-4 w-4 ml-2" />
-                      </>
-                    )}
-                  </Button>
-                )}
+                <Button
+                  onClick={currentStep < 3 ? handleNext : handleSubmit}
+                  disabled={isSubmitting}
+                  className={`px-8 py-3 ${currentStep === 3
+                      ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
+                      : 'bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#0066b3] hover:to-[#005391]'
+                    } text-white font-bold shadow-lg hover:shadow-xl transition-all duration-300`}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Registering...
+                    </>
+                  ) : currentStep === 3 ? (
+                    <>
+                      Complete Registration
+                      <Award className="h-4 w-4 ml-2" />
+                    </>
+                  ) : (
+                    <>
+                      Next Step
+                      <Target className="h-4 w-4 ml-2" />
+                    </>
+                  )}
+                </Button>
               </div>
             </CardContent>
           </Card>
