@@ -60,9 +60,61 @@ export default async function handler(
                 });
             }
 
+            // Decrypt function (matches the simple encryption we're using)
+            const decrypt = (value: any) => {
+                if (!value) return '';
+                // If it's already a string, return it
+                if (typeof value === 'string') return value;
+                // If it's a buffer or other type, convert to string
+                return String(value);
+            };
+
+            // Calculate age from date of birth
+            const calculateAge = (dob: string) => {
+                if (!dob) return null;
+                const birthDate = new Date(dob);
+                const today = new Date();
+                let age = today.getFullYear() - birthDate.getFullYear();
+                const monthDiff = today.getMonth() - birthDate.getMonth();
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+                return age;
+            };
+
+            // Transform players data to frontend format
+            const transformedPlayers = (players || []).map((player: any) => ({
+                id: player.id,
+                playerCardId: player.player_card_id,
+                firstName: decrypt(player.first_name_cipher),
+                lastName: decrypt(player.last_name_cipher),
+                dateOfBirth: decrypt(player.dob_cipher),
+                age: calculateAge(decrypt(player.dob_cipher)),
+                position: player.position,
+                email: decrypt(player.email_cipher),
+                phone: decrypt(player.phone_cipher),
+                address: decrypt(player.address_cipher),
+                city: decrypt(player.city_cipher),
+                country: decrypt(player.country_cipher),
+                nationality: player.nationality,
+                height: player.height_cm,
+                weight: player.weight_kg,
+                jerseyNumber: player.jersey_number,
+                preferredFoot: player.preferred_foot,
+                guardianName: decrypt(player.guardian_contact_name_cipher),
+                guardianPhone: decrypt(player.guardian_contact_phone_cipher),
+                medicalInfo: decrypt(player.medical_info_cipher),
+                emergencyContact: decrypt(player.emergency_contact_cipher),
+                playingHistory: decrypt(player.playing_history_cipher),
+                currentClub: decrypt(player.current_club_cipher),
+                isActive: player.is_active !== false,
+                createdAt: player.created_at,
+                updatedAt: player.updated_at
+            }));
+
             return res.status(200).json({
                 success: true,
-                data: players || []
+                data: transformedPlayers
             });
         } catch (error: any) {
             console.error('[VERCEL] Get players error:', error);
