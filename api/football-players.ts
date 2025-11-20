@@ -63,9 +63,17 @@ export default async function handler(
             // Decrypt function (matches the simple encryption we're using)
             const decrypt = (value: any) => {
                 if (!value) return '';
+                // If it's a Buffer (from PostgreSQL bytea), decode to UTF-8
+                if (Buffer.isBuffer(value)) {
+                    return value.toString('utf8');
+                }
                 // If it's already a string, return it
                 if (typeof value === 'string') return value;
-                // If it's a buffer or other type, convert to string
+                // If it's a Uint8Array or ArrayBuffer
+                if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
+                    return Buffer.from(value).toString('utf8');
+                }
+                // Otherwise convert to string
                 return String(value);
             };
 
