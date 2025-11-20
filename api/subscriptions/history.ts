@@ -32,9 +32,19 @@ export default async function handler(
             }
         ];
 
-        return res.status(200).json(mockHistory);
+        return res.status(200).json({
+            success: true,
+            data: {
+                history: mockHistory
+            }
+        });
     } catch (error) {
         console.error('Error:', error);
-        return res.status(500).json([]);
+        return res.status(500).json({
+            success: false,
+            data: {
+                history: []
+            }
+        });
     }
 }
