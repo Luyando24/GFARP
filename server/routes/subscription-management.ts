@@ -81,6 +81,7 @@ export const handleGetSubscription: RequestHandler = async (req, res) => {
 
 // Get Available Subscription Plans
 export const handleGetPlans: RequestHandler = async (req, res) => {
+  console.log('[SUBSCRIPTION] GET /plans request received');
   try {
     const plansQuery = `
       SELECT 
@@ -101,7 +102,9 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
       ORDER BY sort_order ASC
     `;
     try {
+      console.log('[SUBSCRIPTION] Querying database for plans...');
       const result = await query(plansQuery);
+      console.log(`[SUBSCRIPTION] Query returned ${result.rows.length} plans`);
 
       let plans = result.rows.map(plan => ({
         id: plan.id,
@@ -197,6 +200,7 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
         ];
       }
 
+      console.log(`[SUBSCRIPTION] Returning ${plans.length} plans to client`);
       return res.json({
         success: true,
         data: plans
