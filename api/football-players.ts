@@ -63,17 +63,26 @@ export default async function handler(
             // Decrypt function (matches the simple encryption we're using)
             const decrypt = (value: any) => {
                 if (!value) return '';
-                // If it's a Buffer (from PostgreSQL bytea), decode to UTF-8
+
+                // If it's a string starting with \x (PostgreSQL bytea hex format)
+                if (typeof value === 'string' && value.startsWith('\\x')) {
+                    // Remove \x prefix and convert hex to utf8
+                    return Buffer.from(value.slice(2), 'hex').toString('utf8');
+                }
+
+                // If it's a Buffer
                 if (Buffer.isBuffer(value)) {
                     return value.toString('utf8');
                 }
-                // If it's already a string, return it
-                if (typeof value === 'string') return value;
+
                 // If it's a Uint8Array or ArrayBuffer
                 if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
                     return Buffer.from(value).toString('utf8');
                 }
-                // Otherwise convert to string
+
+                // If it's already a string, return it
+                if (typeof value === 'string') return value;
+
                 return String(value);
             };
 
@@ -169,11 +178,8 @@ export default async function handler(
             const cardId = `CARD-${Date.now()}`;
             const cardQrSignature = `QR-${playerId}`;
 
-            // Simple encryption (convert to Buffer for PostgreSQL bytea columns)
-            const encrypt = (text: string) => {
-                if (!text) return Buffer.from('', 'utf8');
-                return Buffer.from(text, 'utf8');
-            };
+            // Simple encryption (in production, use proper encryption)
+            const encrypt = (text: string) => text || '';
 
             // Prepare player data
             const playerData = {
