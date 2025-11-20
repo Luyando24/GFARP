@@ -8,4 +8,6 @@ console.log("[VERCEL] createServer imported");
 console.log("[VERCEL] Calling createServer()...");
 const app = createServer();
 console.log("[VERCEL] Express app created, wrapping with serverless-http...");
-export default serverless(app);
+const handler = serverless(app);
+console.log("[VERCEL] ✅ Serverless handler created successfully");
+export default handler;
