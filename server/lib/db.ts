@@ -196,7 +196,7 @@ export async function transaction<T>(callback: (client: any) => Promise<T>): Pro
 
 // Password hashing utilities
 export async function hashPassword(password: string): Promise<string> {
-  const saltRounds = 12;
+  const saltRounds = 10; // Reduced from 12 for serverless performance (4x faster)
   return bcrypt.hash(password, saltRounds);
 }
 
