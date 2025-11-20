@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "buildCommand": "npm run build:client",
+  "buildCommand": "npm run build",
   "outputDirectory": "dist/spa",
   "framework": "vite",
   "rewrites": [
@@ -13,6 +13,11 @@
       "destination": "/index.html"
     }
   ],
+  "functions": {
+    "api/server/index.ts": {
+      "maxDuration": 10
+    }
+  },
   "env": {
     "DATABASE_URL": "postgresql://postgres:kvIJFwZHElEXHwrd@aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require",
     "VITE_SUPABASE_URL": "https://lpsujzvospfaomgkrcew.supabase.co",

@@ -1,13 +1,13 @@
-console.log("[VERCEL] Starting serverless wrapper initialization...");
-import serverless from "serverless-http";
-console.log("[VERCEL] serverless-http imported");
-import { createServer } from "../../server/index.js";
-console.log("[VERCEL] createServer imported");
+import { createServer } from '../server/index.js';
+import serverless from 'serverless-http';
 
-// Wrap the Express app for Vercel serverless runtime
-console.log("[VERCEL] Calling createServer()...");
+// Create the Express app
+console.log('[VERCEL] Creating Express server for serverless...');
 const app = createServer();
-console.log("[VERCEL] Express app created, wrapping with serverless-http...");
+
+// Wrap it with serverless-http for Vercel
+console.log('[VERCEL] Wrapping Express app with serverless-http...');
 const handler = serverless(app);
-console.log("[VERCEL] ✅ Serverless handler created successfully");
+
+// Export the handler for Vercel
 export default handler;
