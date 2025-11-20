@@ -110,6 +110,7 @@ const facilityOptions = [
 
 export default function RegisterAcademy() {
   const [formData, setFormData] = useState<FormData>(initialFormData);
+  console.log('Academy Registration Component v1.0.1');
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
