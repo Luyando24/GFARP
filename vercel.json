@@ -5,8 +5,12 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/api/(.*)",
+      "source": "/api/subscriptions/plans",
       "destination": "/api/server/index"
+    },
+    {
+      "source": "/api/football-auth/academy/register",
+      "destination": "/api/football-auth/academy/register"
     },
     {
       "source": "/(.*)",
