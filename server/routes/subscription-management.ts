@@ -87,6 +87,7 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
   // CRITICAL: Set very aggressive timeout (2s) for Vercel serverless
   // If database doesn't respond in 2s, return fallback immediately
   const timeoutMs = 2000; // 2 seconds max
+  console.log('[SUBSCRIPTION] ✅ New version loaded – timeout set to', timeoutMs, 'ms');
   let responded = false;
 
   // Start timeout timer that will send fallback plans
