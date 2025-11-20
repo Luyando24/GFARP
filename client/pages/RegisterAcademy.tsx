@@ -272,6 +272,16 @@ export default function RegisterAcademy() {
     if (!validateStep(3)) return;
 
     setIsSubmitting(true);
+    const startTime = Date.now();
+    console.log('[REGISTER] Starting registration submission...');
+
+    // Create abort controller for timeout
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => {
+      abortController.abort();
+      console.error('[REGISTER] Request timed out after 15 seconds');
+    }, 15000); // 15 second timeout
+
     try {
       const submitData = {
         name: formData.academyName,
@@ -287,15 +297,21 @@ export default function RegisterAcademy() {
         subscriptionPlan: formData.selectedPlan
       };
 
+      console.log('[REGISTER] Sending POST to /api/football-auth/academy/register');
       const response = await fetch('/api/football-auth/academy/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(submitData)
+        body: JSON.stringify(submitData),
+        signal: abortController.signal
       });
 
+      clearTimeout(timeoutId);
+      console.log(`[REGISTER] Response received in ${Date.now() - startTime}ms, status: ${response.status}`);
+
       const data = await response.json();
+      console.log('[REGISTER] Response data:', data);
 
       if (data.success) {
         // Save session to automatically log in the user
@@ -331,14 +347,25 @@ export default function RegisterAcademy() {
         throw new Error(data.message || 'Registration failed');
       }
     } catch (error) {
-      console.error('Registration failed:', error);
+      clearTimeout(timeoutId);
+      console.error('[REGISTER] Error:', error);
+
+      let errorMessage = 'An unexpected error occurred';
+
+      if (error.name === 'AbortError') {
+        errorMessage = 'Registration is taking too long. The server might be experiencing issues. Please try again in a few minutes.';
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
       toast({
         title: 'Registration Failed',
-        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+        description: errorMessage,
         variant: 'destructive'
       });
     } finally {
       setIsSubmitting(false);
+      console.log(`[REGISTER] Total time: ${Date.now() - startTime}ms`);
     }
   };
 
@@ -1005,8 +1032,8 @@ export default function RegisterAcademy() {
                   onClick={currentStep < 3 ? handleNext : handleSubmit}
                   disabled={isSubmitting}
                   className={`px-8 py-3 ${currentStep === 3
-                      ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
-                      : 'bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#0066b3] hover:to-[#005391]'
+                    ? 'bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700'
+                    : 'bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#0066b3] hover:to-[#005391]'
                     } text-white font-bold shadow-lg hover:shadow-xl transition-all duration-300`}
                 >
                   {isSubmitting ? (
