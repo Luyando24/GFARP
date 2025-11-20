@@ -124,20 +124,36 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
     responded = true;
     console.log(`[SUBSCRIPTION] Query returned ${result.rows.length} plans`);
 
-    let plans = result.rows.map(plan => ({
-      id: plan.id,
-      name: plan.name,
-      description: plan.description,
-      price: parseFloat(plan.price),
-      currency: plan.currency,
-      billingCycle: plan.billing_cycle,
-      playerLimit: plan.player_limit,
-      storageLimit: plan.storage_limit,
-      features: plan.features,
-      isActive: plan.is_active,
-      isFree: plan.is_free,
-      sortOrder: plan.sort_order
-    }));
+    let plans = result.rows.map(plan => {
+      // Parse features if it's a JSON string
+      let features = plan.features;
+      if (typeof features === 'string') {
+        try {
+          features = JSON.parse(features);
+        } catch (e) {
+          console.error('[SUBSCRIPTION] Failed to parse features for plan:', plan.name, e);
+          features = [];
+        }
+      }
+
+      const mappedPlan = {
+        id: plan.id,
+        name: plan.name,
+        description: plan.description,
+        price: parseFloat(plan.price),
+        currency: plan.currency,
+        billingCycle: plan.billing_cycle,
+        playerLimit: plan.player_limit,
+        storageLimit: plan.storage_limit,
+        features: features,
+        isActive: plan.is_active,
+        isFree: plan.is_free,
+        sortOrder: plan.sort_order
+      };
+
+      console.log('[SUBSCRIPTION] Mapped plan:', JSON.stringify(mappedPlan));
+      return mappedPlan;
+    });
 
     // Use fallback if no plans found
     if (!plans || plans.length === 0) {

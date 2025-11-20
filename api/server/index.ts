@@ -1,4 +1,4 @@
-import { createServer } from '../server/index.js';
+import { createServer } from '../../server/index';
 import serverless from 'serverless-http';
 
 // Create the Express app
