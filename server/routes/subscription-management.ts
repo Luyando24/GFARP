@@ -82,6 +82,13 @@ export const handleGetSubscription: RequestHandler = async (req, res) => {
 // Get Available Subscription Plans
 export const handleGetPlans: RequestHandler = async (req, res) => {
   console.log('[SUBSCRIPTION] GET /plans request received');
+
+  // Set aggressive timeout for serverless (Vercel has 10s limit on Hobby plan)
+  const timeoutMs = 5000; // 5 seconds max
+  const timeoutPromise = new Promise((_, reject) => {
+    setTimeout(() => reject(new Error('Database query timeout')), timeoutMs);
+  });
+
   try {
     const plansQuery = `
       SELECT 
@@ -101,9 +108,16 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
       WHERE is_active = true 
       ORDER BY sort_order ASC
     `;
+
     try {
       console.log('[SUBSCRIPTION] Querying database for plans...');
-      const result = await query(plansQuery);
+
+      // Race between query and timeout
+      const result = await Promise.race([
+        query(plansQuery),
+        timeoutPromise
+      ]) as { rows: any[] };
+
       console.log(`[SUBSCRIPTION] Query returned ${result.rows.length} plans`);
 
       let plans = result.rows.map(plan => ({
@@ -124,80 +138,7 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
       // Fallback: if no active plans are available, provide a safe default set
       if (!plans || plans.length === 0) {
         console.warn('No active subscription plans found in DB. Returning fallback plans.');
-        plans = [
-          {
-            id: 'free',
-            name: 'Free Plan',
-            description: 'Get started with core features for small academies.',
-            price: 0,
-            currency: 'USD',
-            billingCycle: 'MONTHLY',
-            playerLimit: 25,
-            storageLimit: 1024,
-            features: [
-              'Basic player management',
-              'Limited storage',
-              'Community support'
-            ],
-            isActive: true,
-            isFree: true,
-            sortOrder: 1
-          },
-          {
-            id: 'basic',
-            name: 'Basic Plan',
-            description: 'Essential tools for growing academies.',
-            price: 19.99,
-            currency: 'USD',
-            billingCycle: 'MONTHLY',
-            playerLimit: 100,
-            storageLimit: 5120,
-            features: [
-              'Advanced player tracking',
-              'Priority support',
-              'Expanded storage'
-            ],
-            isActive: true,
-            isFree: false,
-            sortOrder: 2
-          },
-          {
-            id: 'pro',
-            name: 'Pro Plan',
-            description: 'Professional features for established academies.',
-            price: 49.99,
-            currency: 'USD',
-            billingCycle: 'MONTHLY',
-            playerLimit: 500,
-            storageLimit: 20480,
-            features: [
-              'Advanced analytics',
-              'Priority support',
-              'High storage limits'
-            ],
-            isActive: true,
-            isFree: false,
-            sortOrder: 3
-          },
-          {
-            id: 'elite',
-            name: 'Elite Plan',
-            description: 'All features unlocked for large academies.',
-            price: 99.99,
-            currency: 'USD',
-            billingCycle: 'MONTHLY',
-            playerLimit: 2000,
-            storageLimit: 51200,
-            features: [
-              'Full analytics suite',
-              'Dedicated support',
-              'Maximum storage limits'
-            ],
-            isActive: true,
-            isFree: false,
-            sortOrder: 4
-          }
-        ];
+        plans = getFallbackPlans();
       }
 
       console.log(`[SUBSCRIPTION] Returning ${plans.length} plans to client`);
@@ -206,92 +147,95 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
         data: plans
       });
     } catch (dbError: any) {
-      console.error('Get plans DB error, returning fallback:', dbError);
-      const plans = [
-        {
-          id: 'free',
-          name: 'Free Plan',
-          description: 'Get started with core features for small academies.',
-          price: 0,
-          currency: 'USD',
-          billingCycle: 'MONTHLY',
-          playerLimit: 25,
-          storageLimit: 1024,
-          features: [
-            'Basic player management',
-            'Limited storage',
-            'Community support'
-          ],
-          isActive: true,
-          isFree: true,
-          sortOrder: 1
-        },
-        {
-          id: 'basic',
-          name: 'Basic Plan',
-          description: 'Essential tools for growing academies.',
-          price: 19.99,
-          currency: 'USD',
-          billingCycle: 'MONTHLY',
-          playerLimit: 100,
-          storageLimit: 5120,
-          features: [
-            'Advanced player tracking',
-            'Priority support',
-            'Expanded storage'
-          ],
-          isActive: true,
-          isFree: false,
-          sortOrder: 2
-        },
-        {
-          id: 'pro',
-          name: 'Pro Plan',
-          description: 'Professional features for established academies.',
-          price: 49.99,
-          currency: 'USD',
-          billingCycle: 'MONTHLY',
-          playerLimit: 500,
-          storageLimit: 20480,
-          features: [
-            'Advanced analytics',
-            'Priority support',
-            'High storage limits'
-          ],
-          isActive: true,
-          isFree: false,
-          sortOrder: 3
-        },
-        {
-          id: 'elite',
-          name: 'Elite Plan',
-          description: 'All features unlocked for large academies.',
-          price: 99.99,
-          currency: 'USD',
-          billingCycle: 'MONTHLY',
-          playerLimit: 2000,
-          storageLimit: 51200,
-          features: [
-            'Full analytics suite',
-            'Dedicated support',
-            'Maximum storage limits'
-          ],
-          isActive: true,
-          isFree: false,
-          sortOrder: 4
-        }
-      ];
-      return res.json({ success: true, data: plans });
+      console.error('Get plans DB error or timeout, returning fallback:', dbError.message);
+      // Return fallback plans immediately on any DB error
+      return res.json({ success: true, data: getFallbackPlans() });
     }
   } catch (error: any) {
     console.error('Get plans error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get subscription plans',
-      error: error.message
-    });
+    // Last resort: return fallback plans
+    return res.json({ success: true, data: getFallbackPlans() });
   }
 }
+
+// Helper function to get fallback plans (extracted to avoid duplication)
+function getFallbackPlans() {
+  return [
+    {
+      id: 'free',
+      name: 'Free Plan',
+      description: 'Get started with core features for small academies.',
+      price: 0,
+      currency: 'USD',
+      billingCycle: 'MONTHLY',
+      playerLimit: 25,
+      storageLimit: 1024,
+      features: [
+        'Basic player management',
+        'Limited storage',
+        'Community support'
+      ],
+      isActive: true,
+      isFree: true,
+      sortOrder: 1
+    },
+    {
+      id: 'basic',
+      name: 'Basic Plan',
+      description: 'Essential tools for growing academies.',
+      price: 19.99,
+      currency: 'USD',
+      billingCycle: 'MONTHLY',
+      playerLimit: 100,
+      storageLimit: 5120,
+      features: [
+        'Advanced player tracking',
+        'Priority support',
+        'Expanded storage'
+      ],
+      isActive: true,
+      isFree: false,
+      sortOrder: 2
+    },
+    {
+      id: 'pro',
+      name: 'Pro Plan',
+      description: 'Professional features for established academies.',
+      price: 49.99,
+      currency: 'USD',
+      billingCycle: 'MONTHLY',
+      playerLimit: 500,
+      storageLimit: 20480,
+      features: [
+        'Advanced analytics',
+        'Priority support',
+        'High storage limits'
+      ],
+      isActive: true,
+      isFree: false,
+      sortOrder: 3
+    },
+    {
+      id: 'elite',
+      name: 'Elite Plan',
+      description: 'All features unlocked for large academies.',
+      price: 99.99,
+      currency: 'USD',
+      billingCycle: 'MONTHLY',
+      playerLimit: 2000,
+      storageLimit: 51200,
+      features: [
+        'Full analytics suite',
+        'Dedicated support',
+        'Maximum storage limits'
+      ],
+      isActive: true,
+      isFree: false,
+      sortOrder: 4
+    }
+  ];
+}
+
 
 // Upgrade Subscription Plan
 export const handleUpgradePlan: RequestHandler = async (req, res) => {
