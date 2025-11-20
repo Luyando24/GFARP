@@ -622,7 +622,7 @@ export default function AcademyDashboard() {
     transaction.amount.toString().includes(searchQuery)
   );
 
-  const complianceData = { overallScore: 95, nextReview: "March 15, 2025", areas: [{ id: 1, name: "Player Registration", status: "compliant", score: 100, lastCheck: "Jan 15", issues: 0 }] };
+  const complianceData = { overallScore: 95, nextReview: "March 15, 2025", areas: [{ id: 1, name: "Player Registration", status: "compliant", score: 100, lastCheck: "Jan 15", issues: 0, description: "All registrations compliant" }], auditHistory: [{ id: 1, type: "Annual Audit", date: "Dec 2024", inspector: "FIFA Officer", result: "Passed", score: 95, notes: "Excellent compliance" }], documents: [{ id: 1, name: "License Certificate", type: "PDF", size: "2MB", status: "current", lastUpdated: "Jan 2025" }] };
   const filteredComplianceAreas = complianceData.areas;
   const filteredActionItems = [{ id: 1, title: "Update Documents", priority: "high", dueDate: "Feb 1", status: "in_progress" }];
 
@@ -1026,8 +1026,8 @@ export default function AcademyDashboard() {
                     key={item.id}
                     variant="ghost"
                     className={`w-full justify-start text-white hover:bg-white/20 transition-all duration-300 ${activeTab === item.id
-                        ? 'bg-white/20 border-l-4 border-yellow-400 shadow-lg'
-                        : 'border-l-4 border-transparent hover:border-yellow-400/50'
+                      ? 'bg-white/20 border-l-4 border-yellow-400 shadow-lg'
+                      : 'border-l-4 border-transparent hover:border-yellow-400/50'
                       }`}
                     onClick={() => {
                       setActiveTab(item.id);
@@ -1159,8 +1159,8 @@ export default function AcademyDashboard() {
                             <Badge
                               variant="outline"
                               className={`${subscriptionData.status === 'active'
-                                  ? 'bg-green-50 text-green-700 border-green-200'
-                                  : 'bg-red-50 text-red-700 border-red-200'
+                                ? 'bg-green-50 text-green-700 border-green-200'
+                                : 'bg-red-50 text-red-700 border-red-200'
                                 } text-xs`}
                             >
                               {subscriptionData.status === 'active' ? 'Active' : 'Inactive'}
@@ -1835,8 +1835,8 @@ export default function AcademyDashboard() {
                   <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Subscription Management</h2>
                   {subscriptionData && (
                     <Badge variant="outline" className={`${subscriptionData.status === 'active'
-                        ? 'bg-green-50 text-green-700 border-green-200'
-                        : 'bg-red-50 text-red-700 border-red-200'
+                      ? 'bg-green-50 text-green-700 border-green-200'
+                      : 'bg-red-50 text-red-700 border-red-200'
                       }`}>
                       {subscriptionData.status === 'active' ? 'Active Plan' : 'Inactive'}
                     </Badge>
@@ -1885,8 +1885,8 @@ export default function AcademyDashboard() {
                           <div className="flex justify-between text-sm">
                             <span>Status:</span>
                             <Badge variant="outline" className={`${subscriptionData.status === 'active'
-                                ? 'bg-green-50 text-green-700 border-green-200'
-                                : 'bg-red-50 text-red-700 border-red-200'
+                              ? 'bg-green-50 text-green-700 border-green-200'
+                              : 'bg-red-50 text-red-700 border-red-200'
                               }`}>
                               {subscriptionData.status}
                             </Badge>
@@ -1930,10 +1930,10 @@ export default function AcademyDashboard() {
                               <div className="w-full bg-slate-200 rounded-full h-2">
                                 <div
                                   className={`h-2 rounded-full ${((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) >= 1
-                                      ? 'bg-red-600'
-                                      : ((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) >= 0.8
-                                        ? 'bg-yellow-600'
-                                        : 'bg-blue-600'
+                                    ? 'bg-red-600'
+                                    : ((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) >= 0.8
+                                      ? 'bg-yellow-600'
+                                      : 'bg-blue-600'
                                     }`}
                                   style={{
                                     width: `${Math.min(((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) * 100, 100)}%`
@@ -1946,8 +1946,8 @@ export default function AcademyDashboard() {
                                     size="sm"
                                     onClick={scrollToPlanManagement}
                                     className={`w-full ${((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) >= 1
-                                        ? 'bg-red-600 hover:bg-red-700 text-white'
-                                        : 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                                      ? 'bg-red-600 hover:bg-red-700 text-white'
+                                      : 'bg-yellow-600 hover:bg-yellow-700 text-white'
                                       }`}
                                   >
                                     <Crown className="h-4 w-4 mr-2" />
@@ -1969,10 +1969,10 @@ export default function AcademyDashboard() {
                               <div className="w-full bg-slate-200 rounded-full h-2">
                                 <div
                                   className={`h-2 rounded-full ${((subscriptionData.storageUsed || 0) / subscriptionData.storageLimit) >= 1
-                                      ? 'bg-red-600'
-                                      : ((subscriptionData.storageUsed || 0) / subscriptionData.storageLimit) >= 0.8
-                                        ? 'bg-yellow-600'
-                                        : 'bg-green-600'
+                                    ? 'bg-red-600'
+                                    : ((subscriptionData.storageUsed || 0) / subscriptionData.storageLimit) >= 0.8
+                                      ? 'bg-yellow-600'
+                                      : 'bg-green-600'
                                     }`}
                                   style={{
                                     width: `${Math.min(((subscriptionData.storageUsed || 0) / subscriptionData.storageLimit) * 100, 100)}%`
@@ -1985,8 +1985,8 @@ export default function AcademyDashboard() {
                                     size="sm"
                                     onClick={scrollToPlanManagement}
                                     className={`w-full ${((subscriptionData.storageUsed || 0) / subscriptionData.storageLimit) >= 1
-                                        ? 'bg-red-600 hover:bg-red-700 text-white'
-                                        : 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                                      ? 'bg-red-600 hover:bg-red-700 text-white'
+                                      : 'bg-yellow-600 hover:bg-yellow-700 text-white'
                                       }`}
                                   >
                                     <Crown className="h-4 w-4 mr-2" />
@@ -2083,8 +2083,8 @@ export default function AcademyDashboard() {
                                     <Card
                                       key={plan.id}
                                       className={`cursor-pointer hover:bg-slate-50 ${subscriptionData?.planName === plan.name
-                                          ? 'border-2 border-blue-500'
-                                          : ''
+                                        ? 'border-2 border-blue-500'
+                                        : ''
                                         }`}
                                       onClick={() => handleUpgradePlan(plan.id)}
                                     >
