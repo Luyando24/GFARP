@@ -292,7 +292,23 @@ export default function RegisterAcademy() {
         body: JSON.stringify(submitData)
       });
 
-      const data = await response.json();
+      // Handle both JSON and text responses
+      let data: any;
+      try {
+        const contentType = response.headers.get('content-type');
+        if (contentType?.includes('application/json')) {
+          data = await response.json();
+        } else {
+          const errorText = await response.text();
+          throw new Error(errorText || 'Server error occurred');
+        }
+      } catch (jsonError) {
+        if (!data) {
+          const errorText = await response.text().catch(() => 'Unknown server error');
+          throw new Error(errorText);
+        }
+        throw jsonError;
+      }
 
       if (data.success) {
         // Save session to automatically log in the user
@@ -930,8 +946,8 @@ export default function RegisterAcademy() {
                   <Card
                     key={plan.id}
                     className={`relative cursor-pointer transition-all duration-300 transform hover:scale-105 ${formData.selectedPlan === plan.id
-                        ? 'ring-4 ring-[#005391] shadow-xl'
-                        : 'hover:shadow-lg'
+                      ? 'ring-4 ring-[#005391] shadow-xl'
+                      : 'hover:shadow-lg'
                       } ${plan.popular ? 'border-2 border-[#005391]' : ''}`}
                     onClick={() => handleInputChange('selectedPlan', plan.id)}
                   >
