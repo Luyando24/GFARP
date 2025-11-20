@@ -80,80 +80,84 @@ export const handleGetSubscription: RequestHandler = async (req, res) => {
 };
 
 // Get Available Subscription Plans
+// OPTIMIZED FOR VERCEL: Returns fallback plans immediately if DB is slow
 export const handleGetPlans: RequestHandler = async (req, res) => {
   console.log('[SUBSCRIPTION] GET /plans request received');
 
-  // Set aggressive timeout for serverless (Vercel has 10s limit on Hobby plan)
-  const timeoutMs = 5000; // 5 seconds max
-  const timeoutPromise = new Promise((_, reject) => {
-    setTimeout(() => reject(new Error('Database query timeout')), timeoutMs);
-  });
+  // CRITICAL: Set very aggressive timeout (2s) for Vercel serverless
+  // If database doesn't respond in 2s, return fallback immediately
+  const timeoutMs = 2000; // 2 seconds max
+  let responded = false;
+
+  // Start timeout timer that will send fallback plans
+  const timeoutId = setTimeout(() => {
+    if (!responded) {
+      responded = true;
+      console.warn('[SUBSCRIPTION] Database timeout after 2s, returning fallback plans');
+      res.json({ success: true, data: getFallbackPlans() });
+    }
+  }, timeoutMs);
 
   try {
     const plansQuery = `
       SELECT 
-        id,
-        name,
-        description,
-        price,
-        currency,
-        billing_cycle,
-        player_limit,
-        storage_limit,
-        features,
-        is_active,
-        is_free,
-        sort_order
+        id, name, description, price, currency, billing_cycle,
+        player_limit, storage_limit, features, is_active, is_free, sort_order
       FROM subscription_plans 
       WHERE is_active = true 
       ORDER BY sort_order ASC
     `;
 
-    try {
-      console.log('[SUBSCRIPTION] Querying database for plans...');
+    console.log('[SUBSCRIPTION] Querying database for plans...');
+    const result = await query(plansQuery);
 
-      // Race between query and timeout
-      const result = await Promise.race([
-        query(plansQuery),
-        timeoutPromise
-      ]) as { rows: any[] };
+    // Clear timeout if query succeeded
+    clearTimeout(timeoutId);
 
-      console.log(`[SUBSCRIPTION] Query returned ${result.rows.length} plans`);
-
-      let plans = result.rows.map(plan => ({
-        id: plan.id,
-        name: plan.name,
-        description: plan.description,
-        price: parseFloat(plan.price),
-        currency: plan.currency,
-        billingCycle: plan.billing_cycle,
-        playerLimit: plan.player_limit,
-        storageLimit: plan.storage_limit,
-        features: plan.features,
-        isActive: plan.is_active,
-        isFree: plan.is_free,
-        sortOrder: plan.sort_order
-      }));
-
-      // Fallback: if no active plans are available, provide a safe default set
-      if (!plans || plans.length === 0) {
-        console.warn('No active subscription plans found in DB. Returning fallback plans.');
-        plans = getFallbackPlans();
-      }
-
-      console.log(`[SUBSCRIPTION] Returning ${plans.length} plans to client`);
-      return res.json({
-        success: true,
-        data: plans
-      });
-    } catch (dbError: any) {
-      console.error('Get plans DB error or timeout, returning fallback:', dbError.message);
-      // Return fallback plans immediately on any DB error
-      return res.json({ success: true, data: getFallbackPlans() });
+    if (responded) {
+      // Already sent fallback response due to timeout
+      console.log('[SUBSCRIPTION] Query completed but already sent fallback');
+      return;
     }
-  } catch (error: any) {
-    console.error('Get plans error:', error);
-    // Last resort: return fallback plans
+
+    responded = true;
+    console.log(`[SUBSCRIPTION] Query returned ${result.rows.length} plans`);
+
+    let plans = result.rows.map(plan => ({
+      id: plan.id,
+      name: plan.name,
+      description: plan.description,
+      price: parseFloat(plan.price),
+      currency: plan.currency,
+      billingCycle: plan.billing_cycle,
+      playerLimit: plan.player_limit,
+      storageLimit: plan.storage_limit,
+      features: plan.features,
+      isActive: plan.is_active,
+      isFree: plan.is_free,
+      sortOrder: plan.sort_order
+    }));
+
+    // Use fallback if no plans found
+    if (!plans || plans.length === 0) {
+      console.warn('No active subscription plans found in DB. Returning fallback plans.');
+      plans = getFallbackPlans();
+    }
+
+    console.log(`[SUBSCRIPTION] Returning ${plans.length} plans to client`);
+    return res.json({ success: true, data: plans });
+
+  } catch (dbError: any) {
+    clearTimeout(timeoutId);
+
+    if (responded) {
+      // Already sent fallback response
+      console.log('[SUBSCRIPTION] DB error but already sent fallback');
+      return;
+    }
+
+    responded = true;
+    console.error('[SUBSCRIPTION] DB error, returning fallback:', dbError.message);
     return res.json({ success: true, data: getFallbackPlans() });
   }
 }
