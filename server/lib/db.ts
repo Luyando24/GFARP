@@ -71,17 +71,20 @@ function computeSslOption(urlStr: string | undefined): any {
 
 // Only create a pool if we have a valid connection string.
 // This prevents implicit localhost (127.0.0.1:5432) connections on Netlify.
+console.log('[DB] Initializing connection pool...');
 const pool: any = resolvedConnectionString
   ? new Pool({
     connectionString: resolvedConnectionString,
     ssl: computeSslOption(resolvedConnectionString),
-    max: parseInt(process.env.DB_POOL_MAX || '5'),
-    connectionTimeoutMillis: parseInt(process.env.DB_CONNECT_TIMEOUT_MS || '8000'),
+    max: parseInt(process.env.DB_POOL_MAX || '3'), // Reduced from 5 for serverless
+    connectionTimeoutMillis: parseInt(process.env.DB_CONNECT_TIMEOUT_MS || '3000'), // Reduced from 8000ms to prevent Vercel timeout
     idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS || '0'),
     keepAlive: true,
-    keepAliveInitialDelayMillis: 10000,
+    keepAliveInitialDelayMillis: 3000, // Reduced from 10000ms for faster serverless startup
   })
   : null;
+
+console.log('[DB] Pool initialized:', pool ? 'Connected' : 'No connection string');
 
 // Helper function to execute queries
 import { QueryResultRow } from 'pg';
@@ -103,8 +106,12 @@ export async function query(text: string, params?: (string | number | boolean | 
     console.error('[DB] Unavailable:', details);
     throw new Error('Database unavailable: set DATABASE_URL (or SUPABASE_DB_URL)');
   }
-  const client = await pool.connect();
+
+  let client;
   try {
+    console.log('[DB] Acquiring connection from pool...');
+    client = await pool.connect();
+    console.log('[DB] Connection acquired, executing query');
     const result = await client.query(text, params);
     return { rows: result.rows };
   } catch (error) {
@@ -161,7 +168,10 @@ export async function query(text: string, params?: (string | number | boolean | 
 
     throw error;
   } finally {
-    client.release();
+    if (client) {
+      client.release();
+      console.log('[DB] Connection released back to pool');
+    }
   }
 }
 
