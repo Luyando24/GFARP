@@ -169,8 +169,11 @@ export default async function handler(
             const cardId = `CARD-${Date.now()}`;
             const cardQrSignature = `QR-${playerId}`;
 
-            // Simple encryption (in production, use proper encryption)
-            const encrypt = (text: string) => text || '';
+            // Simple encryption (convert to Buffer for PostgreSQL bytea columns)
+            const encrypt = (text: string) => {
+                if (!text) return Buffer.from('', 'utf8');
+                return Buffer.from(text, 'utf8');
+            };
 
             // Prepare player data
             const playerData = {
