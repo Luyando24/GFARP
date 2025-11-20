@@ -51,15 +51,19 @@ import {
 export function createServer() {
   console.log("Creating Express server...");
   const app = express();
+  console.log("[SERVER] Express app instantiated");
 
   // Middleware
   app.use(cors());
+  console.log("[SERVER] CORS middleware added");
 
   // Stripe webhooks need raw body, so add this before express.json()
   app.use("/api/stripe/webhooks", express.raw({ type: 'application/json' }), stripeWebhooksRouter);
+  console.log("[SERVER] Stripe webhooks route added");
 
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
+  console.log("[SERVER] Body parsing middleware added");
 
   // Health check routes
   app.get("/ping", (_req, res) => {
@@ -68,9 +72,11 @@ export function createServer() {
   });
 
   app.get("/demo", handleDemo);
+  console.log("[SERVER] Health check routes added");
 
   // Prefix all API routes under /api to match client base URL
   const api = express.Router();
+  console.log("[SERVER] API router created");
 
   // Authentication routes
   api.post("/auth/login", handleLogin);
@@ -81,6 +87,7 @@ export function createServer() {
 
   // Use auth router for additional endpoints
   api.use("/", authRouter);
+  console.log("[SERVER] Auth routes registered");
 
   // Dashboard routes
   api.get("/dashboard/stats", handleGetDashboardStats);
@@ -88,6 +95,7 @@ export function createServer() {
   api.get("/dashboard/country-distribution", handleGetCountryDistribution);
   api.get("/dashboard/financial-growth", handleGetFinancialGrowth);
   api.get("/dashboard/academy-stats", handleGetAcademyDashboardStats);
+  console.log("[SERVER] Dashboard routes registered");
 
   // Notifications routes
   api.use("/notifications", notificationsRouter);
@@ -103,6 +111,7 @@ export function createServer() {
 
   // System settings routes
   api.use("/system-settings", systemSettingsRouter);
+  console.log("[SERVER] Admin routes registered");
 
   // Academy routes (commented until DB is connected)
   api.use("/academies", academyRouter);
@@ -121,6 +130,7 @@ export function createServer() {
 
   // Stripe admin routes
   api.use("/stripe/admin", stripeAdminRouter);
+  console.log("[SERVER] Football & subscription routes registered");
 
   // Transfers routes
   api.use("/transfers", transfersRouter);
@@ -130,6 +140,7 @@ export function createServer() {
 
   // FIFA compliance routes
   api.use("/fifa-compliance", fifaComplianceRouter);
+  console.log("[SERVER] Transfer & financial routes registered");
 
   // Player documents routes
   api.post("/player-documents/upload", uploadMiddleware, handleUploadPlayerDocument);
@@ -140,12 +151,15 @@ export function createServer() {
   api.post("/demo-player-documents/upload", demoUploadMiddleware, handleDemoUploadPlayerDocument);
   api.get("/demo-player-documents/:playerId", handleDemoGetPlayerDocuments);
   api.delete("/demo-player-documents/:documentId", handleDemoDeletePlayerDocument);
+  console.log("[SERVER] Document routes registered");
 
   // Mount the /api router
   app.use("/api", api);
+  console.log("[SERVER] API router mounted");
 
   // Demo file serving route (outside /api prefix)
   app.get("/demo-files/:fileId", handleServeDemoFile);
 
+  console.log("[SERVER] ✅ Server creation completed successfully");
   return app;
 }
