@@ -12,15 +12,15 @@ import { Progress } from "../ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { useToast } from "../../hooks/use-toast";
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  Users, 
-  TrendingUp, 
+import {
+  Plus,
+  Search,
+  Filter,
+  Edit,
+  Trash2,
+  Eye,
+  Users,
+  TrendingUp,
   Award,
   Calendar,
   MapPin,
@@ -166,7 +166,7 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
           title: "Success",
           description: "Player added successfully"
         });
-        
+
         // Refresh the player list after a short delay
         setTimeout(() => {
           fetchPlayers();
@@ -177,7 +177,7 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
-      
+
       if (errorMessage.includes('Player limit reached') || errorMessage.includes('subscription') || errorMessage.includes('No active subscription')) {
         setSubscriptionError(errorMessage);
         setShowSubscriptionNotice(true);
@@ -198,7 +198,7 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
   // Delete player
   const deletePlayer = async (playerId: string) => {
     if (!confirm("Are you sure you want to delete this player?")) return;
-    
+
     setLoading(true);
     try {
       const response = await Api.deletePlayer(playerId);
@@ -227,23 +227,20 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
     }
   };
 
-  // Generate a random rating for demo purposes
-  const getRandomRating = () => {
-    return Math.floor(Math.random() * 30) + 70; // Random number between 70-99
-  };
+
 
   // Filter players based on search query
   const filteredPlayers = players.filter(player => {
     if (!searchQuery.trim()) return true;
-    
+
     const query = searchQuery.toLowerCase();
     const fullName = `${player.firstName} ${player.lastName}`.toLowerCase();
     const position = player.position?.toLowerCase() || '';
     const email = player.email?.toLowerCase() || '';
-    
-    return fullName.includes(query) || 
-           position.includes(query) || 
-           email.includes(query);
+
+    return fullName.includes(query) ||
+      position.includes(query) ||
+      email.includes(query);
   });
 
   return (
@@ -282,19 +279,19 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           )}
-          
+
           {!loading && filteredPlayers.length === 0 && players.length > 0 && (
             <div className="text-center py-8 text-slate-500">
               No players found matching your search criteria.
             </div>
           )}
-          
+
           {!loading && players.length === 0 && (
             <div className="text-center py-8 text-slate-500">
               No players found. Add your first player to get started.
             </div>
           )}
-          
+
           {!loading && filteredPlayers.length > 0 && (
             <Table>
               <TableHeader>
@@ -302,25 +299,18 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
                   <TableHead>Name</TableHead>
                   <TableHead>Age</TableHead>
                   <TableHead>Position</TableHead>
-                  <TableHead>Rating</TableHead>
+
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredPlayers.map((player) => {
-                  const rating = getRandomRating();
                   return (
                     <TableRow key={player.id}>
                       <TableCell className="font-medium">{player.firstName} {player.lastName}</TableCell>
                       <TableCell>{calculateAge(player.dateOfBirth)}</TableCell>
                       <TableCell>{player.position}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Progress value={rating} className="w-16 h-2" />
-                          <span className="text-sm">{rating}</span>
-                        </div>
-                      </TableCell>
                       <TableCell>
                         <Badge variant={player.isActive ? 'default' : 'destructive'}>
                           {player.isActive ? 'active' : 'inactive'}
