@@ -16,18 +16,18 @@ export default function Index() {
       <DemoModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       <header className="sticky top-0 z-50">
         {/* Top Bar */}
-         <div className="bg-[#005391] text-white text-xs">
-           <div className="px-4 py-2">
-             <div className="flex items-center justify-end gap-6">
-               <a href="#about" className="hover:text-yellow-300 transition-colors font-medium">ABOUT US</a>
-               <a href="#support" className="hover:text-yellow-300 transition-colors font-medium">SUPPORT</a>
-               <Link to="/shop" className="hover:text-yellow-300 transition-colors font-medium">SHOP</Link>
-               <a href="#blog" className="hover:text-yellow-300 transition-colors font-medium">BLOG</a>
-               <a href="#help" className="hover:text-yellow-300 transition-colors font-medium">HELP CENTER</a>
-               <Link to="/admin-dashboard" className="hover:text-yellow-300 transition-colors font-medium">ADMIN (TEST)</Link>
-             </div>
-           </div>
-         </div>
+        <div className="bg-[#005391] text-white text-xs">
+          <div className="px-4 py-2">
+            <div className="flex items-center justify-end gap-6">
+              <a href="#about" className="hover:text-yellow-300 transition-colors font-medium">ABOUT US</a>
+              <a href="#support" className="hover:text-yellow-300 transition-colors font-medium">SUPPORT</a>
+              <Link to="/shop" className="hover:text-yellow-300 transition-colors font-medium">SHOP</Link>
+              <a href="#blog" className="hover:text-yellow-300 transition-colors font-medium">BLOG</a>
+              <a href="#help" className="hover:text-yellow-300 transition-colors font-medium">HELP CENTER</a>
+              <Link to="/admin-dashboard" className="hover:text-yellow-300 transition-colors font-medium">ADMIN (TEST)</Link>
+            </div>
+          </div>
+        </div>
 
         {/* Main Navigation */}
         <div className="bg-gradient-to-r from-[#005391] via-[#0066b3] to-[#005391] shadow-2xl border-b-4 border-yellow-400 relative">
@@ -35,7 +35,7 @@ export default function Index() {
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.1%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%222%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
           </div>
-          
+
           <div className="px-2 relative">
             <div className="flex items-center justify-between py-3">
               {/* Left side - Hamburger Menu */}
@@ -43,45 +43,45 @@ export default function Index() {
                 <Button variant="ghost" onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 text-white hover:bg-white/20 rounded-lg">
                   <Menu className="h-6 w-6" />
                 </Button>
-                
+
                 {/* GFARP Logo */}
-                 <Link to="/" className="flex items-center gap-3 group">
-                   <div className="relative">
-                     <div className="w-10 h-10 bg-gradient-to-br from-white to-gray-100 rounded-full flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-500 group-hover:scale-110">
-                       <Trophy className="h-5 w-5 text-[#005391] group-hover:text-yellow-500 transition-colors duration-300" />
-                     </div>
-                     <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg">
-                       <Star className="h-2 w-2 text-white" />
-                     </div>
-                   </div>
-                   <div className="text-white">
-                     <div className="text-xl font-black tracking-tight bg-gradient-to-r from-white to-yellow-100 bg-clip-text text-transparent">
-                       GFARP
-                     </div>
-                   </div>
-                 </Link>
+                <Link to="/" className="flex items-center gap-3 group">
+                  <div className="relative">
+                    <div className="w-10 h-10 bg-gradient-to-br from-white to-gray-100 rounded-full flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-500 group-hover:scale-110">
+                      <Trophy className="h-5 w-5 text-[#005391] group-hover:text-yellow-500 transition-colors duration-300" />
+                    </div>
+                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg">
+                      <Star className="h-2 w-2 text-white" />
+                    </div>
+                  </div>
+                  <div className="text-white">
+                    <div className="text-xl font-black tracking-tight bg-gradient-to-r from-white to-yellow-100 bg-clip-text text-transparent">
+                      GFARP
+                    </div>
+                  </div>
+                </Link>
               </div>
-              
+
               {/* Center - Desktop Navigation */}
-               <nav className={`hidden lg:flex items-center gap-1 transition-all duration-300 ${isMenuOpen ? 'opacity-100' : 'opacity-100'}`}>
-                 {[
-                   { href: "#features", label: "FEATURES" },
-                   { href: "#benefits", label: "BENEFITS" },
-                   { href: "#pricing", label: "PRICING" },
-                   { href: "#testimonials", label: "TESTIMONIALS" },
-                   { href: "#contact", label: "CONTACT" }
-                 ].map((item) => (
-                   <a 
-                     key={item.href}
-                     href={item.href} 
-                     className="px-3 py-2 text-white font-bold text-xs tracking-wide hover:bg-white/20 rounded-lg transition-all duration-300 hover:scale-105 hover:text-yellow-300 relative group"
-                   >
-                     {item.label}
-                     <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-yellow-400 group-hover:w-full transition-all duration-300"></div>
-                   </a>
-                 ))}
-               </nav>
-            
+              <nav className={`hidden lg:flex items-center gap-1 transition-all duration-300 ${isMenuOpen ? 'opacity-100' : 'opacity-100'}`}>
+                {[
+                  { href: "#features", label: "FEATURES" },
+                  { href: "#benefits", label: "BENEFITS" },
+                  { href: "#pricing", label: "PRICING" },
+                  { href: "#testimonials", label: "TESTIMONIALS" },
+                  { href: "#contact", label: "CONTACT" }
+                ].map((item) => (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    className="px-3 py-2 text-white font-bold text-xs tracking-wide hover:bg-white/20 rounded-lg transition-all duration-300 hover:scale-105 hover:text-yellow-300 relative group"
+                  >
+                    {item.label}
+                    <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-yellow-400 group-hover:w-full transition-all duration-300"></div>
+                  </a>
+                ))}
+              </nav>
+
               {/* Right side - Search, Language, User */}
               <div className="flex items-center gap-3">
                 <Link to="/shop">
@@ -98,47 +98,47 @@ export default function Index() {
                 <Button variant="ghost" className="p-2 text-white hover:bg-white/20 rounded-lg">
                   <User className="h-5 w-5" />
                 </Button>
-                
+
                 {/* Mobile Sign In */}
                 <Button asChild className="bg-white text-[#005391] hover:bg-yellow-400 hover:text-black font-bold px-4 py-2 rounded-full text-sm lg:hidden">
                   <Link to="/academy-registration">GET STARTED</Link>
                 </Button>
               </div>
             </div>
-            
+
             {isMenuOpen && (
               <>
                 {/* Overlay */}
-                <div 
+                <div
                   className="fixed inset-0 bg-black bg-opacity-50 z-40"
                   onClick={() => setIsMenuOpen(false)}
                 />
                 {/* Menu */}
                 <div className="bg-gradient-to-b from-[#005391] to-[#0066b3] border-t-2 border-yellow-400 absolute top-full left-0 w-80 z-50 shadow-2xl">
                   <nav className="flex flex-col gap-2 p-6">
-                   {[
-                     { href: "#features", label: "FEATURES" },
-                     { href: "#benefits", label: "BENEFITS" },
-                     { href: "#pricing", label: "PRICING" },
-                     { href: "#testimonials", label: "TESTIMONIALS" },
-                     { href: "#contact", label: "CONTACT" }
-                   ].map((item) => (
-                     <a 
-                       key={item.href}
-                       href={item.href} 
-                       className="text-white font-bold py-3 px-4 hover:bg-white/20 rounded-lg transition-all duration-300 hover:text-yellow-300 border-l-4 border-transparent hover:border-yellow-400"
-                       onClick={() => setIsMenuOpen(false)}
-                     >
-                       {item.label}
-                     </a>
-                   ))}
-                   <Button asChild className="mt-4 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 font-bold py-3 rounded-full shadow-xl">
-                     <Link to="/academy-registration">REGISTER ACADEMY</Link>
-                   </Button>
-                 </nav>
-               </div>
-               </>
-             )}
+                    {[
+                      { href: "#features", label: "FEATURES" },
+                      { href: "#benefits", label: "BENEFITS" },
+                      { href: "#pricing", label: "PRICING" },
+                      { href: "#testimonials", label: "TESTIMONIALS" },
+                      { href: "#contact", label: "CONTACT" }
+                    ].map((item) => (
+                      <a
+                        key={item.href}
+                        href={item.href}
+                        className="text-white font-bold py-3 px-4 hover:bg-white/20 rounded-lg transition-all duration-300 hover:text-yellow-300 border-l-4 border-transparent hover:border-yellow-400"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        {item.label}
+                      </a>
+                    ))}
+                    <Button asChild className="mt-4 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 font-bold py-3 rounded-full shadow-xl">
+                      <Link to="/academy-registration">REGISTER ACADEMY</Link>
+                    </Button>
+                  </nav>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -146,13 +146,13 @@ export default function Index() {
       <section id="hero" className="relative min-h-screen bg-gradient-to-br from-[#001a33] via-[#003366] to-[#005391] overflow-hidden">
         {/* FIFA-related Background Image */}
         <div className="absolute inset-0 w-full h-full">
-          <div 
+          <div
             className="w-full h-full bg-cover bg-center"
             style={{
               backgroundImage: "url('https://images.unsplash.com/photo-1522778119026-d647f0596c20?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2070&q=80')"
             }}
           />
-          
+
           {/* Image Overlay with FIFA-inspired elements */}
           <div className="absolute inset-0 bg-gradient-to-br from-[#001a33]/90 via-[#003366]/85 to-[#005391]/80">
             {/* FIFA Trophy Silhouette */}
@@ -173,7 +173,7 @@ export default function Index() {
               <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-32 h-32 border-2 border-white rounded-full"></div>
             </div>
           </div>
-          
+
           {/* Floating orbs */}
           <div className="absolute top-20 left-20 w-64 h-64 bg-gradient-to-r from-yellow-400/20 to-yellow-500/20 rounded-full blur-3xl animate-pulse"></div>
           <div className="absolute bottom-32 right-20 w-80 h-80 bg-gradient-to-r from-blue-400/15 to-blue-500/15 rounded-full blur-3xl animate-pulse delay-1000"></div>
@@ -205,7 +205,7 @@ export default function Index() {
 
             {/* Subtitle */}
             <p className="text-lg sm:text-xl md:text-2xl text-blue-100 font-semibold max-w-4xl mx-auto leading-relaxed mb-10 px-4">
-              Register your academy players today • Secure future compensation payments • 
+              Register your academy players today • Secure future compensation payments •
               <span className="text-yellow-300"> Your first step towards long-term financial stability</span>
             </p>
 
@@ -217,11 +217,11 @@ export default function Index() {
                   REGISTER ACADEMY
                 </Link>
               </Button>
-              
+
               <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-white/10 hover:bg-white/20 text-white font-black shadow-xl hover:shadow-white/25 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/50 backdrop-blur-sm w-full sm:w-auto">
                 <Link to="/academy-dashboard" className="flex items-center gap-3 justify-center">
                   <Target className="h-6 w-6" />
-                  TRY DEMO
+                  GET STARTED
                 </Link>
               </Button>
             </div>
@@ -266,21 +266,21 @@ export default function Index() {
               <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Register Academy</h3>
               <p className="text-blue-100">Create your academy profile and verify your credentials with our FIFA-approved system.</p>
             </div>
-            
+
             {/* Step 2 */}
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-white/20 hover:border-yellow-500/50 transition-all duration-300 transform hover:-translate-y-2">
               <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 w-12 h-12 rounded-full flex items-center justify-center mb-6 text-black font-bold text-xl">2</div>
               <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Add Players</h3>
               <p className="text-blue-100">Register all your players with complete profiles, documentation, and training history.</p>
             </div>
-            
+
             {/* Step 3 */}
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-white/20 hover:border-yellow-500/50 transition-all duration-300 transform hover:-translate-y-2">
               <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 w-12 h-12 rounded-full flex items-center justify-center mb-6 text-black font-bold text-xl">3</div>
               <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Track Progress</h3>
               <p className="text-blue-100">Monitor player development and transfers through our FIFA-connected dashboard.</p>
             </div>
-            
+
             {/* Step 4 */}
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-white/20 hover:border-yellow-500/50 transition-all duration-300 transform hover:-translate-y-2">
               <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 w-12 h-12 rounded-full flex items-center justify-center mb-6 text-black font-bold text-xl">4</div>
@@ -288,7 +288,7 @@ export default function Index() {
               <p className="text-blue-100">Get automatic notifications and secure payments when your players advance to professional clubs.</p>
             </div>
           </div>
-          
+
           {/* CTA Button */}
           <div className="text-center">
             <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-black shadow-2xl hover:shadow-yellow-500/50 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/60">
@@ -331,7 +331,7 @@ export default function Index() {
               <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden cursor-pointer">
                 {/* Card Header */}
                 <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#005391] to-[#0066b3]"></div>
-                
+
                 {/* Icon Badge */}
                 <div className="relative mb-6">
                   <div className="w-20 h-20 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-[#005391]/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
@@ -353,7 +353,7 @@ export default function Index() {
                 {/* CTA Button */}
                 <Button className="w-full bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#0066b3] hover:to-[#005391] text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 pointer-events-none">
                   <div className="flex items-center justify-center gap-2">
-                    TRY DEMO
+                    GET STARTED
                     <Target className="h-4 w-4" />
                   </div>
                 </Button>
@@ -368,7 +368,7 @@ export default function Index() {
               <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden cursor-pointer">
                 {/* Card Header */}
                 <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-yellow-400 to-yellow-500"></div>
-                
+
                 {/* Icon Badge */}
                 <div className="relative mb-6">
                   <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-yellow-500/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
@@ -390,7 +390,7 @@ export default function Index() {
                 {/* CTA Button */}
                 <Button className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 pointer-events-none">
                   <div className="flex items-center justify-center gap-2">
-                    TRY DEMO
+                    GET STARTED
                     <Target className="h-4 w-4" />
                   </div>
                 </Button>
@@ -405,7 +405,7 @@ export default function Index() {
               <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden cursor-pointer">
                 {/* Card Header */}
                 <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-green-400 to-green-500"></div>
-                
+
                 {/* Icon Badge */}
                 <div className="relative mb-6">
                   <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-green-500/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
@@ -427,7 +427,7 @@ export default function Index() {
                 {/* CTA Button */}
                 <Button className="w-full bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 pointer-events-none">
                   <div className="flex items-center justify-center gap-2">
-                    TRY DEMO
+                    GET STARTED
                     <Target className="h-4 w-4" />
                   </div>
                 </Button>
@@ -479,7 +479,7 @@ export default function Index() {
             <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
               {/* Card Header */}
               <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#005391] to-[#0066b3]"></div>
-              
+
               {/* Icon Badge */}
               <div className="relative mb-6">
                 <div className="w-20 h-20 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-[#005391]/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
@@ -503,7 +503,7 @@ export default function Index() {
             <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
               {/* Card Header */}
               <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#005391] to-[#0066b3]"></div>
-              
+
               {/* Icon Badge */}
               <div className="relative mb-6">
                 <div className="w-20 h-20 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-[#005391]/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
@@ -527,7 +527,7 @@ export default function Index() {
             <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
               {/* Card Header */}
               <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#005391] to-[#0066b3]"></div>
-              
+
               {/* Icon Badge */}
               <div className="relative mb-6">
                 <div className="w-20 h-20 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-[#005391]/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
@@ -551,7 +551,7 @@ export default function Index() {
             <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
               {/* Card Header */}
               <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#005391] to-[#0066b3]"></div>
-              
+
               {/* Icon Badge */}
               <div className="relative mb-6">
                 <div className="w-20 h-20 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-[#005391]/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
@@ -575,7 +575,7 @@ export default function Index() {
             <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
               {/* Card Header */}
               <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#005391] to-[#0066b3]"></div>
-              
+
               {/* Icon Badge */}
               <div className="relative mb-6">
                 <div className="w-20 h-20 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-[#005391]/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
@@ -599,7 +599,7 @@ export default function Index() {
             <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
               {/* Card Header */}
               <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#005391] to-[#0066b3]"></div>
-              
+
               {/* Icon Badge */}
               <div className="relative mb-6">
                 <div className="w-20 h-20 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-[#005391]/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
@@ -652,7 +652,7 @@ export default function Index() {
 
           {/* Pricing Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            
+
             {/* Basic Tier - Bronze */}
             <div className="group relative bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-3 border-2 border-transparent hover:border-yellow-400/30 overflow-hidden">
               {/* Tier Badge */}
@@ -838,7 +838,7 @@ export default function Index() {
         <div className="absolute inset-0 opacity-10">
           <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.1%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%222%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
         </div>
-        
+
         <div className="container mx-auto px-4 relative z-10">
           <div className="text-center mb-16">
             <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 rounded-full border border-amber-500/30 mb-6">
@@ -855,7 +855,7 @@ export default function Index() {
               </span>
             </h2>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
             {/* Player Card 1 - Marco Rodriguez */}
             <div className="group relative">
@@ -883,7 +883,7 @@ export default function Index() {
                     <div className="text-amber-300 text-xs font-semibold">RATING</div>
                   </div>
                 </div>
-                
+
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
                   <div className="text-center">
@@ -899,7 +899,7 @@ export default function Index() {
                     <div className="text-slate-400 text-xs">USING</div>
                   </div>
                 </div>
-                
+
                 {/* Quote */}
                 <div className="relative">
                   <div className="absolute -top-2 -left-2 text-blue-500/30 text-3xl font-black">"</div>
@@ -907,7 +907,7 @@ export default function Index() {
                     GFARP has revolutionized how we handle FIFA registrations for our 300+ players. What used to take our staff weeks now takes hours. The compliance monitoring has saved us from potential FIFA sanctions.
                   </p>
                 </div>
-                
+
                 {/* Achievement Badge */}
                 <div className="mt-6 inline-flex items-center px-3 py-1 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-full border border-green-500/30">
                   <CheckCircle className="w-3 h-3 text-green-400 mr-2" />
@@ -915,7 +915,7 @@ export default function Index() {
                 </div>
               </div>
             </div>
-            
+
             {/* Player Card 2 - James Smith */}
             <div className="group relative">
               <div className="absolute inset-0 bg-gradient-to-br from-red-600/20 to-orange-600/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500"></div>
@@ -942,7 +942,7 @@ export default function Index() {
                     <div className="text-amber-300 text-xs font-semibold">RATING</div>
                   </div>
                 </div>
-                
+
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
                   <div className="text-center">
@@ -958,7 +958,7 @@ export default function Index() {
                     <div className="text-slate-400 text-xs">USING</div>
                   </div>
                 </div>
-                
+
                 {/* Quote */}
                 <div className="relative">
                   <div className="absolute -top-2 -left-2 text-red-500/30 text-3xl font-black">"</div>
@@ -966,7 +966,7 @@ export default function Index() {
                     The training compensation tracking feature has been a game-changer. We can now accurately calculate and manage solidarity payments, ensuring we're fully compliant with FIFA regulations while maximizing our revenue.
                   </p>
                 </div>
-                
+
                 {/* Achievement Badge */}
                 <div className="mt-6 inline-flex items-center px-3 py-1 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-full border border-blue-500/30">
                   <DollarSign className="w-3 h-3 text-blue-400 mr-2" />
@@ -974,7 +974,7 @@ export default function Index() {
                 </div>
               </div>
             </div>
-            
+
             {/* Player Card 3 - Andrea Lopez */}
             <div className="group relative">
               <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 to-pink-600/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500"></div>
@@ -1001,7 +1001,7 @@ export default function Index() {
                     <div className="text-amber-300 text-xs font-semibold">RATING</div>
                   </div>
                 </div>
-                
+
                 {/* Stats */}
                 <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
                   <div className="text-center">
@@ -1017,7 +1017,7 @@ export default function Index() {
                     <div className="text-slate-400 text-xs">USING</div>
                   </div>
                 </div>
-                
+
                 {/* Quote */}
                 <div className="relative">
                   <div className="absolute -top-2 -left-2 text-purple-500/30 text-3xl font-black">"</div>
@@ -1025,7 +1025,7 @@ export default function Index() {
                     As one of the world's largest academies, we needed a robust solution that could scale. GFARP's Elite plan handles our 500+ players effortlessly, and the analytics help us make data-driven decisions about our youth development program.
                   </p>
                 </div>
-                
+
                 {/* Achievement Badge */}
                 <div className="mt-6 inline-flex items-center px-3 py-1 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full border border-purple-500/30">
                   <BarChart3 className="w-3 h-3 text-purple-400 mr-2" />
@@ -1034,7 +1034,7 @@ export default function Index() {
               </div>
             </div>
           </div>
-          
+
           {/* Call to Action */}
           <div className="text-center mt-16">
             <Link to="/academy-registration">
