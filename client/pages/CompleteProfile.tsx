@@ -105,7 +105,7 @@ export default function CompleteProfile() {
         setIsSubmitting(true);
         try {
             const response = await fetch(`/api/academies/${academyData.id}`, {
-                method: 'PATCH',
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -114,12 +114,10 @@ export default function CompleteProfile() {
                     name: formData.name,
                     phone: formData.phone,
                     address: formData.address,
-                    district: formData.city,
-                    province: formData.country,
-                    director_name: formData.directorName,
-                    director_email: formData.directorEmail,
-                    director_phone: formData.directorPhone || formData.phone,
-                    founded_year: formData.foundedYear ? parseInt(formData.foundedYear) : null
+                    directorName: formData.directorName,
+                    directorEmail: formData.directorEmail,
+                    directorPhone: formData.directorPhone || formData.phone,
+                    foundedYear: formData.foundedYear ? parseInt(formData.foundedYear) : undefined
                 })
             });
 
