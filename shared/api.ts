@@ -16,7 +16,8 @@ export type UserRole =
   | "accountant"
   | "parent"
   | "student"
-  | "superadmin";
+  | "superadmin"
+  | "academy";
 
 export interface School {
   id: UUID;
@@ -468,7 +469,7 @@ export class Api {
     if (params?.campusId) queryParams.append('campusId', params.campusId);
     if (params?.grade) queryParams.append('grade', params.grade);
     if (params?.isActive !== undefined) queryParams.append('isActive', params.isActive.toString());
-    
+
     const response = await fetch(`/api/students?${queryParams}`);
     if (!response.ok) throw new Error('Failed to fetch students');
     const data = await response.json();
@@ -579,7 +580,7 @@ export class Api {
     if (params.q) searchParams.append('q', params.q);
     if (params.subject) searchParams.append('subject', params.subject);
     if (params.department) searchParams.append('department', params.department);
-    
+
     const response = await fetch(`/api/teachers/search?${searchParams}`);
     if (!response.ok) throw new Error('Failed to search teachers');
     return response.json();
@@ -599,7 +600,7 @@ export class Api {
     if (params?.subject) query.append('subject', params.subject);
     if (params?.teacherId) query.append('teacherId', params.teacherId);
     if (params?.academicYear) query.append('academicYear', params.academicYear);
-    
+
     const response = await fetch(`/api/classes?${query}`);
     if (!response.ok) throw new Error('Failed to fetch classes');
     return response.json();
@@ -656,15 +657,15 @@ export class Api {
     return response.json();
   }
 
-  static async getClassStats(schoolId?: UUID): Promise<{ 
-    total: number; 
-    active: number; 
-    gradeLevels: number; 
-    subjects: number; 
-    averageEnrollment: number; 
-    totalEnrollment: number; 
-    averageCapacity: number; 
-    totalCapacity: number; 
+  static async getClassStats(schoolId?: UUID): Promise<{
+    total: number;
+    active: number;
+    gradeLevels: number;
+    subjects: number;
+    averageEnrollment: number;
+    totalEnrollment: number;
+    averageCapacity: number;
+    totalCapacity: number;
   }> {
     const query = schoolId ? `?schoolId=${schoolId}` : '';
     const response = await fetch(`/api/classes/stats${query}`);
@@ -687,7 +688,7 @@ export class Api {
     });
     if (!response.ok) {
       let data: any = null;
-      try { data = await response.json(); } catch (_) {}
+      try { data = await response.json(); } catch (_) { }
       const error = new Error(data?.error || data?.message || 'Failed to create subject');
       (error as any).data = data;
       throw error;
@@ -752,7 +753,7 @@ export class Api {
     });
     if (!response.ok) {
       let data: any = null;
-      try { data = await response.json(); } catch (_) {}
+      try { data = await response.json(); } catch (_) { }
       const error = new Error(data?.error || data?.message || "Failed to create assignment");
       (error as any).data = data;
       throw error;

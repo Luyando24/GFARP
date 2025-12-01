@@ -67,7 +67,7 @@ export default function RegisterAcademy() {
       if (data.success) {
         const session = {
           userId: data.data.academy.id,
-          role: 'admin' as const,
+          role: 'academy' as const,
           schoolId: data.data.academy.id,
           tokens: { accessToken: data.data.token, expiresInSec: 24 * 3600 }
         };
