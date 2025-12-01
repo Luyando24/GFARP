@@ -23,9 +23,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const body = req.body;
         console.log('[VERCEL] Registration data received:', { name: body.name, email: body.email });
 
-        // Validate required fields
-        if (!body.name || !body.email || !body.password) {
-            return res.status(400).json({ success: false, message: 'Missing required fields' });
+        // Validate required fields - only email and password are required
+        if (!body.email || !body.password) {
+            return res.status(400).json({ success: false, message: 'Email and password are required' });
         }
 
         // Initialize Supabase client
@@ -57,8 +57,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // 3. Generate IDs
         const academyId = uuidv4();
         const userId = uuidv4();
+
+        // Use default name if not provided
+        const academyName = body.name || 'New Academy';
+
         // Generate a simple code from name (e.g., "Academy Name" -> "AN-1234")
-        const nameInitials = body.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 3);
+        const nameInitials = academyName.split(' ').map((n: string) => n[0]).join('').toUpperCase().substring(0, 3);
         const randomSuffix = Math.floor(1000 + Math.random() * 9000);
         const academyCode = `${nameInitials}-${randomSuffix}`;
 
@@ -67,7 +71,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .from('academies')
             .insert({
                 id: academyId,
-                name: body.name,
+                name: academyName,
                 code: academyCode,
                 email: body.email,
                 phone: body.phone,
@@ -121,7 +125,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             data: {
                 academy: {
                     id: academyId,
-                    name: body.name,
+                    name: academyName,
                     email: body.email,
                     role: 'academy_admin'
                 },
