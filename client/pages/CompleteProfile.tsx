@@ -27,7 +27,7 @@ export default function CompleteProfile() {
         phone: '',
         address: '',
         city: '',
-        country: 'Zambia',
+        country: 'United States',
         directorName: '',
         directorEmail: '',
         directorPhone: ''
@@ -243,7 +243,7 @@ export default function CompleteProfile() {
                                     value={formData.address}
                                     onChange={(e) => handleInputChange('address', e.target.value)}
                                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#005391] focus:outline-none mt-1"
-                                    placeholder="Street address"
+                                    placeholder="123 Main St, New York, NY"
                                 />
                                 {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
                             </div>
@@ -259,7 +259,7 @@ export default function CompleteProfile() {
                                         value={formData.city}
                                         onChange={(e) => handleInputChange('city', e.target.value)}
                                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#005391] focus:outline-none mt-1"
-                                        placeholder="Lusaka"
+                                        placeholder="New York"
                                     />
                                     {errors.city && <p className="text-red-500 text-sm mt-1">{errors.city}</p>}
                                 </div>
@@ -274,7 +274,7 @@ export default function CompleteProfile() {
                                         value={formData.country}
                                         onChange={(e) => handleInputChange('country', e.target.value)}
                                         className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#005391] focus:outline-none mt-1"
-                                        placeholder="Zambia"
+                                        placeholder="United States"
                                     />
                                 </div>
                             </div>
@@ -334,7 +334,7 @@ export default function CompleteProfile() {
                                     value={formData.directorPhone}
                                     onChange={(e) => handleInputChange('directorPhone', e.target.value)}
                                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#005391] focus:outline-none mt-1"
-                                    placeholder="+260 97 123 4567"
+                                    placeholder="+1 (555) 123-4567"
                                 />
                             </div>
                         </div>
