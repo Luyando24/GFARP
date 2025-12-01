@@ -29,6 +29,14 @@
       "destination": "/api/football-players"
     },
     {
+      "source": "/api/player-documents/upload",
+      "destination": "/api/player-documents/upload"
+    },
+    {
+      "source": "/api/player-documents/:id",
+      "destination": "/api/player-documents/[id]"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
