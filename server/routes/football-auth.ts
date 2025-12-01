@@ -271,11 +271,11 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
       } catch (_) { }
     }
 
-    // Validate required fields
-    if (!name || !email || !password || !contactPerson || !phone || !address || !city || !country) {
+    // Allow minimal registration: email + password only
+    if (!email || !password) {
       return res.status(400).json({
         success: false,
-        message: 'Missing required fields'
+        message: 'Email and password are required'
       });
     }
 
@@ -354,16 +354,17 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
         RETURNING id, name, email, code
       `;
 
+      const defaultName = name && name.trim() ? name : 'New Academy';
       const academyInsertValues = isUuidId ? [
         academyId,
-        name,
+        defaultName,
         academyCode,
         email,
         address || null,
         city || null,
         country || null,
         phone || null,
-        null, // website
+        null,
         'youth',
         'active',
         contactPerson || null,
@@ -372,14 +373,14 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
         foundedYear ? parseInt(foundedYear.toString()) : null,
         hashedPassword
       ] : [
-        name,
+        defaultName,
         academyCode,
         email,
         address || null,
         city || null,
         country || null,
         phone || null,
-        null, // website
+        null,
         'youth',
         'active',
         contactPerson || null,
