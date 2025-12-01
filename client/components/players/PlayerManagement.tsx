@@ -158,7 +158,15 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
         email: playerData.email || null,
         phone: combinedPhone,
         jerseyNumber: playerData.jerseyNumber ? parseInt(playerData.jerseyNumber) : null,
-        academyId
+        academyId,
+        // Additional fields to persist
+        nationality: playerData.nationality,
+        height: playerData.height,
+        weight: playerData.weight,
+        currentClub: playerData.currentClub,
+        trainingStartDate: playerData.trainingStartDate,
+        trainingEndDate: playerData.trainingEndDate,
+        internalNotes: playerData.internalNotes
       } as any);
 
       if (response.success) {
