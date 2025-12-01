@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   Search, 
-  Filter, 
   Edit, 
   Trash2, 
   Download, 
@@ -10,11 +9,8 @@ import {
   DollarSign,
   TrendingUp,
   TrendingDown,
-  Eye,
   X,
-  Save,
-  AlertCircle,
-  FileText
+  AlertCircle
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
@@ -130,12 +126,12 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
 
       setTransactions(transactionsRes.data?.transactions || []);
       setTotalPages(transactionsRes.data?.pagination?.totalPages || 1);
-      setSummary(summaryRes.data || {
+      setSummary(summaryRes.data?.summary || {
         totalRevenue: 0,
         totalExpenses: 0,
         netProfit: 0,
-        profitMargin: 0,
-        monthlyGrowth: 0
+        profitMargin: '0',
+        totalTransactions: 0
       });
       setBudgetCategories(budgetRes.data || []);
     } catch (err) {
@@ -155,7 +151,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
 
       await createFinancialTransaction({
         ...transactionForm,
-        academy_id: academyId, // Keep as string UUID, don't parse as integer
+        academy_id: academyId,
         amount: Number(transactionForm.amount)
       } as FinancialTransaction);
 
@@ -236,7 +232,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
 
       // Check for duplicate category names
       const existingCategory = budgetCategories.find(
-        cat => cat.category_name.toLowerCase() === budgetForm.category_name.trim().toLowerCase()
+        cat => cat.category_name.toLowerCase() === budgetForm.category_name?.trim().toLowerCase()
       );
       if (existingCategory) {
         setError('A budget category with this name already exists');
@@ -245,7 +241,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
 
       await createBudgetCategory(academyId, {
         ...budgetForm,
-        category_name: budgetForm.category_name.trim(),
+        category_name: budgetForm.category_name?.trim() || '',
         budgeted_amount: Number(budgetForm.budgeted_amount)
       } as Omit<BudgetCategory, 'id' | 'academy_id' | 'created_at' | 'updated_at'>);
 
@@ -286,7 +282,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       // Check for duplicate category names (excluding current category)
       const existingCategory = budgetCategories.find(
         cat => cat.id !== editingBudget.id && 
-               cat.category_name.toLowerCase() === budgetForm.category_name.trim().toLowerCase()
+               cat.category_name.toLowerCase() === budgetForm.category_name?.trim().toLowerCase()
       );
       if (existingCategory) {
         setError('A budget category with this name already exists');
@@ -295,7 +291,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
 
       await updateBudgetCategory(editingBudget.id, {
         ...budgetForm,
-        category_name: budgetForm.category_name.trim(),
+        category_name: budgetForm.category_name?.trim() || '',
         budgeted_amount: Number(budgetForm.budgeted_amount)
       });
 
@@ -341,34 +337,6 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     }
     setShowBudgetModal(true);
     setError(''); // Clear any previous errors when opening modal
-  };
-
-  // Budget validation helpers
-  const validateBudgetForm = () => {
-    const errors: string[] = [];
-    
-    if (!budgetForm.category_name?.trim()) {
-      errors.push('Category name is required');
-    }
-    
-    if (!budgetForm.budgeted_amount || Number(budgetForm.budgeted_amount) <= 0) {
-      errors.push('Budgeted amount must be greater than 0');
-    }
-
-    if (!budgetForm.fiscal_year || budgetForm.fiscal_year < 2020 || budgetForm.fiscal_year > 2030) {
-      errors.push('Please enter a valid fiscal year between 2020 and 2030');
-    }
-
-    return errors;
-  };
-
-  const isBudgetFormValid = () => {
-    return budgetForm.category_name?.trim() && 
-           budgetForm.budgeted_amount && 
-           Number(budgetForm.budgeted_amount) > 0 &&
-           budgetForm.fiscal_year &&
-           budgetForm.fiscal_year >= 2020 && 
-           budgetForm.fiscal_year <= 2030;
   };
 
   const formatCurrency = (amount: number) => {
@@ -1003,24 +971,23 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                     })}
                     rows={2}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Optional notes"
+                    placeholder="Additional notes"
                   />
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3 mt-6">
+              <div className="mt-6 flex justify-end space-x-3">
                 <button
                   onClick={() => setShowTransactionModal(false)}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={editingTransaction ? handleUpdateTransaction : handleCreateTransaction}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
-                  <Save className="h-4 w-4 mr-2" />
-                  {editingTransaction ? 'Update' : 'Create'} Transaction
+                  {editingTransaction ? 'Update Transaction' : 'Create Transaction'}
                 </button>
               </div>
             </div>
@@ -1028,275 +995,123 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         </div>
       )}
 
-      {/* Budget Management Modal */}
+      {/* Budget Modal */}
       {showBudgetModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-6xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-gray-900">Budget Management</h2>
-              <button
-                onClick={() => setShowBudgetModal(false)}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-medium text-gray-900">
+                  {editingBudget ? 'Edit Budget Category' : 'Add Budget Category'}
+                </h3>
+                <button
+                  onClick={() => setShowBudgetModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Budget Categories Table */}
-              <div>
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold text-gray-900">Current Budget Categories</h3>
-                  <button
-                    onClick={() => openBudgetModal()}
-                    className="inline-flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
-                  >
-                    <Plus className="h-4 w-4 mr-1" />
-                    Add Category
-                  </button>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Category Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={budgetForm.category_name || ''}
+                    onChange={(e) => setBudgetForm({
+                      ...budgetForm,
+                      category_name: e.target.value
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="e.g., Equipment, Travel"
+                  />
                 </div>
 
-                <div className="overflow-x-auto">
-                  <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Category
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Type
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Budget
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Period
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {budgetCategories.map((category) => (
-                        <tr key={category.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
-                              {category.category_name}
-                            </div>
-                            {category.description && (
-                              <div className="text-sm text-gray-500">
-                                {category.description}
-                              </div>
-                            )}
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              category.category_type === 'income' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-red-100 text-red-800'
-                            }`}>
-                              {category.category_type}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatCurrency(category.budgeted_amount)}
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {category.period_type}
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              category.is_active 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {category.is_active ? 'Active' : 'Inactive'}
-                            </span>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm font-medium">
-                            <div className="flex space-x-2">
-                              <button
-                                onClick={() => openBudgetModal(category)}
-                                className="text-blue-600 hover:text-blue-900"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </button>
-                              <button
-                                onClick={() => handleDeleteBudgetCategory(category.id)}
-                                className="text-red-600 hover:text-red-900"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Category Type
+                  </label>
+                  <select
+                    value={budgetForm.category_type}
+                    onChange={(e) => setBudgetForm({
+                      ...budgetForm,
+                      category_type: e.target.value as 'revenue' | 'expense'
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="revenue">Revenue</option>
+                    <option value="expense">Expense</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Budgeted Amount *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={budgetForm.budgeted_amount || ''}
+                    onChange={(e) => setBudgetForm({
+                      ...budgetForm,
+                      budgeted_amount: parseFloat(e.target.value)
+                    })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="0.00"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Fiscal Year
+                    </label>
+                    <input
+                      type="number"
+                      value={budgetForm.fiscal_year}
+                      onChange={(e) => setBudgetForm({
+                        ...budgetForm,
+                        fiscal_year: parseInt(e.target.value)
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Period Type
+                    </label>
+                    <select
+                      value={budgetForm.period_type}
+                      onChange={(e) => setBudgetForm({
+                        ...budgetForm,
+                        period_type: e.target.value as 'monthly' | 'quarterly' | 'yearly'
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="monthly">Monthly</option>
+                      <option value="quarterly">Quarterly</option>
+                      <option value="yearly">Yearly</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
-              {/* Budget Category Form */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">
-                  {editingBudget ? 'Edit Budget Category' : 'Add Budget Category'}
-                </h3>
-
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Category Name *
-                    </label>
-                    <input
-                      type="text"
-                      value={budgetForm.category_name || ''}
-                      onChange={(e) => setBudgetForm({ ...budgetForm, category_name: e.target.value })}
-                      className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                        budgetForm.category_name?.trim() 
-                          ? 'border-gray-300' 
-                          : 'border-red-300 bg-red-50'
-                      }`}
-                      placeholder="e.g., Tuition Fees, Equipment, Marketing"
-                    />
-                    {!budgetForm.category_name?.trim() && (
-                      <p className="text-red-500 text-xs mt-1">Category name is required</p>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Description
-                    </label>
-                    <textarea
-                      value={budgetForm.description || ''}
-                      onChange={(e) => setBudgetForm({ ...budgetForm, description: e.target.value })}
-                      rows={2}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      placeholder="Optional description"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Category Type *
-                      </label>
-                      <select
-                        value={budgetForm.category_type || 'expense'}
-                        onChange={(e) => setBudgetForm({ ...budgetForm, category_type: e.target.value as 'income' | 'expense' })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="expense">Expense</option>
-                        <option value="income">Income</option>
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Period Type *
-                      </label>
-                      <select
-                        value={budgetForm.period_type || 'monthly'}
-                        onChange={(e) => setBudgetForm({ ...budgetForm, period_type: e.target.value as 'monthly' | 'quarterly' | 'yearly' })}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      >
-                        <option value="monthly">Monthly</option>
-                        <option value="quarterly">Quarterly</option>
-                        <option value="yearly">Yearly</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Budgeted Amount *
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        value={budgetForm.budgeted_amount || ''}
-                        onChange={(e) => setBudgetForm({ ...budgetForm, budgeted_amount: e.target.value })}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                          budgetForm.budgeted_amount && Number(budgetForm.budgeted_amount) > 0
-                            ? 'border-gray-300' 
-                            : 'border-red-300 bg-red-50'
-                        }`}
-                        placeholder="0.00"
-                      />
-                      {(!budgetForm.budgeted_amount || Number(budgetForm.budgeted_amount) <= 0) && (
-                        <p className="text-red-500 text-xs mt-1">Amount must be greater than 0</p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Fiscal Year *
-                      </label>
-                      <input
-                        type="number"
-                        value={budgetForm.fiscal_year || new Date().getFullYear()}
-                        onChange={(e) => setBudgetForm({ ...budgetForm, fiscal_year: parseInt(e.target.value) })}
-                        className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-                          budgetForm.fiscal_year && budgetForm.fiscal_year >= 2020 && budgetForm.fiscal_year <= 2030
-                            ? 'border-gray-300' 
-                            : 'border-red-300 bg-red-50'
-                        }`}
-                        min="2020"
-                        max="2030"
-                      />
-                      {(!budgetForm.fiscal_year || budgetForm.fiscal_year < 2020 || budgetForm.fiscal_year > 2030) && (
-                        <p className="text-red-500 text-xs mt-1">Fiscal year must be between 2020 and 2030</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="is_active"
-                      checked={budgetForm.is_active !== false}
-                      onChange={(e) => setBudgetForm({ ...budgetForm, is_active: e.target.checked })}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="is_active" className="ml-2 block text-sm text-gray-900">
-                      Active Category
-                    </label>
-                  </div>
-
-                  <div className="flex justify-end space-x-3 mt-6">
-                    <button
-                      onClick={() => {
-                        setEditingBudget(null);
-                        setBudgetForm({
-                          category_type: 'expense',
-                          period_type: 'monthly',
-                          fiscal_year: new Date().getFullYear(),
-                          is_active: true
-                        });
-                      }}
-                      className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
-                    >
-                      Clear
-                    </button>
-                    <button
-                      onClick={editingBudget ? handleUpdateBudgetCategory : handleCreateBudgetCategory}
-                      disabled={!isBudgetFormValid()}
-                      className={`px-4 py-2 rounded-lg transition-colors flex items-center ${
-                        isBudgetFormValid()
-                          ? 'bg-blue-600 text-white hover:bg-blue-700'
-                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                      }`}
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      {editingBudget ? 'Update' : 'Create'} Category
-                    </button>
-                  </div>
-                </div>
+              <div className="mt-6 flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowBudgetModal(false)}
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={editingBudget ? handleUpdateBudgetCategory : handleCreateBudgetCategory}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  {editingBudget ? 'Update Budget' : 'Create Budget'}
+                </button>
               </div>
             </div>
           </div>
@@ -1306,10 +1121,10 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       {/* Export Modal */}
       {showExportModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
+          <div className="bg-white rounded-lg max-w-sm w-full">
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Export Financial Data</h3>
+                <h3 className="text-lg font-medium text-gray-900">Export Data</h3>
                 <button
                   onClick={() => setShowExportModal(false)}
                   className="text-gray-400 hover:text-gray-600"
@@ -1317,44 +1132,22 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                   <X className="h-6 w-6" />
                 </button>
               </div>
-
-              <div className="space-y-4">
-                <p className="text-sm text-gray-600">
-                  Choose your preferred export format for the financial transactions data.
-                </p>
-
-                <div className="space-y-3">
-                  <button
-                    onClick={exportToPDF}
-                    className="w-full flex items-center justify-center px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
-                  >
-                    <FileText className="h-5 w-5 mr-2" />
-                    Export as PDF
-                  </button>
-
-                  <button
-                    onClick={exportToExcel}
-                    className="w-full flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    <Download className="h-5 w-5 mr-2" />
-                    Export as Excel
-                  </button>
-                </div>
-
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-xs text-blue-700">
-                    <strong>Export includes:</strong> Summary data, all transactions with filters applied, 
-                    and detailed financial information.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex justify-end mt-6">
+              
+              <div className="space-y-3">
                 <button
-                  onClick={() => setShowExportModal(false)}
-                  className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  onClick={exportToPDF}
+                  className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  Cancel
+                  <FileText className="h-5 w-5 mr-2 text-red-600" />
+                  Export as PDF
+                </button>
+                
+                <button
+                  onClick={exportToExcel}
+                  className="w-full flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  <FileText className="h-5 w-5 mr-2 text-green-600" />
+                  Export as Excel
                 </button>
               </div>
             </div>
@@ -1364,5 +1157,27 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     </div>
   );
 };
+
+// Missing Icon Component
+const FileText = ({ className }: { className?: string }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    width="24" 
+    height="24" 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    stroke="currentColor" 
+    strokeWidth="2" 
+    strokeLinecap="round" 
+    strokeLinejoin="round" 
+    className={className}
+  >
+    <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path>
+    <polyline points="14 2 14 8 20 8"></polyline>
+    <line x1="16" y1="13" x2="8" y2="13"></line>
+    <line x1="16" y1="17" x2="8" y2="17"></line>
+    <line x1="10" y1="9" x2="8" y2="9"></line>
+  </svg>
+);
 
 export default FinancialTransactionsManager;
