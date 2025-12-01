@@ -53,8 +53,16 @@
       "destination": "/api/financial/summary"
     },
     {
+      "source": "/api/financial/transactions/:id",
+      "destination": "/api/financial/transactions/[id]"
+    },
+    {
       "source": "/api/financial/transactions",
       "destination": "/api/financial/transactions"
+    },
+    {
+      "source": "/api/financial/categories/:id",
+      "destination": "/api/financial/categories/[id]"
     },
     {
       "source": "/api/financial/categories",

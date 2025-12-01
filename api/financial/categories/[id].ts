@@ -12,7 +12,7 @@ export default async function handler(
 ) {
     // Handle CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
     if (req.method === 'OPTIONS') {
@@ -28,58 +28,56 @@ export default async function handler(
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
+    const { id } = req.query;
 
-    // GET - List categories
-    if (req.method === 'GET') {
-        try {
-            const academyId = req.query.academyId as string;
-
-            if (!academyId) {
-                return res.status(400).json({ success: false, message: 'Academy ID is required' });
-            }
-
-            const { data: categories, error } = await supabase
-                .from('budget_categories')
-                .select('*')
-                .eq('academy_id', academyId)
-                .eq('is_active', true)
-                .order('category_name');
-
-            if (error) throw error;
-
-            return res.status(200).json({
-                success: true,
-                data: categories
-            });
-        } catch (error: any) {
-            console.error('Error fetching categories:', error);
-            return res.status(500).json({ success: false, message: error.message });
-        }
+    if (!id) {
+        return res.status(400).json({ success: false, message: 'Category ID is required' });
     }
 
-    // POST - Create category
-    if (req.method === 'POST') {
+    // PUT - Update category
+    if (req.method === 'PUT') {
         try {
             const category = req.body;
-            
-            if (!category.academy_id || !category.category_name || !category.budgeted_amount) {
-                return res.status(400).json({ success: false, message: 'Missing required fields' });
-            }
+            const updateData = {
+                ...category,
+                updated_at: new Date().toISOString()
+            };
 
             const { data, error } = await supabase
                 .from('budget_categories')
-                .insert(category)
+                .update(updateData)
+                .eq('id', id)
                 .select()
                 .single();
 
             if (error) throw error;
 
-            return res.status(201).json({
+            return res.status(200).json({
                 success: true,
                 data
             });
         } catch (error: any) {
-            console.error('Error creating category:', error);
+            console.error('Error updating category:', error);
+            return res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    // DELETE - Delete category (soft delete)
+    if (req.method === 'DELETE') {
+        try {
+            const { error } = await supabase
+                .from('budget_categories')
+                .update({ is_active: false })
+                .eq('id', id);
+
+            if (error) throw error;
+
+            return res.status(200).json({
+                success: true,
+                message: 'Category deleted successfully'
+            });
+        } catch (error: any) {
+            console.error('Error deleting category:', error);
             return res.status(500).json({ success: false, message: error.message });
         }
     }
