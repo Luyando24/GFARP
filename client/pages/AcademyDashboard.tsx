@@ -372,31 +372,47 @@ export default function AcademyDashboard() {
 
     setIsLoadingStats(true);
     try {
-      // Parallel fetch for stats and player count
-      const [statsResult, playersResult] = await Promise.all([
+      // Parallel fetch for all stats
+      const [statsResult, playersResult, transfersResult, financialResult] = await Promise.all([
         getAcademyDashboardStats(academyInfo.id),
-        Api.getPlayers(academyInfo.id, 1, 1)
+        Api.getPlayers(academyInfo.id, 1, 1),
+        Api.getTransfers(academyInfo.id),
+        fetch(`/api/financial/summary?academyId=${academyInfo.id}&period=monthly`).then(res => res.json())
       ]);
+
+      // Calculate active transfers
+      const activeTransfers = transfersResult.success 
+        ? transfersResult.data.filter(t => t.status === 'pending' || t.status === 'approved').length 
+        : 0;
+
+      // Process financial data
+      const financialSummary = financialResult.success ? financialResult.data : { totalRevenue: 0, monthlyData: [] };
+      const monthlyFinancialData = financialResult.success && financialResult.data.monthlyData ? financialResult.data.monthlyData : [];
+      
+      // Get recent transfers from the transfers list (already fetched)
+      const recentTransfers = transfersResult.success 
+        ? transfersResult.data.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5)
+        : [];
 
       if (statsResult.success) {
         setDashboardStats(prev => ({
           ...statsResult.data,
-          totalPlayers: playersResult.success ? (playersResult.data.total || 0) : (statsResult.data.totalPlayers || 0)
+          totalPlayers: playersResult.success ? (playersResult.data.total || 0) : (statsResult.data.totalPlayers || 0),
+          activeTransfers: activeTransfers,
+          monthlyRevenue: financialSummary.totalRevenue || 0,
+          recentTransfers: recentTransfers,
+          monthlyFinancialPerformance: monthlyFinancialData.length > 0 ? monthlyFinancialData : prev.monthlyFinancialPerformance
         }));
       } else {
-        // Fallback if stats endpoint fails but we have player count
-        if (playersResult.success) {
-          setDashboardStats(prev => ({
-            ...prev,
-            totalPlayers: playersResult.data.total || 0
-          }));
-        } else {
-          toast({
-            title: "Error",
-            description: "Failed to load dashboard statistics",
-            variant: "destructive",
-          });
-        }
+        // Fallback if stats endpoint fails
+        setDashboardStats(prev => ({
+          ...prev,
+          totalPlayers: playersResult.success ? (playersResult.data.total || 0) : 0,
+          activeTransfers: activeTransfers,
+          monthlyRevenue: financialSummary.totalRevenue || 0,
+          recentTransfers: recentTransfers,
+          monthlyFinancialPerformance: monthlyFinancialData.length > 0 ? monthlyFinancialData : prev.monthlyFinancialPerformance
+        }));
       }
     } catch (error) {
       console.error('Error loading dashboard stats:', error);
@@ -1312,12 +1328,12 @@ export default function AcademyDashboard() {
                           <Loader2 className="h-6 w-6 animate-spin" />
                         </div>
                       ) : dashboardStats.recentTransfers.length > 0 ? (
-                        dashboardStats.recentTransfers.map((transfer) => (
+                        dashboardStats.recentTransfers.map((transfer: any) => (
                           <div key={transfer.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
                             <div>
-                              <p className="font-medium text-slate-900 dark:text-white">{transfer.player}</p>
-                              <p className="text-sm text-slate-600 dark:text-slate-400">{transfer.from} → {transfer.to} - {transfer.amount}</p>
-                              <p className="text-xs text-slate-500 dark:text-slate-400">{transfer.date}</p>
+                              <p className="font-medium text-slate-900 dark:text-white">{transfer.player_name}</p>
+                              <p className="text-sm text-slate-600 dark:text-slate-400">{transfer.from_club} → {transfer.to_club} - {transfer.transfer_amount ? `$${transfer.transfer_amount.toLocaleString()}` : 'N/A'}</p>
+                              <p className="text-xs text-slate-500 dark:text-slate-400">{new Date(transfer.transfer_date).toLocaleDateString()}</p>
                             </div>
                             <Badge variant={transfer.status === 'completed' ? 'default' : 'secondary'}>
                               {transfer.status}
