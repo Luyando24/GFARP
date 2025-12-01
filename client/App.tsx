@@ -15,6 +15,7 @@ import AdminLogin from "./pages/AdminLogin";
 import Register from "./pages/Register";
 import Shop from "./pages/Shop";
 import RegisterAcademy from "./pages/RegisterAcademy";
+import CompleteProfile from "./pages/CompleteProfile";
 import AcademyDashboard from "./pages/AcademyDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import DatabaseManagement from "./pages/DatabaseManagement";
@@ -51,19 +52,20 @@ const App = () => {
               <Route path="/login" element={<AuthLogin />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/register" element={<Register />} />
-              
+
               {/* Academy Registration - Public route */}
               <Route path="/academy-registration" element={<RegisterAcademy />} />
-              
+              <Route path="/complete-profile" element={<CompleteProfile />} />
+
               {/* Academy Dashboard - Protected route requiring authentication */}
               <Route element={<ProtectedRoute allowedRoles={["academy"]} />}>
                 <Route path="/academy-dashboard" element={<AcademyDashboard />} />
                 <Route path="/academy-dashboard/player-details/:id" element={<PlayerDetails />} />
               </Route>
-              
+
               {/* Admin Dashboard - Protected route requiring superadmin authentication */}
               <Route path="/admin" element={<AdminDashboard />} />
-              
+
               {/* Protected Admin Routes */}
               <Route element={<ProtectedRoute allowedRoles={["admin", "superadmin"]} />}>
                 <Route path="/admin/database" element={<DatabaseManagement />} />
@@ -78,7 +80,7 @@ const App = () => {
               <Route path="/payment-success" element={<PaymentSuccess />} />
               <Route path="/subscription/success" element={<SubscriptionSuccess />} />
               <Route path="/subscription/cancel" element={<SubscriptionCancel />} />
-              
+
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

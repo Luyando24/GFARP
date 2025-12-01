@@ -67,14 +67,15 @@ export default function RegisterAcademy() {
       if (data.success) {
         const session = {
           userId: data.data.academy.id,
-          role: 'academy',
+          role: 'admin' as const,
           schoolId: data.data.academy.id,
           tokens: { accessToken: data.data.token, expiresInSec: 24 * 3600 }
         };
         localStorage.setItem('academy_data', JSON.stringify(data.data.academy));
+        localStorage.setItem('isNewRegistration', 'true');
         saveSession(session);
-        toast({ title: 'Registration Successful', description: 'Account created. Complete your details after login.' });
-        navigate('/academy-dashboard');
+        toast({ title: 'Registration Successful', description: 'Let\'s complete your academy profile!' });
+        navigate('/complete-profile');
       } else {
         throw new Error(data.message || 'Registration failed');
       }
