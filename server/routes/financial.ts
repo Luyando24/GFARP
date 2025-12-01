@@ -11,7 +11,7 @@ const handleGetSummary: RequestHandler = async (req, res) => {
 
         // Get completed financial transactions
         const txResult = await query(
-            `SELECT amount, transaction_type 
+            `SELECT amount, transaction_type, transaction_date 
              FROM financial_transactions 
              WHERE academy_id = $1 AND status = 'completed'`,
             [academyId]
@@ -19,19 +19,33 @@ const handleGetSummary: RequestHandler = async (req, res) => {
 
         let totalRevenue = 0;
         let totalExpenses = 0;
+        const monthlyStats: Record<string, { revenue: number, expenses: number }> = {};
+
+        // Initialize last 6 months
+        const today = new Date();
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+            const monthKey = d.toLocaleString('default', { month: 'short' });
+            monthlyStats[monthKey] = { revenue: 0, expenses: 0 };
+        }
 
         txResult.rows.forEach((tx: any) => {
             const amount = Number(tx.amount) || 0;
+            const date = new Date(tx.transaction_date);
+            const monthKey = date.toLocaleString('default', { month: 'short' });
+
             if (tx.transaction_type === 'income') {
                 totalRevenue += amount;
+                if (monthlyStats[monthKey]) monthlyStats[monthKey].revenue += amount;
             } else if (tx.transaction_type === 'expense') {
                 totalExpenses += amount;
+                if (monthlyStats[monthKey]) monthlyStats[monthKey].expenses += amount;
             }
         });
 
         // Get completed transfers
         const transferResult = await query(
-            `SELECT transfer_amount 
+            `SELECT transfer_amount, transfer_date, created_at 
              FROM transfers 
              WHERE academy_id = $1 AND status = 'completed'`,
             [academyId]
@@ -39,12 +53,27 @@ const handleGetSummary: RequestHandler = async (req, res) => {
 
         transferResult.rows.forEach((t: any) => {
             // Assuming all completed transfers are revenue for now
-            totalRevenue += Number(t.transfer_amount) || 0;
+            const amount = Number(t.transfer_amount) || 0;
+            totalRevenue += amount;
+
+            const dateStr = t.transfer_date || t.created_at;
+            const date = new Date(dateStr);
+            const monthKey = date.toLocaleString('default', { month: 'short' });
+
+            if (monthlyStats[monthKey]) monthlyStats[monthKey].revenue += amount;
         });
 
         const netProfit = totalRevenue - totalExpenses;
         const profitMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : '0.0';
-        const monthlyGrowth = 0; // Placeholder
+        const monthlyGrowth = 0; 
+
+        // Convert monthlyStats object to array
+        const monthlyData = Object.entries(monthlyStats).map(([month, stats]) => ({
+            month,
+            revenue: stats.revenue,
+            expenses: stats.expenses,
+            profit: stats.revenue - stats.expenses
+        }));
 
         res.json({
             success: true,
@@ -53,7 +82,8 @@ const handleGetSummary: RequestHandler = async (req, res) => {
                 totalExpenses,
                 netProfit,
                 profitMargin,
-                monthlyGrowth
+                monthlyGrowth,
+                monthlyData
             }
         });
     } catch (error) {
@@ -120,7 +150,7 @@ const handleGetTransactions: RequestHandler = async (req, res) => {
 // GET /api/financial/categories
 const handleGetCategories: RequestHandler = async (req, res) => {
     try {
-        // Mock for now as we don't have budget_categories table in the initial context
+        // Mock for now
         const mockCategories = [
             { id: 1, category_name: 'Academy Fees', category_type: 'revenue', budgeted_amount: 300000, is_active: true },
             { id: 2, category_name: 'Sponsorship', category_type: 'revenue', budgeted_amount: 500000, is_active: true },
@@ -144,8 +174,8 @@ const handleGetCategories: RequestHandler = async (req, res) => {
 };
 
 router.get('/summary', handleGetSummary);
-router.get('/transactions/:academyId', handleGetTransactions); // Support param based
-router.get('/transactions', handleGetTransactions); // Support query based
+router.get('/transactions/:academyId', handleGetTransactions);
+router.get('/transactions', handleGetTransactions);
 router.get('/categories', handleGetCategories);
 
 export default router;

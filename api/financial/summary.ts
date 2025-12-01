@@ -34,7 +34,7 @@ export default async function handler(
         // Calculate total revenue and expenses from transactions
         let query = supabase
             .from('financial_transactions')
-            .select('amount, transaction_type, status');
+            .select('amount, transaction_type, status, transaction_date');
             
         if (academyId) {
             query = query.eq('academy_id', academyId);
@@ -51,48 +51,68 @@ export default async function handler(
 
         let totalRevenue = 0;
         let totalExpenses = 0;
+        const monthlyStats: Record<string, { revenue: number, expenses: number }> = {};
+
+        // Initialize last 6 months
+        const today = new Date();
+        for (let i = 5; i >= 0; i--) {
+            const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+            const monthKey = d.toLocaleString('default', { month: 'short' });
+            monthlyStats[monthKey] = { revenue: 0, expenses: 0 };
+        }
 
         transactions?.forEach(tx => {
             const amount = Number(tx.amount) || 0;
+            const date = new Date(tx.transaction_date);
+            const monthKey = date.toLocaleString('default', { month: 'short' });
+
             if (tx.transaction_type === 'income') {
                 totalRevenue += amount;
+                if (monthlyStats[monthKey]) monthlyStats[monthKey].revenue += amount;
             } else if (tx.transaction_type === 'expense') {
                 totalExpenses += amount;
+                if (monthlyStats[monthKey]) monthlyStats[monthKey].expenses += amount;
             }
         });
 
         // Also include transfer revenue
         let transferQuery = supabase
             .from('transfers')
-            .select('transfer_amount, status, transfer_type');
+            .select('transfer_amount, status, transfer_type, transfer_date, created_at');
             
         if (academyId) {
             transferQuery = transferQuery.eq('academy_id', academyId);
         }
-        
-        // Only include completed transfers (both income and expense)
-        // Assuming transfers OUT are income (selling player) and transfers IN are expense (buying player)
-        // But transfer_type in DB is 'permanent', 'loan', etc.
-        // We need to infer direction. For now, let's assume 'completed' transfers with amount > 0 are revenue
-        // In a real app, we'd check if from_club or to_club matches the academy
         
         const { data: transfers, error: transferError } = await transferQuery;
         
         if (!transferError && transfers) {
             transfers.forEach(t => {
                 if (t.status === 'completed') {
-                    // Simplified logic: Assuming all recorded transfers are revenue for now
-                    // You might want to refine this based on 'from_club' vs 'to_club'
-                    totalRevenue += Number(t.transfer_amount) || 0;
+                    const amount = Number(t.transfer_amount) || 0;
+                    // Use transfer_date or created_at
+                    const dateStr = t.transfer_date || t.created_at;
+                    const date = new Date(dateStr);
+                    const monthKey = date.toLocaleString('default', { month: 'short' });
+
+                    // Assuming transfers are revenue
+                    totalRevenue += amount;
+                    if (monthlyStats[monthKey]) monthlyStats[monthKey].revenue += amount;
                 }
             });
         }
 
         const netProfit = totalRevenue - totalExpenses;
         const profitMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : '0.0';
-
-        // Calculate monthly growth (mock calculation for now, or compare with last month)
         const monthlyGrowth = 0; 
+
+        // Convert monthlyStats object to array
+        const monthlyData = Object.entries(monthlyStats).map(([month, stats]) => ({
+            month,
+            revenue: stats.revenue,
+            expenses: stats.expenses,
+            profit: stats.revenue - stats.expenses
+        }));
 
         return res.status(200).json({
             success: true,
@@ -101,7 +121,8 @@ export default async function handler(
                 totalExpenses,
                 netProfit,
                 profitMargin,
-                monthlyGrowth
+                monthlyGrowth,
+                monthlyData
             }
         });
     } catch (error: any) {
