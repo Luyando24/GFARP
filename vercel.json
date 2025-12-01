@@ -13,6 +13,14 @@
       "destination": "/api/football-auth/academy/register"
     },
     {
+      "source": "/api/football-auth/academy/login",
+      "destination": "/api/football-auth/academy/login"
+    },
+    {
+      "source": "/api/academies/:id",
+      "destination": "/api/academies/[id]"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
