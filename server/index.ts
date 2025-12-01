@@ -29,6 +29,7 @@ import footballAuthRouter from "./routes/football-auth.js";
 import footballPlayersRouter from "./routes/football-players.js";
 import transfersRouter from "./routes/transfers.js";
 import financialTransactionsRouter from "./routes/financial-transactions.js";
+import financialRouter from "./routes/financial.js";
 import fifaComplianceRouter from "./routes/fifa-compliance.js";
 import subscriptionRouter from "./routes/subscription-management.js";
 import stripePaymentsRouter from "./routes/stripe-payments.js";
@@ -137,6 +138,9 @@ export function createServer() {
 
   // Financial transactions routes
   api.use("/financial-transactions", financialTransactionsRouter);
+  
+  // Financial summary/categories routes (for dashboard)
+  api.use("/financial", financialRouter);
 
   // FIFA compliance routes
   api.use("/fifa-compliance", fifaComplianceRouter);
