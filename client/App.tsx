@@ -14,7 +14,7 @@ import AuthLogin from "./pages/AuthLogin";
 import AdminLogin from "./pages/AdminLogin";
 import Register from "./pages/Register";
 import Shop from "./pages/Shop";
-import RegisterAcademySimple from "./pages/RegisterAcademySimple";
+import RegisterAcademy from "./pages/RegisterAcademy";
 import AcademyDashboard from "./pages/AcademyDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import DatabaseManagement from "./pages/DatabaseManagement";
@@ -53,7 +53,7 @@ const App = () => {
               <Route path="/register" element={<Register />} />
               
               {/* Academy Registration - Public route */}
-              <Route path="/academy-registration" element={<RegisterAcademySimple />} />
+              <Route path="/academy-registration" element={<RegisterAcademy />} />
               
               {/* Academy Dashboard - Protected route requiring authentication */}
               <Route element={<ProtectedRoute allowedRoles={["academy"]} />}>
