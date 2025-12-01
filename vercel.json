@@ -21,6 +21,14 @@
       "destination": "/api/academies/[id]"
     },
     {
+      "source": "/api/football-players/:id",
+      "destination": "/api/football-players/[id]"
+    },
+    {
+      "source": "/api/football-players",
+      "destination": "/api/football-players"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
