@@ -45,6 +45,18 @@
       "destination": "/api/transfers"
     },
     {
+      "source": "/api/financial/summary",
+      "destination": "/api/financial/summary"
+    },
+    {
+      "source": "/api/financial/transactions",
+      "destination": "/api/financial/transactions"
+    },
+    {
+      "source": "/api/financial/categories",
+      "destination": "/api/financial/categories"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

@@ -128,12 +128,19 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         getBudgetCategories(academyId)
       ]);
 
-      setTransactions(transactionsRes.data.transactions);
-      setTotalPages(transactionsRes.data.pagination.totalPages);
-      setSummary(summaryRes.data.summary);
-      setBudgetCategories(budgetRes.data);
+      setTransactions(transactionsRes.data?.transactions || []);
+      setTotalPages(transactionsRes.data?.pagination?.totalPages || 1);
+      setSummary(summaryRes.data || {
+        totalRevenue: 0,
+        totalExpenses: 0,
+        netProfit: 0,
+        profitMargin: 0,
+        monthlyGrowth: 0
+      });
+      setBudgetCategories(budgetRes.data || []);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch data');
+      console.error("Error fetching financial data:", err);
     } finally {
       setLoading(false);
     }
