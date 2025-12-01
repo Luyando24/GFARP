@@ -355,18 +355,14 @@ const AddPlayerStepForm: React.FC<AddPlayerStepFormProps> = ({
 
             <div className="space-y-2">
               <Label htmlFor="nationality">Nationality *</Label>
-              <Select value={formData.nationality} onValueChange={(value) => handleSelectChange('nationality', value)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select nationality" />
-                </SelectTrigger>
-                <SelectContent>
-                  {nationalities.map((nationality) => (
-                    <SelectItem key={nationality} value={nationality}>
-                      {nationality}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                id="nationality"
+                name="nationality"
+                placeholder="Enter nationality"
+                value={formData.nationality}
+                onChange={handleInputChange}
+                required
+              />
             </div>
 
             <div className="space-y-2">
@@ -456,26 +452,22 @@ const AddPlayerStepForm: React.FC<AddPlayerStepFormProps> = ({
 
             <div className="space-y-2">
               <Label htmlFor="phone">Phone</Label>
-              <div className="relative">
-                <Select value={formData.phoneCountryCode} onValueChange={(val) => handleSelectChange('phoneCountryCode', val)}>
-                  <SelectTrigger className="w-20 absolute left-0 top-0 h-full border-r-0 rounded-r-none z-10">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-60">
-                    {countryCodes.map((country) => (
-                      <SelectItem key={`${country.code}-${country.country}`} value={country.code}>
-                        {country.flag} {country.code}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex gap-2">
+                <Input
+                  id="phoneCountryCode"
+                  name="phoneCountryCode"
+                  placeholder="+1"
+                  value={formData.phoneCountryCode}
+                  onChange={handleInputChange}
+                  className="w-20"
+                />
                 <Input
                   id="phone"
                   name="phone"
                   placeholder="XXX XXX XXX"
                   value={formData.phone}
                   onChange={handleInputChange}
-                  className="pl-20 rounded-l-none"
+                  className="flex-1"
                 />
               </div>
             </div>

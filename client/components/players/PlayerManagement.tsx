@@ -70,6 +70,8 @@ const playerPositions = [
   "Attacking Midfielder"
 ];
 
+import { uploadPlayerDocument } from "../../lib/document-upload";
+
 const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -170,6 +172,29 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
       } as any);
 
       if (response.success) {
+        // Handle document uploads if any exist
+        if (playerData.uploadedDocuments) {
+          const playerId = (response.data as any).player?.id || (response.data as any).id;
+          
+          if (playerId) {
+            const documentTypes = Object.keys(playerData.uploadedDocuments) as Array<keyof typeof playerData.uploadedDocuments>;
+            
+            // Upload documents in parallel
+            await Promise.all(documentTypes.map(async (docType) => {
+              const file = playerData.uploadedDocuments[docType];
+              if (file) {
+                try {
+                  await uploadPlayerDocument(playerId, file, docType);
+                } catch (error) {
+                  console.error(`Failed to upload ${docType}:`, error);
+                  // We don't fail the whole process if a document upload fails, 
+                  // but we could show a warning toast
+                }
+              }
+            }));
+          }
+        }
+
         toast({
           title: "Success",
           description: "Player added successfully"
