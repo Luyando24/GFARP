@@ -228,6 +228,9 @@ const PlayerDetails = () => {
           title: "Success",
           description: "Player details and documents updated successfully"
         });
+        
+        // Reload documents to ensure the new photo is displayed
+        await loadPlayerDocuments(player.id);
       } else {
         toast({
           title: "Error",

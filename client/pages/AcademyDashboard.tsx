@@ -372,15 +372,31 @@ export default function AcademyDashboard() {
 
     setIsLoadingStats(true);
     try {
-      const result = await getAcademyDashboardStats(academyInfo.id);
-      if (result.success) {
-        setDashboardStats(result.data);
+      // Parallel fetch for stats and player count
+      const [statsResult, playersResult] = await Promise.all([
+        getAcademyDashboardStats(academyInfo.id),
+        Api.getPlayers(academyInfo.id, 1, 1)
+      ]);
+
+      if (statsResult.success) {
+        setDashboardStats(prev => ({
+          ...statsResult.data,
+          totalPlayers: playersResult.success ? (playersResult.total || 0) : (statsResult.data.totalPlayers || 0)
+        }));
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to load dashboard statistics",
-          variant: "destructive",
-        });
+        // Fallback if stats endpoint fails but we have player count
+        if (playersResult.success) {
+          setDashboardStats(prev => ({
+            ...prev,
+            totalPlayers: playersResult.total || 0
+          }));
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to load dashboard statistics",
+            variant: "destructive",
+          });
+        }
       }
     } catch (error) {
       console.error('Error loading dashboard stats:', error);
