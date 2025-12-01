@@ -37,6 +37,9 @@ export default async function handler(
     if (req.method === 'GET') {
         try {
             const academyId = req.query.academyId as string;
+            const page = parseInt(req.query.page as string) || 1;
+            const limit = parseInt(req.query.limit as string) || 10;
+            const offset = (page - 1) * limit;
 
             if (!academyId) {
                 return res.status(400).json({
@@ -45,11 +48,28 @@ export default async function handler(
                 });
             }
 
+            // Get total count
+            const { count, error: countError } = await supabase
+                .from('players')
+                .select('*', { count: 'exact', head: true })
+                .eq('academy_id', academyId);
+
+            if (countError) {
+                console.error('[VERCEL] Error counting players:', countError);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to count players',
+                    error: countError.message
+                });
+            }
+
+            // Get paginated players
             const { data: players, error } = await supabase
                 .from('players')
                 .select('*')
                 .eq('academy_id', academyId)
-                .order('created_at', { ascending: false });
+                .order('created_at', { ascending: false })
+                .range(offset, offset + limit - 1);
 
             if (error) {
                 console.error('[VERCEL] Error fetching players:', error);
@@ -131,7 +151,12 @@ export default async function handler(
 
             return res.status(200).json({
                 success: true,
-                data: transformedPlayers
+                data: {
+                    players: transformedPlayers,
+                    total: count || 0,
+                    page,
+                    limit
+                }
             });
         } catch (error: any) {
             console.error('[VERCEL] Get players error:', error);

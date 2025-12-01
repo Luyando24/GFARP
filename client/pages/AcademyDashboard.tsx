@@ -381,14 +381,14 @@ export default function AcademyDashboard() {
       if (statsResult.success) {
         setDashboardStats(prev => ({
           ...statsResult.data,
-          totalPlayers: playersResult.success ? (playersResult.total || 0) : (statsResult.data.totalPlayers || 0)
+          totalPlayers: playersResult.success ? (playersResult.data.total || 0) : (statsResult.data.totalPlayers || 0)
         }));
       } else {
         // Fallback if stats endpoint fails but we have player count
         if (playersResult.success) {
           setDashboardStats(prev => ({
             ...prev,
-            totalPlayers: playersResult.total || 0
+            totalPlayers: playersResult.data.total || 0
           }));
         } else {
           toast({
