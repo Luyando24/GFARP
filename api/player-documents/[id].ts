@@ -59,13 +59,13 @@ export default async function handler(
 
                 return {
                     id: doc.id,
-                    documentType: doc.document_type,
-                    originalFilename: doc.original_filename,
-                    fileSize: doc.file_size,
-                    mimeType: doc.mime_type,
-                    uploadDate: doc.upload_date,
-                    uploadedBy: doc.uploaded_by,
-                    url: urlData.publicUrl
+                    document_type: doc.document_type,
+                    original_filename: doc.original_filename,
+                    file_size: doc.file_size,
+                    mime_type: doc.mime_type,
+                    uploaded_at: doc.upload_date,
+                    uploaded_by: doc.uploaded_by,
+                    file_url: urlData.publicUrl
                 };
             });
 

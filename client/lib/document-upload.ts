@@ -11,13 +11,13 @@ export interface DocumentUploadResult {
 
 export interface PlayerDocument {
   id: string;
-  documentType: 'passport_id' | 'player_photo' | 'proof_of_training' | 'birth_certificate';
-  originalFilename: string;
-  fileSize: number;
-  mimeType: string;
-  uploadedAt: string;
-  uploadedBy?: string;
-  fileUrl: string;
+  document_type: 'passport_id' | 'player_photo' | 'proof_of_training' | 'birth_certificate';
+  original_filename: string;
+  file_size: number;
+  mime_type: string;
+  uploaded_at: string;
+  uploaded_by?: string;
+  file_url: string;
 }
 
 /**
@@ -27,7 +27,7 @@ const saveDocumentToLocalStorage = (playerId: string, document: PlayerDocument) 
   try {
     const existingDocs = getDocumentsFromLocalStorage(playerId);
     // Replace any existing document of the same type with the new one
-    const filtered = existingDocs.filter(doc => doc.documentType !== document.documentType);
+    const filtered = existingDocs.filter(doc => doc.document_type !== document.document_type);
     const updatedDocs = [...filtered, document];
     localStorage.setItem(`${STORAGE_KEY_PREFIX}${playerId}`, JSON.stringify(updatedDocs));
   } catch (error) {

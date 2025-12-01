@@ -160,12 +160,12 @@ export default async function handler(
             message: 'Document uploaded successfully',
             document: {
                 id: document.id,
-                documentType: document.document_type,
-                originalFilename: document.original_filename,
-                fileSize: document.file_size,
-                mimeType: document.mime_type,
-                uploadDate: document.upload_date,
-                url: urlData.publicUrl
+                document_type: document.document_type,
+                original_filename: document.original_filename,
+                file_size: document.file_size,
+                mime_type: document.mime_type,
+                uploaded_at: document.upload_date,
+                file_url: urlData.publicUrl
             }
         });
 
