@@ -648,6 +648,13 @@ export default function AcademyDashboard() {
   };
 
   // Settings form handlers
+  const handleInputChange = (field: string, value: string) => {
+    setSettingsFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   const handleEditSettings = () => {
     setIsEditingSettings(true);
   };
