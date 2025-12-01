@@ -224,6 +224,31 @@ export const Api = {
     });
   },
 
+  // Transfers
+  async getTransfers(academyId: string): Promise<{ success: boolean; data: Transfer[] }> {
+    return http<{ success: boolean; data: Transfer[] }>(`/transfers?academyId=${academyId}`);
+  },
+
+  async createTransfer(transferData: Partial<Transfer>): Promise<{ success: boolean; data: Transfer; message?: string }> {
+    return http<{ success: boolean; data: Transfer; message?: string }>('/transfers', {
+      method: 'POST',
+      body: JSON.stringify(transferData),
+    });
+  },
+
+  async updateTransfer(transferId: string, transferData: Partial<Transfer>): Promise<{ success: boolean; data: Transfer; message?: string }> {
+    return http<{ success: boolean; data: Transfer; message?: string }>(`/transfers/${transferId}`, {
+      method: 'PUT',
+      body: JSON.stringify(transferData),
+    });
+  },
+
+  async deleteTransfer(transferId: string): Promise<{ success: boolean; message?: string }> {
+    return http<{ success: boolean; message?: string }>(`/transfers/${transferId}`, {
+      method: 'DELETE',
+    });
+  },
+
   async login(payload: LoginRequest & { userType?: string }): Promise<AuthSession> {
     if (USE_MOCK) return mock.login(payload);
     return http<AuthSession>("/auth/login", {
@@ -658,24 +683,24 @@ export async function createTransfer(transferData: Partial<Transfer>): Promise<{
   try {
     // Transform the data to match the API expectations
     const apiData = {
-      academyId: transferData.academyId || transferData.academy_id,
-      playerId: transferData.player_id,
-      playerName: transferData.player_name,
-      fromClub: transferData.from_club,
-      toClub: transferData.to_club,
-      transferAmount: transferData.transfer_amount,
+      academy_id: transferData.academyId || transferData.academy_id,
+      player_id: transferData.player_id,
+      player_name: transferData.player_name,
+      from_club: transferData.from_club,
+      to_club: transferData.to_club,
+      transfer_amount: transferData.transfer_amount,
       currency: transferData.currency,
-      transferDate: transferData.transfer_date,
-      contractStartDate: transferData.contract_start_date,
-      contractEndDate: transferData.contract_end_date,
+      transfer_date: transferData.transfer_date,
+      contract_start_date: transferData.contract_start_date,
+      contract_end_date: transferData.contract_end_date,
       status: transferData.status,
-      transferType: transferData.transfer_type,
+      transfer_type: transferData.transfer_type,
       priority: transferData.priority,
-      agentName: transferData.agent_name,
-      agentFee: transferData.agent_fee,
+      agent_name: transferData.agent_name,
+      agent_fee: transferData.agent_fee,
       notes: transferData.notes,
       documents: transferData.documents,
-      createdBy: transferData.createdBy || transferData.created_by
+      created_by: transferData.createdBy || transferData.created_by
     };
 
     console.log('API Data being sent to server:', apiData);
@@ -705,24 +730,24 @@ export async function updateTransfer(transferId: string, transferData: Partial<T
   try {
     // Transform the data to match the API expectations
     const apiData = {
-      academyId: transferData.academyId || transferData.academy_id,
-      playerId: transferData.player_id,
-      playerName: transferData.player_name,
-      fromClub: transferData.from_club,
-      toClub: transferData.to_club,
-      transferAmount: transferData.transfer_amount,
+      academy_id: transferData.academyId || transferData.academy_id,
+      player_id: transferData.player_id,
+      player_name: transferData.player_name,
+      from_club: transferData.from_club,
+      to_club: transferData.to_club,
+      transfer_amount: transferData.transfer_amount,
       currency: transferData.currency,
-      transferDate: transferData.transfer_date,
-      contractStartDate: transferData.contract_start_date,
-      contractEndDate: transferData.contract_end_date,
+      transfer_date: transferData.transfer_date,
+      contract_start_date: transferData.contract_start_date,
+      contract_end_date: transferData.contract_end_date,
       status: transferData.status,
-      transferType: transferData.transfer_type,
+      transfer_type: transferData.transfer_type,
       priority: transferData.priority,
-      agentName: transferData.agent_name,
-      agentFee: transferData.agent_fee,
+      agent_name: transferData.agent_name,
+      agent_fee: transferData.agent_fee,
       notes: transferData.notes,
       documents: transferData.documents,
-      createdBy: transferData.createdBy || transferData.created_by
+      created_by: transferData.createdBy || transferData.created_by
     };
 
     const response = await fetch(`${BASE_URL}/transfers/${transferId}`, {

@@ -37,6 +37,14 @@
       "destination": "/api/player-documents/[id]"
     },
     {
+      "source": "/api/transfers/:id",
+      "destination": "/api/transfers/[id]"
+    },
+    {
+      "source": "/api/transfers",
+      "destination": "/api/transfers"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
