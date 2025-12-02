@@ -278,14 +278,24 @@ export const handleUpgradePlan: RequestHandler = async (req, res) => {
       const currentSubscription = currentSubResult.rows.length > 0 ? currentSubResult.rows[0] : null;
 
       // Get new plan details
-      const newPlanQuery = `SELECT * FROM subscription_plans WHERE id = $1 AND is_active = true`;
-      const newPlanResult = await client.query(newPlanQuery, [newPlanId]);
-
-      if (newPlanResult.rows.length === 0) {
-        throw new Error('Invalid or inactive subscription plan');
+      let newPlan;
+      
+      // Check if it's a predefined plan ID (fallback plans)
+      if (['free', 'basic', 'pro', 'elite'].includes(newPlanId)) {
+        const fallbackPlans = getFallbackPlans();
+        newPlan = fallbackPlans.find(p => p.id === newPlanId);
+      } else {
+        // Check DB
+        const newPlanQuery = `SELECT * FROM subscription_plans WHERE id = $1 AND is_active = true`;
+        const newPlanResult = await client.query(newPlanQuery, [newPlanId]);
+        if (newPlanResult.rows.length > 0) {
+          newPlan = newPlanResult.rows[0];
+        }
       }
 
-      const newPlan = newPlanResult.rows[0];
+      if (!newPlan) {
+        throw new Error('Invalid or inactive subscription plan');
+      }
 
       // If there's an existing subscription, deactivate it
       if (currentSubscription) {

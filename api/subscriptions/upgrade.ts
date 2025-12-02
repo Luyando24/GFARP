@@ -48,14 +48,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .single();
 
         // 2. Get new plan details
-        const { data: newPlan, error: newPlanError } = await supabase
-            .from('subscription_plans')
-            .select('*')
-            .eq('id', newPlanId)
-            .eq('is_active', true)
-            .single();
+        // Check for fallback/mock plans first (free, basic, pro, elite)
+        let newPlan;
+        if (['free', 'basic', 'pro', 'elite'].includes(newPlanId)) {
+            const fallbackPlans = [
+                { id: 'free', name: 'Free Plan', price: 0 },
+                { id: 'basic', name: 'Basic Plan', price: 19.99 },
+                { id: 'pro', name: 'Pro Plan', price: 49.99 },
+                { id: 'elite', name: 'Elite Plan', price: 99.99 }
+            ];
+            newPlan = fallbackPlans.find(p => p.id === newPlanId);
+        } else {
+            // Fetch from DB if not a fallback plan ID
+            const { data: dbPlan, error: newPlanError } = await supabase
+                .from('subscription_plans')
+                .select('*')
+                .eq('id', newPlanId)
+                .eq('is_active', true)
+                .single();
+            
+            if (!newPlanError && dbPlan) {
+                newPlan = dbPlan;
+            }
+        }
 
-        if (newPlanError || !newPlan) {
+        if (!newPlan) {
             throw new Error('Invalid or inactive subscription plan');
         }
 
