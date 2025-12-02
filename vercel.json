@@ -69,6 +69,10 @@
       "destination": "/api/financial/categories"
     },
     {
+      "source": "/api/setup-admin",
+      "destination": "/api/setup-admin"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

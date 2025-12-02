@@ -1,92 +1,106 @@
+
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { query, hashPassword } from '../../server/lib/db';
+import { createClient } from '@supabase/supabase-js';
+import bcrypt from 'bcryptjs';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    console.log('[SETUP] Admin setup request received');
+  console.log('[SETUP] Admin setup request received');
 
-    try {
-        // 1. Create Admin table
-        const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS "Admin" (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        email TEXT NOT NULL UNIQUE,
-        password_hash TEXT NOT NULL,
-        role TEXT NOT NULL DEFAULT 'ADMIN' CHECK (role IN ('ADMIN', 'SUPERADMIN')),
-        first_name TEXT,
-        last_name TEXT,
-        is_active BOOLEAN NOT NULL DEFAULT TRUE,
-        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-      );
-    `;
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-        await query(createTableQuery);
-        console.log('✅ Admin table created/verified');
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
 
-        // 2. Insert super admin user
-        const insertSuperAdminQuery = `
-      INSERT INTO "Admin" (email, password_hash, role, first_name, last_name)
-      VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (email) DO UPDATE SET
-        password_hash = EXCLUDED.password_hash,
-        role = EXCLUDED.role,
-        updated_at = now()
-      RETURNING id, email, role;
-    `;
+  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
-        const superAdminPasswordHash = await hashPassword('admin123');
-        const superAdminResult = await query(insertSuperAdminQuery, [
-            'admin@gfarp.com',
-            superAdminPasswordHash,
-            'SUPERADMIN',
-            'Super',
-            'Admin'
-        ]);
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('[SETUP] Missing Supabase credentials');
+    return res.status(500).json({
+      success: false,
+      message: 'Server configuration error: Missing Supabase credentials'
+    });
+  }
 
-        // 3. Insert regular admin user
-        const insertAdminQuery = `
-      INSERT INTO "Admin" (email, password_hash, role, first_name, last_name)
-      VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (email) DO UPDATE SET
-        password_hash = EXCLUDED.password_hash,
-        role = EXCLUDED.role,
-        updated_at = now()
-      RETURNING id, email, role;
-    `;
+  const supabase = createClient(supabaseUrl, supabaseKey);
 
-        const adminPasswordHash = await hashPassword('admin123');
-        const adminResult = await query(insertAdminQuery, [
-            'admin@system.com',
-            adminPasswordHash,
-            'ADMIN',
-            'System',
-            'Admin'
-        ]);
+  try {
+    console.log('[SETUP] Connected to database');
 
-        // 4. Verify count
-        const verifyResult = await query('SELECT COUNT(*) as count FROM "Admin"');
+    // Helper to hash password
+    const hashPassword = async (pwd: string) => bcrypt.hash(pwd, 10);
+    const defaultPasswordHash = await hashPassword('admin123');
 
-        return res.status(200).json({
-            success: true,
-            message: 'Admin setup completed successfully',
-            data: {
-                superAdmin: superAdminResult.rows[0],
-                admin: adminResult.rows[0],
-                totalAdmins: verifyResult.rows[0].count
-            },
-            credentials: {
-                superAdmin: { email: 'admin@gfarp.com', password: 'admin123' },
-                systemAdmin: { email: 'admin@system.com', password: 'admin123' }
-            }
-        });
+    // 1. Insert super admin user
+    const { data: superAdmin, error: superAdminError } = await supabase
+        .from('Admin')
+        .upsert({
+            email: 'admin@gfarp.com',
+            password_hash: defaultPasswordHash,
+            role: 'SUPERADMIN',
+            first_name: 'Super',
+            last_name: 'Admin',
+            is_active: true
+        }, { onConflict: 'email' })
+        .select()
+        .single();
 
-    } catch (error: any) {
-        console.error('[SETUP] Error:', error);
-        return res.status(500).json({
-            success: false,
-            message: 'Admin setup failed',
-            error: error.message,
-            stack: error.stack
-        });
+    if (superAdminError) {
+        throw superAdminError;
     }
+
+    // 2. Insert regular admin user
+    const { data: admin, error: adminError } = await supabase
+        .from('Admin')
+        .upsert({
+            email: 'admin@system.com',
+            password_hash: defaultPasswordHash,
+            role: 'ADMIN',
+            first_name: 'System',
+            last_name: 'Admin',
+            is_active: true
+        }, { onConflict: 'email' })
+        .select()
+        .single();
+
+    if (adminError) {
+        throw adminError;
+    }
+
+    // 3. Verify count
+    const { count, error: countError } = await supabase
+        .from('Admin')
+        .select('*', { count: 'exact', head: true });
+
+    if (countError) {
+        throw countError;
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Admin setup completed successfully',
+      data: {
+        superAdmin,
+        admin,
+        totalAdmins: count
+      },
+      credentials: {
+        superAdmin: { email: 'admin@gfarp.com', password: 'admin123' },
+        systemAdmin: { email: 'admin@system.com', password: 'admin123' }
+      }
+    });
+
+  } catch (error: any) {
+    console.error('[SETUP] Error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Admin setup failed',
+      error: error.message,
+      stack: error.stack
+    });
+  }
 }
