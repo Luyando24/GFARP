@@ -170,7 +170,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       connected = true;
       break; // Stop if connected
     } catch (error: any) {
-      console.error(`[SETUP] Connection failed for current string: ${error.message}`);
+      const isAuthError = error.message.includes('password authentication failed');
+      console.error(`[SETUP] Connection failed for current string: ${error.message}${isAuthError ? ' (Check your password!)' : ''}`);
       lastError = error;
       await client.end().catch(() => {});
       client = null;
@@ -187,7 +188,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (errorMessage.includes('Tenant or user not found')) {
       errorMessage = 'Database connection failed: Tenant or user not found. Please check your database connection string and ensure the project is active.';
     } else if (errorMessage.includes('password authentication failed')) {
-      errorMessage = 'Database authentication failed. Please check your database credentials.';
+      errorMessage = 'Authentication failed. The password in your DATABASE_URL does not match your Supabase database password. Please update your environment variables in Vercel. Note: If your password contains special characters, ensure they are URL-encoded.';
+    } else if (errorMessage.includes('ENOTFOUND')) {
+      errorMessage = 'Database host not found. This might indicate an incorrect Project Reference or a network issue.';
     }
 
     return res.status(500).json({
