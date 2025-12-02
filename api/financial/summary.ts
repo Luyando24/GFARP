@@ -68,6 +68,7 @@ export default async function handler(
 
             if (tx.transaction_type === 'income') {
                 totalRevenue += amount;
+                // Only update monthly stats if the key exists (i.e., within the last 6 months)
                 if (monthlyStats[monthKey]) monthlyStats[monthKey].revenue += amount;
             } else if (tx.transaction_type === 'expense') {
                 totalExpenses += amount;
@@ -76,9 +77,11 @@ export default async function handler(
         });
 
         // Also include transfer revenue
+        // Only fetch completed transfers
         let transferQuery = supabase
             .from('transfers')
-            .select('transfer_amount, status, transfer_type, transfer_date, created_at');
+            .select('transfer_amount, status, transfer_type, transfer_date, created_at')
+            .eq('status', 'completed');
             
         if (academyId) {
             transferQuery = transferQuery.eq('academy_id', academyId);
@@ -88,23 +91,22 @@ export default async function handler(
         
         if (!transferError && transfers) {
             transfers.forEach(t => {
-                if (t.status === 'completed') {
-                    const amount = Number(t.transfer_amount) || 0;
-                    // Use transfer_date or created_at
-                    const dateStr = t.transfer_date || t.created_at;
-                    const date = new Date(dateStr);
-                    const monthKey = date.toLocaleString('default', { month: 'short' });
+                const amount = Number(t.transfer_amount) || 0;
+                // Use transfer_date or created_at
+                const dateStr = t.transfer_date || t.created_at;
+                const date = new Date(dateStr);
+                const monthKey = date.toLocaleString('default', { month: 'short' });
 
-                    // Assuming transfers are revenue
-                    totalRevenue += amount;
-                    if (monthlyStats[monthKey]) monthlyStats[monthKey].revenue += amount;
-                }
+                // Assuming transfers are revenue
+                totalRevenue += amount;
+                if (monthlyStats[monthKey]) monthlyStats[monthKey].revenue += amount;
             });
         }
 
         const netProfit = totalRevenue - totalExpenses;
+        // Fix profit margin calculation: avoid division by zero
         const profitMargin = totalRevenue > 0 ? ((netProfit / totalRevenue) * 100).toFixed(1) : '0.0';
-        const monthlyGrowth = 0; 
+        const monthlyGrowth = 0; // Placeholder for now 
 
         // Convert monthlyStats object to array
         const monthlyData = Object.entries(monthlyStats).map(([month, stats]) => ({
