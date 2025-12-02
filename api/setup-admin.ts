@@ -5,9 +5,11 @@ import bcrypt from 'bcryptjs';
 
 // Resolve database connection string
 function resolveConnectionString(): string | undefined {
+  // Prioritize SUPABASE_DB_URL (often direct) over generic DATABASE_URL/POSTGRES_URL (often pooled)
+  // for setup scripts that might run DDL or need session-level features.
   return (
-    process.env.DATABASE_URL ||
     process.env.SUPABASE_DB_URL ||
+    process.env.DATABASE_URL ||
     process.env.SUPABASE_DB_POOL_URL ||
     process.env.SUPABASE_POOLED_DATABASE_URL ||
     process.env.POSTGRES_URL ||
@@ -90,6 +92,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('[SETUP] Connecting to database...');
     await client.connect();
     console.log('[SETUP] Connected');
+    
+    // Force search_path to public to ensure we are in the right schema
+    await client.query('SET search_path TO public');
 
     // 1. Create Admin table
     // Note: Using quotes "Admin" to match existing application usage
