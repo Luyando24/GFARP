@@ -56,7 +56,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const client = new pg.Client({
     connectionString,
-    ssl: computeSslOption(connectionString)
+    ssl: { rejectUnauthorized: false } // Force loose SSL for Vercel/Supabase
   });
 
   try {
