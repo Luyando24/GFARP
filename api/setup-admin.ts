@@ -3,18 +3,19 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 
-// Resolve database connection string
-function resolveConnectionString(): string | undefined {
-  // Prioritize SUPABASE_DB_URL (often direct) over generic DATABASE_URL/POSTGRES_URL (often pooled)
-  // for setup scripts that might run DDL or need session-level features.
-  return (
-    process.env.SUPABASE_DB_URL ||
-    process.env.DATABASE_URL ||
-    process.env.SUPABASE_DB_POOL_URL ||
-    process.env.SUPABASE_POOLED_DATABASE_URL ||
-    process.env.POSTGRES_URL ||
+// Resolve all potential database connection strings
+function getAllConnectionStrings(): string[] {
+  const candidates = [
+    process.env.SUPABASE_DB_URL,
+    process.env.DATABASE_URL,
+    process.env.SUPABASE_DB_POOL_URL,
+    process.env.SUPABASE_POOLED_DATABASE_URL,
+    process.env.POSTGRES_URL,
     process.env.PG_CONNECTION_STRING
-  );
+  ];
+  
+  // Filter out undefined and duplicates
+  return [...new Set(candidates.filter(Boolean) as string[])];
 }
 
 // Determine appropriate SSL option. Supabase (including pooler.supabase.com)
@@ -61,8 +62,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
-  const connectionString = resolveConnectionString();
-  if (!connectionString) {
+  const connectionStrings = getAllConnectionStrings();
+  if (connectionStrings.length === 0) {
     console.error('[SETUP] No database connection string found');
     return res.status(500).json({ 
       success: false, 
@@ -70,29 +71,73 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
-  // Clean connection string to avoid conflicts with explicit SSL config
-  // Some pg versions prioritize connection string params over config object
-  let cleanConnectionString = connectionString;
-  try {
-    const u = new URL(connectionString);
-    if (u.searchParams.has('sslmode')) {
-      u.searchParams.delete('sslmode');
-      cleanConnectionString = u.toString();
+  let client: pg.Client | null = null;
+  let lastError: any = null;
+  let connected = false;
+
+  // Try each connection string until one works
+  for (const connectionString of connectionStrings) {
+    // Log connection details (masked)
+    try {
+      const u = new URL(connectionString);
+      console.log(`[SETUP] Attempting connection to host: ${u.hostname}, port: ${u.port}, user: ${u.username}, db: ${u.pathname.slice(1)}`);
+    } catch (e) {
+      console.log('[SETUP] Connecting to database (url parse failed)');
     }
-  } catch (e) {
-    // ignore
+
+    // Clean connection string to avoid conflicts with explicit SSL config
+    let cleanConnectionString = connectionString;
+    try {
+      const u = new URL(connectionString);
+      if (u.searchParams.has('sslmode')) {
+        u.searchParams.delete('sslmode');
+        cleanConnectionString = u.toString();
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    client = new pg.Client({
+      connectionString: cleanConnectionString,
+      ssl: computeSslOption(connectionString)
+    });
+
+    try {
+      console.log('[SETUP] Connecting...');
+      await client.connect();
+      console.log('[SETUP] Connected successfully');
+      connected = true;
+      break; // Stop if connected
+    } catch (error: any) {
+      console.error(`[SETUP] Connection failed for current string: ${error.message}`);
+      lastError = error;
+      await client.end().catch(() => {});
+      client = null;
+    }
   }
 
-  const client = new pg.Client({
-    connectionString: cleanConnectionString,
-    ssl: computeSslOption(connectionString)
-  });
+  if (!connected || !client) {
+    console.error('[SETUP] All connection attempts failed');
+    
+    // Improve error message for common connection issues
+    let errorMessage = lastError?.message || 'Unknown connection error';
+    let errorDetails = lastError?.toString() || '';
+    
+    if (errorMessage.includes('Tenant or user not found')) {
+      errorMessage = 'Database connection failed: Tenant or user not found. Please check your database connection string and ensure the project is active.';
+    } else if (errorMessage.includes('password authentication failed')) {
+      errorMessage = 'Database authentication failed. Please check your database credentials.';
+    }
+
+    return res.status(500).json({
+      success: false,
+      message: errorMessage,
+      error: lastError?.message,
+      details: errorDetails
+    });
+  }
 
   try {
-    console.log('[SETUP] Connecting to database...');
-    await client.connect();
-    console.log('[SETUP] Connected');
-    
     // Force search_path to public to ensure we are in the right schema
     await client.query('SET search_path TO public');
 
@@ -212,13 +257,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   } catch (error: any) {
     console.error('[SETUP] Database error:', error);
+    
+    // Improve error message for common connection issues
+    let errorMessage = error.message;
+    let errorDetails = error.toString();
+    
+    if (errorMessage.includes('Tenant or user not found')) {
+      errorMessage = 'Database connection failed: Tenant or user not found. Please check your database connection string and ensure the project is active.';
+    } else if (errorMessage.includes('password authentication failed')) {
+      errorMessage = 'Database authentication failed. Please check your database credentials.';
+    }
+
     return res.status(500).json({
       success: false,
-      message: 'Admin setup failed',
+      message: errorMessage,
       error: error.message,
-      details: error.toString()
+      details: errorDetails
     });
   } finally {
-    await client.end().catch(() => {});
+    if (client) {
+      await client.end().catch(() => {});
+    }
   }
 }
