@@ -141,7 +141,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Log connection details (masked)
     try {
       const u = new URL(connectionString);
-      console.log(`[SETUP] Attempting connection to host: ${u.hostname}, port: ${u.port}, user: ${u.username}, db: ${u.pathname.slice(1)}`);
+      const maskedPassword = u.password ? `${u.password.substring(0, 2)}******${u.password.slice(-2)}` : 'none';
+      console.log(`[SETUP] Attempting connection to host: ${u.hostname}, port: ${u.port}, user: ${u.username}, db: ${u.pathname.slice(1)}, password_hint: ${maskedPassword}`);
     } catch (e) {
       console.log('[SETUP] Connecting to database (url parse failed)');
     }
