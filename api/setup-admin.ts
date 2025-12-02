@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 // Resolve all potential database connection strings
 function getAllConnectionStrings(): string[] {
   const candidates = [
+    process.env.DIRECT_URL, // Prioritize direct connection for setup/DDL
     process.env.SUPABASE_DB_URL,
     process.env.DATABASE_URL,
     process.env.SUPABASE_DB_POOL_URL,
