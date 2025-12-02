@@ -158,10 +158,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // ignore
     }
 
-    client = new pg.Client({
+    // For direct connections (port 5432) to Supabase, we MUST use specific SSL settings
+    const u = new URL(connectionString);
+    const isDirectSupabase = u.port === '5432' && u.hostname.includes('supabase.co');
+    
+    const clientConfig: pg.ClientConfig = {
       connectionString: cleanConnectionString,
-      ssl: computeSslOption(connectionString)
-    });
+    };
+
+    if (isDirectSupabase) {
+      // Supabase direct connections require SSL but can fail with self-signed cert error in some environments
+      // We explicitly set rejectUnauthorized: false to allow the connection
+      clientConfig.ssl = { rejectUnauthorized: false };
+    } else {
+      clientConfig.ssl = computeSslOption(connectionString);
+    }
+
+    client = new pg.Client(clientConfig);
 
     try {
       console.log('[SETUP] Connecting...');
