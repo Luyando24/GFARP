@@ -18,7 +18,7 @@ export const handleGetSubscription: RequestHandler = async (req, res) => {
     const subscriptionQuery = `
       SELECT 
         s.id, s.status, s.start_date, s.end_date, s.auto_renew,
-        p.name as plan_name, p.price, p.player_limit, p.storage_limit,
+        p.name as plan_name, p.price, p.player_limit,
         a.name as academy_name
       FROM academy_subscriptions s
       JOIN subscription_plans p ON s.plan_id = p.id
@@ -103,7 +103,7 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
     const plansQuery = `
       SELECT 
         id, name, description, price, currency, billing_cycle,
-        player_limit, storage_limit, features, is_active, is_free, sort_order
+        player_limit, features, is_active, is_free, sort_order
       FROM subscription_plans 
       WHERE is_active = true 
       ORDER BY sort_order ASC
@@ -144,7 +144,6 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
         currency: plan.currency,
         billingCycle: plan.billing_cycle,
         playerLimit: plan.player_limit,
-        storageLimit: plan.storage_limit,
         features: features,
         isActive: plan.is_active,
         isFree: plan.is_free,
@@ -190,10 +189,9 @@ function getFallbackPlans() {
       currency: 'USD',
       billingCycle: 'MONTHLY',
       playerLimit: 25,
-      storageLimit: 1024,
       features: [
+        'Up to 25 players',
         'Basic player management',
-        'Limited storage',
         'Community support'
       ],
       isActive: true,
@@ -208,11 +206,10 @@ function getFallbackPlans() {
       currency: 'USD',
       billingCycle: 'MONTHLY',
       playerLimit: 100,
-      storageLimit: 5120,
       features: [
+        'Up to 100 players',
         'Advanced player tracking',
-        'Priority support',
-        'Expanded storage'
+        'Priority support'
       ],
       isActive: true,
       isFree: false,
@@ -226,11 +223,10 @@ function getFallbackPlans() {
       currency: 'USD',
       billingCycle: 'MONTHLY',
       playerLimit: 500,
-      storageLimit: 20480,
       features: [
+        'Up to 500 players',
         'Advanced analytics',
-        'Priority support',
-        'High storage limits'
+        'Priority support'
       ],
       isActive: true,
       isFree: false,
@@ -244,11 +240,10 @@ function getFallbackPlans() {
       currency: 'USD',
       billingCycle: 'MONTHLY',
       playerLimit: 2000,
-      storageLimit: 51200,
       features: [
+        'Up to 2000 players',
         'Full analytics suite',
-        'Dedicated support',
-        'Maximum storage limits'
+        'Dedicated support'
       ],
       isActive: true,
       isFree: false,

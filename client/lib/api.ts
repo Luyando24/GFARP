@@ -86,7 +86,7 @@ const API_BASE = (() => {
 })();
 const USE_MOCK =
   (import.meta.env.VITE_USE_MOCK as string | undefined) === "true";
-  
+
 // Player API response types
 export interface PlayerResponse {
   success: boolean;
@@ -161,49 +161,49 @@ export const Api = {
   async get<T>(path: string): Promise<T> {
     return http<T>(path);
   },
-  
+
   async post<T>(path: string, data?: any): Promise<T> {
     return http<T>(path, {
       method: "POST",
       body: data ? JSON.stringify(data) : undefined,
     });
   },
-  
+
   async put<T>(path: string, data?: any): Promise<T> {
     return http<T>(path, {
       method: "PUT",
       body: data ? JSON.stringify(data) : undefined,
     });
   },
-  
+
   async delete<T>(path: string): Promise<T> {
     return http<T>(path, {
       method: "DELETE",
     });
   },
-  
+
   // Players
   async getPlayers(academyId?: string, page = 1, limit = 10): Promise<PlayersListResponse> {
     const academyParam = academyId ? `&academyId=${academyId}` : '';
     return http<PlayersListResponse>(`/football-players?page=${page}&limit=${limit}${academyParam}`);
   },
-  
+
   async getPlayer(playerId: string): Promise<PlayerResponse> {
     return http<PlayerResponse>(`/football-players/${playerId}`);
   },
-  
+
   async searchPlayers(query: string, academyId?: string, limit = 10): Promise<{ success: boolean; data: any[] }> {
     const academyParam = academyId ? `&academyId=${academyId}` : '';
     return http<{ success: boolean; data: any[] }>(`/football-players/search?q=${encodeURIComponent(query)}&limit=${limit}${academyParam}`);
   },
-  
+
   async createPlayer(playerData: Omit<Player, 'id' | 'createdAt' | 'updatedAt' | 'isActive'> & { academyId: string }): Promise<PlayerResponse> {
     return http<PlayerResponse>('/football-players', {
       method: 'POST',
       body: JSON.stringify(playerData),
     });
   },
-  
+
   async updatePlayer(playerId: string, playerData: Partial<Player>): Promise<PlayerResponse> {
     return http<PlayerResponse>(`/football-players/${playerId}`, {
       method: 'PUT',
@@ -217,7 +217,7 @@ export const Api = {
       body: JSON.stringify(playerData),
     });
   },
-  
+
   async deletePlayer(playerId: string): Promise<PlayerResponse> {
     return http<PlayerResponse>(`/football-players/${playerId}`, {
       method: 'DELETE',
@@ -256,7 +256,7 @@ export const Api = {
       body: JSON.stringify(payload),
     });
   },
-  
+
   async createTask(payload: CreateTaskRequest): Promise<CreateTaskResponse> {
     if (USE_MOCK) return mock.createTask(payload);
     return http<CreateTaskResponse>("/tasks", {
@@ -272,7 +272,7 @@ export const Api = {
   async getSchoolById(schoolId: string): Promise<School> {
     return http<School>(`/schools/${schoolId}`);
   },
-  
+
   async getClassStats(): Promise<{
     total: number;
     active: number;
@@ -332,7 +332,7 @@ export const Api = {
     });
     if (!res.ok) {
       let raw = '';
-      try { raw = await res.text(); } catch (_) {}
+      try { raw = await res.text(); } catch (_) { }
       throw new Error(raw || `HTTP ${res.status}`);
     }
   },
@@ -406,7 +406,7 @@ export const Api = {
     // This function is deprecated - military personnel registration removed
     throw new Error("Military personnel registration is no longer supported");
   },
-  
+
   async registerSchool(payload: {
     schoolName: string;
     schoolType: string;
@@ -438,21 +438,21 @@ const mock = {
         tokens: { accessToken: uuidv4(), expiresInSec: 3600 },
       };
     }
-    
+
     const user = await db.staffUsers.where({ email }).first();
     if (!user) throw new Error("Account not found. Please register.");
     const hash = await sha256Hex(password);
     if (user.passwordHash !== hash) throw new Error("Invalid credentials");
-    
+
     // Determine role based on userType if provided
     const role = userType ? userType : user.role;
-    
+
     return {
       userId: user.id,
       role: role,
       schoolId: user.schoolId,
       tokens: { accessToken: uuidv4(), expiresInSec: 3600 },
-     };
+    };
   },
   async registerSchool(payload: {
     schoolName: string;
@@ -468,9 +468,9 @@ const mock = {
       .where({ email: payload.email })
       .first();
     if (existing) throw new Error("Email already registered");
-    
+
     const now = new Date().toISOString();
-    
+
     // Create school
     const schoolId = uuidv4();
     const school = {
@@ -484,7 +484,7 @@ const mock = {
       updatedAt: now,
     };
     await db.schools.put(school);
-    
+
     // Create user
     const userId = uuidv4();
     const user = {
@@ -501,7 +501,7 @@ const mock = {
       updatedAt: now,
     };
     await db.staffUsers.put(user);
-    
+
     return { userId, schoolId };
   },
   async createTask(req: CreateTaskRequest): Promise<CreateTaskResponse> {
@@ -651,11 +651,11 @@ export async function getTransfers(academyId?: string, limit = 50, offset = 0, s
 
     const response = await fetch(`${BASE_URL}/transfers?${params}`);
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.error || 'Failed to fetch transfers');
     }
-    
+
     return result;
   } catch (error) {
     console.error('Error fetching transfers:', error);
@@ -667,11 +667,11 @@ export async function getTransfer(transferId: string): Promise<{ success: boolea
   try {
     const response = await fetch(`${BASE_URL}/transfers/${transferId}`);
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.error || 'Failed to fetch transfer');
     }
-    
+
     return result;
   } catch (error) {
     console.error('Error fetching transfer:', error);
@@ -712,13 +712,13 @@ export async function createTransfer(transferData: Partial<Transfer>): Promise<{
       },
       body: JSON.stringify(apiData),
     });
-    
+
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.error || 'Failed to create transfer');
     }
-    
+
     return result;
   } catch (error) {
     console.error('Error creating transfer:', error);
@@ -757,13 +757,13 @@ export async function updateTransfer(transferId: string, transferData: Partial<T
       },
       body: JSON.stringify(apiData),
     });
-    
+
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.error || 'Failed to update transfer');
     }
-    
+
     return result;
   } catch (error) {
     console.error('Error updating transfer:', error);
@@ -776,13 +776,13 @@ export async function deleteTransfer(transferId: string): Promise<{ success: boo
     const response = await fetch(`${BASE_URL}/transfers/${transferId}`, {
       method: 'DELETE',
     });
-    
+
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.error || 'Failed to delete transfer');
     }
-    
+
     return result;
   } catch (error) {
     console.error('Error deleting transfer:', error);
@@ -797,11 +797,11 @@ export async function getTransferStats(academyId?: string): Promise<{ success: b
 
     const response = await fetch(`${BASE_URL}/transfers/stats?${params}`);
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.error || 'Failed to fetch transfer stats');
     }
-    
+
     return result;
   } catch (error) {
     console.error('Error fetching transfer stats:', error);
@@ -809,8 +809,8 @@ export async function getTransferStats(academyId?: string): Promise<{ success: b
   }
 }
 
-export async function getAcademyDashboardStats(academyId: string): Promise<{ 
-  success: boolean; 
+export async function getAcademyDashboardStats(academyId: string): Promise<{
+  success: boolean;
   data: {
     totalPlayers: number;
     activeTransfers: number;
@@ -838,11 +838,11 @@ export async function getAcademyDashboardStats(academyId: string): Promise<{
 
     const response = await fetch(`${BASE_URL}/dashboard/academy-stats?${params}`);
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.error || 'Failed to fetch academy dashboard stats');
     }
-    
+
     return result;
   } catch (error) {
     console.error('Error fetching academy dashboard stats:', error);
@@ -925,7 +925,7 @@ export async function getFinancialTransactions(
 ): Promise<FinancialTransactionsResponse> {
   try {
     const params = new URLSearchParams();
-    
+
     if (options.page) params.append('page', options.page.toString());
     if (options.limit) params.append('limit', options.limit.toString());
     if (options.type) params.append('type', options.type);
@@ -937,11 +937,11 @@ export async function getFinancialTransactions(
 
     const response = await fetch(`${BASE_URL}/financial-transactions/${academyId}?${params}`);
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.error || 'Failed to fetch financial transactions');
     }
-    
+
     return result;
   } catch (error) {
     console.error('Error fetching financial transactions:', error);
@@ -960,11 +960,11 @@ export async function createFinancialTransaction(transaction: Omit<FinancialTran
     });
 
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.error || 'Failed to create financial transaction');
     }
-    
+
     return result;
   } catch (error) {
     console.error('Error creating financial transaction:', error);
@@ -983,11 +983,11 @@ export async function updateFinancialTransaction(id: number, transaction: Partia
     });
 
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.error || 'Failed to update financial transaction');
     }
-    
+
     return result;
   } catch (error) {
     console.error('Error updating financial transaction:', error);
@@ -1002,11 +1002,11 @@ export async function deleteFinancialTransaction(id: number): Promise<{ success:
     });
 
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.error || 'Failed to delete financial transaction');
     }
-    
+
     return result;
   } catch (error) {
     console.error('Error deleting financial transaction:', error);
@@ -1038,11 +1038,11 @@ export async function getFinancialSummary(academyId: string, options: { period?:
 
     const response = await fetch(`${BASE_URL}/financial-transactions/${academyId}/summary?${params}`);
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.error || 'Failed to fetch financial summary');
     }
-    
+
     return result;
   } catch (error) {
     console.error('Error fetching financial summary:', error);
@@ -1057,11 +1057,11 @@ export async function getBudgetCategories(academyId: string, year?: number): Pro
 
     const response = await fetch(`${BASE_URL}/financial-transactions/${academyId}/budget-categories?${params}`);
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.error || 'Failed to fetch budget categories');
     }
-    
+
     return result;
   } catch (error) {
     console.error('Error fetching budget categories:', error);
@@ -1080,11 +1080,11 @@ export async function createBudgetCategory(academyId: string, category: Omit<Bud
     });
 
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.error || 'Failed to create budget category');
     }
-    
+
     return result;
   } catch (error) {
     console.error('Error creating budget category:', error);
@@ -1103,11 +1103,11 @@ export async function updateBudgetCategory(id: number, category: Partial<BudgetC
     });
 
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.error || 'Failed to update budget category');
     }
-    
+
     return result;
   } catch (error) {
     console.error('Error updating budget category:', error);
@@ -1122,11 +1122,11 @@ export async function deleteBudgetCategory(id: number): Promise<{ success: boole
     });
 
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.error || 'Failed to delete budget category');
     }
-    
+
     return result;
   } catch (error) {
     console.error('Error deleting budget category:', error);
@@ -1145,7 +1145,6 @@ export interface SubscriptionPlan {
   currency: string;
   billingCycle: 'MONTHLY' | 'YEARLY' | 'LIFETIME';
   playerLimit: number;
-  storageLimit: number;
   features: string[];
   isActive: boolean;
   isFree: boolean;
@@ -1166,13 +1165,10 @@ export interface Subscription {
 export interface SubscriptionUsage {
   playerCount: number;
   playerUsagePercentage: number;
-  storageUsed: number;
-  storageUsagePercentage: number;
 }
 
 export interface SubscriptionLimits {
   playerLimit: number;
-  storageLimit: number;
 }
 
 export interface SubscriptionData {
@@ -1201,7 +1197,7 @@ export interface UpgradeSubscriptionRequest {
 export async function getCurrentSubscription(academyId?: string): Promise<SubscriptionData | null> {
   try {
     const url = `${BASE_URL}/subscriptions/current`;
-      
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -1211,16 +1207,16 @@ export async function getCurrentSubscription(academyId?: string): Promise<Subscr
     });
 
     const result = await response.json();
-    
+
     // Handle 404 - No active subscription found
     if (response.status === 404) {
       return null;
     }
-    
+
     if (!response.ok) {
       throw new Error(result.message || 'Failed to get subscription details');
     }
-    
+
     return result.data;
   } catch (error) {
     console.error('Error getting current subscription:', error);
@@ -1239,11 +1235,11 @@ export async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
     });
 
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.message || 'Failed to get subscription plans');
     }
-    
+
     return result.data.plans;
   } catch (error) {
     console.error('Error getting subscription plans:', error);
@@ -1268,11 +1264,11 @@ export async function upgradeSubscription(upgradeData: UpgradeSubscriptionReques
     });
 
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.message || 'Failed to upgrade subscription');
     }
-    
+
     return result.data;
   } catch (error) {
     console.error('Error upgrading subscription:', error);
@@ -1283,10 +1279,10 @@ export async function upgradeSubscription(upgradeData: UpgradeSubscriptionReques
 // Get subscription history
 export async function getSubscriptionHistory(academyId?: string): Promise<SubscriptionHistory[]> {
   try {
-    const url = academyId 
+    const url = academyId
       ? `${BASE_URL}/subscriptions/history?academyId=${academyId}`
       : `${BASE_URL}/subscriptions/history`;
-      
+
     const response = await fetch(url, {
       method: 'GET',
       headers: {
@@ -1296,11 +1292,11 @@ export async function getSubscriptionHistory(academyId?: string): Promise<Subscr
     });
 
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.message || 'Failed to get subscription history');
     }
-    
+
     return result.data.history;
   } catch (error) {
     console.error('Error getting subscription history:', error);
@@ -1333,11 +1329,11 @@ export async function processCashPayment(paymentData: {
     });
 
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.message || 'Failed to process payment');
     }
-    
+
     return result.data;
   } catch (error) {
     console.error('Error processing cash payment:', error);
@@ -1365,11 +1361,11 @@ export async function cancelSubscription(reason?: string): Promise<{
     });
 
     const result = await response.json();
-    
+
     if (!response.ok) {
       throw new Error(result.message || 'Failed to cancel subscription');
     }
-    
+
     return result.data;
   } catch (error) {
     console.error('Error canceling subscription:', error);
@@ -1381,7 +1377,7 @@ export async function cancelSubscription(reason?: string): Promise<{
 function getAuthToken(): string {
   const sessionData = localStorage.getItem('ipims_auth_session');
   if (!sessionData) return '';
-  
+
   try {
     const session = JSON.parse(sessionData);
     return session.tokens?.accessToken || '';

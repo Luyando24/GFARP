@@ -13,7 +13,6 @@ export default async function handler(
     }
 
     try {
-        // Mock current subscription data
         const mockSubscription = {
             id: 'sub-123',
             planName: 'Professional Plan',
@@ -25,11 +24,8 @@ export default async function handler(
             autoRenew: true,
             daysRemaining: 30,
             playerLimit: 50,
-            storageLimit: 100,
             playerCount: 25,
             playerUsagePercentage: 50,
-            storageUsed: 45,
-            storageUsagePercentage: 45,
             features: [
                 'Unlimited player profiles',
                 'Advanced analytics',
@@ -44,14 +40,11 @@ export default async function handler(
             data: {
                 subscription: mockSubscription,
                 limits: {
-                    playerLimit: 50,
-                    storageLimit: 100
+                    playerLimit: 50
                 },
                 usage: {
                     playerCount: 25,
-                    playerUsagePercentage: 50,
-                    storageUsed: 45,
-                    storageUsagePercentage: 45
+                    playerUsagePercentage: 50
                 }
             }
         });

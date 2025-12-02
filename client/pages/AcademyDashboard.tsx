@@ -381,16 +381,16 @@ export default function AcademyDashboard() {
       ]);
 
       // Calculate active transfers
-      const activeTransfers = transfersResult.success 
-        ? transfersResult.data.filter(t => t.status === 'pending' || t.status === 'approved').length 
+      const activeTransfers = transfersResult.success
+        ? transfersResult.data.filter(t => t.status === 'pending' || t.status === 'approved').length
         : 0;
 
       // Process financial data
       const financialSummary = financialResult.success ? financialResult.data : { totalRevenue: 0, monthlyData: [] };
       const monthlyFinancialData = financialResult.success && financialResult.data.monthlyData ? financialResult.data.monthlyData : [];
-      
+
       // Get recent transfers from the transfers list (already fetched)
-      const recentTransfers = transfersResult.success 
+      const recentTransfers = transfersResult.success
         ? transfersResult.data.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5)
         : [];
 
@@ -447,11 +447,8 @@ export default function AcademyDashboard() {
           autoRenew: data.subscription?.autoRenew,
           daysRemaining: data.subscription?.daysRemaining,
           playerLimit: data.limits?.playerLimit,
-          storageLimit: data.limits?.storageLimit,
           playerCount: data.usage?.playerCount,
-          playerUsagePercentage: data.usage?.playerUsagePercentage,
-          storageUsed: data.usage?.storageUsed,
-          storageUsagePercentage: data.usage?.storageUsagePercentage
+          playerUsagePercentage: data.usage?.playerUsagePercentage
         });
       } else {
         // Handle case when no subscription is found
@@ -468,11 +465,8 @@ export default function AcademyDashboard() {
           autoRenew: true,
           daysRemaining: 365,
           playerLimit: 2,
-          storageLimit: 1,
           playerCount: 0,
-          playerUsagePercentage: 0,
-          storageUsed: 0,
-          storageUsagePercentage: 0
+          playerUsagePercentage: 0
         });
       }
     } catch (error) {
@@ -1999,44 +1993,7 @@ export default function AcademyDashboard() {
                               )}
                             </div>
                           )}
-                          {subscriptionData.storageLimit && (
-                            <div>
-                              <div className="flex justify-between text-sm mb-1">
-                                <span>Storage</span>
-                                <span>{subscriptionData.storageUsed || 0}GB / {subscriptionData.storageLimit}GB</span>
-                              </div>
-                              <div className="w-full bg-slate-200 rounded-full h-2">
-                                <div
-                                  className={`h-2 rounded-full ${((subscriptionData.storageUsed || 0) / subscriptionData.storageLimit) >= 1
-                                    ? 'bg-red-600'
-                                    : ((subscriptionData.storageUsed || 0) / subscriptionData.storageLimit) >= 0.8
-                                      ? 'bg-yellow-600'
-                                      : 'bg-green-600'
-                                    }`}
-                                  style={{
-                                    width: `${Math.min(((subscriptionData.storageUsed || 0) / subscriptionData.storageLimit) * 100, 100)}%`
-                                  }}
-                                ></div>
-                              </div>
-                              {((subscriptionData.storageUsed || 0) / subscriptionData.storageLimit) >= 0.8 && (
-                                <div className="mt-2">
-                                  <Button
-                                    size="sm"
-                                    onClick={scrollToPlanManagement}
-                                    className={`w-full ${((subscriptionData.storageUsed || 0) / subscriptionData.storageLimit) >= 1
-                                      ? 'bg-red-600 hover:bg-red-700 text-white'
-                                      : 'bg-yellow-600 hover:bg-yellow-700 text-white'
-                                      }`}
-                                  >
-                                    <Crown className="h-4 w-4 mr-2" />
-                                    {((subscriptionData.storageUsed || 0) / subscriptionData.storageLimit) >= 1
-                                      ? 'Upgrade Required - Storage Full'
-                                      : 'Upgrade Plan - Storage Near Limit'
-                                    }
-                                  </Button>
-                                </div>
-                              )}
-                            </div>
+</div>
                           )}
                         </div>
                       </CardContent>
