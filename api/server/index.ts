@@ -10,11 +10,10 @@ function getFallbackPlans() {
             price: 0,
             currency: 'USD',
             billingCycle: 'MONTHLY',
-            playerLimit: 25,
-            storageLimit: 1024,
+            playerLimit: 1,
             features: [
+                'Up to 1 player',
                 'Basic player management',
-                'Limited storage',
                 'Community support'
             ],
             isActive: true,
@@ -29,11 +28,10 @@ function getFallbackPlans() {
             currency: 'USD',
             billingCycle: 'MONTHLY',
             playerLimit: 100,
-            storageLimit: 5120,
             features: [
+                'Up to 100 players',
                 'Advanced player tracking',
-                'Priority support',
-                'Expanded storage'
+                'Priority support'
             ],
             isActive: true,
             isFree: false,
@@ -47,11 +45,10 @@ function getFallbackPlans() {
             currency: 'USD',
             billingCycle: 'MONTHLY',
             playerLimit: 500,
-            storageLimit: 20480,
             features: [
+                'Up to 500 players',
                 'Advanced analytics',
-                'Priority support',
-                'High storage limits'
+                'Priority support'
             ],
             isActive: true,
             isFree: false,
@@ -65,11 +62,10 @@ function getFallbackPlans() {
             currency: 'USD',
             billingCycle: 'MONTHLY',
             playerLimit: 2000,
-            storageLimit: 51200,
             features: [
+                'Up to 2000 players',
                 'Full analytics suite',
-                'Dedicated support',
-                'Maximum storage limits'
+                'Dedicated support'
             ],
             isActive: true,
             isFree: false,

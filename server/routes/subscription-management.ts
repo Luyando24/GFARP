@@ -188,9 +188,9 @@ function getFallbackPlans() {
       price: 0,
       currency: 'USD',
       billingCycle: 'MONTHLY',
-      playerLimit: 25,
+      playerLimit: 1,
       features: [
-        'Up to 25 players',
+        'Up to 1 player',
         'Basic player management',
         'Community support'
       ],

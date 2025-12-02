@@ -82,8 +82,8 @@ ALTER TABLE academies ADD COLUMN IF NOT EXISTS storage_used BIGINT DEFAULT 0;
 
 -- Insert default subscription plans
 INSERT INTO subscription_plans (name, description, price, currency, billing_cycle, player_limit, storage_limit, features, is_active, is_free, sort_order) VALUES
-('Free Plan', 'Perfect for small academies getting started', 0.00, 'USD', 'LIFETIME', 2, 1073741824, 
- '["Basic player management", "Document storage (1GB)", "Email support", "Basic reporting"]', 
+('Free Plan', 'Perfect for small academies getting started', 0.00, 'USD', 'LIFETIME', 1, 1073741824, 
+ '["Up to 1 player", "Basic player management", "Email support", "Basic reporting"]', 
  TRUE, TRUE, 1),
 ('Basic Plan', 'Great for growing academies', 29.99, 'USD', 'MONTHLY', 50, 5368709120, 
  '["Advanced player management", "Document storage (5GB)", "Email support", "Advanced reporting", "Player analytics"]', 

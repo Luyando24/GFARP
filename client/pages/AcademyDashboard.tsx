@@ -464,7 +464,7 @@ export default function AcademyDashboard() {
           endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
           autoRenew: true,
           daysRemaining: 365,
-          playerLimit: 2,
+          playerLimit: 1,
           playerCount: 0,
           playerUsagePercentage: 0
         });
@@ -1993,421 +1993,419 @@ export default function AcademyDashboard() {
                               )}
                             </div>
                           )}
-</div>
-                          )}
                         </div>
-                      </CardContent>
-                    </Card>
+                    </CardContent>
+                  </Card>
 
                     {/* Billing History */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Receipt className="h-5 w-5 text-slate-600" />
-                          Billing History
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {subscriptionHistory.length > 0 ? (
-                            subscriptionHistory.slice(0, 5).map((record: any, index: number) => (
-                              <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
-                                <div>
-                                  <div className="font-medium">
-                                    {new Date(record.createdAt).toLocaleDateString()}
-                                  </div>
-                                  <div className="text-sm text-slate-600">{record.action}</div>
-                                  {record.notes && (
-                                    <div className="text-xs text-slate-500">{record.notes}</div>
-                                  )}
-                                </div>
-                                <div className="text-right">
-                                  {record.newPlanName && (
-                                    <div className="font-medium">{record.newPlanName}</div>
-                                  )}
-                                  <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
-                                    {record.action}
-                                  </Badge>
-                                </div>
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Receipt className="h-5 w-5 text-slate-600" />
+                      Billing History
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {subscriptionHistory.length > 0 ? (
+                        subscriptionHistory.slice(0, 5).map((record: any, index: number) => (
+                          <div key={index} className="flex items-center justify-between py-2 border-b last:border-b-0">
+                            <div>
+                              <div className="font-medium">
+                                {new Date(record.createdAt).toLocaleDateString()}
                               </div>
-                            ))
-                          ) : (
-                            <div className="text-center text-slate-500 py-4">
-                              No billing history available
+                              <div className="text-sm text-slate-600">{record.action}</div>
+                              {record.notes && (
+                                <div className="text-xs text-slate-500">{record.notes}</div>
+                              )}
                             </div>
-                          )}
+                            <div className="text-right">
+                              {record.newPlanName && (
+                                <div className="font-medium">{record.newPlanName}</div>
+                              )}
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 text-xs">
+                                {record.action}
+                              </Badge>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="text-center text-slate-500 py-4">
+                          No billing history available
                         </div>
-                      </CardContent>
-                    </Card>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
 
-                    {/* Plan Management */}
-                    <Card id="plan-management">
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Settings className="h-5 w-5 text-slate-600" />
-                          Plan Management
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="space-y-3">
-                          {availablePlans.length > 0 && (
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button
-                                  className="w-full bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#004080] hover:to-[#0052a3] text-white"
-                                  disabled={isUpgrading}
+                {/* Plan Management */}
+                <Card id="plan-management">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="h-5 w-5 text-slate-600" />
+                      Plan Management
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-3">
+                      {availablePlans.length > 0 && (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              className="w-full bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#004080] hover:to-[#0052a3] text-white"
+                              disabled={isUpgrading}
+                            >
+                              {isUpgrading ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Upgrading...
+                                </>
+                              ) : (
+                                'Select Plan'
+                              )}
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Select a Plan</DialogTitle>
+                              <DialogDescription>
+                                Choose a subscription plan for your academy.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4">
+                              {availablePlans.map((plan: any) => (
+                                <Card
+                                  key={plan.id}
+                                  className={`cursor-pointer hover:bg-slate-50 ${subscriptionData?.planName === plan.name
+                                    ? 'border-2 border-blue-500'
+                                    : ''
+                                    }`}
+                                  onClick={() => handleUpgradePlan(plan.id)}
                                 >
-                                  {isUpgrading ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Upgrading...
-                                    </>
-                                  ) : (
-                                    'Select Plan'
-                                  )}
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Select a Plan</DialogTitle>
-                                  <DialogDescription>
-                                    Choose a subscription plan for your academy.
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-4">
-                                  {availablePlans.map((plan: any) => (
-                                    <Card
-                                      key={plan.id}
-                                      className={`cursor-pointer hover:bg-slate-50 ${subscriptionData?.planName === plan.name
-                                        ? 'border-2 border-blue-500'
-                                        : ''
-                                        }`}
-                                      onClick={() => handleUpgradePlan(plan.id)}
-                                    >
-                                      <CardContent className="p-4">
-                                        <div className="flex justify-between items-center">
-                                          <div>
-                                            <h3 className="font-semibold">{plan.name}</h3>
-                                            <p className="text-sm text-slate-600">{plan.description}</p>
-                                            {subscriptionData?.planName === plan.name && (
-                                              <Badge className="mt-1 bg-blue-100 text-blue-800 border-blue-200">
-                                                Current Plan
-                                              </Badge>
-                                            )}
-                                          </div>
-                                          <div className="text-right">
-                                            <div className="font-bold">${plan.price}/month</div>
-                                            <div className="text-sm text-slate-600">
-                                              {plan.playerLimit} players
-                                            </div>
-                                          </div>
+                                  <CardContent className="p-4">
+                                    <div className="flex justify-between items-center">
+                                      <div>
+                                        <h3 className="font-semibold">{plan.name}</h3>
+                                        <p className="text-sm text-slate-600">{plan.description}</p>
+                                        {subscriptionData?.planName === plan.name && (
+                                          <Badge className="mt-1 bg-blue-100 text-blue-800 border-blue-200">
+                                            Current Plan
+                                          </Badge>
+                                        )}
+                                      </div>
+                                      <div className="text-right">
+                                        <div className="font-bold">${plan.price}/month</div>
+                                        <div className="text-sm text-slate-600">
+                                          {plan.playerLimit} players
                                         </div>
-                                      </CardContent>
-                                    </Card>
-                                  ))}
-                                </div>
-                              </DialogContent>
-                            </Dialog>
-                          )}
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              ))}
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                      )}
 
-                          <Button variant="outline" className="w-full">
-                            Change Payment Method
-                          </Button>
-                          <Button variant="outline" className="w-full">
-                            Download Invoice
-                          </Button>
+                      <Button variant="outline" className="w-full">
+                        Change Payment Method
+                      </Button>
+                      <Button variant="outline" className="w-full">
+                        Download Invoice
+                      </Button>
 
-                          {subscriptionData.status === 'active' && (
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  className="w-full text-red-600 border-red-200 hover:bg-red-50"
-                                  disabled={isCancelling}
-                                >
-                                  {isCancelling ? (
-                                    <>
-                                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                      Cancelling...
-                                    </>
-                                  ) : (
-                                    'Cancel Subscription'
-                                  )}
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Cancel Subscription</DialogTitle>
-                                  <DialogDescription>
-                                    Are you sure you want to cancel your subscription? This action cannot be undone.
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <DialogFooter>
-                                  <Button variant="outline">Keep Subscription</Button>
-                                  <Button
-                                    variant="destructive"
-                                    onClick={handleCancelSubscription}
-                                    disabled={isCancelling}
-                                  >
-                                    {isCancelling ? (
-                                      <>
-                                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                        Cancelling...
-                                      </>
-                                    ) : (
-                                      'Yes, Cancel'
-                                    )}
-                                  </Button>
-                                </DialogFooter>
-                              </DialogContent>
-                            </Dialog>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <div className="text-slate-500 mb-4">No subscription data available</div>
-                    <Button
-                      onClick={loadSubscriptionData}
-                      variant="outline"
-                    >
-                      Retry Loading
-                    </Button>
-                  </div>
+                      {subscriptionData.status === 'active' && (
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              variant="outline"
+                              className="w-full text-red-600 border-red-200 hover:bg-red-50"
+                              disabled={isCancelling}
+                            >
+                              {isCancelling ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Cancelling...
+                                </>
+                              ) : (
+                                'Cancel Subscription'
+                              )}
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Cancel Subscription</DialogTitle>
+                              <DialogDescription>
+                                Are you sure you want to cancel your subscription? This action cannot be undone.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                              <Button variant="outline">Keep Subscription</Button>
+                              <Button
+                                variant="destructive"
+                                onClick={handleCancelSubscription}
+                                disabled={isCancelling}
+                              >
+                                {isCancelling ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Cancelling...
+                                  </>
+                                ) : (
+                                  'Yes, Cancel'
+                                )}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              ) : (
+              <div className="text-center py-8">
+                <div className="text-slate-500 mb-4">No subscription data available</div>
+                <Button
+                  onClick={loadSubscriptionData}
+                  variant="outline"
+                >
+                  Retry Loading
+                </Button>
+              </div>
                 )}
-              </TabsContent>
+            </TabsContent>
 
               {/* Settings Tab */}
-              <TabsContent value="settings" className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Academy Settings</h2>
-                  <div className="flex gap-2">
-                    {isEditingSettings ? (
-                      <>
-                        <Button variant="outline" onClick={handleCancelEdit}>
-                          <X className="h-4 w-4 mr-2" />
-                          Cancel
-                        </Button>
-                        <Button onClick={handleSaveSettings}>
-                          <Save className="h-4 w-4 mr-2" />
-                          Save Changes
-                        </Button>
-                      </>
-                    ) : (
-                      <Button onClick={handleEditSettings}>
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit Information
-                      </Button>
-                    )}
+          <TabsContent value="settings" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Academy Settings</h2>
+              <div className="flex gap-2">
+                {isEditingSettings ? (
+                  <>
+                    <Button variant="outline" onClick={handleCancelEdit}>
+                      <X className="h-4 w-4 mr-2" />
+                      Cancel
+                    </Button>
+                    <Button onClick={handleSaveSettings}>
+                      <Save className="h-4 w-4 mr-2" />
+                      Save Changes
+                    </Button>
+                  </>
+                ) : (
+                  <Button onClick={handleEditSettings}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Information
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Building className="h-5 w-5 mr-2" />
+                    Academy Information
+                  </CardTitle>
+                  <CardDescription>
+                    Basic information about your football academy
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="academy-name" className="text-sm font-medium">Academy Name</Label>
+                    <Input
+                      id="academy-name"
+                      type="text"
+                      value={settingsFormData.name}
+                      onChange={(e) => handleInputChange('name', e.target.value)}
+                      className="mt-1"
+                      disabled={!isEditingSettings}
+                      placeholder="Enter academy name"
+                    />
                   </div>
-                </div>
+                  <div>
+                    <Label htmlFor="location" className="text-sm font-medium">Location</Label>
+                    <Input
+                      id="location"
+                      type="text"
+                      value={settingsFormData.location}
+                      onChange={(e) => handleInputChange('location', e.target.value)}
+                      className="mt-1"
+                      disabled={!isEditingSettings}
+                      placeholder="Enter academy location"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="established" className="text-sm font-medium">Year Established</Label>
+                    <Input
+                      id="established"
+                      type="text"
+                      value={settingsFormData.established}
+                      onChange={(e) => handleInputChange('established', e.target.value)}
+                      className="mt-1"
+                      disabled={!isEditingSettings}
+                      placeholder="Enter year established"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <Building className="h-5 w-5 mr-2" />
-                        Academy Information
-                      </CardTitle>
-                      <CardDescription>
-                        Basic information about your football academy
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div>
-                        <Label htmlFor="academy-name" className="text-sm font-medium">Academy Name</Label>
-                        <Input
-                          id="academy-name"
-                          type="text"
-                          value={settingsFormData.name}
-                          onChange={(e) => handleInputChange('name', e.target.value)}
-                          className="mt-1"
-                          disabled={!isEditingSettings}
-                          placeholder="Enter academy name"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="location" className="text-sm font-medium">Location</Label>
-                        <Input
-                          id="location"
-                          type="text"
-                          value={settingsFormData.location}
-                          onChange={(e) => handleInputChange('location', e.target.value)}
-                          className="mt-1"
-                          disabled={!isEditingSettings}
-                          placeholder="Enter academy location"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="established" className="text-sm font-medium">Year Established</Label>
-                        <Input
-                          id="established"
-                          type="text"
-                          value={settingsFormData.established}
-                          onChange={(e) => handleInputChange('established', e.target.value)}
-                          className="mt-1"
-                          disabled={!isEditingSettings}
-                          placeholder="Enter year established"
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Phone className="h-5 w-5 mr-2" />
+                    Contact Information
+                  </CardTitle>
+                  <CardDescription>
+                    Primary contact details for the academy
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <Label htmlFor="email" className="text-sm font-medium">Academy Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={settingsFormData.email}
+                      onChange={(e) => handleInputChange('email', e.target.value)}
+                      className="mt-1"
+                      disabled={!isEditingSettings}
+                      placeholder="Enter academy email"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="phone" className="text-sm font-medium">Academy Phone</Label>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      value={settingsFormData.phone}
+                      onChange={(e) => handleInputChange('phone', e.target.value)}
+                      className="mt-1"
+                      disabled={!isEditingSettings}
+                      placeholder="Enter academy phone number"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <Phone className="h-5 w-5 mr-2" />
-                        Contact Information
-                      </CardTitle>
-                      <CardDescription>
-                        Primary contact details for the academy
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div>
-                        <Label htmlFor="email" className="text-sm font-medium">Academy Email</Label>
-                        <Input
-                          id="email"
-                          type="email"
-                          value={settingsFormData.email}
-                          onChange={(e) => handleInputChange('email', e.target.value)}
-                          className="mt-1"
-                          disabled={!isEditingSettings}
-                          placeholder="Enter academy email"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="phone" className="text-sm font-medium">Academy Phone</Label>
-                        <Input
-                          id="phone"
-                          type="tel"
-                          value={settingsFormData.phone}
-                          onChange={(e) => handleInputChange('phone', e.target.value)}
-                          className="mt-1"
-                          disabled={!isEditingSettings}
-                          placeholder="Enter academy phone number"
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <User className="h-5 w-5 mr-2" />
+                    Director Information
+                  </CardTitle>
+                  <CardDescription>
+                    Contact details for the academy director
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="director-name" className="text-sm font-medium">Director Name</Label>
+                      <Input
+                        id="director-name"
+                        type="text"
+                        value={settingsFormData.directorName}
+                        onChange={(e) => handleInputChange('directorName', e.target.value)}
+                        className="mt-1"
+                        disabled={!isEditingSettings}
+                        placeholder="Enter director name"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="director-email" className="text-sm font-medium">Director Email</Label>
+                      <Input
+                        id="director-email"
+                        type="email"
+                        value={settingsFormData.directorEmail}
+                        onChange={(e) => handleInputChange('directorEmail', e.target.value)}
+                        className="mt-1"
+                        disabled={!isEditingSettings}
+                        placeholder="Enter director email"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="director-phone" className="text-sm font-medium">Director Phone</Label>
+                      <Input
+                        id="director-phone"
+                        type="tel"
+                        value={settingsFormData.directorPhone}
+                        onChange={(e) => handleInputChange('directorPhone', e.target.value)}
+                        className="mt-1"
+                        disabled={!isEditingSettings}
+                        placeholder="Enter director phone"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-                  <Card className="lg:col-span-2">
-                    <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <User className="h-5 w-5 mr-2" />
-                        Director Information
-                      </CardTitle>
-                      <CardDescription>
-                        Contact details for the academy director
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div>
-                          <Label htmlFor="director-name" className="text-sm font-medium">Director Name</Label>
-                          <Input
-                            id="director-name"
-                            type="text"
-                            value={settingsFormData.directorName}
-                            onChange={(e) => handleInputChange('directorName', e.target.value)}
-                            className="mt-1"
-                            disabled={!isEditingSettings}
-                            placeholder="Enter director name"
-                          />
+              {/* Additional Settings Card */}
+              <Card className="lg:col-span-2">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Settings className="h-5 w-5 mr-2" />
+                    System Settings
+                  </CardTitle>
+                  <CardDescription>
+                    Additional configuration options
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-sm">Notifications</h4>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">Email notifications</span>
+                          <Button variant="outline" size="sm">Configure</Button>
                         </div>
-                        <div>
-                          <Label htmlFor="director-email" className="text-sm font-medium">Director Email</Label>
-                          <Input
-                            id="director-email"
-                            type="email"
-                            value={settingsFormData.directorEmail}
-                            onChange={(e) => handleInputChange('directorEmail', e.target.value)}
-                            className="mt-1"
-                            disabled={!isEditingSettings}
-                            placeholder="Enter director email"
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="director-phone" className="text-sm font-medium">Director Phone</Label>
-                          <Input
-                            id="director-phone"
-                            type="tel"
-                            value={settingsFormData.directorPhone}
-                            onChange={(e) => handleInputChange('directorPhone', e.target.value)}
-                            className="mt-1"
-                            disabled={!isEditingSettings}
-                            placeholder="Enter director phone"
-                          />
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm">SMS notifications</span>
+                          <Button variant="outline" size="sm">Configure</Button>
                         </div>
                       </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Additional Settings Card */}
-                  <Card className="lg:col-span-2">
-                    <CardHeader>
-                      <CardTitle className="flex items-center">
-                        <Settings className="h-5 w-5 mr-2" />
-                        System Settings
-                      </CardTitle>
-                      <CardDescription>
-                        Additional configuration options
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                          <h4 className="font-medium text-sm">Notifications</h4>
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm">Email notifications</span>
-                              <Button variant="outline" size="sm">Configure</Button>
-                            </div>
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm">SMS notifications</span>
-                              <Button variant="outline" size="sm">Configure</Button>
-                            </div>
-                          </div>
-                        </div>
-                        <div className="space-y-4">
-                          <h4 className="font-medium text-sm">Data Management</h4>
-                          <div className="space-y-2">
-                            <Button variant="outline" size="sm" className="w-full">
-                              <Download className="h-4 w-4 mr-2" />
-                              Export Academy Data
-                            </Button>
-                            <Button variant="outline" size="sm" className="w-full">
-                              <Upload className="h-4 w-4 mr-2" />
-                              Import Player Data
-                            </Button>
-                          </div>
-                        </div>
+                    </div>
+                    <div className="space-y-4">
+                      <h4 className="font-medium text-sm">Data Management</h4>
+                      <div className="space-y-2">
+                        <Button variant="outline" size="sm" className="w-full">
+                          <Download className="h-4 w-4 mr-2" />
+                          Export Academy Data
+                        </Button>
+                        <Button variant="outline" size="sm" className="w-full">
+                          <Upload className="h-4 w-4 mr-2" />
+                          Import Player Data
+                        </Button>
                       </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </TabsContent>
-            </Tabs>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
           )}
 
-          {/* Payment Method Selection Modal */}
-          {showPaymentModal && selectedPlanForUpgrade && (
-            <PaymentMethodSelector
-              isOpen={showPaymentModal}
-              onClose={() => {
-                setShowPaymentModal(false);
-                setSelectedPlanForUpgrade(null);
-              }}
-              selectedPlan={selectedPlanForUpgrade}
-              academyId={academyInfo?.id || ''}
-              onSuccess={handleUpgradeSuccess}
-            />
-          )}
-        </main>
-      </div>
+        {/* Payment Method Selection Modal */}
+        {showPaymentModal && selectedPlanForUpgrade && (
+          <PaymentMethodSelector
+            isOpen={showPaymentModal}
+            onClose={() => {
+              setShowPaymentModal(false);
+              setSelectedPlanForUpgrade(null);
+            }}
+            selectedPlan={selectedPlanForUpgrade}
+            academyId={academyInfo?.id || ''}
+            onSuccess={handleUpgradeSuccess}
+          />
+        )}
+      </main>
     </div>
+    </div >
   );
 }
 

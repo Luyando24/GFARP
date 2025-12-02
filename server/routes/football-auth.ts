@@ -107,8 +107,8 @@ async function ensureSubscriptionSchema(client: any, academyIdType: 'uuid' | 'in
       id: uuidv4(), name, description: desc, price, currency: 'USD', billing_cycle: cycle, player_limit: players, storage_limit: storage, features: JSON.stringify(features), is_active: true, is_free: isFree, sort_order: order,
     });
     const plans = [
-      makePlan('Free Plan', 'Perfect for small academies getting started', 0.00, 'LIFETIME', 2, 1073741824, [
-        'Basic player management', 'Document storage (1GB)', 'Email support', 'Basic reporting'
+      makePlan('Free Plan', 'Perfect for small academies getting started', 0.00, 'LIFETIME', 1, 1073741824, [
+        'Up to 1 player', 'Basic player management', 'Email support', 'Basic reporting'
       ], true, 1),
       makePlan('Basic Plan', 'Great for growing academies', 29.99, 'MONTHLY', 50, 5368709120, [
         'Advanced player management', 'Document storage (5GB)', 'Email support', 'Advanced reporting', 'Player analytics'
