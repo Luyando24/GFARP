@@ -56,27 +56,39 @@ function generateSmartFallbacks(originalString: string): string[] {
 }
 
 // Resolve all potential database connection strings
-function getAllConnectionStrings(): string[] {
+function getAllConnectionStrings(): { source: string, value: string }[] {
   const explicitCandidates = [
-    process.env.DIRECT_URL, // Prioritize direct connection for setup/DDL
-    process.env.SUPABASE_DB_URL,
-    process.env.DATABASE_URL,
-    process.env.SUPABASE_DB_POOL_URL,
-    process.env.SUPABASE_POOLED_DATABASE_URL,
-    process.env.POSTGRES_URL,
-    process.env.PG_CONNECTION_STRING
-  ].filter(Boolean) as string[];
+    { source: 'DIRECT_URL', value: process.env.DIRECT_URL },
+    { source: 'SUPABASE_DB_URL', value: process.env.SUPABASE_DB_URL },
+    { source: 'DATABASE_URL', value: process.env.DATABASE_URL },
+    { source: 'SUPABASE_DB_POOL_URL', value: process.env.SUPABASE_DB_POOL_URL },
+    { source: 'SUPABASE_POOLED_DATABASE_URL', value: process.env.SUPABASE_POOLED_DATABASE_URL },
+    { source: 'POSTGRES_URL', value: process.env.POSTGRES_URL },
+    { source: 'PG_CONNECTION_STRING', value: process.env.PG_CONNECTION_STRING }
+  ].filter(c => !!c.value) as { source: string, value: string }[];
 
   // Generate smart fallbacks from the first available candidate
-  const smartFallbacks: string[] = [];
+  const smartFallbacks: { source: string, value: string }[] = [];
   if (explicitCandidates.length > 0) {
     // Use the first candidate to generate variations
-    const fallbacks = generateSmartFallbacks(explicitCandidates[0]);
-    smartFallbacks.push(...fallbacks);
+    const fallbacks = generateSmartFallbacks(explicitCandidates[0].value);
+    fallbacks.forEach((fallback, index) => {
+      smartFallbacks.push({ source: `SMART_FALLBACK_${index + 1} (from ${explicitCandidates[0].source})`, value: fallback });
+    });
   }
   
-  // Filter out undefined and duplicates
-  return [...new Set([...explicitCandidates, ...smartFallbacks])];
+  // Return unique connection strings (keeping source info)
+  const seen = new Set<string>();
+  const uniqueResults: { source: string, value: string }[] = [];
+  
+  [...explicitCandidates, ...smartFallbacks].forEach(item => {
+    if (!seen.has(item.value)) {
+      seen.add(item.value);
+      uniqueResults.push(item);
+    }
+  });
+  
+  return uniqueResults;
 }
 
 // Determine appropriate SSL option. Supabase (including pooler.supabase.com)
@@ -123,8 +135,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
-  const connectionStrings = getAllConnectionStrings();
-  if (connectionStrings.length === 0) {
+  const connectionCandidates = getAllConnectionStrings();
+  if (connectionCandidates.length === 0) {
     console.error('[SETUP] No database connection string found');
     return res.status(500).json({ 
       success: false, 
@@ -137,14 +149,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   let connected = false;
 
   // Try each connection string until one works
-  for (const connectionString of connectionStrings) {
+  for (const candidate of connectionCandidates) {
+    const connectionString = candidate.value;
+    
     // Log connection details (masked)
     try {
       const u = new URL(connectionString);
       const maskedPassword = u.password ? `${u.password.substring(0, 2)}******${u.password.slice(-2)}` : 'none';
-      console.log(`[SETUP] Attempting connection to host: ${u.hostname}, port: ${u.port}, user: ${u.username}, db: ${u.pathname.slice(1)}, password_hint: ${maskedPassword}`);
+      console.log(`[SETUP] Attempting connection using ${candidate.source}`);
+      console.log(`[SETUP] Details: host=${u.hostname}, port=${u.port}, user=${u.username}, db=${u.pathname.slice(1)}, password_hint=${maskedPassword}`);
     } catch (e) {
-      console.log('[SETUP] Connecting to database (url parse failed)');
+      console.log(`[SETUP] Connecting using ${candidate.source} (url parse failed)`);
     }
 
     // Clean connection string to avoid conflicts with explicit SSL config
