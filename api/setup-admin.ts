@@ -95,7 +95,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Note: Using quotes "Admin" to match existing application usage
     // Ensure we check public schema to avoid tenant confusion
     const createTableQuery = `
-      CREATE TABLE IF NOT EXISTS public."Admin" (
+      CREATE TABLE IF NOT EXISTS "Admin" (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         first_name VARCHAR(255) NOT NULL,
         last_name VARCHAR(255) NOT NULL,
@@ -120,7 +120,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       // Create custom super admin
       const customPasswordHash = await hashPassword(password);
       const upsertCustomAdmin = `
-        INSERT INTO public."Admin" (email, password_hash, role, first_name, last_name, is_active)
+        INSERT INTO "Admin" (email, password_hash, role, first_name, last_name, is_active)
         VALUES ($1, $2, $3, $4, $5, true)
         ON CONFLICT (email) DO UPDATE SET
           password_hash = EXCLUDED.password_hash,
@@ -152,11 +152,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // 2. Insert Super Admin
     const upsertSuperAdmin = `
-      INSERT INTO public."Admin" (email, password_hash, role, first_name, last_name, is_active)
+      INSERT INTO "Admin" (email, password_hash, role, first_name, last_name, is_active)
       VALUES ($1, $2, $3, $4, $5, true)
       ON CONFLICT (email) DO UPDATE SET
         password_hash = EXCLUDED.password_hash,
         role = EXCLUDED.role,
+        first_name = EXCLUDED.first_name,
+        last_name = EXCLUDED.last_name,
         updated_at = CURRENT_TIMESTAMP
       RETURNING id, email, role;
     `;
@@ -171,11 +173,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // 3. Insert System Admin
     const upsertAdmin = `
-      INSERT INTO public."Admin" (email, password_hash, role, first_name, last_name, is_active)
+      INSERT INTO "Admin" (email, password_hash, role, first_name, last_name, is_active)
       VALUES ($1, $2, $3, $4, $5, true)
       ON CONFLICT (email) DO UPDATE SET
         password_hash = EXCLUDED.password_hash,
         role = EXCLUDED.role,
+        first_name = EXCLUDED.first_name,
+        last_name = EXCLUDED.last_name,
         updated_at = CURRENT_TIMESTAMP
       RETURNING id, email, role;
     `;
