@@ -49,6 +49,30 @@
       "destination": "/api/transfers"
     },
     {
+      "source": "/api/financial-transactions/:academyId/summary",
+      "destination": "/api/financial/summary"
+    },
+    {
+      "source": "/api/financial-transactions/:academyId/budget-categories",
+      "destination": "/api/financial/categories"
+    },
+    {
+      "source": "/api/financial-transactions/budget-categories/:id",
+      "destination": "/api/financial/categories/[id]"
+    },
+    {
+      "source": "/api/financial-transactions/:academyId",
+      "destination": "/api/financial/transactions"
+    },
+    {
+      "source": "/api/financial-transactions",
+      "destination": "/api/financial/transactions"
+    },
+    {
+      "source": "/api/financial-transactions/:id",
+      "destination": "/api/financial/transactions/[id]"
+    },
+    {
       "source": "/api/financial/summary",
       "destination": "/api/financial/summary"
     },
