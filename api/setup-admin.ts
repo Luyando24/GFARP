@@ -15,21 +15,35 @@ function resolveConnectionString(): string | undefined {
   );
 }
 
-// Determine SSL option
+// Determine appropriate SSL option. Supabase (including pooler.supabase.com)
+// requires TLS and can present a certificate chain that breaks strict
+// verification in some environments. We relax verification specifically
+// for Supabase/pooler hosts and when sslmode=require is present.
 function computeSslOption(urlStr: string | undefined): any {
-  if (!urlStr) return { rejectUnauthorized: false };
+  if (!urlStr) {
+    return process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false;
+  }
   try {
     const u = new URL(urlStr);
     const host = (u.hostname || '').toLowerCase();
     const sslmode = (u.searchParams.get('sslmode') || '').toLowerCase();
-    const isSupabase = host.includes('supabase') || host.includes('pooler');
-    
-    if (isSupabase || sslmode === 'require' || process.env.PGSSLMODE === 'require') {
+
+    const isSupabaseHost =
+      host.endsWith('supabase.co') ||
+      host.endsWith('supabase.com') ||
+      host.includes('pooler.supabase.com');
+
+    const envSslRequire = ['require', 'prefer'].includes((process.env.PGSSLMODE || '').toLowerCase())
+      || (process.env.DB_SSL === 'true')
+      || (process.env.DB_SSL_MODE || '').toLowerCase() === 'require';
+
+    if (isSupabaseHost || sslmode === 'require' || envSslRequire) {
       return { rejectUnauthorized: false };
     }
-    return { rejectUnauthorized: false }; // Default to lenient for cloud
+
+    return process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false;
   } catch {
-    return { rejectUnauthorized: false };
+    return process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false;
   }
 }
 
@@ -54,9 +68,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     });
   }
 
+  // Clean connection string to avoid conflicts with explicit SSL config
+  // Some pg versions prioritize connection string params over config object
+  let cleanConnectionString = connectionString;
+  try {
+    const u = new URL(connectionString);
+    if (u.searchParams.has('sslmode')) {
+      u.searchParams.delete('sslmode');
+      cleanConnectionString = u.toString();
+    }
+  } catch (e) {
+    // ignore
+  }
+
   const client = new pg.Client({
-    connectionString,
-    ssl: { rejectUnauthorized: false } // Force loose SSL for Vercel/Supabase
+    connectionString: cleanConnectionString,
+    ssl: computeSslOption(connectionString)
   });
 
   try {
