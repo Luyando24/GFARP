@@ -452,23 +452,22 @@ const handleDeleteTransaction: RequestHandler = async (req, res) => {
 
 // --- Route Definitions ---
 
-// Budget Categories
-router.put('/budget-categories/:id', handleUpdateBudgetCategory);
-router.delete('/budget-categories/:id', handleDeleteBudgetCategory);
-router.get('/:academyId/budget-categories', handleGetBudgetCategories);
-router.post('/:academyId/budget-categories', handleCreateBudgetCategory);
-
 // Summary
+// Put this first to ensure it's matched before :academyId
 router.get('/:academyId/summary', handleGetSummary);
 
+// Budget Categories
+// Put this second to ensure it's matched before :academyId
+router.get('/:academyId/budget-categories', handleGetBudgetCategories);
+router.post('/:academyId/budget-categories', handleCreateBudgetCategory);
+router.put('/budget-categories/:id', handleUpdateBudgetCategory);
+router.delete('/budget-categories/:id', handleDeleteBudgetCategory);
+
 // Transactions
-// Important: Put specific paths before generic param paths if necessary, 
-// but here :academyId and :id are mutually exclusive in usage usually, 
-// however 'summary' could be mistaken for an ID if :id was at root.
-// But :academyId is at root for GET list.
 router.post('/', handleCreateTransaction);
 router.put('/:id', handleUpdateTransaction);
 router.delete('/:id', handleDeleteTransaction);
+// This matches anything not matched above, so it must be last
 router.get('/:academyId', handleGetTransactions);
 
 export default router;
