@@ -31,6 +31,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import PaymentSuccess from "./pages/PaymentSuccess";
 import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 import SubscriptionCancel from "./pages/SubscriptionCancel";
+import SetupSuperAdmin from "./pages/SetupSuperAdmin";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,9 @@ const App = () => {
               <Route path="/login" element={<AuthLogin />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/register" element={<Register />} />
+              
+              {/* Temporary Setup Route */}
+              <Route path="/setup-super-admin" element={<SetupSuperAdmin />} />
 
               {/* Academy Registration - Public route */}
               <Route path="/academy-registration" element={<RegisterAcademy />} />

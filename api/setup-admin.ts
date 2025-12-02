@@ -111,6 +111,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Helper to hash
     const hashPassword = async (pwd: string) => bcrypt.hash(pwd, 10);
+    
+    // Check if body params are provided
+    const { email, password, firstName, lastName } = req.body || {};
+    
+    if (email && password) {
+      // Create custom super admin
+      const customPasswordHash = await hashPassword(password);
+      const upsertCustomAdmin = `
+        INSERT INTO "Admin" (email, password_hash, role, first_name, last_name, is_active)
+        VALUES ($1, $2, $3, $4, $5, true)
+        ON CONFLICT (email) DO UPDATE SET
+          password_hash = EXCLUDED.password_hash,
+          role = EXCLUDED.role,
+          first_name = EXCLUDED.first_name,
+          last_name = EXCLUDED.last_name,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING id, email, role;
+      `;
+      
+      const customAdminRes = await client.query(upsertCustomAdmin, [
+        email,
+        customPasswordHash,
+        'SUPERADMIN',
+        firstName || 'Super',
+        lastName || 'Admin'
+      ]);
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Custom Super Admin created successfully',
+        data: {
+          superAdmin: customAdminRes.rows[0]
+        }
+      });
+    }
+
     const defaultPasswordHash = await hashPassword('admin123');
 
     // 2. Insert Super Admin
