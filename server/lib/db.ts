@@ -75,9 +75,24 @@ function computeSslOption(urlStr: string | undefined): any {
 // Only create a pool if we have a valid connection string.
 // This prevents implicit localhost (127.0.0.1:5432) connections on Netlify.
 console.log('[DB] Initializing connection pool...');
-const pool: any = resolvedConnectionString
+
+// Clean connection string to avoid conflicts with explicit SSL config
+let cleanConnectionString = resolvedConnectionString;
+if (resolvedConnectionString) {
+  try {
+    const u = new URL(resolvedConnectionString);
+    if (u.searchParams.has('sslmode')) {
+      u.searchParams.delete('sslmode');
+      cleanConnectionString = u.toString();
+    }
+  } catch (e) {
+    // ignore
+  }
+}
+
+const pool: any = cleanConnectionString
   ? new Pool({
-    connectionString: resolvedConnectionString,
+    connectionString: cleanConnectionString,
     ssl: computeSslOption(resolvedConnectionString),
     max: parseInt(process.env.DB_POOL_MAX || '3'), // Reduced from 5 for serverless
     connectionTimeoutMillis: parseInt(process.env.DB_CONNECT_TIMEOUT_MS || '3000'), // Reduced from 8000ms to prevent Vercel timeout
