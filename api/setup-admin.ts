@@ -3,9 +3,61 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 
+// Helper to extract project ref from Supabase URL
+function getProjectRef(): string | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+  if (!url) return null;
+  try {
+    const u = new URL(url);
+    // Format: https://[project-ref].supabase.co
+    const parts = u.hostname.split('.');
+    if (parts.length > 0) return parts[0];
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+// Generate fallback connection strings by attempting to fix common configuration errors
+function generateSmartFallbacks(originalString: string): string[] {
+  const fallbacks: string[] = [];
+  const projectRef = getProjectRef();
+  
+  if (!projectRef) return [];
+
+  try {
+    const u = new URL(originalString);
+    
+    // Fix 1: If connecting to pooler without project ref in username
+    // Pattern: postgres@[host] -> postgres.[ref]@[host]
+    if (u.hostname.includes('pooler.supabase.com') && !u.username.includes('.')) {
+      const u2 = new URL(originalString);
+      u2.username = `${u2.username}.${projectRef}`;
+      fallbacks.push(u2.toString());
+    }
+
+    // Fix 2: Try Direct Connection Host
+    // Pattern: [user]:[pass]@[host] -> [user]:[pass]@db.[ref].supabase.co
+    // This bypasses the pooler entirely
+    const u3 = new URL(originalString);
+    u3.hostname = `db.${projectRef}.supabase.co`;
+    u3.port = '5432'; // Direct is always 5432
+    // Ensure username is clean for direct connection (usually just 'postgres')
+    if (u3.username.includes('.')) {
+      u3.username = u3.username.split('.')[0];
+    }
+    fallbacks.push(u3.toString());
+
+  } catch (e) {
+    // ignore parsing errors
+  }
+  
+  return fallbacks;
+}
+
 // Resolve all potential database connection strings
 function getAllConnectionStrings(): string[] {
-  const candidates = [
+  const explicitCandidates = [
     process.env.DIRECT_URL, // Prioritize direct connection for setup/DDL
     process.env.SUPABASE_DB_URL,
     process.env.DATABASE_URL,
@@ -13,10 +65,18 @@ function getAllConnectionStrings(): string[] {
     process.env.SUPABASE_POOLED_DATABASE_URL,
     process.env.POSTGRES_URL,
     process.env.PG_CONNECTION_STRING
-  ];
+  ].filter(Boolean) as string[];
+
+  // Generate smart fallbacks from the first available candidate
+  const smartFallbacks: string[] = [];
+  if (explicitCandidates.length > 0) {
+    // Use the first candidate to generate variations
+    const fallbacks = generateSmartFallbacks(explicitCandidates[0]);
+    smartFallbacks.push(...fallbacks);
+  }
   
   // Filter out undefined and duplicates
-  return [...new Set(candidates.filter(Boolean) as string[])];
+  return [...new Set([...explicitCandidates, ...smartFallbacks])];
 }
 
 // Determine appropriate SSL option. Supabase (including pooler.supabase.com)
