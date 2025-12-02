@@ -60,6 +60,9 @@ function computeSslOption(urlStr: string | undefined): any {
       || (process.env.DB_SSL_MODE || '').toLowerCase() === 'require';
 
     if (isSupabaseHost || sslmode === 'require' || envSslRequire) {
+      // IMPORTANT: Supabase pooler (AWS) and direct connections often present certificates 
+      // that Node.js considers "self-signed" or untrusted in the Vercel environment.
+      // We MUST explicitly disable rejection to allow the connection.
       return { rejectUnauthorized: false };
     }
 
