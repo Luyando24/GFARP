@@ -194,7 +194,7 @@ export default function RegisterAcademy() {
               </form>
 
               <div className="text-center text-sm mt-4">
-                Already have an account? <Link to="/login" className="text-[#005391] hover:underline">Login</Link>
+                Already have an account? <Link to="/academy-dashboard" className="text-[#005391] hover:underline">Login</Link>
               </div>
             </CardContent>
           </Card>
