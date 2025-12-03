@@ -115,7 +115,7 @@
     }
   },
   "env": {
-    "DATABASE_URL": "postgresql://postgres.lpsujzvospfaomgkrcew:pjZAX91JlmspAmlpv@aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require",
+    "DATABASE_URL": "postgresql://postgres.lpsujzvospfaomgkrcew:ZLUmqmSuFaKrTJ9f@aws-1-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require",
     "VITE_SUPABASE_URL": "https://lpsujzvospfaomgkrcew.supabase.co",
     "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxwc3VqenZvc3BmYW9tZ2tyY2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzEwMTQsImV4cCI6MjA3NjYwNzAxNH0.5Q210arv1Xd0ab87OM5VYklq1yoML6CpmIuzEQRjRdE",
     "REACT_APP_SUPABASE_URL": "https://lpsujzvospfaomgkrcew.supabase.co",
