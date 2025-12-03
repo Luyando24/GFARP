@@ -831,7 +831,7 @@ export const handleGetPlayerStatistics: RequestHandler = async (req, res) => {
     const activePlayersCount = totalPlayersCount;
 
     // Position statistics
-    let positionStats: any[] = [];
+    let positionStatsResult: any[] = [];
     try {
       const positionStatsQuery = `
         SELECT position, COUNT(*) as count 
@@ -841,7 +841,7 @@ export const handleGetPlayerStatistics: RequestHandler = async (req, res) => {
         ORDER BY count DESC
       `;
       const result = await query(positionStatsQuery, [academyId]);
-      positionStats = result.rows;
+      positionStatsResult = result.rows;
     } catch (e) {
       const positionStatsQuery = `
         SELECT position, COUNT(*) as count 
@@ -851,11 +851,11 @@ export const handleGetPlayerStatistics: RequestHandler = async (req, res) => {
         ORDER BY count DESC
       `;
       const result = await query(positionStatsQuery, [academyId]);
-      positionStats = result.rows;
+      positionStatsResult = result.rows;
     }
 
     // Age groups statistics
-    let ageGroupsStats: any[] = [];
+    let ageGroupsResult: any[] = [];
     try {
       const ageGroupsQuery = `
         SELECT 
@@ -872,7 +872,7 @@ export const handleGetPlayerStatistics: RequestHandler = async (req, res) => {
         ORDER BY count DESC
       `;
       const result = await query(ageGroupsQuery, [academyId]);
-      ageGroupsStats = result.rows;
+      ageGroupsResult = result.rows;
     } catch (e) {
       const ageGroupsQuery = `
         SELECT 
@@ -889,7 +889,7 @@ export const handleGetPlayerStatistics: RequestHandler = async (req, res) => {
         ORDER BY count DESC
       `;
       const result = await query(ageGroupsQuery, [academyId]);
-      ageGroupsStats = result.rows;
+      ageGroupsResult = result.rows;
     }
 
     // Recent players (using encrypted columns)
@@ -901,27 +901,15 @@ export const handleGetPlayerStatistics: RequestHandler = async (req, res) => {
       LIMIT 5
     `;
 
-    const [
-      totalPlayersResult,
-      activePlayersResult,
-      positionStatsResult,
-      ageGroupsResult,
-      recentPlayersResult
-    ] = await Promise.all([
-      query(totalPlayersQuery, [academyId]),
-      query(activePlayersQuery, [academyId]),
-      query(positionStatsQuery, [academyId]),
-      query(ageGroupsQuery, [academyId]),
-      query(recentPlayersQuery, [academyId])
-    ]);
+    const recentPlayersResult = await query(recentPlayersQuery, [academyId]);
 
-    const totalPlayers = parseInt(totalPlayersResult.rows[0].count);
-    const activePlayers = parseInt(activePlayersResult.rows[0].count);
-    const positionStats = positionStatsResult.rows.map(row => ({
+    const totalPlayers = totalPlayersCount;
+    const activePlayers = activePlayersCount;
+    const positionStats = positionStatsResult.map(row => ({
       position: row.position,
       count: parseInt(row.count)
     }));
-    const ageGroups = ageGroupsResult.rows.map(row => ({
+    const ageGroups = ageGroupsResult.map(row => ({
       ageGroup: row.age_group,
       count: parseInt(row.count)
     }));

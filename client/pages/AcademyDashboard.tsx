@@ -502,8 +502,11 @@ export default function AcademyDashboard() {
       console.log('Plans API response:', result);
 
       if (result.success) {
-        setAvailablePlans(result.data || []);
-        console.log('Available plans set:', result.data);
+        // The API returns { success: true, data: { plans: [...] } }
+        // We need to extract the plans array correctly
+        const plans = result.data?.plans || result.data || [];
+        setAvailablePlans(plans);
+        console.log('Available plans set:', plans);
       } else {
         console.error('Failed to load plans:', result.error);
       }

@@ -79,13 +79,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             return res.status(200).json({
                 success: true,
-                data: { plans: defaultPlans }
+                data: defaultPlans
             });
         }
 
         return res.status(200).json({
             success: true,
-            data: { plans }
+            data: plans
         });
 
     } catch (error: any) {
