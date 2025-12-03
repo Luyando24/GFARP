@@ -1,0 +1,49 @@
+  // Handle subscription cancellation
+  const handleCancelSubscription = async () => {
+    if (!academyInfo?.id) return;
+
+    setIsCancelling(true);
+    try {
+      const session = JSON.parse(localStorage.getItem("ipims_auth_session") || "{}");
+      const token = session?.access_token || session?.token;
+
+      const response = await fetch('/api/subscriptions/cancel', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          academyId: academyInfo.id
+        }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: "Subscription cancelled successfully",
+        });
+        // Reload subscription data
+        loadSubscriptionData();
+        loadSubscriptionHistory();
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to cancel subscription",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error cancelling subscription:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel subscription",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCancelling(false);
+    }
+  };
+
