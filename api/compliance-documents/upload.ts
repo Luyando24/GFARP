@@ -62,6 +62,31 @@ export default async function handler(
 
         const supabase = createClient(supabaseUrl, supabaseKey);
 
+        // Check if bucket exists and create if not
+        try {
+            const { data: buckets } = await supabase.storage.listBuckets();
+            const bucketExists = buckets?.some(b => b.name === 'compliance-documents');
+
+            if (!bucketExists) {
+                console.log('[VERCEL] Creating compliance-documents bucket...');
+                const { error: createBucketError } = await supabase.storage.createBucket('compliance-documents', {
+                    public: true,
+                    fileSizeLimit: 10485760, // 10MB
+                    allowedMimeTypes: ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']
+                });
+                
+                if (createBucketError) {
+                    console.error('[VERCEL] Failed to create bucket:', createBucketError);
+                    // Try to continue, maybe it was created by another process or listing failed
+                } else {
+                    console.log('[VERCEL] compliance-documents bucket created successfully');
+                }
+            }
+        } catch (bucketCheckError) {
+            console.warn('[VERCEL] Error checking/creating bucket:', bucketCheckError);
+            // Continue anyway
+        }
+
         // Run multer middleware
         await runMiddleware(req, res, upload.single('file'));
 
