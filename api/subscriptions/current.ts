@@ -69,19 +69,32 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const daysRemaining = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
         // Get usage stats (player count)
-        // Using 'players' (snake_case) as confirmed by api/football-players.ts
+        // Try 'Players' (PascalCase) first as it seems to be the correct one based on recent fixes
         let playerCount = 0;
-
-        const { count, error: countError } = await supabase
-            .from('players')
+        
+        let { count, error: countError } = await supabase
+            .from('Players')
             .select('*', { count: 'exact', head: true })
-            .eq('academy_id', academyId)
-            .eq('is_active', true);
+            .eq('academy_id', academyId);
+
+        // If that fails, try 'players' (snake_case)
+        if (countError) {
+             console.warn('Error fetching player count from "Players", trying "players":', countError);
+             const fallbackResult = await supabase
+                .from('players')
+                .select('*', { count: 'exact', head: true })
+                .eq('academy_id', academyId);
+                
+             if (!fallbackResult.error) {
+                 count = fallbackResult.count;
+                 countError = null;
+             } else {
+                 console.warn('Error fetching player count from "players":', fallbackResult.error);
+             }
+        }
 
         if (!countError) {
             playerCount = count || 0;
-        } else {
-            console.warn('Error fetching player count:', countError);
         }
 
         const playerLimit = subscription.subscription_plans?.player_limit || 0;

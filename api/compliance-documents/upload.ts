@@ -109,12 +109,13 @@ export default async function handler(
             .getPublicUrl(filePath);
 
         // Insert document metadata to database
+        // Note: The table schema likely uses 'user_id' instead of 'academy_id' based on previous errors
         const documentId = uuidv4();
         const { data: insertData, error: insertError } = await supabase
             .from('fifa_compliance_documents')
             .insert({
                 id: documentId,
-                academy_id: academyId,
+                user_id: academyId, // Map academyId to user_id column
                 document_name: documentName,
                 document_type: documentType,
                 file_path: filePath,

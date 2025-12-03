@@ -115,7 +115,7 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
           const playerCountQuery = `
             SELECT COUNT(*) as player_count 
             FROM "Players" 
-            WHERE academy_id = $1 AND is_active = true
+            WHERE academy_id = $1
           `;
           const playerCountResult = await query(playerCountQuery, [academyId]);
           currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
@@ -124,7 +124,7 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
           const playerCountQuery = `
             SELECT COUNT(*) as player_count 
             FROM players 
-            WHERE academy_id = $1 AND is_active = true
+            WHERE academy_id = $1
           `;
           const playerCountResult = await query(playerCountQuery, [academyId]);
           currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
@@ -154,7 +154,7 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
             const playerCountQuery = `
               SELECT COUNT(*) as player_count 
               FROM "Players" 
-              WHERE academy_id = $1 AND is_active = true
+              WHERE academy_id = $1
             `;
             const playerCountResult = await query(playerCountQuery, [academyId]);
             currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
@@ -162,7 +162,7 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
             const playerCountQuery = `
               SELECT COUNT(*) as player_count 
               FROM players 
-              WHERE academy_id = $1 AND is_active = true
+              WHERE academy_id = $1
             `;
             const playerCountResult = await query(playerCountQuery, [academyId]);
             currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
@@ -203,7 +203,7 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
         registration_date, guardian_info_cipher, medical_info_cipher,
         playing_history_cipher, emergency_contact_cipher,
         current_club_cipher, city_cipher, country_cipher,
-        card_id, card_qr_signature, academy_id, created_at, updated_at
+        card_id, card_qr_signature, academy_id, is_active, created_at, updated_at
       ) VALUES (
         $1, $2, $3, $4,
         $5, $6, $7, $8,
@@ -213,7 +213,7 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
         $19, $20, $21,
         $22, $23,
         $24, $25, $26,
-        $27, $28, $29, NOW(), NOW()
+        $27, $28, $29, true, NOW(), NOW()
       ) RETURNING id, player_card_id, position, height_cm, weight_kg, jersey_number, created_at, updated_at
     `;
 
