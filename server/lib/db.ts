@@ -76,15 +76,36 @@ function computeSslOption(urlStr: string | undefined): any {
 // This prevents implicit localhost (127.0.0.1:5432) connections on Netlify.
 console.log('[DB] Initializing connection pool...');
 
-// Clean connection string to avoid conflicts with explicit SSL config
+// Clean connection string to avoid conflicts with explicit SSL config and fix pooler username
 let cleanConnectionString = resolvedConnectionString;
 if (resolvedConnectionString) {
   try {
     const u = new URL(resolvedConnectionString);
+    
+    // Fix: If connecting to pooler without project ref in username
+    // Pattern: postgres@[host] -> postgres.[ref]@[host]
+    if (u.hostname.includes('pooler.supabase.com') && !u.username.includes('.')) {
+      // Try to get project ref from hostname (usually available in direct URL but not pooler URL)
+      // OR try to get it from VITE_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL
+      const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+      if (supabaseUrl) {
+        try {
+          const su = new URL(supabaseUrl);
+          const ref = su.hostname.split('.')[0];
+          if (ref) {
+            u.username = `${u.username}.${ref}`;
+            console.log(`[DB] Auto-fixed pooler username: ${u.username}`);
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    }
+
     if (u.searchParams.has('sslmode')) {
       u.searchParams.delete('sslmode');
-      cleanConnectionString = u.toString();
     }
+    cleanConnectionString = u.toString();
   } catch (e) {
     // ignore
   }
