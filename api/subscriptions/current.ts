@@ -70,7 +70,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // Get usage stats (player count)
         const { count: playerCount, error: countError } = await supabase
-            .from('football_players') // Assuming this is the table name
+            .from('players') // Correct table name
             .select('*', { count: 'exact', head: true })
             .eq('academy_id', academyId);
 
