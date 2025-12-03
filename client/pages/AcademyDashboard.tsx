@@ -312,19 +312,19 @@ export default function AcademyDashboard() {
 
   // Scroll to plan management function
   const scrollToPlanManagement = () => {
-    const element = document.getElementById('plan-management');
-    if (element) {
-      // First switch to subscription tab
-      setActiveTab("subscription");
-      // Then scroll to the plan management section with a slight delay
-      setTimeout(() => {
+    // First switch to subscription tab
+    setActiveTab("subscription");
+    // Then scroll to the plan management section with a slight delay to allow rendering
+    setTimeout(() => {
+      const element = document.getElementById('plan-management');
+      if (element) {
         element.scrollIntoView({
           behavior: 'smooth',
           block: 'start',
           inline: 'nearest'
         });
-      }, 100);
-    }
+      }
+    }, 100);
   };
 
   useEffect(() => {
@@ -1185,6 +1185,13 @@ export default function AcademyDashboard() {
                               subscriptionData?.planName || "Free Plan"
                             )}
                           </p>
+                          <Button 
+                            variant="link" 
+                            className="p-0 h-auto text-sm text-blue-600 mt-1"
+                            onClick={scrollToPlanManagement}
+                          >
+                            Manage Plan
+                          </Button>
                         </div>
                         <div className="flex flex-col items-end">
                           <Star className="h-6 w-6 text-yellow-500 mb-1" />
