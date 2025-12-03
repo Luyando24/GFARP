@@ -69,30 +69,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const daysRemaining = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
 
         // Get usage stats (player count)
-        // Note: 'players' table might be named 'Players' (case sensitive) in some setups
-        // Using 'Players' as per typical Prisma/Supabase conventions if 'players' fails or returns 0 unexpectedly
+        // Using 'players' (snake_case) as confirmed by api/football-players.ts
         let playerCount = 0;
-        
-        // Try 'Players' first (PascalCase is common in Prisma)
-        const { count: countPascal, error: errorPascal } = await supabase
-            .from('Players')
-            .select('*', { count: 'exact', head: true })
-            .eq('academy_id', academyId);
 
-        if (!errorPascal) {
-            playerCount = countPascal || 0;
+        const { count, error: countError } = await supabase
+            .from('players')
+            .select('*', { count: 'exact', head: true })
+            .eq('academy_id', academyId)
+            .eq('is_active', true);
+
+        if (!countError) {
+            playerCount = count || 0;
         } else {
-            // Fallback to 'players' (snake_case)
-            const { count: countSnake, error: errorSnake } = await supabase
-                .from('players')
-                .select('*', { count: 'exact', head: true })
-                .eq('academy_id', academyId);
-            
-            if (!errorSnake) {
-                playerCount = countSnake || 0;
-            } else {
-                console.warn('Error fetching player count from both table variants:', errorPascal, errorSnake);
-            }
+            console.warn('Error fetching player count:', countError);
         }
 
         const playerLimit = subscription.subscription_plans?.player_limit || 0;
