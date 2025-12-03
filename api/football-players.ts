@@ -203,8 +203,76 @@ export default async function handler(
             const cardId = `CARD-${Date.now()}`;
             const cardQrSignature = `QR-${playerId}`;
 
-            // Simple encryption (in production, use proper encryption)
             const encrypt = (text: string) => text || '';
+
+            // Check subscription and player limits
+            console.log('[VERCEL] Checking subscription and player limits');
+
+            // Get current player count for this academy
+            const { count: currentPlayerCount, error: countError } = await supabase
+                .from('players')
+                .select('*', { count: 'exact', head: true })
+                .eq('academy_id', body.academyId)
+                .eq('is_active', true);
+
+            if (countError) {
+                console.error('[VERCEL] Error counting players:', countError);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to check player count',
+                    error: countError.message
+                });
+            }
+
+            // Get academy's active subscription
+            const { data: subscription, error: subError } = await supabase
+                .from('academy_subscriptions')
+                .select(`
+                    *,
+                    subscription_plans (
+                        id,
+                        name,
+                        player_limit
+                    )
+                `)
+                .eq('academy_id', body.academyId)
+                .eq('status', 'active')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single();
+
+            if (subError && subError.code !== 'PGRST116') {
+                console.error('[VERCEL] Error fetching subscription:', subError);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to check subscription',
+                    error: subError.message
+                });
+            }
+
+            // Determine player limit (default to 1 for free/no subscription)
+            const playerLimit = subscription?.subscription_plans?.player_limit || 1;
+
+            console.log('[VERCEL] Player limit check:', {
+                currentCount: currentPlayerCount,
+                limit: playerLimit,
+                hasSubscription: !!subscription
+            });
+
+            // Check if limit is reached
+            if ((currentPlayerCount || 0) >= playerLimit) {
+                console.log('[VERCEL] Player limit reached');
+                return res.status(403).json({
+                    success: false,
+                    message: `Player limit reached. Your current plan allows ${playerLimit} player${playerLimit !== 1 ? 's' : ''}. Please upgrade your subscription to add more players.`,
+                    error: 'PLAYER_LIMIT_REACHED',
+                    details: {
+                        currentCount: currentPlayerCount,
+                        limit: playerLimit,
+                        planName: subscription?.subscription_plans?.name || 'Free Plan'
+                    }
+                });
+            }
 
             // Prepare player data
             const playerData = {
