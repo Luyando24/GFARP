@@ -10,18 +10,18 @@ import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Textarea } from '../ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { 
-  Plus, 
-  Search, 
-  Edit, 
-  Trash2, 
-  Eye, 
-  Building, 
-  Users, 
-  MapPin, 
-  Phone, 
-  Mail, 
-  Globe, 
+import {
+  Plus,
+  Search,
+  Edit,
+  Trash2,
+  Eye,
+  Building,
+  Users,
+  MapPin,
+  Phone,
+  Mail,
+  Globe,
   Calendar,
   CheckCircle,
   XCircle,
@@ -89,20 +89,20 @@ export default function AcademyManagement() {
   const [countryFilter, setCountryFilter] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  
+
   // Bulk selection state
   const [selectedAcademies, setSelectedAcademies] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
-  
+
   // Admin state
   const [adminEmail, setAdminEmail] = useState('admin@system.com'); // Default admin email
-  
+
   // Dialog states
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [selectedAcademy, setSelectedAcademy] = useState<Academy | null>(null);
-  
+
   // Form state
   const [formData, setFormData] = useState<AcademyFormData>({
     name: '',
@@ -302,12 +302,12 @@ export default function AcademyManagement() {
   // Handle status toggle
   const handleStatusToggle = async (academy: Academy, isActive: boolean) => {
     const reason = prompt(`Please provide a reason for ${isActive ? 'activating' : 'deactivating'} ${academy.name}:`);
-    
+
     if (reason === null) {
       // User cancelled the prompt
       return;
     }
-    
+
     if (!reason.trim()) {
       toast({
         title: 'Reason Required',
@@ -323,10 +323,10 @@ export default function AcademyManagement() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           isActive,
           reason: reason.trim(),
-          adminEmail 
+          adminEmail
         })
       });
 
@@ -356,12 +356,12 @@ export default function AcademyManagement() {
   // Handle verification toggle
   const handleVerificationToggle = async (academy: Academy, isVerified: boolean) => {
     const reason = prompt(`Please provide a reason for ${isVerified ? 'verifying' : 'unverifying'} ${academy.name}:`);
-    
+
     if (reason === null) {
       // User cancelled the prompt
       return;
     }
-    
+
     if (!reason.trim()) {
       toast({
         title: 'Reason Required',
@@ -377,10 +377,10 @@ export default function AcademyManagement() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           isVerified,
           reason: reason.trim(),
-          adminEmail 
+          adminEmail
         })
       });
 
@@ -441,7 +441,7 @@ export default function AcademyManagement() {
     }
 
     try {
-      const promises = selectedAcademies.map(academyId => 
+      const promises = selectedAcademies.map(academyId =>
         fetch(`/api/academies/${academyId}/activate`, {
           method: 'PATCH',
           headers: {
@@ -647,7 +647,7 @@ export default function AcademyManagement() {
                 />
               </div>
             </div>
-            
+
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by status" />
@@ -785,8 +785,8 @@ export default function AcademyManagement() {
                       </TableCell>
                       <TableCell>
                         <div className="flex space-x-2">
-                          {/* Only Deactivation Button */}
-                          {academy.isActive && (
+                          {/* Activate/Deactivate Button */}
+                          {academy.isActive ? (
                             <Button
                               variant="outline"
                               size="sm"
@@ -796,8 +796,18 @@ export default function AcademyManagement() {
                               <XCircle className="w-4 h-4 mr-1" />
                               Deactivate
                             </Button>
+                          ) : (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleStatusToggle(academy, true)}
+                              className="border-green-200 text-green-700 hover:bg-green-50 hover:border-green-300"
+                            >
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              Activate
+                            </Button>
                           )}
-                          
+
                           <Button
                             variant="outline"
                             size="sm"
@@ -871,8 +881,8 @@ export default function AcademyManagement() {
               {isEditOpen ? 'Edit Academy' : 'Create New Academy'}
             </DialogTitle>
             <DialogDescription>
-              {isEditOpen 
-                ? 'Update academy information' 
+              {isEditOpen
+                ? 'Update academy information'
                 : 'Add a new academy to the platform'
               }
             </DialogDescription>
@@ -948,8 +958,8 @@ export default function AcademyManagement() {
 
               <div>
                 <Label htmlFor="country">Country *</Label>
-                <Select 
-                  value={formData.country} 
+                <Select
+                  value={formData.country}
                   onValueChange={(value) => setFormData({ ...formData, country: value })}
                 >
                   <SelectTrigger>
@@ -1057,8 +1067,8 @@ export default function AcademyManagement() {
             </div>
 
             <div className="flex justify-end space-x-2 pt-4">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => {
                   setIsCreateOpen(false);
                   setIsEditOpen(false);

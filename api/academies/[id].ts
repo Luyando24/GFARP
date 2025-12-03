@@ -92,20 +92,27 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const updateData: any = {};
 
             if (body.name) updateData.name = body.name;
+            if (body.email) updateData.email = body.email;
             if (body.phone) updateData.phone = body.phone;
             if (body.address) updateData.address = body.address;
             if (body.city) updateData.district = body.city;
             if (body.country) updateData.province = body.country;
+            if (body.contactPerson) updateData.contact_person = body.contactPerson;
+            if (body.licenseNumber) updateData.license_number = body.licenseNumber;
+            if (body.foundedYear) updateData.founded_year = body.foundedYear;
+            if (body.website) updateData.website = body.website;
+            if (body.description) updateData.description = body.description;
             if (body.directorName) updateData.director_name = body.directorName;
             if (body.directorEmail) updateData.director_email = body.directorEmail;
             if (body.directorPhone) updateData.director_phone = body.directorPhone;
-            if (body.foundedYear) updateData.founded_year = body.foundedYear;
 
             // Also support snake_case inputs just in case
+            if (body.contact_person) updateData.contact_person = body.contact_person;
+            if (body.license_number) updateData.license_number = body.license_number;
+            if (body.founded_year) updateData.founded_year = body.founded_year;
             if (body.director_name) updateData.director_name = body.director_name;
             if (body.director_email) updateData.director_email = body.director_email;
             if (body.director_phone) updateData.director_phone = body.director_phone;
-            if (body.founded_year) updateData.founded_year = body.founded_year;
 
             // Perform update
             const { data, error } = await supabase
@@ -124,6 +131,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 success: true,
                 message: 'Academy updated successfully',
                 data: data
+            });
+        }
+
+        // Handle DELETE request - Delete academy
+        if (req.method === 'DELETE') {
+            console.log(`[VERCEL] Deleting academy ${id}`);
+
+            const { data, error } = await supabase
+                .from('academies')
+                .delete()
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('[VERCEL] Academy delete error:', error);
+                throw new Error(error.message);
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: 'Academy deleted successfully'
             });
         }
 
