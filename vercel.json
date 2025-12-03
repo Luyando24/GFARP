@@ -17,6 +17,10 @@
       "destination": "/api/subscriptions/history"
     },
     {
+      "source": "/api/subscriptions/cancel",
+      "destination": "/api/subscriptions/cancel"
+    },
+    {
       "source": "/api/subscriptions/upgrade",
       "destination": "/api/subscriptions/upgrade"
     },
