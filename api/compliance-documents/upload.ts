@@ -1,15 +1,34 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
-import formidable from 'formidable';
-import fs from 'fs';
+import multer from 'multer';
 
 export const config = {
     api: {
-        bodyParser: false, // Disallow body parsing for file uploads
+        bodyParser: false, // Disallow body parsing for file uploads (only works in Next.js, but good practice)
     },
     maxDuration: 60,
 };
+
+// Configure multer
+const upload = multer({
+    storage: multer.memoryStorage(),
+    limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB limit
+    },
+});
+
+// Helper to run middleware
+function runMiddleware(req: any, res: any, fn: any) {
+    return new Promise((resolve, reject) => {
+        fn(req, res, (result: any) => {
+            if (result instanceof Error) {
+                return reject(result);
+            }
+            return resolve(result);
+        });
+    });
+}
 
 export default async function handler(
     req: VercelRequest,
@@ -43,31 +62,18 @@ export default async function handler(
 
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        // Parse form data
-        const form = formidable({
-            maxFileSize: 10 * 1024 * 1024, // 10MB limit
-        });
+        // Run multer middleware
+        await runMiddleware(req, res, upload.single('file'));
 
-        const parseForm = (): Promise<{ fields: formidable.Fields; files: formidable.Files }> => {
-            return new Promise((resolve, reject) => {
-                form.parse(req as any, (err, fields, files) => {
-                    if (err) reject(err);
-                    resolve({ fields, files });
-                });
-            });
-        };
+        // Extract form data from req.body (populated by multer)
+        const body = (req as any).body || {};
+        const file = (req as any).file;
 
-        const { fields, files } = await parseForm();
-
-        // Extract form data
-        const academyId = Array.isArray(fields.academyId) ? fields.academyId[0] : fields.academyId;
-        const documentName = Array.isArray(fields.document_name) ? fields.document_name[0] : fields.document_name;
-        const documentType = Array.isArray(fields.document_type) ? fields.document_type[0] : fields.document_type;
-        const description = Array.isArray(fields.description) ? fields.description[0] : fields.description;
-        const expiryDate = Array.isArray(fields.expiry_date) ? fields.expiry_date[0] : fields.expiry_date;
-
-        // Get uploaded file
-        const file = Array.isArray(files.file) ? files.file[0] : files.file;
+        const academyId = body.academyId;
+        const documentName = body.document_name;
+        const documentType = body.document_type;
+        const description = body.description;
+        const expiryDate = body.expiry_date;
 
         if (!academyId || !documentName || !documentType || !file) {
             return res.status(400).json({
@@ -79,17 +85,14 @@ export default async function handler(
         console.log(`[VERCEL] Uploading compliance document: ${documentName}`);
 
         // Generate unique filename
-        const fileExtension = file.originalFilename?.split('.').pop() || 'pdf';
+        const fileExtension = file.originalname?.split('.').pop() || 'pdf';
         const storedFilename = `${uuidv4()}.${fileExtension}`;
         const filePath = `${academyId}/${documentType}/${storedFilename}`;
-
-        // Read file buffer
-        const fileBuffer = fs.readFileSync(file.filepath);
 
         // Upload to Supabase Storage
         const { data: uploadData, error: uploadError } = await supabase.storage
             .from('compliance-documents')
-            .upload(filePath, fileBuffer, {
+            .upload(filePath, file.buffer, {
                 contentType: file.mimetype || 'application/pdf',
                 upsert: false
             });
