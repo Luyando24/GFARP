@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-    console.log('[VERCEL] Academy update request received');
+    console.log(`[VERCEL] Academy ${req.method} request received`);
 
     // Handle CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -13,20 +13,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).end();
     }
 
-    // Allow PUT (and PATCH just in case)
-    if (req.method !== 'PUT' && req.method !== 'PATCH') {
-        return res.status(405).json({ success: false, message: 'Method not allowed' });
-    }
-
     try {
         const { id } = req.query;
-        const body = req.body;
 
         if (!id) {
             return res.status(400).json({ success: false, message: 'Academy ID is required' });
         }
-
-        console.log(`[VERCEL] Updating academy ${id} with data:`, body);
 
         // Initialize Supabase client
         const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
@@ -39,49 +31,113 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        // Map frontend camelCase fields to database snake_case columns
-        const updateData: any = {};
+        // Handle GET request - Fetch academy details
+        if (req.method === 'GET') {
+            console.log(`[VERCEL] Fetching academy ${id}`);
 
-        if (body.name) updateData.name = body.name;
-        if (body.phone) updateData.phone = body.phone;
-        if (body.address) updateData.address = body.address;
-        if (body.city) updateData.district = body.city; // Mapping city to district
-        if (body.country) updateData.province = body.country; // Mapping country to province
-        if (body.directorName) updateData.director_name = body.directorName;
-        if (body.directorEmail) updateData.director_email = body.directorEmail;
-        if (body.directorPhone) updateData.director_phone = body.directorPhone;
-        if (body.foundedYear) updateData.founded_year = body.foundedYear;
+            const { data, error } = await supabase
+                .from('academies')
+                .select('*')
+                .eq('id', id)
+                .single();
 
-        // Also support snake_case inputs just in case
-        if (body.director_name) updateData.director_name = body.director_name;
-        if (body.director_email) updateData.director_email = body.director_email;
-        if (body.director_phone) updateData.director_phone = body.director_phone;
-        if (body.founded_year) updateData.founded_year = body.founded_year;
+            if (error) {
+                console.error('[VERCEL] Academy fetch error:', error);
+                if (error.code === 'PGRST116') {
+                    return res.status(404).json({
+                        success: false,
+                        message: 'Academy not found'
+                    });
+                }
+                throw new Error(error.message);
+            }
 
-        // Perform update
-        const { data, error } = await supabase
-            .from('academies')
-            .update(updateData)
-            .eq('id', id)
-            .select()
-            .single();
+            // Transform snake_case to camelCase for frontend
+            const transformedData = {
+                id: data.id,
+                name: data.name,
+                email: data.email,
+                phone: data.phone,
+                address: data.address,
+                city: data.district,
+                country: data.province,
+                code: data.code,
+                directorName: data.director_name,
+                directorEmail: data.director_email,
+                directorPhone: data.director_phone,
+                foundedYear: data.founded_year,
+                website: data.website,
+                description: data.description,
+                isActive: data.is_active,
+                isVerified: data.is_verified,
+                storageUsed: data.storage_used || 0,
+                player_count: data.player_count || 0,
+                subscriptionPlan: data.subscription_plan || 'Free Plan',
+                createdAt: data.created_at,
+                updatedAt: data.updated_at
+            };
 
-        if (error) {
-            console.error('[VERCEL] Academy update error:', error);
-            throw new Error(error.message);
+            return res.status(200).json({
+                success: true,
+                data: transformedData
+            });
         }
 
-        return res.status(200).json({
-            success: true,
-            message: 'Academy updated successfully',
-            data: data
+        // Handle PUT/PATCH request - Update academy
+        if (req.method === 'PUT' || req.method === 'PATCH') {
+            const body = req.body;
+            console.log(`[VERCEL] Updating academy ${id} with data:`, body);
+
+            // Map frontend camelCase fields to database snake_case columns
+            const updateData: any = {};
+
+            if (body.name) updateData.name = body.name;
+            if (body.phone) updateData.phone = body.phone;
+            if (body.address) updateData.address = body.address;
+            if (body.city) updateData.district = body.city;
+            if (body.country) updateData.province = body.country;
+            if (body.directorName) updateData.director_name = body.directorName;
+            if (body.directorEmail) updateData.director_email = body.directorEmail;
+            if (body.directorPhone) updateData.director_phone = body.directorPhone;
+            if (body.foundedYear) updateData.founded_year = body.foundedYear;
+
+            // Also support snake_case inputs just in case
+            if (body.director_name) updateData.director_name = body.director_name;
+            if (body.director_email) updateData.director_email = body.director_email;
+            if (body.director_phone) updateData.director_phone = body.director_phone;
+            if (body.founded_year) updateData.founded_year = body.founded_year;
+
+            // Perform update
+            const { data, error } = await supabase
+                .from('academies')
+                .update(updateData)
+                .eq('id', id)
+                .select()
+                .single();
+
+            if (error) {
+                console.error('[VERCEL] Academy update error:', error);
+                throw new Error(error.message);
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: 'Academy updated successfully',
+                data: data
+            });
+        }
+
+        // Method not allowed
+        return res.status(405).json({
+            success: false,
+            message: `Method ${req.method} not allowed`
         });
 
     } catch (error: any) {
-        console.error('[VERCEL] Update error:', error);
+        console.error('[VERCEL] Error:', error);
         return res.status(500).json({
             success: false,
-            message: 'Update failed',
+            message: 'Operation failed',
             error: error.message
         });
     }
