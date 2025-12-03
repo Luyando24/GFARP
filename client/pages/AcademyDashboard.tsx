@@ -1188,7 +1188,10 @@ export default function AcademyDashboard() {
                           <Button 
                             variant="link" 
                             className="p-0 h-auto text-sm text-blue-600 mt-1"
-                            onClick={scrollToPlanManagement}
+                            onClick={() => {
+                              console.log('Scrolling to plan management');
+                              scrollToPlanManagement();
+                            }}
                           >
                             Manage Plan
                           </Button>
