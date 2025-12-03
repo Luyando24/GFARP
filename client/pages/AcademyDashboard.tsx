@@ -69,6 +69,7 @@ import ThemeToggle from '@/components/navigation/ThemeToggle';
 import PlayerManagement from '@/components/players/PlayerManagement';
 import FinancialTransactionsManager from '@/components/FinancialTransactionsManager';
 import PaymentMethodSelector from '@/components/PaymentMethodSelector';
+import AcademyComplianceTab from '@/components/academy/AcademyComplianceTab';
 import { Player, Transfer, getTransfers, createTransfer, updateTransfer, deleteTransfer, getAcademyDashboardStats, Api } from '@/lib/api';
 
 // Mock data for academy dashboard
@@ -1036,6 +1037,7 @@ export default function AcademyDashboard() {
     { id: "players", label: "Players", icon: Users },
     { id: "transfers", label: "Transfers", icon: TrendingUp },
     { id: "finances", label: "Finances", icon: DollarSign },
+    { id: "fifa-compliance", label: "FIFA Compliance", icon: Shield },
     { id: "settings", label: "Settings", icon: Settings }
   ];
 
@@ -1159,10 +1161,11 @@ export default function AcademyDashboard() {
             <ComplianceDocuments onBack={() => setActiveView('main')} />
           ) : (
             <Tabs value={activeTab} onValueChange={setActiveTab}>
-              <TabsList className="grid w-full grid-cols-6">
+              <TabsList className="grid w-full grid-cols-7">
                 <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
                 <TabsTrigger value="players">Players</TabsTrigger>
                 <TabsTrigger value="finances">Finances</TabsTrigger>
+                <TabsTrigger value="fifa-compliance">FIFA Compliance</TabsTrigger>
                 <TabsTrigger value="subscription">Subscription</TabsTrigger>
                 <TabsTrigger value="settings">Settings</TabsTrigger>
               </TabsList>
@@ -1673,6 +1676,11 @@ export default function AcademyDashboard() {
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+              </TabsContent>
+
+              {/* FIFA Compliance Tab */}
+              <TabsContent value="fifa-compliance" className="space-y-6">
+                <AcademyComplianceTab academyId={academyInfo?.id || academyData.id} />
               </TabsContent>
 
               {/* Compliance Tab */}
