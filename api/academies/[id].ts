@@ -35,6 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (req.method === 'GET') {
             console.log(`[VERCEL] Fetching academy ${id}`);
 
+            // Fetch academy details
             const { data, error } = await supabase
                 .from('academies')
                 .select('*')
@@ -51,6 +52,57 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 }
                 throw new Error(error.message);
             }
+
+            // Fetch players
+            const { data: playersData, error: playersError } = await supabase
+                .from('players')
+                .select('*')
+                .eq('academy_id', id);
+
+            if (playersError) {
+                console.error('[VERCEL] Players fetch error:', playersError);
+                // Don't fail the whole request if players fetch fails, just log it
+            }
+
+            // Decrypt function (matches the simple encryption we're using)
+            const decrypt = (value: any) => {
+                if (!value) return '';
+                if (typeof value === 'string' && value.startsWith('\\x')) {
+                    return Buffer.from(value.slice(2), 'hex').toString('utf8');
+                }
+                if (Buffer.isBuffer(value)) return value.toString('utf8');
+                if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
+                    return Buffer.from(value).toString('utf8');
+                }
+                if (typeof value === 'string') return value;
+                return String(value);
+            };
+
+            // Calculate age
+            const calculateAge = (dob: string) => {
+                if (!dob) return null;
+                const birthDate = new Date(dob);
+                const today = new Date();
+                let age = today.getFullYear() - birthDate.getFullYear();
+                const monthDiff = today.getMonth() - birthDate.getMonth();
+                if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+                    age--;
+                }
+                return age;
+            };
+
+            // Transform players data
+            const players = (playersData || []).map((player: any) => {
+                const dob = decrypt(player.dob_cipher);
+                return {
+                    id: player.id,
+                    firstName: decrypt(player.first_name_cipher),
+                    lastName: decrypt(player.last_name_cipher),
+                    position: player.position,
+                    age: calculateAge(dob),
+                    isActive: player.is_active !== false
+                };
+            });
 
             // Transform snake_case to camelCase for frontend
             const transformedData = {
@@ -71,10 +123,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 isActive: data.is_active,
                 isVerified: data.is_verified,
                 storageUsed: data.storage_used || 0,
-                player_count: data.player_count || 0,
+                player_count: players.length, // Use actual player count
                 subscriptionPlan: data.subscription_plan || 'Free Plan',
                 createdAt: data.created_at,
-                updatedAt: data.updated_at
+                updatedAt: data.updated_at,
+                players: players, // Include players in response
+                activities: [], // Empty for now
+                compliance: null // Empty for now
             };
 
             return res.status(200).json({

@@ -5,13 +5,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Building, 
-  Users, 
-  MapPin, 
-  Phone, 
-  Mail, 
-  Globe, 
+import {
+  Building,
+  Users,
+  MapPin,
+  Phone,
+  Mail,
+  Globe,
   Calendar,
   ArrowLeft,
   Clock,
@@ -39,90 +39,25 @@ const AcademyDetails = () => {
     const fetchAcademyDetails = async () => {
       try {
         setLoading(true);
-        
+
         // Fetch academy details
         const response = await fetch(`/api/academies/${id}`);
         const academyData = await response.json();
-        
+
         if (academyData.success) {
           setAcademy(academyData.data);
         } else {
           throw new Error(academyData.error || 'Failed to fetch academy details');
         }
-        
-        // For now, set empty arrays for activities and players
-        // These endpoints may not exist yet
-        setActivities([]);
+
+        // Set players from API response
         setPlayers(academyData.data?.players || []);
-        
-        // Set FIFA compliance data (mock data for now)
-        setFifaCompliance({
-          overallStatus: 'under_review',
-          complianceScore: 75,
-          lastReviewDate: '2024-01-15',
-          nextReviewDate: '2024-07-15',
-          documents: [
-            {
-              id: 1,
-              name: 'Academy License',
-              type: 'academy_licensing',
-              status: 'approved',
-              uploadDate: '2024-01-10',
-              expiryDate: '2025-01-10'
-            },
-            {
-              id: 2,
-              name: 'Youth Protection Certificate',
-              type: 'youth_protection',
-              status: 'pending',
-              uploadDate: '2024-01-12',
-              expiryDate: '2025-01-12'
-            },
-            {
-              id: 3,
-              name: 'Financial Fair Play Report',
-              type: 'financial_fair_play',
-              status: 'requires_action',
-              uploadDate: '2024-01-08',
-              expiryDate: '2024-12-31'
-            },
-            {
-              id: 4,
-              name: 'Player Registration Documents',
-              type: 'player_registration',
-              status: 'approved',
-              uploadDate: '2024-01-05',
-              expiryDate: '2024-12-31'
-            }
-          ],
-          requirements: [
-            {
-              id: 1,
-              name: 'Academy Infrastructure Standards',
-              status: 'completed',
-              description: 'Minimum facility requirements met'
-            },
-            {
-              id: 2,
-              name: 'Coaching Staff Qualifications',
-              status: 'in_progress',
-              description: 'Head coach certification pending'
-            },
-            {
-              id: 3,
-              name: 'Player Welfare Policies',
-              status: 'completed',
-              description: 'Child protection policies in place'
-            },
-            {
-              id: 4,
-              name: 'Financial Transparency',
-              status: 'requires_attention',
-              description: 'Annual financial report submission overdue'
-            }
-          ]
-        });
-        
+
+        // Set compliance and activities from API response (or empty if not available)
+        setFifaCompliance(academyData.data?.compliance || null);
+        setActivities(academyData.data?.activities || []);
+
+
         setLoading(false);
       } catch (error) {
         console.error('Error fetching academy details:', error);
@@ -199,7 +134,7 @@ const AcademyDetails = () => {
                     )}
                   </div>
                 </div>
-                
+
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground">Subscription Plan</h3>
                   <div className="mt-1">
@@ -208,23 +143,23 @@ const AcademyDetails = () => {
                     </Badge>
                   </div>
                 </div>
-                
+
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground">License Number</h3>
                   <p>{academy.licenseNumber || "Not provided"}</p>
                 </div>
-                
+
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground">Founded Year</h3>
                   <p>{academy.foundedYear || "Not provided"}</p>
                 </div>
-                
+
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground">Number of Players</h3>
                   <p>{academy.player_count || 0}</p>
                 </div>
               </div>
-              
+
               <div className="space-y-4">
                 <div className="flex items-start">
                   <Phone className="h-5 w-5 mr-2 text-muted-foreground" />
@@ -233,7 +168,7 @@ const AcademyDetails = () => {
                     <p>{academy.phone || "Not provided"}</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start">
                   <Mail className="h-5 w-5 mr-2 text-muted-foreground" />
                   <div>
@@ -241,7 +176,7 @@ const AcademyDetails = () => {
                     <p>{academy.email}</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start">
                   <MapPin className="h-5 w-5 mr-2 text-muted-foreground" />
                   <div>
@@ -249,7 +184,7 @@ const AcademyDetails = () => {
                     <p>{[academy.address, academy.city, academy.country].filter(Boolean).join(', ')}</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start">
                   <Globe className="h-5 w-5 mr-2 text-muted-foreground" />
                   <div>
@@ -257,7 +192,7 @@ const AcademyDetails = () => {
                     <p>{academy.website || "Not provided"}</p>
                   </div>
                 </div>
-                
+
                 <div className="flex items-start">
                   <Calendar className="h-5 w-5 mr-2 text-muted-foreground" />
                   <div>
@@ -293,12 +228,12 @@ const AcademyDetails = () => {
                   <h3 className="text-sm font-medium text-muted-foreground">Current Plan</h3>
                   <p className="font-medium">{academy.subscriptionPlan || "Free Plan"}</p>
                 </div>
-                
+
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground">Storage Used</h3>
                   <p>{(academy.storageUsed / (1024 * 1024)).toFixed(2)} MB</p>
                 </div>
-                
+
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground">Next Billing Date</h3>
                   <p>{academy.nextBillingDate ? new Date(academy.nextBillingDate).toLocaleDateString() : "N/A"}</p>
@@ -348,8 +283,8 @@ const AcademyDetails = () => {
                             )}
                           </td>
                           <td className="py-3 px-4">
-                            <Button 
-                              variant="outline" 
+                            <Button
+                              variant="outline"
                               size="sm"
                               onClick={() => navigate(`/admin/player-details/${player.id}`)}
                             >
@@ -371,7 +306,7 @@ const AcademyDetails = () => {
         </TabsContent>
 
         <TabsContent value="fifa-compliance" className="space-y-6">
-          {fifaCompliance && (
+          {fifaCompliance ? (
             <>
               {/* Overall Compliance Status */}
               <Card>
@@ -430,7 +365,7 @@ const AcademyDetails = () => {
                         <div className="flex-1">
                           <h4 className="font-medium">{doc.name}</h4>
                           <p className="text-sm text-muted-foreground">
-                            Uploaded: {new Date(doc.uploadDate).toLocaleDateString()} | 
+                            Uploaded: {new Date(doc.uploadDate).toLocaleDateString()} |
                             Expires: {new Date(doc.expiryDate).toLocaleDateString()}
                           </p>
                         </div>
@@ -490,6 +425,14 @@ const AcademyDetails = () => {
                 </CardContent>
               </Card>
             </>
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Shield className="h-12 w-12 mb-4 opacity-20" />
+                <p className="text-lg font-medium">No compliance data available</p>
+                <p className="text-sm">Compliance information has not been set up for this academy yet.</p>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 
