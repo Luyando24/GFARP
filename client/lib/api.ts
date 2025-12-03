@@ -1196,7 +1196,9 @@ export interface UpgradeSubscriptionRequest {
 // Get current academy subscription
 export async function getCurrentSubscription(academyId?: string): Promise<SubscriptionData | null> {
   try {
-    const url = `${BASE_URL}/subscriptions/current`;
+    const url = academyId
+      ? `${BASE_URL}/subscriptions/current?academyId=${academyId}`
+      : `${BASE_URL}/subscriptions/current`;
 
     const response = await fetch(url, {
       method: 'GET',

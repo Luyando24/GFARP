@@ -5,8 +5,20 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/subscriptions/current",
+      "destination": "/api/subscriptions/current"
+    },
+    {
       "source": "/api/subscriptions/plans",
-      "destination": "/api/server/index"
+      "destination": "/api/subscriptions/plans"
+    },
+    {
+      "source": "/api/subscriptions/history",
+      "destination": "/api/subscriptions/history"
+    },
+    {
+      "source": "/api/subscriptions/upgrade",
+      "destination": "/api/subscriptions/upgrade"
     },
     {
       "source": "/api/football-auth/academy/register",
