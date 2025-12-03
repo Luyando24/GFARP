@@ -126,8 +126,46 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
   };
 
   // Open add player dialog
-  const openAddPlayerDialog = () => {
-    setIsAddPlayerOpen(true);
+  const openAddPlayerDialog = async () => {
+    // Check subscription limit before opening dialog
+    try {
+      const session = JSON.parse(localStorage.getItem("ipims_auth_session") || "{}");
+      const academyId = session?.schoolId || session?.academyId;
+
+      if (!academyId) {
+        toast({
+          title: "Error",
+          description: "Could not find academy information. Please try logging in again.",
+          variant: "destructive"
+        });
+        return;
+      }
+
+      // Check current subscription and player count
+      const response = await fetch(`/api/subscriptions/current?academyId=${academyId}`);
+      const result = await response.json();
+
+      if (result.success && result.data) {
+        const { playerCount, playerLimit } = result.data;
+
+        // Check if limit is reached
+        if ((playerCount || 0) >= playerLimit) {
+          setSubscriptionError(
+            `Player limit reached. Your current plan allows ${playerLimit} player${playerLimit !== 1 ? 's' : ''}. Please upgrade your subscription to add more players.`
+          );
+          setShowSubscriptionNotice(true);
+          return; // Don't open the dialog
+        }
+      }
+
+      // If we're within limits, open the dialog
+      setIsAddPlayerOpen(true);
+    } catch (error) {
+      console.error('Error checking subscription limits:', error);
+      // If check fails, still allow opening the dialog
+      // The backend will validate again on submission
+      setIsAddPlayerOpen(true);
+    }
   };
 
   // Add new player
@@ -175,10 +213,10 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
         // Handle document uploads if any exist
         if (playerData.uploadedDocuments) {
           const playerId = (response.data as any).player?.id || (response.data as any).id;
-          
+
           if (playerId) {
             const documentTypes = Object.keys(playerData.uploadedDocuments) as Array<keyof typeof playerData.uploadedDocuments>;
-            
+
             // Upload documents in parallel
             await Promise.all(documentTypes.map(async (docType) => {
               const file = playerData.uploadedDocuments[docType];

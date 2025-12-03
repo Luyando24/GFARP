@@ -597,6 +597,67 @@ export default function AcademyDashboard() {
     }
   };
 
+  // Verify payment from Stripe redirect
+  const verifyPayment = async (sessionId: string) => {
+    try {
+      const response = await fetch('/api/payments/verify-payment', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ sessionId }),
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Payment Successful",
+          description: "Your subscription has been upgraded successfully!",
+        });
+        loadSubscriptionData();
+        loadSubscriptionHistory();
+      } else {
+        toast({
+          title: "Payment Verification Failed",
+          description: result.message || "Could not verify payment. Please contact support.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error verifying payment:', error);
+      toast({
+        title: "Error",
+        description: "An error occurred while verifying payment.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Check for payment success URL params
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentSuccess = params.get('payment_success');
+    const sessionId = params.get('session_id');
+    const paymentCancelled = params.get('payment_cancelled');
+
+    if (paymentSuccess && sessionId) {
+      // Verify payment
+      verifyPayment(sessionId);
+      // Clean URL (remove params but keep tab)
+      const newUrl = window.location.pathname + '?tab=subscription';
+      window.history.replaceState({}, '', newUrl);
+    } else if (paymentCancelled) {
+      toast({
+        title: "Payment Cancelled",
+        description: "You have cancelled the payment process.",
+      });
+      // Clean URL
+      const newUrl = window.location.pathname + '?tab=subscription';
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
+
   // Load transfers when academy info is available
   useEffect(() => {
     if (academyInfo?.id) {

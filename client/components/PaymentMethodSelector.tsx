@@ -201,79 +201,45 @@ export default function PaymentMethodSelector({
       return;
     }
 
-    // Validate payment details based on selected method
-    if (paymentMethod === 'CARD' && !validateCardDetails()) {
-      return;
-    }
-
-    if (paymentMethod === 'PAYPAL' && !validatePayPalDetails()) {
-      return;
-    }
-
     setIsProcessing(true);
     try {
-      let paymentReference = '';
-      
       if (paymentMethod === 'CARD') {
-        // In a real implementation, you would integrate with a payment processor like Stripe
-        paymentReference = `CARD_${Date.now()}_${cardDetails.cardNumber.slice(-4)}`;
-      } else if (paymentMethod === 'PAYPAL') {
-        // Simulate PayPal payment processing
-        try {
-          const paypalResult = await simulatePayPalPayment(paypalDetails.email, selectedPlan.price);
-          if (!paypalResult.success) {
-            throw new Error(paypalResult.error || 'PayPal payment failed');
-          }
-          paymentReference = paypalResult.transactionId;
-        } catch (paypalError: any) {
-          toast({
-            title: "PayPal Payment Failed",
-            description: paypalError.message || "Failed to process PayPal payment",
-            variant: "destructive",
-          });
-          setIsProcessing(false);
-          return;
-        }
-      }
-
-      const response = await fetch('/api/subscriptions/upgrade', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          academyId,
-          newPlanId: selectedPlan.id,
-          paymentMethod,
-          paymentReference,
-          notes: `Upgraded to ${selectedPlan.name} via ${paymentMethod}`
-        }),
-      });
-
-      const result = await response.json();
-
-      if (result.success) {
-        toast({
-          title: "Success",
-          description: `Successfully upgraded to ${selectedPlan.name}`,
+        // Create Stripe Checkout Session
+        const response = await fetch('/api/payments/create-checkout-session', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            academyId,
+            planId: selectedPlan.id,
+            successUrl: `${window.location.origin}/academy-dashboard?tab=subscription&payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
+            cancelUrl: `${window.location.origin}/academy-dashboard?tab=subscription&payment_cancelled=true`
+          }),
         });
-        onSuccess();
-        onClose();
+
+        const result = await response.json();
+
+        if (result.success && result.url) {
+          // Redirect to Stripe Checkout
+          window.location.href = result.url;
+        } else {
+          throw new Error(result.message || 'Failed to create checkout session');
+        }
       } else {
         toast({
-          title: "Error",
-          description: result.error || "Failed to process payment",
-          variant: "destructive",
+          title: "Coming Soon",
+          description: "This payment method is not yet available.",
         });
+        setIsProcessing(false);
       }
-    } catch (error) {
-      console.error('Error processing payment:', error);
+    } catch (error: any) {
+      console.error('Error initiating payment:', error);
       toast({
         title: "Error",
-        description: "Failed to process payment",
+        description: error.message || "Failed to initiate payment",
         variant: "destructive",
       });
-    } finally {
       setIsProcessing(false);
     }
   };
@@ -430,7 +396,7 @@ export default function PaymentMethodSelector({
           </Button>
           <Button onClick={handleSubmit} disabled={isProcessing}>
             {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isProcessing 
+            {isProcessing
               ? (paymentMethod === 'PAYPAL' ? 'Processing PayPal...' : 'Processing...')
               : (selectedPlan.isFree ? 'Activate Plan' : `Pay $${selectedPlan.price}`)
             }
