@@ -6,37 +6,6 @@
   "rewrites": [
     {
       "source": "/api/subscriptions/current",
-      "destination": "/api/subscriptions/current"
-    },
-    {
-      "source": "/api/subscriptions/plans",
-      "destination": "/api/subscriptions/plans"
-    },
-    {
-      "source": "/api/subscriptions/history",
-      "destination": "/api/subscriptions/history"
-    },
-    {
-      "source": "/api/subscriptions/cancel",
-      "destination": "/api/subscriptions/cancel"
-    },
-    {
-      "source": "/api/subscriptions/upgrade",
-      "destination": "/api/subscriptions/upgrade"
-    },
-    {
-      "source": "/api/football-auth/academy/register",
-      "destination": "/api/football-auth/academy/register"
-    },
-    {
-      "source": "/api/football-auth/academy/login",
-      "destination": "/api/football-auth/academy/login"
-    },
-    {
-      "source": "/api/academies/:id",
-      "destination": "/api/academies/[id]"
-    },
-    {
       "source": "/api/football-players/search",
       "destination": "/api/football-players/search"
     },

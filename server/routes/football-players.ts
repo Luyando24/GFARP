@@ -905,7 +905,7 @@ export const handleGetPlayerStatistics: RequestHandler = async (req, res) => {
 
     const totalPlayers = totalPlayersCount;
     const activePlayers = activePlayersCount;
-    const positionStats = positionStatsResult.map(row => ({
+    const formattedPositionStats = positionStatsResult.map(row => ({
       position: row.position,
       count: parseInt(row.count)
     }));
@@ -926,7 +926,7 @@ export const handleGetPlayerStatistics: RequestHandler = async (req, res) => {
       data: {
         totalPlayers,
         activePlayers,
-        positionStats,
+        positionStats: formattedPositionStats,
         ageGroups,
         recentPlayers
       }
