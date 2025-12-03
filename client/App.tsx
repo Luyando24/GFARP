@@ -53,7 +53,7 @@ const App = () => {
               <Route path="/login" element={<AuthLogin />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/register" element={<Register />} />
-              
+
               {/* Temporary Setup Route */}
               <Route path="/setup-super-admin" element={<SetupSuperAdmin />} />
 
@@ -78,6 +78,7 @@ const App = () => {
                 <Route path="/admin/support" element={<AdminSupportManagement />} />
                 <Route path="/admin/super-admins" element={<SuperAdmins />} />
                 <Route path="/admin/academy/:id" element={<AcademyDetails />} />
+                <Route path="/admin/player-details/:id" element={<PlayerDetails />} />
               </Route>
 
               {/* Stripe payment/subscription outcome routes */}

@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Save, 
-  Edit, 
-  User, 
-  Phone, 
-  Mail, 
-  Calendar, 
-  MapPin, 
-  Heart, 
-  Shield, 
-  Ruler, 
+import {
+  ArrowLeft,
+  Save,
+  Edit,
+  User,
+  Phone,
+  Mail,
+  Calendar,
+  MapPin,
+  Heart,
+  Shield,
+  Ruler,
   Weight,
   Trophy,
   Activity,
@@ -47,7 +47,7 @@ const playerPositions = [
 ];
 
 const nationalities = [
-  "Zambian", "South African", "Kenyan", "Nigerian", "Ghanaian", "Tanzanian", 
+  "Zambian", "South African", "Kenyan", "Nigerian", "Ghanaian", "Tanzanian",
   "Ugandan", "Zimbabwean", "Botswanan", "Malawian", "Mozambican", "Other"
 ];
 
@@ -88,13 +88,13 @@ const PlayerDetails = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
-  
+
   const [player, setPlayer] = useState<DetailedPlayer | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(searchParams.get('edit') === 'true');
   const [formData, setFormData] = useState<Partial<DetailedPlayer>>({});
-  
+
   // Document upload state
   const [uploadedFiles, setUploadedFiles] = useState({
     passportId: null as File | null,
@@ -140,14 +140,14 @@ const PlayerDetails = () => {
       if (response.success) {
         // Parse the combined phone number
         const { countryCode, phoneNumber } = parsePhoneNumber(response.data.phone || '');
-        
+
         // Set player data with parsed phone and mapped guardian fields
         const playerData = mapGuardianToParentFields({
           ...response.data,
           phoneCountryCode: countryCode,
           phone: phoneNumber
         });
-        
+
         setPlayer(playerData);
         setFormData(playerData);
         // Load existing documents
@@ -202,7 +202,7 @@ const PlayerDetails = () => {
 
   const handleSave = async () => {
     if (!player) return;
-    
+
     setSaving(true);
     try {
       // Prepare data with combined phone number and mapped field names
@@ -214,21 +214,21 @@ const PlayerDetails = () => {
         guardianPhone: formData.parentPhone,
         guardianEmail: formData.parentEmail
       };
-      
+
       // First update player details
       const response = await Api.updatePlayerDetails(player.id, dataToSend);
       if (response.success) {
         setPlayer({ ...player, ...formData });
-        
+
         // Upload any new documents
         await uploadNewDocuments();
-        
+
         setIsEditing(false);
         toast({
           title: "Success",
           description: "Player details and documents updated successfully"
         });
-        
+
         // Reload documents to ensure the new photo is displayed
         await loadPlayerDocuments(player.id);
       } else {
@@ -240,12 +240,12 @@ const PlayerDetails = () => {
       }
     } catch (error) {
       console.error("Error updating player details:", error);
-      
+
       // For demo purposes, update the local state and upload documents
       setPlayer({ ...player, ...formData });
       await uploadNewDocuments();
       setIsEditing(false);
-      
+
       toast({
         title: "Success",
         description: "Player details and documents updated successfully (demo mode)"
@@ -259,7 +259,7 @@ const PlayerDetails = () => {
     if (!player) return;
 
     const documentTypes = Object.keys(uploadedFiles) as Array<keyof typeof uploadedFiles>;
-    
+
     for (const docType of documentTypes) {
       const file = uploadedFiles[docType];
       if (file) {
@@ -282,7 +282,7 @@ const PlayerDetails = () => {
         }
       }
     }
-    
+
     // Reload documents to show the updated list
     await loadPlayerDocuments(player.id);
   };
@@ -292,11 +292,11 @@ const PlayerDetails = () => {
     const birthDate = new Date(dateOfBirth);
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
-    
+
     return age;
   };
 
@@ -319,7 +319,7 @@ const PlayerDetails = () => {
       ...prev,
       [fileType]: file
     }));
-    
+
     if (file) {
       toast({
         title: "File Selected",
@@ -452,9 +452,9 @@ const PlayerDetails = () => {
         <div className="text-center">
           <h2 className="text-2xl font-bold mb-2">Player Not Found</h2>
           <p className="text-gray-600 mb-4">The requested player could not be found.</p>
-          <Button onClick={() => navigate('/academy-dashboard')}>
+          <Button onClick={() => navigate(-1)}>
             <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Dashboard
+            Go Back
           </Button>
         </div>
       </div>
@@ -467,7 +467,7 @@ const PlayerDetails = () => {
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-4">
-            <Button variant="ghost" onClick={() => navigate('/academy-dashboard')}>
+            <Button variant="ghost" onClick={() => navigate(-1)}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
@@ -518,8 +518,8 @@ const PlayerDetails = () => {
                       console.log('Showing uploaded file preview:', imageUrl);
                       return (
                         <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 border-2 border-blue-200">
-                          <img 
-                            src={imageUrl} 
+                          <img
+                            src={imageUrl}
                             alt={`${player.firstName} ${player.lastName}`}
                             className="w-full h-full object-cover"
                             onLoad={() => console.log('Uploaded image loaded successfully')}
@@ -528,15 +528,15 @@ const PlayerDetails = () => {
                         </div>
                       );
                     }
-                    
+
                     // Check for saved photo from server
                     const savedPhoto = getSavedDocument('player_photo');
                     if (savedPhoto && savedPhoto.file_url) {
                       console.log('Showing saved photo from server:', savedPhoto.file_url);
                       return (
                         <div className="w-24 h-24 rounded-full overflow-hidden mx-auto mb-4 border-2 border-blue-200 relative">
-                          <img 
-                            src={savedPhoto.file_url} 
+                          <img
+                            src={savedPhoto.file_url}
                             alt={`${player.firstName} ${player.lastName}`}
                             className="w-full h-full object-cover"
                             onLoad={() => console.log('Server image loaded successfully')}
@@ -550,13 +550,13 @@ const PlayerDetails = () => {
                             }}
                           />
                           {/* Fallback that shows when image fails to load */}
-                          <div className="fallback-avatar w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center absolute inset-0" style={{display: 'none'}}>
+                          <div className="fallback-avatar w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center absolute inset-0" style={{ display: 'none' }}>
                             <User className="h-12 w-12 text-blue-600" />
                           </div>
                         </div>
                       );
                     }
-                    
+
                     // Default fallback - no photo available
                     console.log('No photo available, showing default icon');
                     console.log('Debug info:', {
@@ -573,7 +573,7 @@ const PlayerDetails = () => {
                   })()}
                   <h3 className="text-xl font-semibold">{player.firstName} {player.lastName}</h3>
                   <p className="text-gray-600">{player.position}</p>
-                  
+
                   {/* Quick photo upload/change button */}
                   {isEditing && (
                     <div className="mt-2">
@@ -595,12 +595,12 @@ const PlayerDetails = () => {
                       </Button>
                     </div>
                   )}
-                  
+
                   <Badge variant={player.isActive ? 'default' : 'destructive'} className="mt-2">
                     {player.isActive ? 'Active' : 'Inactive'}
                   </Badge>
                 </div>
-                
+
                 <div className="space-y-3 pt-4 border-t">
                   <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4 text-gray-500" />
@@ -772,8 +772,8 @@ const PlayerDetails = () => {
                     <Label htmlFor="phone">Phone Number</Label>
                     {isEditing ? (
                       <div className="relative">
-                        <Select 
-                          value={formData.phoneCountryCode || '+260'} 
+                        <Select
+                          value={formData.phoneCountryCode || '+260'}
                           onValueChange={(value) => setFormData(prev => ({ ...prev, phoneCountryCode: value }))}
                         >
                           <SelectTrigger className="w-20 absolute left-0 top-0 h-full border-r-0 rounded-r-none z-10">
@@ -1397,7 +1397,7 @@ const PlayerDetails = () => {
                       )}
                     </div>
                   </div>
-                  
+
                   {getDocumentCount() > 0 && (
                     <div className="mt-2 pt-2 border-t border-blue-200">
                       <div className="flex items-center gap-2 text-blue-700">
