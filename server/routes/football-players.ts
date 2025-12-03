@@ -109,14 +109,26 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
         }
 
         // Check if they've already reached the free plan limit
-        const playerCountQuery = `
-          SELECT COUNT(*) as player_count 
-          FROM players 
-          WHERE academy_id = $1 AND is_active = true
-        `;
-
-        const playerCountResult = await query(playerCountQuery, [academyId]);
-        const currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
+        // Handle case-sensitive table names (players vs Players)
+        let currentPlayerCount = 0;
+        try {
+          const playerCountQuery = `
+            SELECT COUNT(*) as player_count 
+            FROM "Players" 
+            WHERE academy_id = $1 AND is_active = true
+          `;
+          const playerCountResult = await query(playerCountQuery, [academyId]);
+          currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
+        } catch (e) {
+          // Fallback to lowercase table name
+          const playerCountQuery = `
+            SELECT COUNT(*) as player_count 
+            FROM players 
+            WHERE academy_id = $1 AND is_active = true
+          `;
+          const playerCountResult = await query(playerCountQuery, [academyId]);
+          currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
+        }
 
         if (currentPlayerCount >= subscription.player_limit) {
           return res.status(403).json({
@@ -137,14 +149,24 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
 
         // If player limit is not unlimited (-1), check current player count
         if (subscription.player_limit !== -1) {
-          const playerCountQuery = `
-            SELECT COUNT(*) as player_count 
-            FROM players 
-            WHERE academy_id = $1 AND is_active = true
-          `;
-
-          const playerCountResult = await query(playerCountQuery, [academyId]);
-          const currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
+          let currentPlayerCount = 0;
+          try {
+            const playerCountQuery = `
+              SELECT COUNT(*) as player_count 
+              FROM "Players" 
+              WHERE academy_id = $1 AND is_active = true
+            `;
+            const playerCountResult = await query(playerCountQuery, [academyId]);
+            currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
+          } catch (e) {
+            const playerCountQuery = `
+              SELECT COUNT(*) as player_count 
+              FROM players 
+              WHERE academy_id = $1 AND is_active = true
+            `;
+            const playerCountResult = await query(playerCountQuery, [academyId]);
+            currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
+          }
 
           if (currentPlayerCount >= subscription.player_limit) {
             return res.status(403).json({
@@ -793,35 +815,82 @@ export const handleGetPlayerStatistics: RequestHandler = async (req, res) => {
     }
 
     // Total players count
-    const totalPlayersQuery = 'SELECT COUNT(*) as count FROM players WHERE academy_id = $1';
+    let totalPlayersCount = 0;
+    try {
+      const totalPlayersQuery = 'SELECT COUNT(*) as count FROM "Players" WHERE academy_id = $1';
+      const result = await query(totalPlayersQuery, [academyId]);
+      totalPlayersCount = parseInt(result.rows[0].count);
+    } catch (e) {
+      const totalPlayersQuery = 'SELECT COUNT(*) as count FROM players WHERE academy_id = $1';
+      const result = await query(totalPlayersQuery, [academyId]);
+      totalPlayersCount = parseInt(result.rows[0].count);
+    }
 
-    // Active players count (same as total since we don't have is_active column yet)
-    const activePlayersQuery = 'SELECT COUNT(*) as count FROM players WHERE academy_id = $1';
+    // Active players count (same as total since we don't have is_active column yet, or it's handled in where clause if it existed)
+    // Using total for now as placeholder
+    const activePlayersCount = totalPlayersCount;
 
     // Position statistics
-    const positionStatsQuery = `
-      SELECT position, COUNT(*) as count 
-      FROM players 
-      WHERE academy_id = $1 
-      GROUP BY position 
-      ORDER BY count DESC
-    `;
+    let positionStats: any[] = [];
+    try {
+      const positionStatsQuery = `
+        SELECT position, COUNT(*) as count 
+        FROM "Players" 
+        WHERE academy_id = $1 
+        GROUP BY position 
+        ORDER BY count DESC
+      `;
+      const result = await query(positionStatsQuery, [academyId]);
+      positionStats = result.rows;
+    } catch (e) {
+      const positionStatsQuery = `
+        SELECT position, COUNT(*) as count 
+        FROM players 
+        WHERE academy_id = $1 
+        GROUP BY position 
+        ORDER BY count DESC
+      `;
+      const result = await query(positionStatsQuery, [academyId]);
+      positionStats = result.rows;
+    }
 
     // Age groups statistics
-    const ageGroupsQuery = `
-      SELECT 
-        CASE 
-          WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE)) - EXTRACT(YEAR FROM AGE(created_at)) < 12 THEN 'Under 12'
-          WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE)) - EXTRACT(YEAR FROM AGE(created_at)) < 15 THEN 'Under 15'
-          WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE)) - EXTRACT(YEAR FROM AGE(created_at)) < 18 THEN 'Under 18'
-          ELSE 'Over 18'
-        END as age_group,
-        COUNT(*) as count
-      FROM players 
-      WHERE academy_id = $1
-      GROUP BY age_group
-      ORDER BY count DESC
-    `;
+    let ageGroupsStats: any[] = [];
+    try {
+      const ageGroupsQuery = `
+        SELECT 
+          CASE 
+            WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE)) - EXTRACT(YEAR FROM AGE(created_at)) < 12 THEN 'Under 12'
+            WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE)) - EXTRACT(YEAR FROM AGE(created_at)) < 15 THEN 'Under 15'
+            WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE)) - EXTRACT(YEAR FROM AGE(created_at)) < 18 THEN 'Under 18'
+            ELSE 'Over 18'
+          END as age_group,
+          COUNT(*) as count
+        FROM "Players" 
+        WHERE academy_id = $1
+        GROUP BY age_group
+        ORDER BY count DESC
+      `;
+      const result = await query(ageGroupsQuery, [academyId]);
+      ageGroupsStats = result.rows;
+    } catch (e) {
+      const ageGroupsQuery = `
+        SELECT 
+          CASE 
+            WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE)) - EXTRACT(YEAR FROM AGE(created_at)) < 12 THEN 'Under 12'
+            WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE)) - EXTRACT(YEAR FROM AGE(created_at)) < 15 THEN 'Under 15'
+            WHEN EXTRACT(YEAR FROM AGE(CURRENT_DATE)) - EXTRACT(YEAR FROM AGE(created_at)) < 18 THEN 'Under 18'
+            ELSE 'Over 18'
+          END as age_group,
+          COUNT(*) as count
+        FROM players 
+        WHERE academy_id = $1
+        GROUP BY age_group
+        ORDER BY count DESC
+      `;
+      const result = await query(ageGroupsQuery, [academyId]);
+      ageGroupsStats = result.rows;
+    }
 
     // Recent players (using encrypted columns)
     const recentPlayersQuery = `
