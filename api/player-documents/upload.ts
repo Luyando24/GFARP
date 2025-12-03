@@ -107,6 +107,21 @@ export default async function handler(
         const storedFilename = `${uuidv4()}${fileExtension}`;
         const filePath = `player-documents/${playerId}/${documentType}/${storedFilename}`;
 
+        // Check if bucket exists and create if not
+        const { data: buckets } = await supabase.storage.listBuckets();
+        const bucketExists = buckets?.some(b => b.name === 'player-documents');
+
+        if (!bucketExists) {
+            console.log('[VERCEL] Creating player-documents bucket...');
+            const { error: createBucketError } = await supabase.storage.createBucket('player-documents', {
+                public: true
+            });
+            if (createBucketError) {
+                console.error('[VERCEL] Failed to create bucket:', createBucketError);
+                // Continue anyway, maybe it exists but listing failed or race condition
+            }
+        }
+
         // Upload to Supabase Storage
         const { data: uploadData, error: uploadError } = await supabase.storage
             .from('player-documents')
