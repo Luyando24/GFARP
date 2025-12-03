@@ -3,17 +3,17 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth, clearSession, isAdmin } from '@/lib/auth';
 import { useToast } from '@/components/ui/use-toast';
 import AcademyManagement from '../components/academy/AcademyManagement';
-import { 
-  Trophy, 
-  Users, 
-  Calendar, 
-  ClipboardCheck, 
-  User, 
-  Bell, 
-  Award, 
-  TrendingUp, 
-  Clock, 
-  FileText, 
+import {
+  Trophy,
+  Users,
+  Calendar,
+  ClipboardCheck,
+  User,
+  Bell,
+  Award,
+  TrendingUp,
+  Clock,
+  FileText,
   Download,
   Eye,
   CheckCircle,
@@ -148,7 +148,7 @@ const chartConfig = {
     color: "#2563eb",
   },
   academies: {
-    label: "Academies", 
+    label: "Academies",
     color: "#dc2626",
   },
   revenue: {
@@ -164,7 +164,7 @@ const chartConfig = {
     color: "#0891b2",
   },
   memory: {
-    label: "Memory Usage", 
+    label: "Memory Usage",
     color: "#be123c",
   },
   requests: {
@@ -331,7 +331,7 @@ export default function AdminDashboard() {
         const res = await fetch('/api/dashboard/stats');
         if (res.ok) {
           const data = await res.json();
-          
+
           // Update system stats with real data
           setSystemStats({
             totalAcademies: data.totalAcademies || 0,
@@ -358,7 +358,7 @@ export default function AdminDashboard() {
             averageTransactionValue: data.averageTransactionValue || 0,
             revenueGrowth: data.revenueGrowth || 0
           });
-          
+
           setErrors(prev => ({ ...prev, stats: null }));
         } else {
           console.error('Failed to fetch dashboard stats');
@@ -638,7 +638,7 @@ export default function AdminDashboard() {
   const [isComplianceModalOpen, setIsComplianceModalOpen] = useState(false);
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [isFinancialModalOpen, setIsFinancialModalOpen] = useState(false);
-  
+
   // Academy management state
   const [academies, setAcademies] = useState(() => {
     const savedAcademies = localStorage.getItem('academies');
@@ -694,7 +694,7 @@ export default function AdminDashboard() {
         },
         body: JSON.stringify(systemSettings),
       });
-      
+
       if (res.ok) {
         console.log('System settings saved successfully');
         // You could add a toast notification here
@@ -711,7 +711,7 @@ export default function AdminDashboard() {
       const res = await fetch('/api/system-settings/reset', {
         method: 'POST',
       });
-      
+
       if (res.ok) {
         const data = await res.json();
         setSystemSettings(data);
@@ -788,7 +788,7 @@ export default function AdminDashboard() {
   const handleCreateAcademy = () => {
     const errors = validateAcademyForm(createAcademyForm);
     setFormErrors(errors);
-    
+
     if (Object.keys(errors).length === 0) {
       const newAcademy = {
         id: `ACD${String(academies.length + 1).padStart(3, '0')}`,
@@ -808,7 +808,7 @@ export default function AdminDashboard() {
         website: createAcademyForm.website,
         capacity: parseInt(createAcademyForm.capacity)
       };
-      
+
       const updatedAcademies = [...academies, newAcademy];
       setAcademies(updatedAcademies);
       localStorage.setItem('academies', JSON.stringify(updatedAcademies));
@@ -828,7 +828,7 @@ export default function AdminDashboard() {
         capacity: ""
       });
       setFormErrors({});
-      
+
       // Show success notification
       toast({
         title: "Academy Created Successfully",
@@ -864,27 +864,27 @@ export default function AdminDashboard() {
   const handleUpdateAcademy = () => {
     const errors = validateAcademyForm(createAcademyForm);
     setFormErrors(errors);
-    
+
     if (Object.keys(errors).length === 0) {
-      const updatedAcademies = academies.map(academy => 
-        academy.id === selectedAcademy.id 
+      const updatedAcademies = academies.map(academy =>
+        academy.id === selectedAcademy.id
           ? {
-              ...academy,
-              name: createAcademyForm.name,
-              director: createAcademyForm.director,
-              location: createAcademyForm.location,
-              subscription: createAcademyForm.subscription,
-              email: createAcademyForm.email,
-              phone: createAcademyForm.phone,
-              address: createAcademyForm.address,
-              establishedDate: createAcademyForm.establishedDate,
-              description: createAcademyForm.description,
-              website: createAcademyForm.website,
-              capacity: parseInt(createAcademyForm.capacity)
-            }
+            ...academy,
+            name: createAcademyForm.name,
+            director: createAcademyForm.director,
+            location: createAcademyForm.location,
+            subscription: createAcademyForm.subscription,
+            email: createAcademyForm.email,
+            phone: createAcademyForm.phone,
+            address: createAcademyForm.address,
+            establishedDate: createAcademyForm.establishedDate,
+            description: createAcademyForm.description,
+            website: createAcademyForm.website,
+            capacity: parseInt(createAcademyForm.capacity)
+          }
           : academy
       );
-      
+
       setAcademies(updatedAcademies);
       localStorage.setItem('academies', JSON.stringify(updatedAcademies));
       setIsEditAcademyOpen(false);
@@ -922,12 +922,12 @@ export default function AdminDashboard() {
   // Filter and search functionality
   const filteredAcademies = academies.filter(academy => {
     const matchesSearch = academy.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         academy.director.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         academy.location.toLowerCase().includes(searchTerm.toLowerCase());
-    
+      academy.director.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      academy.location.toLowerCase().includes(searchTerm.toLowerCase());
+
     const matchesStatus = statusFilter === 'all' || academy.status === statusFilter;
     const matchesSubscription = subscriptionFilter === 'all' || academy.subscription === subscriptionFilter;
-    
+
     return matchesSearch && matchesStatus && matchesSubscription;
   });
 
@@ -1049,11 +1049,10 @@ export default function AdminDashboard() {
                   <Button
                     key={item.id}
                     variant="ghost"
-                    className={`w-full justify-start text-white hover:bg-white/20 transition-all duration-300 ${
-                      activeTab === item.id 
-                        ? 'bg-white/20 border-l-4 border-yellow-400 shadow-lg' 
+                    className={`w-full justify-start text-white hover:bg-white/20 transition-all duration-300 ${activeTab === item.id
+                        ? 'bg-white/20 border-l-4 border-yellow-400 shadow-lg'
                         : 'border-l-4 border-transparent hover:border-yellow-400/50'
-                    }`}
+                      }`}
                     onClick={() => {
                       if (item.id === 'super-admins') {
                         navigate('/admin/super-admins');
@@ -1074,7 +1073,7 @@ export default function AdminDashboard() {
 
         {/* Overlay for mobile */}
         {isSidebarOpen && (
-          <div 
+          <div
             className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
             onClick={() => setIsSidebarOpen(false)}
           />
@@ -1083,7 +1082,7 @@ export default function AdminDashboard() {
         {/* Main Content */}
         <main className="flex-1 p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            
+
             {/* Dashboard Tab */}
             <TabsContent value="dashboard" className="space-y-6">
               <div className="flex items-center justify-between">
@@ -1190,7 +1189,7 @@ export default function AdminDashboard() {
                           <p className="text-lg font-bold text-blue-600">+{financialGrowthStats?.monthlyGrowth || 0}%</p>
                         </div>
                       </div>
-                      
+
                       {/* Revenue Chart */}
                       <div className="h-48">
                         <ChartContainer config={chartConfig}>
@@ -1199,17 +1198,17 @@ export default function AdminDashboard() {
                               <CartesianGrid strokeDasharray="3 3" />
                               <XAxis dataKey="month" />
                               <YAxis />
-                              <ChartTooltip 
+                              <ChartTooltip
                                 content={<ChartTooltipContent />}
                                 formatter={(value, name) => [
                                   name === 'revenue' ? `$${value.toLocaleString()}` : value,
                                   name === 'revenue' ? 'Revenue' : 'Subscriptions'
                                 ]}
                               />
-                              <Line 
-                                type="monotone" 
-                                dataKey="revenue" 
-                                stroke={chartConfig.revenue.color} 
+                              <Line
+                                type="monotone"
+                                dataKey="revenue"
+                                stroke={chartConfig.revenue.color}
                                 strokeWidth={2}
                                 dot={{ fill: chartConfig.revenue.color, strokeWidth: 2, r: 4 }}
                               />
@@ -1217,7 +1216,7 @@ export default function AdminDashboard() {
                           </ResponsiveContainer>
                         </ChartContainer>
                       </div>
-                      
+
                       {/* Additional Stats */}
                       <div className="flex items-center justify-between pt-2 border-t border-slate-200 dark:border-slate-700">
                         <div className="text-center">
@@ -1257,7 +1256,7 @@ export default function AdminDashboard() {
                       {countryDistribution.map((country, index) => (
                         <Progress key={`progress-${country.country}`} value={country.percentage} className="h-2" />
                       ))}
-                      
+
                       {countryDistributionStats && (
                         <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
                           <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
@@ -1310,7 +1309,7 @@ export default function AdminDashboard() {
                             </div>
                           </div>
                         ))}
-                        
+
                         {/* Summary Stats */}
                         <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
                           <div className="grid grid-cols-3 gap-4 text-center">
@@ -1343,7 +1342,7 @@ export default function AdminDashboard() {
 
             {/* Academy Management Tab */}
             <TabsContent value="academies" className="space-y-6">
-
+              <AcademyManagement />
             </TabsContent>
             <TabsContent value="compliance" className="space-y-6">
               {/* Compliance Statistics */}
@@ -1840,9 +1839,9 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="siteName">Site Name</Label>
-                        <Input 
-                          id="siteName" 
-                          value={systemSettings.general.siteName} 
+                        <Input
+                          id="siteName"
+                          value={systemSettings.general.siteName}
                           onChange={(e) => handleSystemSettingsChange('general', 'siteName', e.target.value)}
                         />
                       </div>
@@ -1936,29 +1935,29 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="passwordExpiry">Password Expiry (days)</Label>
-                        <Input 
-                          id="passwordExpiry" 
-                          type="number" 
-                          value={systemSettings.security.passwordExpiry} 
+                        <Input
+                          id="passwordExpiry"
+                          type="number"
+                          value={systemSettings.security.passwordExpiry}
                           onChange={(e) => handleSystemSettingsChange('security', 'passwordExpiry', e.target.value)}
                         />
                       </div>
                       <div>
                         <Label htmlFor="sessionTimeout">Session Timeout (min)</Label>
-                        <Input 
-                          id="sessionTimeout" 
-                          type="number" 
-                          value={systemSettings.security.sessionTimeout} 
+                        <Input
+                          id="sessionTimeout"
+                          type="number"
+                          value={systemSettings.security.sessionTimeout}
                           onChange={(e) => handleSystemSettingsChange('security', 'sessionTimeout', e.target.value)}
                         />
                       </div>
                     </div>
                     <div>
                       <Label htmlFor="maxLoginAttempts">Max Login Attempts</Label>
-                      <Input 
-                        id="maxLoginAttempts" 
-                        type="number" 
-                        value={systemSettings.security.maxLoginAttempts} 
+                      <Input
+                        id="maxLoginAttempts"
+                        type="number"
+                        value={systemSettings.security.maxLoginAttempts}
                         onChange={(e) => handleSystemSettingsChange('security', 'maxLoginAttempts', e.target.value)}
                       />
                     </div>
@@ -2092,10 +2091,10 @@ export default function AdminDashboard() {
                       </div>
                       <div>
                         <Label htmlFor="backupRetention">Retention (days)</Label>
-                        <Input 
-                          id="backupRetention" 
-                          type="number" 
-                          value={systemSettings.backup.backupRetention} 
+                        <Input
+                          id="backupRetention"
+                          type="number"
+                          value={systemSettings.backup.backupRetention}
                           onChange={(e) => handleSystemSettingsChange('backup', 'backupRetention', e.target.value)}
                         />
                       </div>
@@ -2113,11 +2112,11 @@ export default function AdminDashboard() {
                     <div className="flex gap-2">
                       <Button size="sm" className="flex-1">
                         <BackupIcon className="h-4 w-4 mr-2" />
-                  Create Backup
+                        Create Backup
                       </Button>
                       <Button variant="outline" size="sm" className="flex-1">
-                          <RestoreIcon className="h-4 w-4 mr-2" />
-                          Restore
+                        <RestoreIcon className="h-4 w-4 mr-2" />
+                        Restore
                       </Button>
                     </div>
                   </CardContent>
@@ -2300,19 +2299,19 @@ export default function AdminDashboard() {
                           <XAxis dataKey="month" />
                           <YAxis />
                           <ChartTooltip content={<ChartTooltipContent />} />
-                          <Area 
-                            type="monotone" 
-                            dataKey="users" 
+                          <Area
+                            type="monotone"
+                            dataKey="users"
                             stackId="1"
-                            stroke={chartConfig.users.color} 
+                            stroke={chartConfig.users.color}
                             fill={chartConfig.users.color}
                             fillOpacity={0.6}
                           />
-                          <Area 
-                            type="monotone" 
-                            dataKey="academies" 
+                          <Area
+                            type="monotone"
+                            dataKey="academies"
                             stackId="2"
-                            stroke={chartConfig.academies.color} 
+                            stroke={chartConfig.academies.color}
                             fill={chartConfig.academies.color}
                             fillOpacity={0.6}
                           />
@@ -2394,16 +2393,16 @@ export default function AdminDashboard() {
                           <XAxis dataKey="time" />
                           <YAxis />
                           <ChartTooltip content={<ChartTooltipContent />} />
-                          <Line 
-                            type="monotone" 
-                            dataKey="cpu" 
-                            stroke={chartConfig.cpu.color} 
+                          <Line
+                            type="monotone"
+                            dataKey="cpu"
+                            stroke={chartConfig.cpu.color}
                             strokeWidth={2}
                           />
-                          <Line 
-                            type="monotone" 
-                            dataKey="memory" 
-                            stroke={chartConfig.memory.color} 
+                          <Line
+                            type="monotone"
+                            dataKey="memory"
+                            stroke={chartConfig.memory.color}
                             strokeWidth={2}
                           />
                         </LineChart>
@@ -2667,21 +2666,21 @@ export default function AdminDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex flex-wrap gap-3">
-                      <Button 
+                      <Button
                         onClick={() => handleApproveCompliance(selectedCompliance.id)}
                         className="bg-green-600 hover:bg-green-700 text-white"
                       >
                         <CheckCircle className="h-4 w-4 mr-2" />
                         Approve Compliance
                       </Button>
-                      <Button 
+                      <Button
                         variant="destructive"
                         onClick={() => handleRejectCompliance(selectedCompliance.id)}
                       >
                         <XCircle className="h-4 w-4 mr-2" />
                         Reject Compliance
                       </Button>
-                      <Button 
+                      <Button
                         variant="outline"
                         onClick={() => handleFlagCompliance(selectedCompliance.id)}
                         className="border-orange-200 text-orange-600 hover:bg-orange-50"
@@ -2799,11 +2798,11 @@ export default function AdminDashboard() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Status:</span>
-                      <Badge 
+                      <Badge
                         variant={
                           selectedTransaction.status === 'completed' ? 'default' :
-                          selectedTransaction.status === 'pending' ? 'secondary' :
-                          'destructive'
+                            selectedTransaction.status === 'pending' ? 'secondary' :
+                              'destructive'
                         }
                       >
                         {selectedTransaction.status}
@@ -2973,84 +2972,84 @@ export default function AdminDashboard() {
               Add a new academy to the platform with all required information.
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="name">Academy Name *</Label>
               <Input
                 id="name"
                 value={createAcademyForm.name}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, name: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, name: e.target.value })}
                 placeholder="Enter academy name"
                 className={formErrors.name ? "border-red-500" : ""}
               />
               {formErrors.name && <p className="text-sm text-red-500">{formErrors.name}</p>}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="director">Director Name *</Label>
               <Input
                 id="director"
                 value={createAcademyForm.director}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, director: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, director: e.target.value })}
                 placeholder="Enter director name"
                 className={formErrors.director ? "border-red-500" : ""}
               />
               {formErrors.director && <p className="text-sm text-red-500">{formErrors.director}</p>}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="location">Location *</Label>
               <Input
                 id="location"
                 value={createAcademyForm.location}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, location: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, location: e.target.value })}
                 placeholder="City, Country"
                 className={formErrors.location ? "border-red-500" : ""}
               />
               {formErrors.location && <p className="text-sm text-red-500">{formErrors.location}</p>}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="email">Email *</Label>
               <Input
                 id="email"
                 type="email"
                 value={createAcademyForm.email}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, email: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, email: e.target.value })}
                 placeholder="academy@example.com"
                 className={formErrors.email ? "border-red-500" : ""}
               />
               {formErrors.email && <p className="text-sm text-red-500">{formErrors.email}</p>}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="phone">Phone Number *</Label>
               <Input
                 id="phone"
                 value={createAcademyForm.phone}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, phone: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, phone: e.target.value })}
                 placeholder="+260 XXX XXX XXX"
                 className={formErrors.phone ? "border-red-500" : ""}
               />
               {formErrors.phone && <p className="text-sm text-red-500">{formErrors.phone}</p>}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="establishedDate">Established Date *</Label>
               <Input
                 id="establishedDate"
                 type="date"
                 value={createAcademyForm.establishedDate}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, establishedDate: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, establishedDate: e.target.value })}
                 className={formErrors.establishedDate ? "border-red-500" : ""}
               />
               {formErrors.establishedDate && <p className="text-sm text-red-500">{formErrors.establishedDate}</p>}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="subscription">Subscription Plan</Label>
-              <Select value={createAcademyForm.subscription} onValueChange={(value) => setCreateAcademyForm({...createAcademyForm, subscription: value})}>
+              <Select value={createAcademyForm.subscription} onValueChange={(value) => setCreateAcademyForm({ ...createAcademyForm, subscription: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select subscription" />
                 </SelectTrigger>
@@ -3061,7 +3060,7 @@ export default function AdminDashboard() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="capacity">Player Capacity *</Label>
               <Input
@@ -3069,48 +3068,48 @@ export default function AdminDashboard() {
                 type="number"
                 min="1"
                 value={createAcademyForm.capacity}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, capacity: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, capacity: e.target.value })}
                 placeholder="Maximum number of players"
                 className={formErrors.capacity ? "border-red-500" : ""}
               />
               {formErrors.capacity && <p className="text-sm text-red-500">{formErrors.capacity}</p>}
             </div>
-            
+
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="address">Address *</Label>
               <Input
                 id="address"
                 value={createAcademyForm.address}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, address: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, address: e.target.value })}
                 placeholder="Full address"
                 className={formErrors.address ? "border-red-500" : ""}
               />
               {formErrors.address && <p className="text-sm text-red-500">{formErrors.address}</p>}
             </div>
-            
+
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="website">Website (Optional)</Label>
               <Input
                 id="website"
                 type="url"
                 value={createAcademyForm.website}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, website: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, website: e.target.value })}
                 placeholder="https://academy-website.com"
               />
             </div>
-            
+
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="description">Description (Optional)</Label>
               <Textarea
                 id="description"
                 value={createAcademyForm.description}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, description: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, description: e.target.value })}
                 placeholder="Brief description of the academy"
                 rows={3}
               />
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateAcademyOpen(false)}>
               Cancel
@@ -3132,7 +3131,7 @@ export default function AdminDashboard() {
               Comprehensive information about {selectedAcademy?.name}
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedAcademy && (
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -3141,12 +3140,12 @@ export default function AdminDashboard() {
                     <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Academy Name</Label>
                     <p className="text-lg font-semibold">{selectedAcademy.name}</p>
                   </div>
-                  
+
                   <div>
                     <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Academy ID</Label>
                     <p className="font-mono text-sm bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">{selectedAcademy.id}</p>
                   </div>
-                  
+
                   <div>
                     <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Director</Label>
                     <p className="flex items-center gap-2">
@@ -3154,7 +3153,7 @@ export default function AdminDashboard() {
                       {selectedAcademy.director}
                     </p>
                   </div>
-                  
+
                   <div>
                     <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Location</Label>
                     <p className="flex items-center gap-2">
@@ -3162,7 +3161,7 @@ export default function AdminDashboard() {
                       {selectedAcademy.location}
                     </p>
                   </div>
-                  
+
                   <div>
                     <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Status</Label>
                     <div className="mt-1">
@@ -3170,7 +3169,7 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div>
                     <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Email</Label>
@@ -3179,7 +3178,7 @@ export default function AdminDashboard() {
                       {selectedAcademy.email || 'Not provided'}
                     </p>
                   </div>
-                  
+
                   <div>
                     <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Phone</Label>
                     <p className="flex items-center gap-2">
@@ -3187,7 +3186,7 @@ export default function AdminDashboard() {
                       {selectedAcademy.phone || 'Not provided'}
                     </p>
                   </div>
-                  
+
                   <div>
                     <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Join Date</Label>
                     <p className="flex items-center gap-2">
@@ -3195,38 +3194,38 @@ export default function AdminDashboard() {
                       {selectedAcademy.joinDate}
                     </p>
                   </div>
-                  
+
                   <div>
                     <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Subscription</Label>
                     <Badge variant="outline" className="mt-1">{selectedAcademy.subscription}</Badge>
                   </div>
-                  
+
                   <div>
                     <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Players</Label>
                     <p className="text-2xl font-bold text-blue-600">{selectedAcademy.players}</p>
                   </div>
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Monthly Revenue</Label>
                   <p className="text-2xl font-bold text-green-600">${selectedAcademy.revenue?.toLocaleString()}</p>
                 </div>
-                
+
                 <div>
                   <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Player Capacity</Label>
                   <p className="text-lg font-semibold">{selectedAcademy.capacity || 'Not specified'}</p>
                 </div>
               </div>
-              
+
               {selectedAcademy.address && (
                 <div>
                   <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Address</Label>
                   <p className="mt-1">{selectedAcademy.address}</p>
                 </div>
               )}
-              
+
               {selectedAcademy.website && (
                 <div>
                   <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Website</Label>
@@ -3237,7 +3236,7 @@ export default function AdminDashboard() {
                   </p>
                 </div>
               )}
-              
+
               {selectedAcademy.description && (
                 <div>
                   <Label className="text-sm font-medium text-slate-600 dark:text-slate-400">Description</Label>
@@ -3246,7 +3245,7 @@ export default function AdminDashboard() {
               )}
             </div>
           )}
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsViewAcademyOpen(false)}>
               Close
@@ -3271,84 +3270,84 @@ export default function AdminDashboard() {
               Update academy information for {selectedAcademy?.name}
             </DialogDescription>
           </DialogHeader>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="edit-name">Academy Name *</Label>
               <Input
                 id="edit-name"
                 value={createAcademyForm.name}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, name: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, name: e.target.value })}
                 placeholder="Enter academy name"
                 className={formErrors.name ? "border-red-500" : ""}
               />
               {formErrors.name && <p className="text-sm text-red-500">{formErrors.name}</p>}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="edit-director">Director Name *</Label>
               <Input
                 id="edit-director"
                 value={createAcademyForm.director}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, director: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, director: e.target.value })}
                 placeholder="Enter director name"
                 className={formErrors.director ? "border-red-500" : ""}
               />
               {formErrors.director && <p className="text-sm text-red-500">{formErrors.director}</p>}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="edit-location">Location *</Label>
               <Input
                 id="edit-location"
                 value={createAcademyForm.location}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, location: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, location: e.target.value })}
                 placeholder="City, Country"
                 className={formErrors.location ? "border-red-500" : ""}
               />
               {formErrors.location && <p className="text-sm text-red-500">{formErrors.location}</p>}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="edit-email">Email *</Label>
               <Input
                 id="edit-email"
                 type="email"
                 value={createAcademyForm.email}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, email: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, email: e.target.value })}
                 placeholder="academy@example.com"
                 className={formErrors.email ? "border-red-500" : ""}
               />
               {formErrors.email && <p className="text-sm text-red-500">{formErrors.email}</p>}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="edit-phone">Phone Number *</Label>
               <Input
                 id="edit-phone"
                 value={createAcademyForm.phone}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, phone: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, phone: e.target.value })}
                 placeholder="+260 XXX XXX XXX"
                 className={formErrors.phone ? "border-red-500" : ""}
               />
               {formErrors.phone && <p className="text-sm text-red-500">{formErrors.phone}</p>}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="edit-establishedDate">Established Date *</Label>
               <Input
                 id="edit-establishedDate"
                 type="date"
                 value={createAcademyForm.establishedDate}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, establishedDate: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, establishedDate: e.target.value })}
                 className={formErrors.establishedDate ? "border-red-500" : ""}
               />
               {formErrors.establishedDate && <p className="text-sm text-red-500">{formErrors.establishedDate}</p>}
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="edit-subscription">Subscription Plan</Label>
-              <Select value={createAcademyForm.subscription} onValueChange={(value) => setCreateAcademyForm({...createAcademyForm, subscription: value})}>
+              <Select value={createAcademyForm.subscription} onValueChange={(value) => setCreateAcademyForm({ ...createAcademyForm, subscription: value })}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select subscription" />
                 </SelectTrigger>
@@ -3359,7 +3358,7 @@ export default function AdminDashboard() {
                 </SelectContent>
               </Select>
             </div>
-            
+
             <div className="space-y-2">
               <Label htmlFor="edit-capacity">Player Capacity *</Label>
               <Input
@@ -3367,48 +3366,48 @@ export default function AdminDashboard() {
                 type="number"
                 min="1"
                 value={createAcademyForm.capacity}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, capacity: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, capacity: e.target.value })}
                 placeholder="Maximum number of players"
                 className={formErrors.capacity ? "border-red-500" : ""}
               />
               {formErrors.capacity && <p className="text-sm text-red-500">{formErrors.capacity}</p>}
             </div>
-            
+
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="edit-address">Address *</Label>
               <Input
                 id="edit-address"
                 value={createAcademyForm.address}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, address: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, address: e.target.value })}
                 placeholder="Full address"
                 className={formErrors.address ? "border-red-500" : ""}
               />
               {formErrors.address && <p className="text-sm text-red-500">{formErrors.address}</p>}
             </div>
-            
+
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="edit-website">Website (Optional)</Label>
               <Input
                 id="edit-website"
                 type="url"
                 value={createAcademyForm.website}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, website: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, website: e.target.value })}
                 placeholder="https://academy-website.com"
               />
             </div>
-            
+
             <div className="space-y-2 md:col-span-2">
               <Label htmlFor="edit-description">Description (Optional)</Label>
               <Textarea
                 id="edit-description"
                 value={createAcademyForm.description}
-                onChange={(e) => setCreateAcademyForm({...createAcademyForm, description: e.target.value})}
+                onChange={(e) => setCreateAcademyForm({ ...createAcademyForm, description: e.target.value })}
                 placeholder="Brief description of the academy"
                 rows={3}
               />
             </div>
           </div>
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditAcademyOpen(false)}>
               Cancel
@@ -3430,7 +3429,7 @@ export default function AdminDashboard() {
               Are you sure you want to delete {selectedAcademy?.name}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
-          
+
           {selectedAcademy && (
             <div className="bg-red-50 dark:bg-red-950/20 p-4 rounded-lg border border-red-200 dark:border-red-800">
               <div className="flex items-center gap-2 text-red-800 dark:text-red-200 mb-2">
@@ -3448,7 +3447,7 @@ export default function AdminDashboard() {
               </ul>
             </div>
           )}
-          
+
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsDeleteAcademyOpen(false)}>
               Cancel
