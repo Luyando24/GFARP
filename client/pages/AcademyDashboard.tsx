@@ -620,7 +620,7 @@ export default function AcademyDashboard() {
       } else {
         toast({
           title: "Payment Verification Failed",
-          description: result.message || "Could not verify payment. Please contact support.",
+          description: result.error || result.message || "Could not verify payment. Please contact support.",
           variant: "destructive",
         });
       }

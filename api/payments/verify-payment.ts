@@ -64,17 +64,23 @@ export default async function handler(
         });
 
         // 1. Retrieve session
+        console.log(`[VERCEL] Verifying session: ${sessionId}`);
         const session = await stripe.checkout.sessions.retrieve(sessionId);
 
         if (!session) {
+            console.error('[VERCEL] Session not found');
             return res.status(404).json({
                 success: false,
                 message: 'Session not found'
             });
         }
 
+        console.log('[VERCEL] Session status:', session.payment_status);
+        console.log('[VERCEL] Session metadata:', session.metadata);
+
         // 2. Verify payment status
         if (session.payment_status !== 'paid') {
+            console.warn(`[VERCEL] Payment not paid: ${session.payment_status}`);
             return res.status(400).json({
                 success: false,
                 message: 'Payment not completed',
@@ -85,6 +91,7 @@ export default async function handler(
         const { academyId, planId } = session.metadata || {};
 
         if (!academyId || !planId) {
+            console.error('[VERCEL] Missing metadata');
             return res.status(400).json({
                 success: false,
                 message: 'Invalid session metadata'
@@ -94,6 +101,15 @@ export default async function handler(
         // 3. Check if subscription already exists/processed
         // We can check by stripe_subscription_id
         const stripeSubscriptionId = session.subscription as string;
+        console.log(`[VERCEL] Stripe Subscription ID: ${stripeSubscriptionId}`);
+
+        if (!stripeSubscriptionId) {
+            console.error('[VERCEL] No subscription ID in session');
+            return res.status(400).json({
+                success: false,
+                message: 'No subscription ID found in session'
+            });
+        }
 
         const { data: existingSub } = await supabase
             .from('academy_subscriptions')
@@ -102,6 +118,7 @@ export default async function handler(
             .single();
 
         if (existingSub) {
+            console.log('[VERCEL] Subscription already processed');
             return res.json({
                 success: true,
                 message: 'Subscription already processed',
@@ -110,6 +127,7 @@ export default async function handler(
         }
 
         // 4. Deactivate current active subscription
+        console.log('[VERCEL] Deactivating old subscriptions');
         await supabase
             .from('academy_subscriptions')
             .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
@@ -120,11 +138,13 @@ export default async function handler(
         const subscriptionId = uuidv4();
 
         // Get subscription details from Stripe
+        console.log('[VERCEL] Retrieving subscription details from Stripe');
         const stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
 
         const startDate = new Date(stripeSub.current_period_start * 1000);
         const endDate = new Date(stripeSub.current_period_end * 1000);
 
+        console.log('[VERCEL] Creating new subscription record');
         const { error: insertError } = await supabase
             .from('academy_subscriptions')
             .insert({
