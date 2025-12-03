@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -21,17 +20,6 @@ interface PaymentMethodSelectorProps {
   onSuccess: () => void;
 }
 
-interface CardDetails {
-  cardNumber: string;
-  expiryDate: string;
-  cvv: string;
-  cardholderName: string;
-}
-
-interface PayPalDetails {
-  email: string;
-}
-
 export default function PaymentMethodSelector({
   isOpen,
   onClose,
@@ -39,107 +27,12 @@ export default function PaymentMethodSelector({
   academyId,
   onSuccess
 }: PaymentMethodSelectorProps) {
-  const [paymentMethod, setPaymentMethod] = useState<string>('');
+  const [paymentMethod, setPaymentMethod] = useState<string>('CARD'); // Default to CARD
   const [isProcessing, setIsProcessing] = useState(false);
-  const [cardDetails, setCardDetails] = useState<CardDetails>({
-    cardNumber: '',
-    expiryDate: '',
-    cvv: '',
-    cardholderName: ''
-  });
-  const [paypalDetails, setPaypalDetails] = useState<PayPalDetails>({
-    email: ''
-  });
   const { toast } = useToast();
 
   const handlePaymentMethodChange = (value: string) => {
     setPaymentMethod(value);
-  };
-
-  const handleCardDetailsChange = (field: keyof CardDetails, value: string) => {
-    setCardDetails(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const handlePayPalDetailsChange = (field: keyof PayPalDetails, value: string) => {
-    setPaypalDetails(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const validateCardDetails = (): boolean => {
-    if (!cardDetails.cardNumber || cardDetails.cardNumber.length < 16) {
-      toast({
-        title: "Invalid Card Number",
-        description: "Please enter a valid card number",
-        variant: "destructive"
-      });
-      return false;
-    }
-    if (!cardDetails.expiryDate || !/^\d{2}\/\d{2}$/.test(cardDetails.expiryDate)) {
-      toast({
-        title: "Invalid Expiry Date",
-        description: "Please enter expiry date in MM/YY format",
-        variant: "destructive"
-      });
-      return false;
-    }
-    if (!cardDetails.cvv || cardDetails.cvv.length < 3) {
-      toast({
-        title: "Invalid CVV",
-        description: "Please enter a valid CVV",
-        variant: "destructive"
-      });
-      return false;
-    }
-    if (!cardDetails.cardholderName.trim()) {
-      toast({
-        title: "Invalid Cardholder Name",
-        description: "Please enter the cardholder name",
-        variant: "destructive"
-      });
-      return false;
-    }
-    return true;
-  };
-
-  const validatePayPalDetails = (): boolean => {
-    if (!paypalDetails.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paypalDetails.email)) {
-      toast({
-        title: "Invalid Email",
-        description: "Please enter a valid PayPal email address",
-        variant: "destructive"
-      });
-      return false;
-    }
-    return true;
-  };
-
-  const simulatePayPalPayment = async (email: string, amount: number): Promise<{
-    success: boolean;
-    transactionId?: string;
-    error?: string;
-  }> => {
-    // Simulate PayPal API call delay
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Simulate 95% success rate for PayPal payments
-    const success = Math.random() > 0.05;
-
-    if (success) {
-      return {
-        success: true,
-        transactionId: `PAYPAL_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-      };
-    } else {
-      return {
-        success: false,
-        error: 'PayPal payment was declined. Please check your PayPal account or try a different payment method.'
-      };
-    }
   };
 
   const handleSubmit = async () => {
@@ -244,31 +137,6 @@ export default function PaymentMethodSelector({
     }
   };
 
-  const formatCardNumber = (value: string) => {
-    // Remove all non-digits
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    // Add spaces every 4 digits
-    const matches = v.match(/\d{4,16}/g);
-    const match = matches && matches[0] || '';
-    const parts = [];
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-    if (parts.length) {
-      return parts.join(' ');
-    } else {
-      return v;
-    }
-  };
-
-  const formatExpiryDate = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    if (v.length >= 2) {
-      return v.substring(0, 2) + '/' + v.substring(2, 4);
-    }
-    return v;
-  };
-
   if (!selectedPlan) return null;
 
   return (
@@ -303,89 +171,23 @@ export default function PaymentMethodSelector({
                     <RadioGroupItem value="CARD" id="card" />
                     <Label htmlFor="card" className="flex items-center space-x-2 cursor-pointer">
                       <CreditCard className="h-4 w-4" />
-                      <span>Credit/Debit Card</span>
+                      <span>Credit/Debit Card (Stripe)</span>
                     </Label>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="PAYPAL" id="paypal" />
-                    <Label htmlFor="paypal" className="flex items-center space-x-2 cursor-pointer">
+                  {/* PayPal hidden for now as requested */}
+                  {/* <div className="flex items-center space-x-2 opacity-50 cursor-not-allowed">
+                    <RadioGroupItem value="PAYPAL" id="paypal" disabled />
+                    <Label htmlFor="paypal" className="flex items-center space-x-2 cursor-not-allowed">
                       <Wallet className="h-4 w-4" />
-                      <span>PayPal</span>
+                      <span>PayPal (Coming Soon)</span>
                     </Label>
-                  </div>
+                  </div> */}
                 </RadioGroup>
               </div>
 
-              {paymentMethod === 'CARD' && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">Card Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label htmlFor="cardNumber">Card Number</Label>
-                      <Input
-                        id="cardNumber"
-                        placeholder="1234 5678 9012 3456"
-                        value={cardDetails.cardNumber}
-                        onChange={(e) => handleCardDetailsChange('cardNumber', formatCardNumber(e.target.value))}
-                        maxLength={19}
-                      />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="expiryDate">Expiry Date</Label>
-                        <Input
-                          id="expiryDate"
-                          placeholder="MM/YY"
-                          value={cardDetails.expiryDate}
-                          onChange={(e) => handleCardDetailsChange('expiryDate', formatExpiryDate(e.target.value))}
-                          maxLength={5}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="cvv">CVV</Label>
-                        <Input
-                          id="cvv"
-                          placeholder="123"
-                          value={cardDetails.cvv}
-                          onChange={(e) => handleCardDetailsChange('cvv', e.target.value.replace(/\D/g, ''))}
-                          maxLength={4}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="cardholderName">Cardholder Name</Label>
-                      <Input
-                        id="cardholderName"
-                        placeholder="John Doe"
-                        value={cardDetails.cardholderName}
-                        onChange={(e) => handleCardDetailsChange('cardholderName', e.target.value)}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {paymentMethod === 'PAYPAL' && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-lg">PayPal Details</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div>
-                      <Label htmlFor="paypalEmail">PayPal Email</Label>
-                      <Input
-                        id="paypalEmail"
-                        type="email"
-                        placeholder="your-email@example.com"
-                        value={paypalDetails.email}
-                        onChange={(e) => handlePayPalDetailsChange('email', e.target.value)}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
+              <div className="bg-slate-50 p-4 rounded-md text-sm text-slate-600">
+                You will be redirected to a secure payment page to complete your subscription.
+              </div>
             </>
           )}
         </div>
@@ -397,7 +199,7 @@ export default function PaymentMethodSelector({
           <Button onClick={handleSubmit} disabled={isProcessing}>
             {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isProcessing
-              ? (paymentMethod === 'PAYPAL' ? 'Processing PayPal...' : 'Processing...')
+              ? 'Redirecting...'
               : (selectedPlan.isFree ? 'Activate Plan' : `Pay $${selectedPlan.price}`)
             }
           </Button>
