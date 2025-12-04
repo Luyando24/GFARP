@@ -136,25 +136,65 @@ export default async function handler(
             .from('compliance-documents')
             .getPublicUrl(filePath);
 
+        // First create a compliance record if one doesn't exist (or use a default one)
+        // But based on the schema, documents link to a compliance_id, NOT user_id directly.
+        // We need to find or create a compliance record for this academy first.
+        
+        // Check for an existing general compliance record for this academy
+        let complianceId;
+        const { data: complianceRecord, error: complianceError } = await supabase
+            .from('fifa_compliance')
+            .select('id')
+            .eq('academy_id', academyId)
+            .eq('compliance_type', 'documentation_review')
+            .limit(1)
+            .single();
+
+        if (complianceRecord) {
+            complianceId = complianceRecord.id;
+        } else {
+            // Create a new compliance record
+            const { data: newCompliance, error: createError } = await supabase
+                .from('fifa_compliance')
+                .insert({
+                    academy_id: academyId,
+                    compliance_type: 'documentation_review',
+                    title: 'General Documentation',
+                    description: 'Uploaded compliance documents',
+                    status: 'pending'
+                })
+                .select('id')
+                .single();
+                
+            if (createError) {
+                console.error('[VERCEL] Failed to create compliance record:', createError);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to initialize compliance record',
+                    error: createError.message
+                });
+            }
+            complianceId = newCompliance.id;
+        }
+
         // Insert document metadata to database
-        // Note: The table schema likely uses 'user_id' instead of 'academy_id' based on previous errors
         const documentId = uuidv4();
         const { data: insertData, error: insertError } = await supabase
             .from('fifa_compliance_documents')
             .insert({
                 id: documentId,
-                user_id: academyId, // Map academyId to user_id column
+                compliance_id: complianceId, // Link to compliance record, NOT user_id directly
                 document_name: documentName,
                 document_type: documentType,
                 file_path: filePath,
                 file_size: file.size,
                 mime_type: file.mimetype || 'application/pdf',
-                description: description || null,
+                // description: description || null, // Column does not exist in schema
                 expiry_date: expiryDate || null,
-                status: 'active',
-                uploaded_by: 'Academy User', // TODO: Get from auth context
-                uploaded_at: new Date().toISOString(),
-                is_active: true
+                status: 'pending', // valid statuses: 'pending', 'verified', 'rejected', 'expired'
+                // uploaded_by: 'Academy User', // UUID expected, cannot use string 'Academy User'
+                upload_date: new Date().toISOString()
+                // is_active: true // Column does not exist in schema
             })
             .select()
             .single();
