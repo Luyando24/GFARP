@@ -100,14 +100,25 @@ export default async function handler(
 
         // 3. Check if subscription already exists/processed
         // We can check by stripe_subscription_id
-        const stripeSubscriptionId = session.subscription as string;
+        console.log('[VERCEL] Session object:', {
+            id: session.id,
+            mode: session.mode,
+            subscription: session.subscription,
+            subscription_type: typeof session.subscription
+        });
+
+        const stripeSubscriptionId = typeof session.subscription === 'string'
+            ? session.subscription
+            : session.subscription?.id;
         console.log(`[VERCEL] Stripe Subscription ID: ${stripeSubscriptionId}`);
 
         if (!stripeSubscriptionId) {
             console.error('[VERCEL] No subscription ID in session');
+            console.error('[VERCEL] Full session for debugging:', JSON.stringify(session, null, 2));
             return res.status(400).json({
                 success: false,
-                message: 'No subscription ID found in session'
+                message: 'No subscription ID found in session. Please ensure the payment was configured as a subscription.',
+                error: 'MISSING_SUBSCRIPTION_ID'
             });
         }
 
