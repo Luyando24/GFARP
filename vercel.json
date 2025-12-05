@@ -85,6 +85,26 @@
       "destination": "/api/setup-admin"
     },
     {
+      "source": "/api/payments/verify-payment",
+      "destination": "/api/payments/verify-payment"
+    },
+    {
+      "source": "/api/payments/create-checkout-session",
+      "destination": "/api/payments/create-checkout-session"
+    },
+    {
+      "source": "/api/subscriptions/plans",
+      "destination": "/api/subscriptions/plans"
+    },
+    {
+      "source": "/api/subscriptions/upgrade",
+      "destination": "/api/subscriptions/upgrade"
+    },
+    {
+      "source": "/api/subscriptions/cancel",
+      "destination": "/api/subscriptions/cancel"
+    },
+    {
       "source": "/api/auth/(.*)",
       "destination": "/api/server/index"
     },
