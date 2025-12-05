@@ -79,13 +79,23 @@ export default async function handler(
         }
 
         const stripe = new Stripe(stripeSecretKey, {
-            apiVersion: '2025-10-29.clover' as any,
+            apiVersion: '2024-06-20' as any,
             typescript: true,
         });
 
         // 1. Retrieve session
         console.log(`[VERCEL] Verifying session: ${sessionId}`);
-        const session = await stripe.checkout.sessions.retrieve(sessionId);
+        let session: Stripe.Checkout.Session;
+        try {
+            session = await stripe.checkout.sessions.retrieve(sessionId);
+        } catch (sessionError: any) {
+            console.error('[VERCEL] Error retrieving checkout session:', sessionError);
+            return res.status(400).json({
+                success: false,
+                message: 'Failed to retrieve checkout session',
+                error: sessionError.message
+            });
+        }
 
         if (!session) {
             console.error('[VERCEL] Session not found');
@@ -170,31 +180,70 @@ export default async function handler(
 
         // Get subscription details from Stripe
         console.log('[VERCEL] Retrieving subscription details from Stripe');
-        const stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId) as any;
+        let stripeSub: any;
+        try {
+            stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+        } catch (stripeError: any) {
+            console.error('[VERCEL] Error retrieving Stripe subscription:', stripeError);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to retrieve subscription from Stripe',
+                error: stripeError.message
+            });
+        }
 
-        console.log('[VERCEL] Stripe subscription data:', {
+        console.log('[VERCEL] Stripe subscription data:', JSON.stringify({
             current_period_start: stripeSub.current_period_start,
             current_period_end: stripeSub.current_period_end,
             status: stripeSub.status,
             start_date: stripeSub.start_date
-        });
+        }, null, 2));
 
         // Validate timestamps - use start_date as fallback
         // Stripe timestamps are in seconds, Date expects milliseconds
+        const nowSeconds = Math.floor(Date.now() / 1000);
+
         let periodStart = stripeSub.current_period_start;
-        if (!periodStart && stripeSub.start_date) periodStart = stripeSub.start_date;
-        if (!periodStart) periodStart = Math.floor(Date.now() / 1000);
+        if (periodStart === null || periodStart === undefined || typeof periodStart !== 'number') {
+            console.warn('[VERCEL] current_period_start invalid, trying start_date');
+            periodStart = stripeSub.start_date;
+        }
+        if (periodStart === null || periodStart === undefined || typeof periodStart !== 'number') {
+            console.warn('[VERCEL] start_date also invalid, using current time');
+            periodStart = nowSeconds;
+        }
 
         let periodEnd = stripeSub.current_period_end;
-        if (!periodEnd) periodEnd = periodStart + (30 * 24 * 60 * 60); // Default to 30 days if missing
+        if (periodEnd === null || periodEnd === undefined || typeof periodEnd !== 'number') {
+            console.warn('[VERCEL] current_period_end invalid, defaulting to 30 days from start');
+            periodEnd = periodStart + (30 * 24 * 60 * 60); // Default to 30 days if missing
+        }
 
         console.log('[VERCEL] Calculated timestamps (seconds):', { periodStart, periodEnd });
 
-        // Ensure they are numbers
+        // Ensure they are valid numbers before conversion
+        if (isNaN(periodStart) || isNaN(periodEnd)) {
+            console.error('[VERCEL] Invalid timestamps after validation:', { periodStart, periodEnd });
+            return res.status(500).json({
+                success: false,
+                message: 'Invalid subscription period dates from Stripe'
+            });
+        }
+
+        // Convert to milliseconds
         const startTimestamp = Number(periodStart) * 1000;
         const endTimestamp = Number(periodEnd) * 1000;
 
         console.log('[VERCEL] Calculated timestamps (ms):', { startTimestamp, endTimestamp });
+
+        // Final safety check before date conversion
+        if (isNaN(startTimestamp) || isNaN(endTimestamp)) {
+            console.error('[VERCEL] Timestamps became NaN during conversion');
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to convert subscription dates'
+            });
+        }
 
         const startDateStr = safeISOString(startTimestamp, 'start_date');
         const endDateStr = safeISOString(endTimestamp, 'end_date');
