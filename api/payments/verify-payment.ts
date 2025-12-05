@@ -264,6 +264,8 @@ export default async function handler(
                 start_date: startDateStr,
                 end_date: endDateStr,
                 auto_renew: !stripeSub.cancel_at_period_end,
+                payment_status: 'PAID',
+                amount_paid: session.amount_total ? session.amount_total / 100 : 0,
                 created_at: safeISOString(new Date(), 'created_at'),
                 updated_at: safeISOString(new Date(), 'updated_at')
             });
