@@ -4,17 +4,21 @@ import Stripe from 'stripe';
 import { v4 as uuidv4 } from 'uuid';
 
 // Helper for safe date conversion
-function safeISOString(date?: Date | number | string | null): string {
+function safeISOString(date?: Date | number | string | null, context: string = 'unknown'): string {
     try {
-        if (!date) return new Date().toISOString();
+        if (date === null || date === undefined) {
+            console.warn(`[VERCEL] safeISOString received null/undefined in context: ${context}`);
+            return new Date().toISOString();
+        }
+
         const d = new Date(date);
         if (isNaN(d.getTime())) {
-            console.error('[VERCEL] safeISOString received invalid date:', date);
+            console.error(`[VERCEL] safeISOString received invalid date in context: ${context}`, { value: date, type: typeof date });
             return new Date().toISOString();
         }
         return d.toISOString();
     } catch (e) {
-        console.error('[VERCEL] safeISOString error:', e);
+        console.error(`[VERCEL] safeISOString error in context: ${context}`, e);
         return new Date().toISOString();
     }
 }
@@ -157,7 +161,7 @@ export default async function handler(
         console.log('[VERCEL] Deactivating old subscriptions');
         await supabase
             .from('academy_subscriptions')
-            .update({ status: 'CANCELLED', updated_at: safeISOString() })
+            .update({ status: 'CANCELLED', updated_at: safeISOString(new Date(), 'deactivate_old') })
             .eq('academy_id', academyId)
             .eq('status', 'ACTIVE');
 
@@ -171,15 +175,29 @@ export default async function handler(
         console.log('[VERCEL] Stripe subscription data:', {
             current_period_start: stripeSub.current_period_start,
             current_period_end: stripeSub.current_period_end,
-            status: stripeSub.status
+            status: stripeSub.status,
+            start_date: stripeSub.start_date
         });
 
         // Validate timestamps - use start_date as fallback
-        const periodStart = stripeSub.current_period_start || stripeSub.start_date || Math.floor(Date.now() / 1000);
-        const periodEnd = stripeSub.current_period_end || (periodStart + 30 * 24 * 60 * 60); // Default to 30 days if missing
+        // Stripe timestamps are in seconds, Date expects milliseconds
+        let periodStart = stripeSub.current_period_start;
+        if (!periodStart && stripeSub.start_date) periodStart = stripeSub.start_date;
+        if (!periodStart) periodStart = Math.floor(Date.now() / 1000);
 
-        const startDateStr = safeISOString(periodStart * 1000);
-        const endDateStr = safeISOString(periodEnd * 1000);
+        let periodEnd = stripeSub.current_period_end;
+        if (!periodEnd) periodEnd = periodStart + (30 * 24 * 60 * 60); // Default to 30 days if missing
+
+        console.log('[VERCEL] Calculated timestamps (seconds):', { periodStart, periodEnd });
+
+        // Ensure they are numbers
+        const startTimestamp = Number(periodStart) * 1000;
+        const endTimestamp = Number(periodEnd) * 1000;
+
+        console.log('[VERCEL] Calculated timestamps (ms):', { startTimestamp, endTimestamp });
+
+        const startDateStr = safeISOString(startTimestamp, 'start_date');
+        const endDateStr = safeISOString(endTimestamp, 'end_date');
 
         console.log('[VERCEL] Date conversion successful:', { startDateStr, endDateStr });
 
@@ -195,8 +213,8 @@ export default async function handler(
                 start_date: startDateStr,
                 end_date: endDateStr,
                 auto_renew: !stripeSub.cancel_at_period_end,
-                created_at: safeISOString(),
-                updated_at: safeISOString()
+                created_at: safeISOString(new Date(), 'created_at'),
+                updated_at: safeISOString(new Date(), 'updated_at')
             });
 
         if (insertError) {
@@ -221,8 +239,8 @@ export default async function handler(
                 payment_reference: session.payment_intent as string || session.id,
                 status: 'COMPLETED',
                 notes: `Stripe Checkout Session: ${session.id}`,
-                created_at: safeISOString(),
-                updated_at: safeISOString()
+                created_at: safeISOString(new Date(), 'payment_created_at'),
+                updated_at: safeISOString(new Date(), 'payment_updated_at')
             });
 
         return res.json({
@@ -233,10 +251,15 @@ export default async function handler(
 
     } catch (error: any) {
         console.error('[VERCEL] Verify payment error:', error);
+        // Log the full error stack if available
+        if (error.stack) {
+            console.error('[VERCEL] Error stack:', error.stack);
+        }
+
         return res.status(500).json({
             success: false,
             message: 'Failed to verify payment',
-            error: error.message
+            error: error.message || 'Unknown error occurred'
         });
     }
 }
