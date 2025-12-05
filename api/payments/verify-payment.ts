@@ -266,6 +266,9 @@ export default async function handler(
                 auto_renew: !stripeSub.cancel_at_period_end,
                 payment_status: 'PAID',
                 amount_paid: session.amount_total ? session.amount_total / 100 : 0,
+                payment_method: 'CARD',
+                payment_reference: typeof session.payment_intent === 'string' ? session.payment_intent : session.id,
+                stripe_invoice_id: typeof stripeSub.latest_invoice === 'string' ? stripeSub.latest_invoice : stripeSub.latest_invoice?.id,
                 created_at: safeISOString(new Date(), 'created_at'),
                 updated_at: safeISOString(new Date(), 'updated_at')
             });
@@ -289,7 +292,8 @@ export default async function handler(
                 amount: session.amount_total ? session.amount_total / 100 : 0,
                 currency: session.currency || 'usd',
                 payment_method: 'CARD', // Assumed from checkout
-                payment_reference: session.payment_intent as string || session.id,
+                payment_reference: typeof session.payment_intent === 'string' ? session.payment_intent : session.id,
+                stripe_invoice_id: typeof stripeSub.latest_invoice === 'string' ? stripeSub.latest_invoice : stripeSub.latest_invoice?.id,
                 status: 'COMPLETED',
                 notes: `Stripe Checkout Session: ${session.id}`,
                 created_at: safeISOString(new Date(), 'payment_created_at'),
