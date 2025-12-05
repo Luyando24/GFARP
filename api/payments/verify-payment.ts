@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 import { v4 as uuidv4 } from 'uuid';
 
+// Version 2.0 - Fixed date handling and improved error handling
+
 // Helper for safe date conversion
 function safeISOString(date?: Date | number | string | null, context: string = 'unknown'): string {
     try {
