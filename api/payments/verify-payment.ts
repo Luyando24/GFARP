@@ -3,6 +3,22 @@ import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 import { v4 as uuidv4 } from 'uuid';
 
+// Helper for safe date conversion
+function safeISOString(date?: Date | number | string | null): string {
+    try {
+        if (!date) return new Date().toISOString();
+        const d = new Date(date);
+        if (isNaN(d.getTime())) {
+            console.error('[VERCEL] safeISOString received invalid date:', date);
+            return new Date().toISOString();
+        }
+        return d.toISOString();
+    } catch (e) {
+        console.error('[VERCEL] safeISOString error:', e);
+        return new Date().toISOString();
+    }
+}
+
 export const config = {
     maxDuration: 10,
 };
@@ -141,7 +157,7 @@ export default async function handler(
         console.log('[VERCEL] Deactivating old subscriptions');
         await supabase
             .from('academy_subscriptions')
-            .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
+            .update({ status: 'CANCELLED', updated_at: safeISOString() })
             .eq('academy_id', academyId)
             .eq('status', 'ACTIVE');
 
@@ -158,40 +174,14 @@ export default async function handler(
             status: stripeSub.status
         });
 
-        let startDateStr: string;
-        let endDateStr: string;
+        // Validate timestamps - use start_date as fallback
+        const periodStart = stripeSub.current_period_start || stripeSub.start_date || Math.floor(Date.now() / 1000);
+        const periodEnd = stripeSub.current_period_end || (periodStart + 30 * 24 * 60 * 60); // Default to 30 days if missing
 
-        try {
-            // Validate timestamps - use start_date as fallback
-            const periodStart = stripeSub.current_period_start || stripeSub.start_date || Math.floor(Date.now() / 1000);
-            const periodEnd = stripeSub.current_period_end || (periodStart + 30 * 24 * 60 * 60); // Default to 30 days if missing
+        const startDateStr = safeISOString(periodStart * 1000);
+        const endDateStr = safeISOString(periodEnd * 1000);
 
-            const startDate = new Date(periodStart * 1000);
-            const endDate = new Date(periodEnd * 1000);
-
-            // Validate dates are valid
-            if (isNaN(startDate.getTime())) {
-                console.error('[VERCEL] Invalid start date:', periodStart);
-                startDateStr = new Date().toISOString();
-            } else {
-                startDateStr = startDate.toISOString();
-            }
-
-            if (isNaN(endDate.getTime())) {
-                console.error('[VERCEL] Invalid end date:', periodEnd);
-                endDateStr = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-            } else {
-                endDateStr = endDate.toISOString();
-            }
-
-            console.log('[VERCEL] Date conversion successful:', { startDateStr, endDateStr });
-
-        } catch (dateError) {
-            console.error('[VERCEL] Date conversion error:', dateError);
-            // Fallback to now + 30 days
-            startDateStr = new Date().toISOString();
-            endDateStr = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-        }
+        console.log('[VERCEL] Date conversion successful:', { startDateStr, endDateStr });
 
         console.log('[VERCEL] Creating new subscription record');
         const { error: insertError } = await supabase
@@ -205,8 +195,8 @@ export default async function handler(
                 start_date: startDateStr,
                 end_date: endDateStr,
                 auto_renew: !stripeSub.cancel_at_period_end,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
+                created_at: safeISOString(),
+                updated_at: safeISOString()
             });
 
         if (insertError) {
@@ -231,8 +221,8 @@ export default async function handler(
                 payment_reference: session.payment_intent as string || session.id,
                 status: 'COMPLETED',
                 notes: `Stripe Checkout Session: ${session.id}`,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
+                created_at: safeISOString(),
+                updated_at: safeISOString()
             });
 
         return res.json({
