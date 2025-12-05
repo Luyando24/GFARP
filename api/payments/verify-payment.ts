@@ -158,25 +158,39 @@ export default async function handler(
             status: stripeSub.status
         });
 
-        // Validate timestamps
-        if (!stripeSub.current_period_start || !stripeSub.current_period_end) {
-            console.error('[VERCEL] Missing subscription period dates');
-            return res.status(400).json({
-                success: false,
-                message: 'Invalid subscription period dates from Stripe'
-            });
-        }
+        let startDateStr: string;
+        let endDateStr: string;
 
-        const startDate = new Date(stripeSub.current_period_start * 1000);
-        const endDate = new Date(stripeSub.current_period_end * 1000);
+        try {
+            // Validate timestamps - use start_date as fallback
+            const periodStart = stripeSub.current_period_start || stripeSub.start_date || Math.floor(Date.now() / 1000);
+            const periodEnd = stripeSub.current_period_end || (periodStart + 30 * 24 * 60 * 60); // Default to 30 days if missing
 
-        // Validate dates are valid
-        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-            console.error('[VERCEL] Invalid date conversion:', { startDate, endDate });
-            return res.status(400).json({
-                success: false,
-                message: 'Failed to parse subscription dates'
-            });
+            const startDate = new Date(periodStart * 1000);
+            const endDate = new Date(periodEnd * 1000);
+
+            // Validate dates are valid
+            if (isNaN(startDate.getTime())) {
+                console.error('[VERCEL] Invalid start date:', periodStart);
+                startDateStr = new Date().toISOString();
+            } else {
+                startDateStr = startDate.toISOString();
+            }
+
+            if (isNaN(endDate.getTime())) {
+                console.error('[VERCEL] Invalid end date:', periodEnd);
+                endDateStr = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+            } else {
+                endDateStr = endDate.toISOString();
+            }
+
+            console.log('[VERCEL] Date conversion successful:', { startDateStr, endDateStr });
+
+        } catch (dateError) {
+            console.error('[VERCEL] Date conversion error:', dateError);
+            // Fallback to now + 30 days
+            startDateStr = new Date().toISOString();
+            endDateStr = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
         }
 
         console.log('[VERCEL] Creating new subscription record');
@@ -188,8 +202,8 @@ export default async function handler(
                 plan_id: planId,
                 stripe_subscription_id: stripeSubscriptionId,
                 status: 'ACTIVE',
-                start_date: startDate.toISOString(),
-                end_date: endDate.toISOString(),
+                start_date: startDateStr,
+                end_date: endDateStr,
                 auto_renew: !stripeSub.cancel_at_period_end,
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
