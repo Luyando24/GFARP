@@ -141,8 +141,32 @@ export default async function handler(
         console.log('[VERCEL] Retrieving subscription details from Stripe');
         const stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
 
+        console.log('[VERCEL] Stripe subscription data:', {
+            current_period_start: stripeSub.current_period_start,
+            current_period_end: stripeSub.current_period_end,
+            status: stripeSub.status
+        });
+
+        // Validate timestamps
+        if (!stripeSub.current_period_start || !stripeSub.current_period_end) {
+            console.error('[VERCEL] Missing subscription period dates');
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid subscription period dates from Stripe'
+            });
+        }
+
         const startDate = new Date(stripeSub.current_period_start * 1000);
         const endDate = new Date(stripeSub.current_period_end * 1000);
+
+        // Validate dates are valid
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            console.error('[VERCEL] Invalid date conversion:', { startDate, endDate });
+            return res.status(400).json({
+                success: false,
+                message: 'Failed to parse subscription dates'
+            });
+        }
 
         console.log('[VERCEL] Creating new subscription record');
         const { error: insertError } = await supabase
