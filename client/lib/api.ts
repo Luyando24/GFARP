@@ -1226,6 +1226,30 @@ export async function getCurrentSubscription(academyId?: string): Promise<Subscr
   }
 }
 
+// Get subscription history
+export async function getSubscriptionHistory(academyId: string): Promise<any[]> {
+  try {
+    const response = await fetch(`${BASE_URL}/subscriptions/history?academyId=${academyId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${getAuthToken()}`,
+      },
+    });
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.message || 'Failed to get subscription history');
+    }
+
+    return result.data.history;
+  } catch (error) {
+    console.error('Error getting subscription history:', error);
+    throw error;
+  }
+}
+
 // Get available subscription plans
 export async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
   try {

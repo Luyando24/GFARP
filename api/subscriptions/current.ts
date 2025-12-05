@@ -61,70 +61,81 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 success: false,
                 message: 'No active subscription found'
             });
+        }
+
+        // Calculate days remaining
+        const endDate = new Date(subscription.end_date);
+        const now = new Date();
+        const diffTime = endDate.getTime() - now.getTime();
+        const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+        // Get player count - try 'Players' first (PascalCase), then 'players' (snake_case)
+        let playerCount = 0;
+        let count = null;
+        const { count: initialCount, error: countError } = await supabase
             .from('Players')
+            .select('*', { count: 'exact', head: true })
+            .eq('academy_id', academyId);
+
+        // If that fails, try 'players' (snake_case)
+        if (countError) {
+            console.warn('Error fetching player count from "Players", trying "players":', countError);
+            const fallbackResult = await supabase
+                .from('players')
                 .select('*', { count: 'exact', head: true })
                 .eq('academy_id', academyId);
 
-            // If that fails, try 'players' (snake_case)
-            if (countError) {
-                console.warn('Error fetching player count from "Players", trying "players":', countError);
-                const fallbackResult = await supabase
-                    .from('players')
-                    .select('*', { count: 'exact', head: true })
-                    .eq('academy_id', academyId);
-
-                if (!fallbackResult.error) {
-                    count = fallbackResult.count;
-                    countError = null;
-                } else {
-                    console.warn('Error fetching player count from "players":', fallbackResult.error);
-                }
+            if (!fallbackResult.error) {
+                count = fallbackResult.count;
+            } else {
+                console.warn('Error fetching player count from "players":', fallbackResult.error);
             }
-
-            if (!countError) {
-                playerCount = count || 0;
-            }
-
-            const playerLimit = subscription.subscription_plans?.player_limit || 0;
-            const usagePercentage = playerLimit > 0 ? Math.round(((playerCount || 0) / playerLimit) * 100) : 0;
-
-            // Format response
-            const formattedSubscription = {
-                id: subscription.id,
-                planName: subscription.subscription_plans?.name || 'Unknown Plan',
-                status: subscription.status,
-                price: subscription.subscription_plans?.price || 0,
-                billingCycle: subscription.subscription_plans?.billing_cycle || 'MONTHLY',
-                startDate: subscription.start_date,
-                endDate: subscription.end_date,
-                autoRenew: subscription.auto_renew,
-                daysRemaining: daysRemaining > 0 ? daysRemaining : 0,
-                playerLimit: playerLimit,
-                playerCount: playerCount || 0,
-                playerUsagePercentage: usagePercentage,
-                features: subscription.subscription_plans?.features || []
-            };
-
-            return res.status(200).json({
-                success: true,
-                data: {
-                    subscription: formattedSubscription,
-                    limits: {
-                        playerLimit: playerLimit
-                    },
-                    usage: {
-                        playerCount: playerCount || 0,
-                        playerUsagePercentage: usagePercentage
-                    }
-                }
-            });
-
-        } catch (error: any) {
-            console.error('Error fetching current subscription:', error);
-            return res.status(500).json({
-                success: false,
-                message: 'Failed to fetch subscription details',
-                error: error.message
-            });
+        } else {
+            count = initialCount;
         }
+
+        playerCount = count || 0;
+
+        const playerLimit = subscription.subscription_plans?.player_limit || 0;
+        const usagePercentage = playerLimit > 0 ? Math.round(((playerCount || 0) / playerLimit) * 100) : 0;
+
+        // Format response
+        const formattedSubscription = {
+            id: subscription.id,
+            planName: subscription.subscription_plans?.name || 'Unknown Plan',
+            status: subscription.status,
+            price: subscription.subscription_plans?.price || 0,
+            billingCycle: subscription.subscription_plans?.billing_cycle || 'MONTHLY',
+            startDate: subscription.start_date,
+            endDate: subscription.end_date,
+            autoRenew: subscription.auto_renew,
+            daysRemaining: daysRemaining > 0 ? daysRemaining : 0,
+            playerLimit: playerLimit,
+            playerCount: playerCount || 0,
+            playerUsagePercentage: usagePercentage,
+            features: subscription.subscription_plans?.features || []
+        };
+
+        return res.status(200).json({
+            success: true,
+            data: {
+                subscription: formattedSubscription,
+                limits: {
+                    playerLimit: playerLimit
+                },
+                usage: {
+                    playerCount: playerCount || 0,
+                    playerUsagePercentage: usagePercentage
+                }
+            }
+        });
+
+    } catch (error: any) {
+        console.error('Error fetching current subscription:', error);
+        return res.status(500).json({
+            success: false,
+            message: 'Failed to fetch subscription details',
+            error: error.message
+        });
     }
+}
