@@ -63,15 +63,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
         }
 
-        // Calculate days remaining
-        const endDate = new Date(subscription.end_date);
-        const now = new Date();
-        const daysRemaining = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        // Calculate days remaining - safely handle invalid dates
+        let daysRemaining = 0;
+        try {
+            const endDate = new Date(subscription.end_date);
+            if (!isNaN(endDate.getTime())) {
+                const now = new Date();
+                daysRemaining = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            } else {
+                console.warn('[API] Invalid end_date in subscription:', subscription.end_date);
+            }
+        } catch (e) {
+            console.error('[API] Error parsing end_date:', e);
+        }
 
         // Get usage stats (player count)
         // Try 'Players' (PascalCase) first as it seems to be the correct one based on recent fixes
         let playerCount = 0;
-        
+
         let { count, error: countError } = await supabase
             .from('Players')
             .select('*', { count: 'exact', head: true })
@@ -79,18 +88,18 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // If that fails, try 'players' (snake_case)
         if (countError) {
-             console.warn('Error fetching player count from "Players", trying "players":', countError);
-             const fallbackResult = await supabase
+            console.warn('Error fetching player count from "Players", trying "players":', countError);
+            const fallbackResult = await supabase
                 .from('players')
                 .select('*', { count: 'exact', head: true })
                 .eq('academy_id', academyId);
-                
-             if (!fallbackResult.error) {
-                 count = fallbackResult.count;
-                 countError = null;
-             } else {
-                 console.warn('Error fetching player count from "players":', fallbackResult.error);
-             }
+
+            if (!fallbackResult.error) {
+                count = fallbackResult.count;
+                countError = null;
+            } else {
+                console.warn('Error fetching player count from "players":', fallbackResult.error);
+            }
         }
 
         if (!countError) {
