@@ -69,32 +69,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const diffTime = endDate.getTime() - now.getTime();
         const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-        // Get player count - try 'Players' first (PascalCase), then 'players' (snake_case)
+        // Get player count
         let playerCount = 0;
-        let count = null;
-        const { count: initialCount, error: countError } = await supabase
-            .from('Players')
+
+        const { count, error: countError } = await supabase
+            .from('players')
             .select('*', { count: 'exact', head: true })
             .eq('academy_id', academyId);
 
-        // If that fails, try 'players' (snake_case)
         if (countError) {
-            console.warn('Error fetching player count from "Players", trying "players":', countError);
-            const fallbackResult = await supabase
-                .from('players')
+            console.warn('Error fetching player count:', countError);
+            // Try fallback to "Players" just in case, but 'players' should be correct
+            const { count: fallbackCount, error: fallbackError } = await supabase
+                .from('Players')
                 .select('*', { count: 'exact', head: true })
                 .eq('academy_id', academyId);
 
-            if (!fallbackResult.error) {
-                count = fallbackResult.count;
-            } else {
-                console.warn('Error fetching player count from "players":', fallbackResult.error);
+            if (!fallbackError && fallbackCount !== null) {
+                playerCount = fallbackCount;
             }
         } else {
-            count = initialCount;
+            playerCount = count || 0;
         }
-
-        playerCount = count || 0;
 
         const playerLimit = subscription.subscription_plans?.player_limit || 0;
         const usagePercentage = playerLimit > 0 ? Math.round(((playerCount || 0) / playerLimit) * 100) : 0;
