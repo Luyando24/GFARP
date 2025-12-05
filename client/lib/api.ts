@@ -78,6 +78,61 @@ export interface Transfer {
   updated_at: string;
 }
 
+// Subscription types
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  price: number;
+  billing_cycle: 'MONTHLY' | 'YEARLY';
+  features: string[];
+  player_limit: number;
+  stripe_price_id: string;
+}
+
+export interface Subscription {
+  id: string;
+  academy_id: string;
+  plan_id: string;
+  stripe_subscription_id: string;
+  status: 'ACTIVE' | 'CANCELLED' | 'PAST_DUE' | 'TRIALING';
+  start_date: string;
+  end_date: string;
+  auto_renew: boolean;
+  created_at: string;
+  updated_at: string;
+  planName?: string;
+  price?: number;
+  daysRemaining?: number;
+}
+
+export interface SubscriptionData {
+  subscription: Subscription | null;
+  limits: {
+    playerLimit: number;
+  };
+  usage: {
+    playerCount: number;
+    playerUsagePercentage: number;
+  };
+}
+
+export interface SubscriptionHistory {
+  id: string;
+  action: string;
+  reason?: string;
+  previousPlan?: string;
+  newPlan?: string;
+  createdAt: string;
+}
+
+export interface UpgradeSubscriptionRequest {
+  planId: string;
+  paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'MOBILE_MONEY' | 'CARD';
+  paymentReference?: string;
+  notes?: string;
+}
+
+
 const API_BASE = (() => {
   if (import.meta.env.VITE_API_BASE_URL) return import.meta.env.VITE_API_BASE_URL;
   // Use same-origin relative base in dev to avoid cross-host CORS quirks
@@ -1226,29 +1281,7 @@ export async function getCurrentSubscription(academyId?: string): Promise<Subscr
   }
 }
 
-// Get subscription history
-export async function getSubscriptionHistory(academyId: string): Promise<any[]> {
-  try {
-    const response = await fetch(`${BASE_URL}/subscriptions/history?academyId=${academyId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getAuthToken()}`,
-      },
-    });
 
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to get subscription history');
-    }
-
-    return result.data.history;
-  } catch (error) {
-    console.error('Error getting subscription history:', error);
-    throw error;
-  }
-}
 
 // Get available subscription plans
 export async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
