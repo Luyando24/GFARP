@@ -166,7 +166,7 @@ export default async function handler(
 
         // Get subscription details from Stripe
         console.log('[VERCEL] Retrieving subscription details from Stripe');
-        const stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId);
+        const stripeSub = await stripe.subscriptions.retrieve(stripeSubscriptionId) as any;
 
         console.log('[VERCEL] Stripe subscription data:', {
             current_period_start: stripeSub.current_period_start,
