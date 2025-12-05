@@ -6,6 +6,9 @@
   "rewrites": [
     {
       "source": "/api/subscriptions/current",
+      "destination": "/api/subscriptions/current"
+    },
+    {
       "source": "/api/football-players/search",
       "destination": "/api/football-players/search"
     },
