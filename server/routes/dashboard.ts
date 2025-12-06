@@ -179,6 +179,10 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
       totalPlayers,
       activeTransfers,
       monthlyRevenue,
+      revenueBreakdown: {
+        subscriptions: subscriptionRevenue,
+        transactions: monthlyRevenue - subscriptionRevenue
+      },
       monthlyGrowth: {
         academies: academiesGrowth,
         subscriptions: academiesGrowth, // Assuming 1:1 relationship for now
@@ -191,6 +195,47 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
   } catch (error) {
     console.error('Error fetching dashboard stats:', error);
     res.status(500).json({ error: 'Failed to fetch dashboard statistics' });
+  }
+};
+
+export const handleGetAdminTransactions: RequestHandler = async (req, res) => {
+  try {
+    const { limit = 10, offset = 0 } = req.query;
+
+    // Fetch transactions from subscription_payments
+    // In a real system, you might want to UNION this with financial_transactions
+    const queryText = `
+      SELECT 
+        sp.id,
+        a.name as academy_name,
+        'subscription' as type,
+        sp.amount,
+        sp.payment_method,
+        sp.created_at as date,
+        sp.status
+      FROM subscription_payments sp
+      JOIN academy_subscriptions sub ON sp.subscription_id = sub.id
+      JOIN academies a ON sub.academy_id = a.id
+      ORDER BY sp.created_at DESC
+      LIMIT $1 OFFSET $2
+    `;
+
+    const result = await query(queryText, [limit, offset]);
+
+    const transactions = result.rows.map(row => ({
+      id: row.id,
+      academy: row.academy_name,
+      type: row.type,
+      amount: parseFloat(row.amount),
+      method: row.payment_method,
+      date: row.date,
+      status: row.status
+    }));
+
+    res.json(transactions);
+  } catch (error) {
+    console.error('Error fetching admin transactions:', error);
+    res.status(500).json({ error: 'Failed to fetch transactions' });
   }
 };
 
@@ -501,5 +546,6 @@ router.get('/stats', handleGetDashboardStats);
 router.get('/new-accounts', handleGetNewAccounts);
 router.get('/country-distribution', handleGetCountryDistribution);
 router.get('/financial-growth', handleGetFinancialGrowth);
+router.get('/transactions', handleGetAdminTransactions);
 
 export default router;

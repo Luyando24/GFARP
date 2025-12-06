@@ -14,7 +14,8 @@ import {
   handleGetDashboardStats,
   handleGetNewAccounts,
   handleGetCountryDistribution,
-  handleGetFinancialGrowth
+  handleGetFinancialGrowth,
+  handleGetAdminTransactions
 } from "./routes/dashboard.js";
 import {
   handleGetAcademyDashboardStats
@@ -95,6 +96,7 @@ export function createServer() {
   api.get("/dashboard/new-accounts", handleGetNewAccounts);
   api.get("/dashboard/country-distribution", handleGetCountryDistribution);
   api.get("/dashboard/financial-growth", handleGetFinancialGrowth);
+  api.get("/dashboard/transactions", handleGetAdminTransactions);
   api.get("/dashboard/academy-stats", handleGetAcademyDashboardStats);
   console.log("[SERVER] Dashboard routes registered");
 
@@ -138,7 +140,7 @@ export function createServer() {
 
   // Financial transactions routes
   api.use("/financial-transactions", financialTransactionsRouter);
-  
+
   // Financial summary/categories routes (for dashboard)
   api.use("/financial", financialRouter);
 

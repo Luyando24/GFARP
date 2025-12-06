@@ -207,7 +207,11 @@ export default function AdminDashboard() {
     pendingPayments: 0,
     subscriptionRevenue: 0,
     averageTransactionValue: 0,
-    revenueGrowth: 0
+    revenueGrowth: 0,
+    revenueBreakdown: {
+      subscriptions: 0,
+      transactions: 0
+    }
   });
 
   // New accounts state - academies registered in past 30 days
@@ -236,6 +240,10 @@ export default function AdminDashboard() {
     totalSubscriptions: 0,
     avgRevenuePerSubscription: 0
   });
+
+  // Transaction history state
+  const [transactions, setTransactions] = useState([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(false);
 
   // System settings state
   const [systemSettings, setSystemSettings] = useState({
@@ -356,7 +364,8 @@ export default function AdminDashboard() {
             pendingPayments: data.pendingPayments || 0,
             subscriptionRevenue: data.subscriptionRevenue || 0,
             averageTransactionValue: data.averageTransactionValue || 0,
-            revenueGrowth: data.revenueGrowth || 0
+            revenueGrowth: data.revenueGrowth || 0,
+            revenueBreakdown: data.revenueBreakdown || { subscriptions: 0, transactions: 0 }
           });
 
           setErrors(prev => ({ ...prev, stats: null }));
@@ -579,8 +588,8 @@ export default function AdminDashboard() {
         const response = await fetch('/api/dashboard/financial-growth');
         if (response.ok) {
           const data = await response.json();
-          setFinancialGrowthData(data.monthlyData);
-          setFinancialGrowthStats(data.stats);
+          setFinancialGrowthData(data.data || []);
+          setFinancialGrowthStats(data.stats || {});
         } else {
           // Use mock data for development or if API fails
           const mockFinancialData = [
@@ -632,7 +641,30 @@ export default function AdminDashboard() {
       }
     };
     fetchFinancialGrowth();
+    fetchFinancialGrowth();
   }, []);
+
+  // Fetch transactions
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      setTransactionsLoading(true);
+      try {
+        const res = await fetch('/api/dashboard/transactions?limit=10');
+        if (res.ok) {
+          const data = await res.json();
+          setTransactions(data);
+        }
+      } catch (error) {
+        console.error('Error fetching transactions:', error);
+      } finally {
+        setTransactionsLoading(false);
+      }
+    };
+
+    if (activeTab === 'finances') {
+      fetchTransactions();
+    }
+  }, [activeTab]);
 
   const [selectedCompliance, setSelectedCompliance] = useState(null);
   const [isComplianceModalOpen, setIsComplianceModalOpen] = useState(false);
@@ -1050,8 +1082,8 @@ export default function AdminDashboard() {
                     key={item.id}
                     variant="ghost"
                     className={`w-full justify-start text-white hover:bg-white/20 transition-all duration-300 ${activeTab === item.id
-                        ? 'bg-white/20 border-l-4 border-yellow-400 shadow-lg'
-                        : 'border-l-4 border-transparent hover:border-yellow-400/50'
+                      ? 'bg-white/20 border-l-4 border-yellow-400 shadow-lg'
+                      : 'border-l-4 border-transparent hover:border-yellow-400/50'
                       }`}
                     onClick={() => {
                       if (item.id === 'super-admins') {
@@ -1600,8 +1632,9 @@ export default function AdminDashboard() {
                   </CardHeader>
                   <CardContent>
                     <div className="space-y-4">
-                      <div className="text-center py-8 text-slate-500">
-                        Revenue data will be loaded from API
+                      <div className="text-center py-8">
+                        <div className="text-3xl font-bold mb-2">${financialStats.totalRevenue.toLocaleString()}</div>
+                        <p className="text-muted-foreground">Total Revenue</p>
                       </div>
                     </div>
                     <div className="mt-4 pt-4 border-t">
@@ -1610,6 +1643,28 @@ export default function AdminDashboard() {
                           <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                           Subscriptions
                         </span>
+                        <span className="font-medium">${(financialStats.revenueBreakdown?.subscriptions || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-sm">
+                        <span className="flex items-center gap-2">
+                          <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
+                          Transactions
+                        </span>
+                        <span className="font-medium">${(financialStats.revenueBreakdown?.transactions || 0).toLocaleString()}</span>
+                      </div>
+                      <div className="mt-4 h-4 w-full bg-slate-100 rounded-full overflow-hidden flex">
+                        <div
+                          className="h-full bg-green-500"
+                          style={{
+                            width: `${financialStats.totalRevenue > 0 ? ((financialStats.revenueBreakdown?.subscriptions || 0) / financialStats.totalRevenue) * 100 : 0}%`
+                          }}
+                        />
+                        <div
+                          className="h-full bg-blue-500"
+                          style={{
+                            width: `${financialStats.totalRevenue > 0 ? ((financialStats.revenueBreakdown?.transactions || 0) / financialStats.totalRevenue) * 100 : 0}%`
+                          }}
+                        />
                       </div>
                     </div>
                   </CardContent>
@@ -1713,11 +1768,40 @@ export default function AdminDashboard() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-slate-500">
-                            Transaction data will be loaded from API
-                          </TableCell>
-                        </TableRow>
+                        {transactionsLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={8} className="text-center py-8">
+                              Loading transactions...
+                            </TableCell>
+                          </TableRow>
+                        ) : transactions.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={8} className="text-center py-8 text-slate-500">
+                              No transactions found
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          transactions.map((tx: any) => (
+                            <TableRow key={tx.id}>
+                              <TableCell className="font-mono text-xs">{tx.id.substring(0, 8)}...</TableCell>
+                              <TableCell>{tx.academy}</TableCell>
+                              <TableCell className="capitalize">{tx.type}</TableCell>
+                              <TableCell>${tx.amount.toFixed(2)}</TableCell>
+                              <TableCell className="capitalize">{tx.method?.replace('_', ' ') || 'N/A'}</TableCell>
+                              <TableCell>{new Date(tx.date).toLocaleDateString()}</TableCell>
+                              <TableCell>
+                                <Badge variant={tx.status === 'COMPLETED' ? 'default' : tx.status === 'PENDING' ? 'secondary' : 'destructive'}>
+                                  {tx.status}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Button variant="ghost" size="sm">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
                       </TableBody>
                     </Table>
                   </div>
