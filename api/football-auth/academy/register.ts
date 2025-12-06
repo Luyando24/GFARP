@@ -144,13 +144,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const verificationLink = `${baseUrl}/verify-email?token=${verificationToken}`;
 
                 await transporter.sendMail({
-                    from: `"GFARP Support" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+                    from: `"Soccer Circular Support" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
                     to: body.email,
-                    subject: 'Verify your GFARP Academy Account',
-                    text: `Welcome to GFARP!\n\nThank you for registering your academy. Please verify your email address by clicking the link below:\n\n${verificationLink}\n\nIf you didn't create an account, you can safely ignore this email.`,
+                    subject: 'Verify your Soccer Circular Academy Account',
+                    text: `Welcome to Soccer Circular!\n\nThank you for registering your academy. Please verify your email address by clicking the link below:\n\n${verificationLink}\n\nIf you didn't create an account, you can safely ignore this email.`,
                     html: `
                         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                            <h2 style="color: #005391;">Welcome to GFARP!</h2>
+                            <h2 style="color: #005391;">Welcome to Soccer Circular!</h2>
                             <p>Thank you for registering your academy. Please verify your email address to activate your account and access the dashboard.</p>
                             <div style="text-align: center; margin: 30px 0;">
                                 <a href="${verificationLink}" style="background-color: #005391; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Verify Email Address</a>

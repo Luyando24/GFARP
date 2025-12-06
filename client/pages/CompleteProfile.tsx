@@ -68,7 +68,6 @@ export default function CompleteProfile() {
         } else if (currentStep === 2) {
             if (!formData.phone.trim()) newErrors.phone = 'Phone number is required';
             if (!formData.address.trim()) newErrors.address = 'Address is required';
-            if (!formData.city.trim()) newErrors.city = 'City is required';
         } else if (currentStep === 3) {
             if (!formData.directorName.trim()) newErrors.directorName = 'Director name is required';
             if (!formData.directorEmail.trim()) newErrors.directorEmail = 'Email is required';
@@ -228,7 +227,7 @@ export default function CompleteProfile() {
                                     value={formData.phone}
                                     onChange={(e) => handleInputChange('phone', e.target.value)}
                                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#005391] focus:outline-none mt-1"
-                                    placeholder="+260 97 123 4567"
+                                    placeholder="+1 234 567 8900"
                                 />
                                 {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
                             </div>

@@ -124,7 +124,7 @@ export default async function handler(
                     let htmlContent = '';
 
                     if (status === 'verified') {
-                        subject = 'Compliance Document Approved - GFARP';
+                        subject = 'Compliance Document Approved - Soccer Circular';
                         htmlContent = `
                             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                                 <h2 style="color: #10b981;">Document Approved</h2>
@@ -134,7 +134,7 @@ export default async function handler(
                             </div>
                         `;
                     } else if (status === 'rejected') {
-                        subject = 'Compliance Document Rejected - GFARP';
+                        subject = 'Compliance Document Rejected - Soccer Circular';
                         htmlContent = `
                             <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                                 <h2 style="color: #ef4444;">Document Rejected</h2>
@@ -148,7 +148,7 @@ export default async function handler(
 
                     if (subject && htmlContent) {
                         await transporter.sendMail({
-                            from: `"GFARP Compliance" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+                            from: `"Soccer Circular Compliance" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
                             to: academyEmail,
                             subject: subject,
                             html: htmlContent

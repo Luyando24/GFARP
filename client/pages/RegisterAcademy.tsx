@@ -113,7 +113,7 @@ export default function RegisterAcademy() {
                 <Trophy className="h-5 w-5 text-[#005391]" />
               </div>
               <div className="text-white">
-                <div className="text-xl font-black tracking-tight">GFARP</div>
+                <div className="text-xl font-black tracking-tight">Soccer Circular</div>
                 <div className="text-xs text-blue-100">Academy Registration</div>
               </div>
             </Link>
@@ -224,7 +224,7 @@ export default function RegisterAcademy() {
             <Trophy className="h-5 w-5 text-yellow-400" />
             <span className="font-bold">FIFA Approved Platform</span>
           </div>
-          <p className="text-blue-200 text-sm">© 2024 Global Football Academy Registration Platform. All rights reserved.</p>
+          <p className="text-blue-200 text-sm">© 2024 Soccer Circular. All rights reserved.</p>
         </div>
       </footer>
     </div>
