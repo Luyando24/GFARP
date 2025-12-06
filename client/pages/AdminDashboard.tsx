@@ -2026,7 +2026,7 @@ export default function AdminDashboard() {
                     System Settings
                   </h2>
                   <p className="text-slate-600 dark:text-slate-400">
-                    Configure system preferences and settings
+                    Configure basic system preferences
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -2041,90 +2041,34 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* System Health Overview */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">CPU Usage</p>
-                        <p className="text-2xl font-bold">0%</p>
-                      </div>
-                      <Cpu className="h-8 w-8 text-blue-600" />
-                    </div>
-                    <Progress value={0} className="mt-2" />
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Memory Usage</p>
-                        <p className="text-2xl font-bold">0%</p>
-                      </div>
-                      <MemoryStick className="h-8 w-8 text-green-600" />
-                    </div>
-                    <Progress value={0} className="mt-2" />
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Disk Usage</p>
-                        <p className="text-2xl font-bold">0%</p>
-                      </div>
-                      <HardDrive className="h-8 w-8 text-orange-600" />
-                    </div>
-                    <Progress value={0} className="mt-2" />
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-sm font-medium text-muted-foreground">Network</p>
-                        <p className="text-2xl font-bold">0ms</p>
-                      </div>
-                      <Network className="h-8 w-8 text-purple-600" />
-                    </div>
-                    <Badge variant="outline" className="mt-2">
-                      Unknown
-                    </Badge>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Settings Categories */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Simplified Settings */}
+              <div className="grid grid-cols-1 gap-6">
                 {/* General Settings */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Cog className="h-5 w-5" />
-                      General Settings
+                      General Configuration
                     </CardTitle>
                     <CardDescription>
                       Basic system configuration and preferences
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
                         <Label htmlFor="siteName">Site Name</Label>
                         <Input
                           id="siteName"
                           value={systemSettings.general.siteName}
                           onChange={(e) => handleSystemSettingsChange('general', 'siteName', e.target.value)}
+                          className="mt-1.5"
                         />
                       </div>
                       <div>
                         <Label htmlFor="timezone">Timezone</Label>
                         <Select value={systemSettings.general.timezone}>
-                          <SelectTrigger>
+                          <SelectTrigger className="mt-1.5">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -2134,12 +2078,10 @@ export default function AdminDashboard() {
                           </SelectContent>
                         </Select>
                       </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="language">Language</Label>
                         <Select value={systemSettings.general.language}>
-                          <SelectTrigger>
+                          <SelectTrigger className="mt-1.5">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -2152,7 +2094,7 @@ export default function AdminDashboard() {
                       <div>
                         <Label htmlFor="currency">Currency</Label>
                         <Select value={systemSettings.general.currency}>
-                          <SelectTrigger>
+                          <SelectTrigger className="mt-1.5">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
@@ -2163,318 +2105,38 @@ export default function AdminDashboard() {
                         </Select>
                       </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Maintenance Mode</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Enable to restrict access during maintenance
-                        </p>
+                    
+                    <div className="pt-4 border-t mt-4">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label className="text-base">Maintenance Mode</Label>
+                          <p className="text-sm text-muted-foreground">
+                            Enable to restrict access during maintenance
+                          </p>
+                        </div>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleSystemSettingsChange('general', 'maintenanceMode', !systemSettings.general.maintenanceMode)}
+                          className={systemSettings.general.maintenanceMode ? "border-green-500 text-green-600" : ""}
+                        >
+                          {systemSettings.general.maintenanceMode ? (
+                            <>
+                              <ToggleRight className="h-4 w-4 mr-2" />
+                              Enabled
+                            </>
+                          ) : (
+                            <>
+                              <ToggleLeft className="h-4 w-4 mr-2" />
+                              Disabled
+                            </>
+                          )}
+                        </Button>
                       </div>
-                      <Button variant="outline" size="sm" onClick={() => handleSystemSettingsChange('general', 'maintenanceMode', !systemSettings.general.maintenanceMode)}>
-                        {systemSettings.general.maintenanceMode ? (
-                          <ToggleRight className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <ToggleLeft className="h-4 w-4 text-gray-400" />
-                        )}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Security Settings */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <ShieldCheck className="h-5 w-5" />
-                      Security Settings
-                    </CardTitle>
-                    <CardDescription>
-                      Authentication and security configuration
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Two-Factor Authentication</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Require 2FA for admin accounts
-                        </p>
-                      </div>
-                      <Button variant="outline" size="sm" onClick={() => handleSystemSettingsChange('security', 'twoFactorAuth', !systemSettings.security.twoFactorAuth)}>
-                        {systemSettings.security.twoFactorAuth ? (
-                          <ToggleRight className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <ToggleLeft className="h-4 w-4 text-gray-400" />
-                        )}
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="passwordExpiry">Password Expiry (days)</Label>
-                        <Input
-                          id="passwordExpiry"
-                          type="number"
-                          value={systemSettings.security.passwordExpiry}
-                          onChange={(e) => handleSystemSettingsChange('security', 'passwordExpiry', e.target.value)}
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="sessionTimeout">Session Timeout (min)</Label>
-                        <Input
-                          id="sessionTimeout"
-                          type="number"
-                          value={systemSettings.security.sessionTimeout}
-                          onChange={(e) => handleSystemSettingsChange('security', 'sessionTimeout', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="maxLoginAttempts">Max Login Attempts</Label>
-                      <Input
-                        id="maxLoginAttempts"
-                        type="number"
-                        value={systemSettings.security.maxLoginAttempts}
-                        onChange={(e) => handleSystemSettingsChange('security', 'maxLoginAttempts', e.target.value)}
-                      />
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>SSL Encryption</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Force HTTPS connections
-                        </p>
-                      </div>
-                      <Badge variant="outline" className="text-green-600">
-                        {systemSettings.security.encryptionLevel}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Notification Settings */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Bell className="h-5 w-5" />
-                      Notification Settings
-                    </CardTitle>
-                    <CardDescription>
-                      Configure system notifications and alerts
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Email Notifications</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Send notifications via email
-                        </p>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        {systemSettings.notifications.emailNotifications ? (
-                          <ToggleRight className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <ToggleLeft className="h-4 w-4 text-gray-400" />
-                        )}
-                      </Button>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>SMS Notifications</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Send notifications via SMS
-                        </p>
-                      </div>
-                      <Button variant="outline" size="sm">
-                        {systemSettings.notifications.smsNotifications ? (
-                          <ToggleRight className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <ToggleLeft className="h-4 w-4 text-gray-400" />
-                        )}
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="emailProvider">Email Provider</Label>
-                        <Select value={systemSettings.notifications.emailProvider}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="SendGrid">SendGrid</SelectItem>
-                            <SelectItem value="Mailgun">Mailgun</SelectItem>
-                            <SelectItem value="AWS SES">AWS SES</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="smsProvider">SMS Provider</Label>
-                        <Select value={systemSettings.notifications.smsProvider}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Twilio">Twilio</SelectItem>
-                            <SelectItem value="AWS SNS">AWS SNS</SelectItem>
-                            <SelectItem value="Nexmo">Nexmo</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                {/* Backup & Restore */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <HardDrive className="h-5 w-5" />
-                      Backup & Restore
-                    </CardTitle>
-                    <CardDescription>
-                      Data backup and recovery settings
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Auto Backup</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Automatically backup system data
-                        </p>
-                      </div>
-                      <Button variant="outline" size="sm" onClick={() => handleSystemSettingsChange('backup', 'autoBackup', !systemSettings.backup.autoBackup)}>
-                        {systemSettings.backup.autoBackup ? (
-                          <ToggleRight className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <ToggleLeft className="h-4 w-4 text-gray-400" />
-                        )}
-                      </Button>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="backupFrequency">Backup Frequency</Label>
-                        <Select value={systemSettings.backup.backupFrequency}>
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="hourly">Hourly</SelectItem>
-                            <SelectItem value="daily">Daily</SelectItem>
-                            <SelectItem value="weekly">Weekly</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label htmlFor="backupRetention">Retention (days)</Label>
-                        <Input
-                          id="backupRetention"
-                          type="number"
-                          value={systemSettings.backup.backupRetention}
-                          onChange={(e) => handleSystemSettingsChange('backup', 'backupRetention', e.target.value)}
-                        />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span>Last Backup:</span>
-                        <span className="text-muted-foreground">{systemSettings.backup.lastBackup}</span>
-                      </div>
-                      <div className="flex justify-between text-sm">
-                        <span>Backup Size:</span>
-                        <span className="text-muted-foreground">{systemSettings.backup.backupSize}</span>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="sm" className="flex-1">
-                        <BackupIcon className="h-4 w-4 mr-2" />
-                        Create Backup
-                      </Button>
-                      <Button variant="outline" size="sm" className="flex-1">
-                        <RestoreIcon className="h-4 w-4 mr-2" />
-                        Restore
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
               </div>
-
-              {/* System Logs */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
-                    System Logs
-                  </CardTitle>
-                  <CardDescription>
-                    Recent system activity and events
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex-1">
-                        <Input placeholder="Search logs..." />
-                      </div>
-                      <Select defaultValue="all">
-                        <SelectTrigger className="w-32">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Levels</SelectItem>
-                          <SelectItem value="info">Info</SelectItem>
-                          <SelectItem value="warning">Warning</SelectItem>
-                          <SelectItem value="error">Error</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button variant="outline" size="sm">
-                        <RefreshCw className="h-4 w-4" />
-                      </Button>
-                    </div>
-
-                    <div className="border rounded-lg">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Timestamp</TableHead>
-                            <TableHead>Level</TableHead>
-                            <TableHead>Category</TableHead>
-                            <TableHead>Message</TableHead>
-                            <TableHead>IP Address</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          <TableRow>
-                            <TableCell colSpan={5} className="text-center py-8 text-slate-500">
-                              System logs will be loaded from API
-                            </TableCell>
-                          </TableRow>
-                        </TableBody>
-                      </Table>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* System Services Status */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Server className="h-5 w-5" />
-                    System Services
-                  </CardTitle>
-                  <CardDescription>
-                    Status of critical system services
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-                    <div className="text-center py-8 text-slate-500 col-span-full">
-                      System services status will be loaded from API
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </TabsContent>
 
             <TabsContent value="analytics" className="space-y-6">
