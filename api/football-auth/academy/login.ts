@@ -51,6 +51,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(401).json({ success: false, message: 'Invalid email or password' });
         }
 
+        // 2.5 Check Email Verification
+        // If email_verified column exists and is false, block login
+        if (user.email_verified === false) {
+             return res.status(403).json({ 
+                 success: false, 
+                 message: 'Please verify your email address before logging in. Check your inbox for the verification link.' 
+             });
+        }
+
         // 3. Get Academy Details
         const { data: academy, error: academyError } = await supabase
             .from('academies')

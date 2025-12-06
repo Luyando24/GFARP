@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
+import nodemailer from 'nodemailer';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('[VERCEL] Academy registration request received');
@@ -90,7 +91,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             throw new Error('Failed to create academy record');
         }
 
-        // 5. Insert Admin User
+        // 5. Generate Verification Token
+        const verificationToken = uuidv4();
+
+        // 6. Insert Admin User with token and unverified status
         const nameParts = body.contactPerson ? body.contactPerson.split(' ') : ['Admin'];
         const firstName = nameParts[0];
         const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : 'User';
@@ -106,7 +110,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 first_name: firstName,
                 last_name: lastName,
                 phone: body.phone,
-                is_active: true
+                is_active: true,
+                email_verified: false, // New field
+                verification_token: verificationToken // New field
             });
 
         if (userError) {
@@ -118,10 +124,58 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         console.log('[VERCEL] Academy and admin created successfully:', academyId);
 
-        // 6. Return Success
+        // 7. Send Verification Email
+        // Only attempt if mail credentials are present
+        if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+            try {
+                const transporter = nodemailer.createTransport({
+                    host: process.env.SMTP_HOST,
+                    port: parseInt(process.env.SMTP_PORT || '587'),
+                    secure: process.env.SMTP_SECURE === 'true',
+                    auth: {
+                        user: process.env.SMTP_USER,
+                        pass: process.env.SMTP_PASS,
+                    },
+                });
+
+                // Determine base URL (handle localhost vs production)
+                const baseUrl = process.env.VITE_APP_URL || 'http://localhost:5173'; 
+                // Wait, frontend usually runs on 5173 in dev. 
+                // But the verification link should point to the frontend page that calls the verification API.
+                // Or point directly to the API? Better to point to a frontend page for better UX.
+                const verificationLink = `${baseUrl}/verify-email?token=${verificationToken}`;
+
+                await transporter.sendMail({
+                    from: `"GFARP Support" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+                    to: body.email,
+                    subject: 'Verify your GFARP Academy Account',
+                    html: `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                            <h2 style="color: #005391;">Welcome to GFARP!</h2>
+                            <p>Thank you for registering your academy. Please verify your email address to activate your account and access the dashboard.</p>
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="${verificationLink}" style="background-color: #005391; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Verify Email Address</a>
+                            </div>
+                            <p style="color: #666; font-size: 12px;">If you didn't create an account, you can safely ignore this email.</p>
+                        </div>
+                    `
+                });
+                console.log('[VERCEL] Verification email sent to:', body.email);
+            } catch (emailError) {
+                console.error('[VERCEL] Failed to send verification email:', emailError);
+                // Don't fail the registration, just log it. User might need to resend.
+            }
+        } else {
+             console.warn('[VERCEL] SMTP configuration missing, skipping email verification send.');
+             // For dev/testing without SMTP, you might want to return the token in the response
+             // or log it clearly.
+             console.log('[DEV] Verification Token:', verificationToken);
+        }
+
+        // 8. Return Success
         return res.status(200).json({
             success: true,
-            message: 'Academy registered successfully',
+            message: 'Academy registered successfully. Please check your email to verify your account.',
             data: {
                 academy: {
                     id: academyId,
@@ -129,7 +183,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     email: body.email,
                     role: 'academy_admin'
                 },
-                token: `mock_jwt_${userId}` // In real app, generate JWT here
+                // token: `mock_jwt_${userId}` // Do NOT return auth token yet, force verification
+                requireVerification: true
             }
         });
 
@@ -142,3 +197,4 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         });
     }
 }
+

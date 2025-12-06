@@ -65,17 +65,34 @@ export default function RegisterAcademy() {
       else throw new Error(await response.text());
 
       if (data.success) {
-        const session = {
-          userId: data.data.academy.id,
-          role: 'academy' as const,
-          schoolId: data.data.academy.id,
-          tokens: { accessToken: data.data.token, expiresInSec: 24 * 3600 }
-        };
-        localStorage.setItem('academy_data', JSON.stringify(data.data.academy));
-        localStorage.setItem('isNewRegistration', 'true');
-        saveSession(session);
-        toast({ title: 'Registration Successful', description: 'Let\'s complete your academy profile!' });
-        navigate('/complete-profile');
+        // If registration requires verification (it should now), redirect to login or a pending page
+        // But we also want to clear any existing session to force new login after verification
+        
+        if (data.data.requireVerification) {
+           toast({ 
+             title: 'Registration Successful', 
+             description: 'Please check your email to verify your account before logging in.',
+             duration: 6000 
+           });
+           // Clear any potential session data
+           localStorage.removeItem('academy_data');
+           localStorage.removeItem('isNewRegistration');
+           // Redirect to login page with a message
+           navigate('/login?verified=pending');
+        } else {
+           // Fallback for old flow (should not happen if API is updated correctly)
+           const session = {
+             userId: data.data.academy.id,
+             role: 'academy' as const,
+             schoolId: data.data.academy.id,
+             tokens: { accessToken: data.data.token, expiresInSec: 24 * 3600 }
+           };
+           localStorage.setItem('academy_data', JSON.stringify(data.data.academy));
+           localStorage.setItem('isNewRegistration', 'true');
+           saveSession(session);
+           toast({ title: 'Registration Successful', description: 'Let\'s complete your academy profile!' });
+           navigate('/complete-profile');
+        }
       } else {
         throw new Error(data.message || 'Registration failed');
       }
