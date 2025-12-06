@@ -390,10 +390,10 @@ export default function AdminDashboard() {
     general: {
       siteName: "",
       siteDescription: "",
-      timezone: "",
-      language: "",
-      dateFormat: "",
-      currency: "",
+      timezone: "America/New_York",
+      language: "English",
+      dateFormat: "MM/DD/YYYY",
+      currency: "USD",
       maintenanceMode: false,
       registrationEnabled: true
     },
@@ -2081,35 +2081,28 @@ export default function AdminDashboard() {
                   <CardContent className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
-                        <Label htmlFor="siteName">Site Name</Label>
-                        <Input
-                          id="siteName"
-                          value={systemSettings.general.siteName}
-                          onChange={(e) => handleSystemSettingsChange('general', 'siteName', e.target.value)}
-                          className="mt-1.5"
-                        />
-                      </div>
-                      <div>
                         <Label htmlFor="timezone">Timezone</Label>
-                        <Select value={systemSettings.general.timezone}>
+                        <Select value={systemSettings.general.timezone} onValueChange={(value) => handleSystemSettingsChange('general', 'timezone', value)}>
                           <SelectTrigger className="mt-1.5">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="Africa/Lusaka">Africa/Lusaka</SelectItem>
+                            <SelectItem value="America/New_York">America/New_York (Eastern)</SelectItem>
+                            <SelectItem value="America/Los_Angeles">America/Los_Angeles (Pacific)</SelectItem>
                             <SelectItem value="UTC">UTC</SelectItem>
-                            <SelectItem value="Africa/Cairo">Africa/Cairo</SelectItem>
+                            <SelectItem value="Africa/Lusaka">Africa/Lusaka</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
                       <div>
                         <Label htmlFor="language">Language</Label>
-                        <Select value={systemSettings.general.language}>
+                        <Select value={systemSettings.general.language} onValueChange={(value) => handleSystemSettingsChange('general', 'language', value)}>
                           <SelectTrigger className="mt-1.5">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="English">English</SelectItem>
+                            <SelectItem value="Spanish">Spanish</SelectItem>
                             <SelectItem value="French">French</SelectItem>
                             <SelectItem value="Portuguese">Portuguese</SelectItem>
                           </SelectContent>
@@ -2117,14 +2110,15 @@ export default function AdminDashboard() {
                       </div>
                       <div>
                         <Label htmlFor="currency">Currency</Label>
-                        <Select value={systemSettings.general.currency}>
+                        <Select value={systemSettings.general.currency} onValueChange={(value) => handleSystemSettingsChange('general', 'currency', value)}>
                           <SelectTrigger className="mt-1.5">
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="ZMW">ZMW - Zambian Kwacha</SelectItem>
                             <SelectItem value="USD">USD - US Dollar</SelectItem>
                             <SelectItem value="EUR">EUR - Euro</SelectItem>
+                            <SelectItem value="GBP">GBP - British Pound</SelectItem>
+                            <SelectItem value="ZMW">ZMW - Zambian Kwacha</SelectItem>
                           </SelectContent>
                         </Select>
                       </div>
