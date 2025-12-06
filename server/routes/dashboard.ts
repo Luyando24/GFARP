@@ -541,7 +541,6 @@ export const handleGetFinancialGrowth: RequestHandler = async (req, res) => {
         WHERE sp.created_at >= NOW() - INTERVAL '12 months'
           AND sp.status = 'COMPLETED'
         GROUP BY DATE_TRUNC('month', sp.created_at)
-        ORDER BY month
       ),
       growth_calculation AS (
         SELECT 
@@ -552,7 +551,8 @@ export const handleGetFinancialGrowth: RequestHandler = async (req, res) => {
         FROM monthly_data
       )
       SELECT 
-        TO_CHAR(month, 'Mon YYYY') as month,
+        month as raw_date,
+        TO_CHAR(month, 'Mon YYYY') as month_label,
         monthly_revenue as revenue,
         subscription_count as subscriptions,
         CASE 
@@ -561,7 +561,7 @@ export const handleGetFinancialGrowth: RequestHandler = async (req, res) => {
           ELSE 0 
         END as growth
       FROM growth_calculation
-      ORDER BY month;
+      ORDER BY raw_date;
     `;
 
     const result = await query(financialQuery);
@@ -580,11 +580,27 @@ export const handleGetFinancialGrowth: RequestHandler = async (req, res) => {
       }));
     } else {
       financialData = result.rows.map(row => ({
-        month: row.month,
+        month: row.month_label,
         revenue: parseFloat(row.revenue) || 0,
         subscriptions: parseInt(row.subscriptions) || 0,
         growth: parseFloat(row.growth) || 0
       }));
+
+      // If we only have 1 data point, add a previous month with 0 values to make the chart look better
+      if (financialData.length === 1) {
+        const currentDate = new Date(result.rows[0].raw_date);
+        const prevDate = new Date(currentDate);
+        prevDate.setMonth(prevDate.getMonth() - 1);
+
+        const prevMonthLabel = prevDate.toLocaleString('default', { month: 'short', year: 'numeric' });
+
+        financialData.unshift({
+          month: prevMonthLabel,
+          revenue: 0,
+          subscriptions: 0,
+          growth: 0
+        });
+      }
     }
 
     // Calculate statistics
