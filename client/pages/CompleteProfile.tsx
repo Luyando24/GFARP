@@ -355,7 +355,7 @@ export default function CompleteProfile() {
                             <Trophy className="h-5 w-5 text-[#005391]" />
                         </div>
                         <div className="text-white">
-                            <div className="text-xl font-black tracking-tight">GFARP</div>
+                            <div className="text-xl font-black tracking-tight">Soccer Circular</div>
                             <div className="text-xs text-blue-100">Complete Your Profile</div>
                         </div>
                     </div>
@@ -443,7 +443,7 @@ export default function CompleteProfile() {
             {/* Footer */}
             <footer className="bg-[#001a33] text-white py-6">
                 <div className="container mx-auto px-4 text-center">
-                    <p className="text-blue-200 text-sm">© 2024 Global Football Academy Registration Platform</p>
+                    <p className="text-blue-200 text-sm">© 2024 Soccer Circular Academy Registration Platform</p>
                 </div>
             </footer>
         </div>

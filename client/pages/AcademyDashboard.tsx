@@ -1242,6 +1242,32 @@ export default function AcademyDashboard() {
 
         {/* Main Content */}
         <main className="flex-1 p-6">
+          
+          {/* Incomplete Profile Banner */}
+          {academyInfo && (!academyInfo.address || !academyInfo.phone || !academyInfo.directorName) && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded shadow-sm">
+              <div className="flex justify-between items-center">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <AlertCircle className="h-5 w-5 text-yellow-400" aria-hidden="true" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="text-sm text-yellow-700">
+                      Your academy profile is incomplete. Please complete your profile to unlock all features.
+                    </p>
+                  </div>
+                </div>
+                <div className="ml-4 flex-shrink-0">
+                  <Link to="/complete-profile">
+                    <Button variant="outline" size="sm" className="text-yellow-700 border-yellow-700 hover:bg-yellow-100">
+                      Complete Profile
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
           {activeView === 'compliance-documents' ? (
             <ComplianceDocuments onBack={() => setActiveView('main')} />
           ) : (

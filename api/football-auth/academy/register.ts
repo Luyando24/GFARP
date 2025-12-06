@@ -100,6 +100,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const academyCode = `${nameInitials}-${randomSuffix}`;
 
         // 4. Insert Academy
+        // We only insert minimal details. The rest will be filled in the Complete Profile step.
         const { error: academyError } = await supabase
             .from('academies')
             .insert({
@@ -107,13 +108,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 name: academyName,
                 code: academyCode,
                 email: body.email,
-                phone: body.phone,
-                address: body.address,
-                district: body.city, // Mapping city to district for now
-                province: body.country, // Mapping country to province/region
-                director_name: body.contactPerson,
-                founded_year: body.foundedYear,
-                facilities: body.description ? [body.description] : [], // Storing description in facilities for now or separate field if schema allows
+                // phone: body.phone, // Leave empty to prompt completion
+                // address: body.address, // Leave empty
+                // district: body.city, // Leave empty
+                // province: body.country, // Leave empty
+                // director_name: body.contactPerson, // Leave empty
+                // founded_year: body.foundedYear, // Leave empty
+                // facilities: body.description ? [body.description] : [], // Leave empty
                 status: 'active',
                 academy_type: 'youth' // Default
             });
