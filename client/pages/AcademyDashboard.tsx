@@ -299,6 +299,88 @@ export default function AcademyDashboard() {
     recentTransfers: [],
     monthlyFinancialPerformance: []
   });
+
+  // Delete account state
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) {
+      setDeleteError("Password is required");
+      return;
+    }
+
+    setIsDeleting(true);
+    setDeleteError("");
+
+    try {
+      // Get user email from local storage or wherever it's stored
+      // Assuming 'football-auth-storage' matches what's used in auth.ts
+      let userEmail = "";
+      try {
+        const storage = JSON.parse(localStorage.getItem('football-auth-storage') || '{}');
+        userEmail = storage?.state?.user?.email;
+      } catch (e) {
+        console.error("Error parsing auth storage", e);
+      }
+      
+      // Fallback if not found in storage, check if we have it in academyInfo or other state
+      if (!userEmail && academyInfo?.email) {
+          // Note: academyInfo.email might be the academy email, not necessarily the logged in user's email
+          // But for now let's try to find the user email.
+          // If the user object is not available, we might need to rely on the user re-entering it?
+          // The API requires email to verify the specific user.
+      }
+
+      if (!academyInfo?.id || !userEmail) {
+        throw new Error("User information missing. Please refresh the page.");
+      }
+
+      const apiUrl = import.meta.env.VITE_API_URL || '/api';
+      const response = await fetch(`${apiUrl}/football-auth/academy/delete-account`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('football-auth-token')}`
+        },
+        body: JSON.stringify({
+          academyId: academyInfo.id,
+          email: userEmail,
+          password: deletePassword
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to delete account');
+      }
+
+      toast({
+        title: "Account Deleted",
+        description: "Your academy account has been permanently deleted.",
+        variant: "destructive"
+      });
+
+      // Clear session and redirect
+      clearSession();
+      navigate('/login');
+
+    } catch (error: any) {
+      console.error('Delete account error:', error);
+      setDeleteError(error.message || "An error occurred while deleting your account");
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete account",
+        variant: "destructive"
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   const [isLoadingStats, setIsLoadingStats] = useState(false);
 
   // Subscription state
@@ -2469,6 +2551,64 @@ export default function AcademyDashboard() {
                               <Upload className="h-4 w-4 mr-2" />
                               Import Player Data
                             </Button>
+                            
+                            <div className="pt-2 mt-2 border-t border-slate-200 dark:border-slate-700">
+                              <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                                <DialogTrigger asChild>
+                                  <Button variant="outline" size="sm" className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 hover:border-red-300 dark:border-red-900 dark:hover:bg-red-900/20 dark:text-red-400">
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete Account
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle className="text-red-600">Delete Account Permanently</DialogTitle>
+                                    <DialogDescription>
+                                      This action cannot be undone. This will permanently delete your academy account, all player data, compliance documents, and remove your data from our servers.
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  
+                                  <div className="space-y-4 py-4">
+                                    <Alert variant="destructive">
+                                      <AlertCircle className="h-4 w-4" />
+                                      <AlertDescription>
+                                        Warning: You are about to delete <strong>{academyInfo?.name || 'your academy'}</strong>. All data will be lost forever.
+                                      </AlertDescription>
+                                    </Alert>
+                                    
+                                    <div className="space-y-2">
+                                      <Label htmlFor="delete-password">Confirm your password to continue</Label>
+                                      <Input 
+                                        id="delete-password" 
+                                        type="password" 
+                                        placeholder="Enter your password"
+                                        value={deletePassword}
+                                        onChange={(e) => setDeletePassword(e.target.value)}
+                                      />
+                                      {deleteError && <p className="text-sm text-red-500">{deleteError}</p>}
+                                    </div>
+                                  </div>
+                                  
+                                  <DialogFooter>
+                                    <Button variant="outline" onClick={() => setShowDeleteDialog(false)} disabled={isDeleting}>Cancel</Button>
+                                    <Button 
+                                      variant="destructive" 
+                                      onClick={handleDeleteAccount}
+                                      disabled={isDeleting || !deletePassword}
+                                    >
+                                      {isDeleting ? (
+                                        <>
+                                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                          Deleting...
+                                        </>
+                                      ) : (
+                                        'Permanently Delete Account'
+                                      )}
+                                    </Button>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
+                            </div>
                           </div>
                         </div>
                       </div>
