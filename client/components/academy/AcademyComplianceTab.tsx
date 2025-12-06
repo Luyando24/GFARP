@@ -58,23 +58,41 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
 
     const [newDocument, setNewDocument] = useState({
         document_name: "",
-        document_type: "Manual",
+        document_type: "other",
         description: "",
         expiry_date: ""
     });
 
-    const documentTypes = ["Manual", "Forms", "Guidelines", "Policy", "Handbook", "Certificate", "Report"];
+    const documentTypes = [
+        "contract",
+        "medical_certificate",
+        "fifa_clearance",
+        "international_clearance",
+        "age_verification",
+        "transfer_agreement",
+        "fifa_tms_certificate",
+        "academy_license",
+        "facility_inspection_report",
+        "coach_certifications",
+        "financial_statements",
+        "audit_report",
+        "transaction_records",
+        "safeguarding_policy",
+        "background_checks",
+        "training_certificates",
+        "other"
+    ];
 
     // Required FIFA compliance documents
     const requiredDocuments = [
-        { name: 'FIFA Statutes and Regulations', type: 'Manual' },
-        { name: 'Player Registration System Manual', type: 'Manual' },
-        { name: 'Anti-Doping Policy', type: 'Policy' },
-        { name: 'Financial Fair Play Guidelines', type: 'Guidelines' },
-        { name: 'Referee Guidelines and Laws', type: 'Guidelines' },
-        { name: 'Stadium Safety Standards', type: 'Guidelines' },
-        { name: 'Medical Regulations', type: 'Guidelines' },
-        { name: 'Disciplinary Code', type: 'Manual' }
+        { name: 'FIFA Statutes and Regulations', type: 'other' },
+        { name: 'Player Registration System Manual', type: 'other' },
+        { name: 'Anti-Doping Policy', type: 'safeguarding_policy' },
+        { name: 'Financial Fair Play Guidelines', type: 'financial_statements' },
+        { name: 'Referee Guidelines and Laws', type: 'other' },
+        { name: 'Stadium Safety Standards', type: 'facility_inspection_report' },
+        { name: 'Medical Regulations', type: 'medical_certificate' },
+        { name: 'Disciplinary Code', type: 'other' }
     ];
 
     useEffect(() => {
@@ -159,7 +177,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
                 });
                 await loadDocuments();
                 setShowUploadDialog(false);
-                setNewDocument({ document_name: "", document_type: "Manual", description: "", expiry_date: "" });
+                setNewDocument({ document_name: "", document_type: "other", description: "", expiry_date: "" });
                 setSelectedFile(null);
             } else {
                 toast({
@@ -335,7 +353,9 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <Badge variant="outline">{document.document_type}</Badge>
+                                            <Badge variant="outline">
+                                                {document.document_type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                            </Badge>
                                         </TableCell>
                                         <TableCell>
                                             {getStatusBadge(document.status)}
@@ -406,7 +426,9 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
                                 </SelectTrigger>
                                 <SelectContent>
                                     {documentTypes.map(type => (
-                                        <SelectItem key={type} value={type}>{type}</SelectItem>
+                                        <SelectItem key={type} value={type}>
+                                            {type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                        </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
