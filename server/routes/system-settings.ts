@@ -63,12 +63,12 @@ interface SystemSettingsData {
 // Default system settings
 const defaultSettings: SystemSettingsData = {
   general: {
-    siteName: "FIFA Platform Zambia",
-    siteDescription: "Official FIFA Football Academy Management Platform",
-    timezone: "Africa/Lusaka",
+    siteName: "Soccer Circular",
+    siteDescription: "Official Soccer Circular Academy Management Platform",
+    timezone: "America/New_York",
     language: "English",
-    dateFormat: "DD/MM/YYYY",
-    currency: "ZMW",
+    dateFormat: "MM/DD/YYYY",
+    currency: "USD",
     maintenanceMode: false,
     registrationEnabled: true
   },
