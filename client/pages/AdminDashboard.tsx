@@ -214,9 +214,9 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<any[]>([]);
   const [complianceRecords, setComplianceRecords] = useState<ComplianceRecord[]>([]);
   const [viewingCompliance, setViewingCompliance] = useState<ComplianceRecord | null>(null);
-  const [complianceDocuments, setComplianceDocuments] = useState<ComplianceDocument[]>([]);
-  const [isComplianceLoading, setIsComplianceLoading] = useState(false);
-
+  
+  // Duplicate declarations removed from here
+  
   // System stats state - will be fetched from API
   const [systemStats, setSystemStats] = useState({
     totalAcademies: 0,
