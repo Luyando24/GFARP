@@ -239,10 +239,13 @@ export default function AdminDashboard() {
   const fetchComplianceDocuments = async () => {
     try {
       setIsComplianceLoading(true);
-      const response = await fetch('/api/compliance-documents/admin-list');
-      const result = await response.json();
-      if (result.success) {
-        setComplianceDocuments(result.data);
+      
+      // Fetch documents
+      const docsResponse = await fetch('/api/compliance-documents/admin-list');
+      const docsResult = await docsResponse.json();
+      
+      if (docsResult.success) {
+        setComplianceDocuments(docsResult.data);
       } else {
         toast({
           title: "Error",
@@ -250,11 +253,20 @@ export default function AdminDashboard() {
           variant: "destructive",
         });
       }
+
+      // Fetch stats
+      const statsResponse = await fetch('/api/compliance-documents/stats');
+      const statsResult = await statsResponse.json();
+
+      if (statsResult.success) {
+        setComplianceStats(statsResult.data);
+      }
+      
     } catch (error) {
-      console.error('Error fetching compliance documents:', error);
+      console.error('Error fetching compliance data:', error);
       toast({
         title: "Error",
-        description: "Failed to load compliance documents",
+        description: "Failed to load compliance data",
         variant: "destructive",
       });
     } finally {
