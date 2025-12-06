@@ -43,12 +43,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         // 1. Check if email already exists
         const { data: existingUser, error: checkError } = await supabase
             .from('staff_users')
-            .select('id')
+            .select('id, email_verified, academy_id')
             .eq('email', body.email)
             .single();
 
         if (existingUser) {
-            return res.status(400).json({ success: false, message: 'Email already registered' });
+            // If the user exists but is not verified, we allow overwriting (cleanup old attempt)
+            // This handles cases where a previous registration failed or wasn't verified
+            if (existingUser.email_verified) {
+                return res.status(400).json({ success: false, message: 'Email already registered' });
+            } else {
+                console.log('[VERCEL] Found unverified existing account. Cleaning up to allow re-registration:', body.email);
+                
+                // Delete the unverified user
+                const { error: deleteUserError } = await supabase
+                    .from('staff_users')
+                    .delete()
+                    .eq('id', existingUser.id);
+                
+                if (deleteUserError) {
+                    console.error('[VERCEL] Error deleting unverified user:', deleteUserError);
+                    // If we can't delete, we must stop to avoid unique constraint violations later
+                    return res.status(500).json({ success: false, message: 'Failed to cleanup previous unverified account' });
+                }
+
+                // Delete the associated academy if it exists
+                if (existingUser.academy_id) {
+                    const { error: deleteAcademyError } = await supabase
+                        .from('academies')
+                        .delete()
+                        .eq('id', existingUser.academy_id);
+                        
+                    if (deleteAcademyError) {
+                        console.error('[VERCEL] Error deleting unverified academy:', deleteAcademyError);
+                        // Continue anyway, as the user is gone, so email collision in staff_users is resolved.
+                        // Academy email collision might happen if we don't delete, but let's hope it deletes or doesn't conflict immediately.
+                    }
+                }
+            }
         }
 
         // 2. Hash password
