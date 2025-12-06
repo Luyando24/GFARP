@@ -174,11 +174,82 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
       console.log('Error fetching recent activity, using empty array');
     }
 
+    // Calculate total revenue (lifetime)
+    let totalRevenue = 0;
+    let totalTransactions = 0;
+    let pendingPayments = 0;
+    let averageTransactionValue = 0;
+    let revenueGrowth = 0;
+
+    try {
+      // Total revenue from financial transactions
+      const totalTxRevenueResult = await query(`
+        SELECT SUM(amount) as total, COUNT(*) as count FROM financial_transactions 
+        WHERE status = 'completed'
+      `);
+      const txRevenue = parseFloat(totalTxRevenueResult.rows[0].total) || 0;
+      const txCount = parseInt(totalTxRevenueResult.rows[0].count) || 0;
+
+      // Total revenue from subscription payments
+      const totalSubRevenueResult = await query(`
+        SELECT SUM(amount) as total, COUNT(*) as count FROM subscription_payments
+        WHERE status = 'COMPLETED'
+      `);
+      const subRevenue = parseFloat(totalSubRevenueResult.rows[0].total) || 0;
+      const subCount = parseInt(totalSubRevenueResult.rows[0].count) || 0;
+
+      totalRevenue = txRevenue + subRevenue;
+      totalTransactions = txCount + subCount;
+      averageTransactionValue = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
+
+      // Pending payments
+      const pendingTxResult = await query(`
+        SELECT COUNT(*) as count FROM financial_transactions WHERE status = 'pending'
+      `);
+      const pendingSubResult = await query(`
+        SELECT COUNT(*) as count FROM subscription_payments WHERE status = 'PENDING'
+      `);
+      pendingPayments = (parseInt(pendingTxResult.rows[0].count) || 0) + (parseInt(pendingSubResult.rows[0].count) || 0);
+
+      // Calculate revenue growth (this month vs last month)
+      const lastMonthStart = new Date();
+      lastMonthStart.setMonth(lastMonthStart.getMonth() - 1);
+      lastMonthStart.setDate(1);
+      lastMonthStart.setHours(0, 0, 0, 0);
+
+      const lastMonthEnd = new Date();
+      lastMonthEnd.setDate(1);
+      lastMonthEnd.setHours(0, 0, 0, 0);
+
+      const lastMonthRevenueResult = await query(`
+        SELECT 
+          (SELECT COALESCE(SUM(amount), 0) FROM financial_transactions 
+           WHERE created_at >= $1 AND created_at < $2 AND status = 'completed') +
+          (SELECT COALESCE(SUM(amount), 0) FROM subscription_payments 
+           WHERE created_at >= $1 AND created_at < $2 AND status = 'COMPLETED') as total
+      `, [lastMonthStart.toISOString(), lastMonthEnd.toISOString()]);
+
+      const lastMonthRevenue = parseFloat(lastMonthRevenueResult.rows[0].total) || 0;
+
+      if (lastMonthRevenue > 0) {
+        revenueGrowth = ((monthlyRevenue - lastMonthRevenue) / lastMonthRevenue) * 100;
+      } else if (monthlyRevenue > 0) {
+        revenueGrowth = 100;
+      }
+    } catch (err) {
+      console.error('Error calculating financial stats:', err);
+    }
+
     const stats = {
       totalAcademies,
       totalPlayers,
       activeTransfers,
       monthlyRevenue,
+      totalRevenue,
+      totalTransactions,
+      pendingPayments,
+      averageTransactionValue: Math.round(averageTransactionValue * 100) / 100,
+      revenueGrowth: Math.round(revenueGrowth * 10) / 10,
       revenueBreakdown: {
         subscriptions: subscriptionRevenue,
         transactions: monthlyRevenue - subscriptionRevenue
