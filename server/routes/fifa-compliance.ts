@@ -10,9 +10,11 @@ router.get('/', async (req, res) => {
 
     let sql = `
       SELECT fc.*, 
+             a.name as academy_name,
              COUNT(fcd.id) as document_count,
              COUNT(fca.id) as action_count
       FROM fifa_compliance fc
+      JOIN academies a ON fc.academy_id = a.id
       LEFT JOIN fifa_compliance_documents fcd ON fc.id = fcd.compliance_id
       LEFT JOIN fifa_compliance_actions fca ON fc.id = fca.compliance_id
       WHERE 1=1
@@ -39,7 +41,7 @@ router.get('/', async (req, res) => {
     }
 
     sql += `
-      GROUP BY fc.id
+      GROUP BY fc.id, a.name
       ORDER BY fc.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
@@ -285,6 +287,40 @@ router.post('/documents', async (req, res) => {
   } catch (error) {
     console.error('Error uploading FIFA compliance document:', error);
     res.status(500).json({ error: 'Failed to upload FIFA compliance document' });
+  }
+});
+
+// PUT /api/fifa-compliance/documents/:id/status - Update document status
+router.put('/documents/:id/status', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!status) {
+      return res.status(400).json({ error: 'Missing required field: status' });
+    }
+
+    // Validate status
+    const validStatuses = ['pending', 'verified', 'rejected', 'expired'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status provided' });
+    }
+
+    const result = await query(`
+      UPDATE fifa_compliance_documents
+      SET status = $1, updated_at = NOW()
+      WHERE id = $2
+      RETURNING *
+    `, [status, id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Document not found' });
+    }
+
+    res.json(result.rows[0]);
+  } catch (error) {
+    console.error('Error updating FIFA compliance document status:', error);
+    res.status(500).json({ error: 'Failed to update document status' });
   }
 });
 

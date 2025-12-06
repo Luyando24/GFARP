@@ -173,6 +173,36 @@ const chartConfig = {
   }
 };
 
+interface ComplianceDocument {
+  id: string;
+  compliance_id: string;
+  document_name: string;
+  document_type: string;
+  file_path: string;
+  file_size: number;
+  mime_type: string;
+  uploaded_by: string;
+  upload_date: string;
+  status: 'pending' | 'verified' | 'rejected' | 'expired';
+  expiry_date?: string;
+  url?: string;
+}
+
+interface ComplianceRecord {
+  id: string;
+  academy_id: string;
+  academy_name?: string;
+  compliance_type: string;
+  title: string;
+  description: string;
+  status: 'pending' | 'under_review' | 'approved' | 'rejected' | 'flagged' | 'requires_action';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
+  submission_date: string;
+  due_date?: string;
+  document_count: number;
+  action_count: number;
+}
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { session } = useAuth();
@@ -182,6 +212,10 @@ export default function AdminDashboard() {
 
   // Users state for admin list
   const [users, setUsers] = useState<any[]>([]);
+  const [complianceRecords, setComplianceRecords] = useState<ComplianceRecord[]>([]);
+  const [viewingCompliance, setViewingCompliance] = useState<ComplianceRecord | null>(null);
+  const [complianceDocuments, setComplianceDocuments] = useState<ComplianceDocument[]>([]);
+  const [isComplianceLoading, setIsComplianceLoading] = useState(false);
 
   // System stats state - will be fetched from API
   const [systemStats, setSystemStats] = useState({
@@ -198,6 +232,75 @@ export default function AdminDashboard() {
     flaggedIssues: 0,
     averageReviewTime: "0 days"
   });
+
+  const [complianceDocuments, setComplianceDocuments] = useState<any[]>([]);
+  const [isComplianceLoading, setIsComplianceLoading] = useState(false);
+
+  const fetchComplianceDocuments = async () => {
+    try {
+      setIsComplianceLoading(true);
+      const response = await fetch('/api/compliance-documents/admin-list');
+      const result = await response.json();
+      if (result.success) {
+        setComplianceDocuments(result.data);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to load compliance documents",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching compliance documents:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load compliance documents",
+        variant: "destructive",
+      });
+    } finally {
+      setIsComplianceLoading(false);
+    }
+  };
+
+  const handleUpdateDocumentStatus = async (documentId: string, newStatus: string) => {
+    try {
+      const response = await fetch('/api/compliance-documents/update-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ documentId, status: newStatus }),
+      });
+      const result = await response.json();
+      
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: `Document ${newStatus === 'verified' ? 'approved' : 'rejected'} successfully`,
+        });
+        fetchComplianceDocuments();
+      } else {
+        toast({
+          title: "Error",
+          description: result.message || "Failed to update status",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error updating status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update document status",
+        variant: "destructive",
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'compliance') {
+      fetchComplianceDocuments();
+    }
+  }, [activeTab]);
 
   // Financial stats state - will be fetched from API
   const [financialStats, setFinancialStats] = useState({
@@ -1527,13 +1630,85 @@ export default function AdminDashboard() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {/* Compliance data will be loaded from API */}
-                        <TableRow>
-                          <TableCell colSpan={8} className="text-center py-8 text-slate-500 dark:text-slate-400">
-                            <p>No compliance data available</p>
-                            <p className="text-sm">Compliance data will be loaded from the API</p>
-                          </TableCell>
-                        </TableRow>
+                        {isComplianceLoading ? (
+                          <TableRow>
+                            <TableCell colSpan={8} className="text-center py-8 text-slate-500 dark:text-slate-400">
+                              Loading compliance documents...
+                            </TableCell>
+                          </TableRow>
+                        ) : complianceDocuments.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={8} className="text-center py-8 text-slate-500 dark:text-slate-400">
+                              <p>No compliance data available</p>
+                              <p className="text-sm">New submissions will appear here</p>
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          complianceDocuments.map((doc) => (
+                            <TableRow key={doc.id}>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium">{doc.academy_name}</p>
+                                  <p className="text-xs text-muted-foreground">{doc.academy_email}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">{doc.document_type}</Badge>
+                                <p className="text-xs mt-1">{doc.document_name}</p>
+                              </TableCell>
+                              <TableCell>
+                                <Badge 
+                                  variant={
+                                    doc.status === 'verified' ? 'default' : 
+                                    doc.status === 'rejected' ? 'destructive' : 
+                                    'secondary'
+                                  }
+                                >
+                                  {doc.status === 'verified' ? 'Approved' : 
+                                   doc.status === 'rejected' ? 'Rejected' : 
+                                   'Pending'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Medium</Badge>
+                              </TableCell>
+                              <TableCell>{new Date(doc.upload_date).toLocaleDateString()}</TableCell>
+                              <TableCell>-</TableCell>
+                              <TableCell>Admin</TableCell>
+                              <TableCell className="text-center">
+                                <div className="flex items-center justify-center gap-2">
+                                  {doc.file_url && (
+                                    <a href={doc.file_url} target="_blank" rel="noopener noreferrer">
+                                      <Button variant="ghost" size="sm" title="View Document">
+                                        <Eye className="h-4 w-4" />
+                                      </Button>
+                                    </a>
+                                  )}
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                    onClick={() => handleUpdateDocumentStatus(doc.id, 'verified')}
+                                    disabled={doc.status === 'verified'}
+                                    title="Approve"
+                                  >
+                                    <CheckCircle className="h-4 w-4" />
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                    onClick={() => handleUpdateDocumentStatus(doc.id, 'rejected')}
+                                    disabled={doc.status === 'rejected'}
+                                    title="Reject"
+                                  >
+                                    <XCircle className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
                       </TableBody>
                     </Table>
                   </div>
