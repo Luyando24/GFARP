@@ -193,6 +193,60 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (req.method === 'DELETE') {
             console.log(`[VERCEL] Deleting academy ${id}`);
 
+            // Perform Deletion (Cascading manually to be safe)
+
+            // Delete Compliance Documents
+            const { error: docsError } = await supabase
+                .from('fifa_compliance_documents')
+                .delete()
+                .eq('academy_id', id);
+            
+            if (docsError) console.error('Error deleting documents:', docsError);
+
+            // Delete Transfers
+            const { error: transfersError } = await supabase
+                .from('transfers')
+                .delete()
+                .eq('academy_id', id);
+            
+            if (transfersError) console.error('Error deleting transfers:', transfersError);
+
+            // Delete Financial Transactions
+            const { error: transactionsError } = await supabase
+                .from('financial_transactions')
+                .delete()
+                .eq('academy_id', id);
+            
+            if (transactionsError) console.error('Error deleting transactions:', transactionsError);
+
+            // Delete Players
+            const { error: playersError } = await supabase
+                .from('football_players')
+                .delete()
+                .eq('academy_id', id);
+
+            if (playersError) console.error('Error deleting players:', playersError);
+
+            // Delete Subscriptions
+            const { error: subsError } = await supabase
+                .from('football_subscriptions')
+                .delete()
+                .eq('academy_id', id);
+
+            if (subsError) console.error('Error deleting subscriptions:', subsError);
+
+            // Delete Staff Users
+            const { error: usersError } = await supabase
+                .from('staff_users')
+                .delete()
+                .eq('academy_id', id);
+
+            if (usersError) {
+                console.error('Error deleting users:', usersError);
+                throw new Error('Failed to delete associated users');
+            }
+
+            // Finally, delete the academy
             const { data, error } = await supabase
                 .from('academies')
                 .delete()
