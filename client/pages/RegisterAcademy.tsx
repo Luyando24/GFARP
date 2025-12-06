@@ -77,8 +77,8 @@ export default function RegisterAcademy() {
            // Clear any potential session data
            localStorage.removeItem('academy_data');
            localStorage.removeItem('isNewRegistration');
-           // Redirect to login page with a message
-           navigate('/login?verified=pending');
+           // Redirect to verification pending page
+           navigate('/verification-pending', { state: { email: formData.email } });
         } else {
            // Fallback for old flow (should not happen if API is updated correctly)
            const session = {

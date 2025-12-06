@@ -33,6 +33,7 @@ import SubscriptionSuccess from "./pages/SubscriptionSuccess";
 import SubscriptionCancel from "./pages/SubscriptionCancel";
 import SetupSuperAdmin from "./pages/SetupSuperAdmin";
 import VerifyEmail from "./pages/VerifyEmail";
+import VerificationPending from "./pages/VerificationPending";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,7 @@ const App = () => {
               {/* Academy Registration - Public route */}
               <Route path="/academy-registration" element={<RegisterAcademy />} />
               <Route path="/verify-email" element={<VerifyEmail />} />
+              <Route path="/verification-pending" element={<VerificationPending />} />
               <Route path="/complete-profile" element={<CompleteProfile />} />
 
               {/* Academy Dashboard - Protected route requiring authentication */}

@@ -140,15 +140,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
                 // Determine base URL (handle localhost vs production)
                 const baseUrl = process.env.VITE_APP_URL || 'http://localhost:5173'; 
-                // Wait, frontend usually runs on 5173 in dev. 
-                // But the verification link should point to the frontend page that calls the verification API.
-                // Or point directly to the API? Better to point to a frontend page for better UX.
+                
                 const verificationLink = `${baseUrl}/verify-email?token=${verificationToken}`;
 
                 await transporter.sendMail({
                     from: `"GFARP Support" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
                     to: body.email,
                     subject: 'Verify your GFARP Academy Account',
+                    text: `Welcome to GFARP!\n\nThank you for registering your academy. Please verify your email address by clicking the link below:\n\n${verificationLink}\n\nIf you didn't create an account, you can safely ignore this email.`,
                     html: `
                         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
                             <h2 style="color: #005391;">Welcome to GFARP!</h2>
@@ -156,6 +155,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                             <div style="text-align: center; margin: 30px 0;">
                                 <a href="${verificationLink}" style="background-color: #005391; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Verify Email Address</a>
                             </div>
+                            <p>Or click this link: <a href="${verificationLink}">${verificationLink}</a></p>
                             <p style="color: #666; font-size: 12px;">If you didn't create an account, you can safely ignore this email.</p>
                         </div>
                     `
