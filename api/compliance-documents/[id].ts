@@ -48,7 +48,7 @@ export default async function handler(
 
         // Handle UPDATE
         if (req.method === 'PUT') {
-            const { document_name, document_type, description, expiry_date, status } = req.body;
+            const { document_name, document_type, expiry_date, status } = req.body;
 
             console.log(`[VERCEL] Updating compliance document: ${id}`);
 
@@ -57,13 +57,11 @@ export default async function handler(
                 .update({
                     document_name,
                     document_type,
-                    description,
                     expiry_date,
                     status,
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', id)
-                .eq('is_active', true)
                 .select()
                 .single();
 
@@ -90,18 +88,17 @@ export default async function handler(
             });
         }
 
-        // Handle DELETE (soft delete)
+        // Handle DELETE (Hard delete as no soft-delete column exists)
         if (req.method === 'DELETE') {
             console.log(`[VERCEL] Deleting compliance document: ${id}`);
 
+            // First get the file path to delete from storage if needed. 
+            // For now, we'll just delete the record. Storage cleanup typically handled by triggers or manual cleanup.
+
             const { data, error } = await supabase
                 .from('fifa_compliance_documents')
-                .update({
-                    is_active: false,
-                    updated_at: new Date().toISOString()
-                })
+                .delete()
                 .eq('id', id)
-                .eq('is_active', true)
                 .select()
                 .single();
 
@@ -114,12 +111,9 @@ export default async function handler(
                 });
             }
 
-            if (!data) {
-                return res.status(404).json({
-                    success: false,
-                    message: 'Document not found'
-                });
-            }
+            // Note: In Supabase delete() returns rows only if select() is called.
+            // If ID wasn't found, it might simply return no data but no error, or data as null/empty array depending on version.
+            // But with single(), it returns error if no rows.
 
             return res.json({
                 success: true,

@@ -31,15 +31,14 @@ import { useToast } from '@/components/ui/use-toast';
 
 interface ComplianceDocument {
     id: string;
-    academy_id: string;
     document_name: string;
     document_type: string;
     file_path: string;
     file_size: number;
     uploaded_by: string;
-    uploaded_at: string;
+    upload_date: string;
     expiry_date?: string;
-    status: 'active' | 'expired' | 'review_needed';
+    status: 'pending' | 'verified' | 'rejected' | 'expired';
     description?: string;
     url?: string;
 }
@@ -216,10 +215,12 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
 
     const getStatusBadge = (status: string) => {
         switch (status) {
-            case 'active':
-                return <Badge className="bg-green-100 text-green-800">Active</Badge>;
-            case 'review_needed':
-                return <Badge className="bg-yellow-100 text-yellow-800">Review Needed</Badge>;
+            case 'verified':
+                return <Badge className="bg-green-100 text-green-800">Verified</Badge>;
+            case 'pending':
+                return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
+            case 'rejected':
+                return <Badge className="bg-red-100 text-red-800">Rejected</Badge>;
             case 'expired':
                 return <Badge className="bg-red-100 text-red-800">Expired</Badge>;
             default:
@@ -340,7 +341,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
                                             {getStatusBadge(document.status)}
                                         </TableCell>
                                         <TableCell>
-                                            {new Date(document.uploaded_at).toLocaleDateString()}
+                                            {new Date(document.upload_date).toLocaleDateString()}
                                         </TableCell>
                                         <TableCell>{formatFileSize(document.file_size)}</TableCell>
                                         <TableCell className="text-right">

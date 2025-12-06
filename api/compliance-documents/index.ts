@@ -46,45 +46,18 @@ export default async function handler(
 
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        // Fetch compliance documents for this academy
-        // Note: The table schema uses 'user_id' to store the academy/user reference
-        // but it might be 'academy_id' in some versions. We'll try to be smart about it.
-        
-        // First try with user_id (which is what the error message suggests is the correct column if academy_id is missing)
-        let { data: documents, error } = await supabase
+        // Fetch compliance documents for this academy by joining with the parent fifa_compliance table
+        // The documents table is linked to fifa_compliance, which is linked to academies
+        const { data: documents, error } = await supabase
             .from('fifa_compliance_documents')
-            .select('*')
-            .eq('user_id', academyId)
-            .eq('is_active', true)
-            .order('uploaded_at', { ascending: false });
-
-        // If user_id query failed or returned nothing, try academy_id as fallback
-        // But only if the error was specifically about the column not existing
-        if (error && error.message.includes('column "user_id" does not exist')) {
-             const fallbackResult = await supabase
-                .from('fifa_compliance_documents')
-                .select('*')
-                .eq('academy_id', academyId)
-                .eq('is_active', true)
-                .order('uploaded_at', { ascending: false });
-                
-             documents = fallbackResult.data;
-             error = fallbackResult.error;
-        } else if (error && error.message.includes('column fifa_compliance_documents.academy_id does not exist')) {
-            // If the initial error (which we might have seen in logs) was about academy_id,
-            // then user_id MUST be the correct one. 
-            // So if we are here, it means the FIRST query (using user_id) failed with something else?
-            // No, wait. The logic above is:
-            // 1. Try user_id.
-            // 2. If that fails saying "user_id does not exist", try academy_id.
-            
-            // The user reported "column fifa_compliance_documents.academy_id does not exist".
-            // This means the previous code (which used academy_id) failed.
-            // So the correct column IS likely 'user_id'.
-            
-            // So my first attempt above (using user_id) is the correct primary strategy.
-            // If THAT fails, we handle it.
-        }
+            .select(`
+                *,
+                fifa_compliance!inner (
+                    academy_id
+                )
+            `)
+            .eq('fifa_compliance.academy_id', academyId)
+            .order('upload_date', { ascending: false });
 
         if (error) {
             console.error('[VERCEL] Error fetching compliance documents:', error);
