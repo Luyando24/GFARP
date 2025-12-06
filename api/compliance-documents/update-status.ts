@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import nodemailer from 'nodemailer';
 
 export const config = {
     maxDuration: 10,
@@ -23,7 +24,7 @@ export default async function handler(
     }
 
     try {
-        const { documentId, status } = req.body;
+        const { documentId, status, rejectionReason } = req.body;
 
         if (!documentId || !status) {
             return res.status(400).json({
@@ -55,10 +56,39 @@ export default async function handler(
 
         const supabase = createClient(supabaseUrl, supabaseKey);
 
+        // Fetch document details along with academy info for email
+        const { data: docInfo, error: fetchError } = await supabase
+            .from('fifa_compliance_documents')
+            .select(`
+                *,
+                fifa_compliance (
+                    academies (
+                        name,
+                        email
+                    )
+                )
+            `)
+            .eq('id', documentId)
+            .single();
+
+        if (fetchError || !docInfo) {
+            console.error('[VERCEL] Error fetching document info:', fetchError);
+            return res.status(404).json({
+                success: false,
+                message: 'Document not found'
+            });
+        }
+
+        // Prepare update data
+        const updateData: any = { status };
+        if (status === 'rejected' && rejectionReason) {
+            updateData.rejection_reason = rejectionReason;
+        }
+
         // Update document status
         const { data, error } = await supabase
             .from('fifa_compliance_documents')
-            .update({ status })
+            .update(updateData)
             .eq('id', documentId)
             .select()
             .single();
@@ -70,6 +100,66 @@ export default async function handler(
                 message: 'Failed to update document status',
                 error: error.message
             });
+        }
+
+        // Send Email Notification
+        if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
+            try {
+                const transporter = nodemailer.createTransport({
+                    host: process.env.SMTP_HOST,
+                    port: parseInt(process.env.SMTP_PORT || '587'),
+                    secure: process.env.SMTP_SECURE === 'true',
+                    auth: {
+                        user: process.env.SMTP_USER,
+                        pass: process.env.SMTP_PASS,
+                    },
+                });
+
+                const academyName = docInfo.fifa_compliance?.academies?.name || 'Academy';
+                const academyEmail = docInfo.fifa_compliance?.academies?.email;
+                const documentName = docInfo.document_name;
+
+                if (academyEmail) {
+                    let subject = '';
+                    let htmlContent = '';
+
+                    if (status === 'verified') {
+                        subject = 'Compliance Document Approved - GFARP';
+                        htmlContent = `
+                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                                <h2 style="color: #10b981;">Document Approved</h2>
+                                <p>Hello ${academyName},</p>
+                                <p>Your document <strong>${documentName}</strong> has been reviewed and <strong>approved</strong>.</p>
+                                <p>Thank you for ensuring compliance.</p>
+                            </div>
+                        `;
+                    } else if (status === 'rejected') {
+                        subject = 'Compliance Document Rejected - GFARP';
+                        htmlContent = `
+                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                                <h2 style="color: #ef4444;">Document Rejected</h2>
+                                <p>Hello ${academyName},</p>
+                                <p>Your document <strong>${documentName}</strong> has been reviewed and <strong>rejected</strong>.</p>
+                                ${rejectionReason ? `<p><strong>Reason for rejection:</strong> ${rejectionReason}</p>` : ''}
+                                <p>Please review the requirements and upload a corrected version.</p>
+                            </div>
+                        `;
+                    }
+
+                    if (subject && htmlContent) {
+                        await transporter.sendMail({
+                            from: `"GFARP Compliance" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+                            to: academyEmail,
+                            subject: subject,
+                            html: htmlContent
+                        });
+                        console.log(`[VERCEL] Notification email sent to ${academyEmail} for status ${status}`);
+                    }
+                }
+            } catch (emailError) {
+                console.error('[VERCEL] Failed to send notification email:', emailError);
+                // Don't fail the request, just log it
+            }
         }
 
         return res.json({

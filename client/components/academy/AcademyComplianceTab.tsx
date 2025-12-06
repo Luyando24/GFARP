@@ -41,6 +41,7 @@ interface ComplianceDocument {
     status: 'pending' | 'verified' | 'rejected' | 'expired';
     description?: string;
     url?: string;
+    rejection_reason?: string;
 }
 
 interface AcademyComplianceTabProps {
@@ -231,18 +232,27 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
         }
     };
 
-    const getStatusBadge = (status: string) => {
-        switch (status) {
+    const getStatusBadge = (doc: ComplianceDocument) => {
+        switch (doc.status) {
             case 'verified':
                 return <Badge className="bg-green-100 text-green-800">Verified</Badge>;
             case 'pending':
                 return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
             case 'rejected':
-                return <Badge className="bg-red-100 text-red-800">Rejected</Badge>;
+                return (
+                    <div className="flex flex-col items-start gap-1">
+                        <Badge className="bg-red-100 text-red-800">Rejected</Badge>
+                        {doc.rejection_reason && (
+                            <span className="text-xs text-red-600 max-w-[200px] truncate" title={doc.rejection_reason}>
+                                Reason: {doc.rejection_reason}
+                            </span>
+                        )}
+                    </div>
+                );
             case 'expired':
                 return <Badge className="bg-red-100 text-red-800">Expired</Badge>;
             default:
-                return <Badge variant="secondary">{status}</Badge>;
+                return <Badge variant="secondary">{doc.status}</Badge>;
         }
     };
 
@@ -358,7 +368,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
                                             </Badge>
                                         </TableCell>
                                         <TableCell>
-                                            {getStatusBadge(document.status)}
+                                            {getStatusBadge(document)}
                                         </TableCell>
                                         <TableCell>
                                             {new Date(document.upload_date).toLocaleDateString()}

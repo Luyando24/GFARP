@@ -235,6 +235,8 @@ export default function AdminDashboard() {
 
   const [complianceDocuments, setComplianceDocuments] = useState<any[]>([]);
   const [isComplianceLoading, setIsComplianceLoading] = useState(false);
+  const [rejectingDocumentId, setRejectingDocumentId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const fetchComplianceDocuments = async () => {
     try {
@@ -275,13 +277,27 @@ export default function AdminDashboard() {
   };
 
   const handleUpdateDocumentStatus = async (documentId: string, newStatus: string) => {
+    if (newStatus === 'rejected') {
+      setRejectingDocumentId(documentId);
+      setRejectionReason("");
+      return;
+    }
+
+    await submitDocumentStatusUpdate(documentId, newStatus);
+  };
+
+  const submitDocumentStatusUpdate = async (documentId: string, newStatus: string, reason?: string) => {
     try {
       const response = await fetch('/api/compliance-documents/update-status', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ documentId, status: newStatus }),
+        body: JSON.stringify({ 
+          documentId, 
+          status: newStatus,
+          rejectionReason: reason 
+        }),
       });
       const result = await response.json();
       
@@ -305,6 +321,14 @@ export default function AdminDashboard() {
         description: "Failed to update document status",
         variant: "destructive",
       });
+    }
+  };
+
+  const confirmRejection = async () => {
+    if (rejectingDocumentId) {
+      await submitDocumentStatusUpdate(rejectingDocumentId, 'rejected', rejectionReason);
+      setRejectingDocumentId(null);
+      setRejectionReason("");
     }
   };
 
@@ -3397,6 +3421,38 @@ export default function AdminDashboard() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      {/* Reject Document Dialog */}
+      <Dialog open={!!rejectingDocumentId} onOpenChange={(open) => !open && setRejectingDocumentId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Document</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for rejecting this document. This will be sent to the academy.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2">
+            <Label htmlFor="rejectionReason">Reason for Rejection</Label>
+            <Textarea
+              id="rejectionReason"
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="E.g., Document is blurry, expired, or incorrect type."
+              rows={4}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRejectingDocumentId(null)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmRejection} disabled={!rejectionReason.trim()}>
+              Confirm Rejection
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* View Transaction Dialog */}
       <Dialog open={!!viewingTransaction} onOpenChange={(open) => !open && setViewingTransaction(null)}>
         <DialogContent className="max-w-md">
