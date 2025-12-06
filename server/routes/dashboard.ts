@@ -114,6 +114,7 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
 
     // Calculate monthly revenue from financial transactions and subscriptions
     let monthlyRevenue = 0;
+    let subscriptionRevenue = 0;
     try {
       // Get revenue from financial transactions (e.g. transfers)
       const revenueResult = await query(`
@@ -129,7 +130,7 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
         WHERE created_at >= date_trunc('month', CURRENT_DATE)
         AND status = 'COMPLETED'
       `);
-      const subscriptionRevenue = parseFloat(subscriptionResult.rows[0].total) || 0;
+      subscriptionRevenue = parseFloat(subscriptionResult.rows[0].total) || 0;
       monthlyRevenue += subscriptionRevenue;
     } catch (err) {
       console.log('Error calculating revenue:', err);
