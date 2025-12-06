@@ -115,6 +115,7 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
     // Calculate monthly revenue from financial transactions and subscriptions
     let monthlyRevenue = 0;
     try {
+      // Get revenue from financial transactions (e.g. transfers)
       const revenueResult = await query(`
         SELECT SUM(amount) as total FROM financial_transactions 
         WHERE created_at >= date_trunc('month', CURRENT_DATE) 
@@ -122,18 +123,18 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
       `);
       monthlyRevenue = parseFloat(revenueResult.rows[0].total) || 0;
 
-      // Add subscription revenue if available
+      // Add revenue from subscription payments
       const subscriptionResult = await query(`
-        SELECT SUM(s.price) as total FROM subscriptions sub
-        JOIN subscription_plans s ON sub.plan_id = s.id
-        WHERE sub.created_at >= date_trunc('month', CURRENT_DATE)
-        AND sub.status = 'active'
+        SELECT SUM(amount) as total FROM subscription_payments
+        WHERE created_at >= date_trunc('month', CURRENT_DATE)
+        AND status = 'COMPLETED'
       `);
       const subscriptionRevenue = parseFloat(subscriptionResult.rows[0].total) || 0;
       monthlyRevenue += subscriptionRevenue;
     } catch (err) {
-      console.log('Financial transactions table may not exist, using calculated value');
-      monthlyRevenue = totalAcademies * 800; // Fallback calculation
+      console.log('Error calculating revenue:', err);
+      // Fallback calculation if tables don't exist yet
+      monthlyRevenue = 0;
     }
 
     // Calculate monthly growth (academies created in the last month vs previous month)
