@@ -359,6 +359,7 @@ export default function AdminDashboard() {
   // Transaction history state
   const [transactions, setTransactions] = useState([]);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
+  const [viewingTransaction, setViewingTransaction] = useState<any | null>(null);
 
   // System settings state
   const [systemSettings, setSystemSettings] = useState({
@@ -1982,7 +1983,11 @@ export default function AdminDashboard() {
                                 </Badge>
                               </TableCell>
                               <TableCell>
-                                <Button variant="ghost" size="sm">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm"
+                                  onClick={() => setViewingTransaction(tx)}
+                                >
                                   <Eye className="h-4 w-4" />
                                 </Button>
                               </TableCell>
@@ -3726,6 +3731,61 @@ export default function AdminDashboard() {
             <Button variant="destructive" onClick={confirmDeleteAcademy}>
               <Trash2 className="h-4 w-4 mr-2" />
               Delete Academy
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* View Transaction Dialog */}
+      <Dialog open={!!viewingTransaction} onOpenChange={(open) => !open && setViewingTransaction(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Transaction Details</DialogTitle>
+            <DialogDescription>
+              Detailed information for transaction
+            </DialogDescription>
+          </DialogHeader>
+
+          {viewingTransaction && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Academy</Label>
+                  <p className="font-medium">{viewingTransaction.academy}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Type</Label>
+                  <p className="capitalize">{viewingTransaction.type}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Amount</Label>
+                  <p className="font-bold text-lg">${viewingTransaction.amount?.toFixed(2)}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Date</Label>
+                  <p>{new Date(viewingTransaction.date).toLocaleDateString()}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Method</Label>
+                  <p className="capitalize">{viewingTransaction.method?.replace('_', ' ') || 'N/A'}</p>
+                </div>
+                <div>
+                  <Label className="text-sm font-medium text-muted-foreground">Status</Label>
+                  <Badge variant={viewingTransaction.status === 'COMPLETED' ? 'default' : viewingTransaction.status === 'PENDING' ? 'secondary' : 'destructive'} className="mt-1">
+                    {viewingTransaction.status}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div className="pt-4 border-t">
+                <Label className="text-sm font-medium text-muted-foreground">Transaction ID</Label>
+                <p className="font-mono text-xs bg-muted p-2 rounded mt-1 break-all">{viewingTransaction.id}</p>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setViewingTransaction(null)}>
+              Close
             </Button>
           </DialogFooter>
         </DialogContent>
