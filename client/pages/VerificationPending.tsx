@@ -1,12 +1,50 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { Mail, ArrowLeft } from 'lucide-react';
+import { Mail, ArrowLeft, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { useToast } from "@/components/ui/use-toast";
 
 export default function VerificationPending() {
   const location = useLocation();
   const email = location.state?.email || 'your email address';
+  const { toast } = useToast();
+  const [isResending, setIsResending] = useState(false);
+
+  const handleResend = async () => {
+    if (isResending) return;
+    
+    setIsResending(true);
+    try {
+        const apiUrl = import.meta.env.VITE_API_URL || '/api';
+        const response = await fetch(`${apiUrl}/football-auth/academy/resend-verification`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ email: location.state?.email }) // Use email from state if available
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+            toast({
+                title: "Email Sent",
+                description: "A new verification email has been sent to your inbox.",
+            });
+        } else {
+            throw new Error(data.message || 'Failed to resend email');
+        }
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message || "Failed to resend verification email.",
+            variant: "destructive"
+        });
+    } finally {
+        setIsResending(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center p-4">
@@ -39,10 +77,26 @@ export default function VerificationPending() {
           </div>
           
           <div className="text-center text-xs text-gray-400">
-            <p>Didn't receive the email? <span className="text-blue-600 cursor-pointer hover:underline">Resend</span></p>
+            <p>Didn't receive the email? 
+                <button 
+                    onClick={handleResend} 
+                    disabled={isResending}
+                    className="ml-1 text-blue-600 cursor-pointer hover:underline disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                    {isResending ? (
+                        <span className="flex items-center">
+                            <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                            Sending...
+                        </span>
+                    ) : (
+                        "Resend"
+                    )}
+                </button>
+            </p>
           </div>
         </CardContent>
       </Card>
     </div>
   );
 }
+
