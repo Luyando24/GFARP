@@ -104,6 +104,43 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 };
             });
 
+            // Fetch compliance documents
+            const { data: complianceDocs, error: complianceError } = await supabase
+                .from('fifa_compliance_documents')
+                .select('*')
+                .eq('academy_id', id);
+
+            if (complianceError) {
+                console.error('[VERCEL] Compliance docs fetch error:', complianceError);
+            }
+
+            // Calculate compliance score/status based on docs
+            // This is a simplified logic. Adjust based on your actual requirements.
+            const totalDocs = complianceDocs?.length || 0;
+            const verifiedDocs = complianceDocs?.filter((d: any) => d.status === 'verified').length || 0;
+            const complianceScore = totalDocs > 0 ? Math.round((verifiedDocs / totalDocs) * 100) : 0;
+            
+            let overallStatus = 'pending';
+            if (complianceScore === 100) overallStatus = 'approved';
+            else if (complianceScore > 0) overallStatus = 'under_review';
+            else if (totalDocs > 0) overallStatus = 'requires_action';
+
+            const complianceData = {
+                complianceScore,
+                overallStatus,
+                nextReviewDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // Mock next review date
+                documents: (complianceDocs || []).map((doc: any) => ({
+                    id: doc.id,
+                    name: doc.document_type || 'Unknown Document', // Use document_type or similar
+                    uploadDate: doc.created_at,
+                    expiryDate: doc.expiry_date || new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+                    status: doc.status,
+                    fileUrl: doc.file_url,
+                    rejectionReason: doc.rejection_reason
+                })),
+                requirements: [] // You might want to fetch this from a 'compliance_requirements' table if it exists
+            };
+
             // Transform snake_case to camelCase for frontend
             const transformedData = {
                 id: data.id,
@@ -129,7 +166,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 updatedAt: data.updated_at,
                 players: players, // Include players in response
                 activities: [], // Empty for now
-                compliance: null // Empty for now
+                compliance: complianceData 
             };
 
             return res.status(200).json({

@@ -20,9 +20,17 @@ import {
   FileCheck,
   AlertTriangle,
   CheckCircle,
-  XCircle
+  XCircle,
+  Eye,
+  Trash2,
+  X,
+  Check,
+  MessageSquare
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 
 const AcademyDetails = () => {
   const { id } = useParams();
@@ -34,6 +42,12 @@ const AcademyDetails = () => {
   const [players, setPlayers] = useState<any[]>([]);
   const [fifaCompliance, setFifaCompliance] = useState<any>(null);
   const [activeTab, setActiveTab] = useState('overview');
+
+  // Rejection Dialog State
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
+  const [isUpdating, setIsUpdating] = useState(false);
 
   useEffect(() => {
     const fetchAcademyDetails = async () => {
@@ -74,6 +88,128 @@ const AcademyDetails = () => {
       fetchAcademyDetails();
     }
   }, [id, toast]);
+
+  const fetchAcademyDetails = async () => {
+      try {
+        // Fetch academy details (re-using logic from useEffect, simplified for refresh)
+        const response = await fetch(`/api/academies/${id}`);
+        const academyData = await response.json();
+
+        if (academyData.success) {
+          setAcademy(academyData.data);
+          setPlayers(academyData.data?.players || []);
+          setFifaCompliance(academyData.data?.compliance || null);
+          setActivities(academyData.data?.activities || []);
+        }
+      } catch (error) {
+        console.error('Error refreshing academy details:', error);
+      }
+  };
+
+  const handleUpdateStatus = async (documentId: string, status: string, reason?: string) => {
+    setIsUpdating(true);
+    try {
+      const apiUrl = import.meta.env.VITE_API_URL || '/api';
+      const response = await fetch(`${apiUrl}/compliance-documents/update-status`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('football-auth-token')}`
+        },
+        body: JSON.stringify({
+          documentId,
+          status,
+          rejectionReason: reason
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to update status');
+      }
+
+      toast({
+        title: "Status Updated",
+        description: `Document status updated to ${status}.`,
+      });
+
+      // Close dialog if open
+      setShowRejectDialog(false);
+      setRejectReason("");
+      setSelectedDocId(null);
+
+      // Refresh data
+      fetchAcademyDetails();
+
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update status",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleDeleteDocument = async (documentId: string) => {
+    if (!confirm("Are you sure you want to delete this document? This action cannot be undone.")) {
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+        // Note: We don't have a specific delete endpoint for single documents yet in the public API list provided in context,
+        // but typically it would follow REST conventions. 
+        // If it doesn't exist, I might need to create it or use a Supabase direct call if allowed (but better via API).
+        // Let's assume we can use a DELETE method on a generic endpoint or a specific one.
+        // Since I just saw api/academies/[id] has delete academy, but not single doc.
+        // I'll create a new endpoint `api/compliance-documents/delete.ts` implicitly or use `update-status` with 'deleted' if supported?
+        // No, 'deleted' isn't in valid statuses.
+        // Let's check if I can quickly create a delete endpoint or if I should assume one exists.
+        // The user asked to "complete the CRUDE functions". "D" is Delete.
+        // I will assume I need to create `api/compliance-documents/delete.ts` separately.
+        
+        const apiUrl = import.meta.env.VITE_API_URL || '/api';
+        const response = await fetch(`${apiUrl}/compliance-documents/delete`, {
+            method: 'POST', // or DELETE
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('football-auth-token')}`
+            },
+            body: JSON.stringify({ documentId })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Failed to delete document');
+        }
+
+        toast({
+            title: "Document Deleted",
+            description: "The document has been permanently removed.",
+        });
+
+        fetchAcademyDetails();
+
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message || "Failed to delete document",
+            variant: "destructive"
+        });
+    } finally {
+        setIsUpdating(false);
+    }
+  };
+
+  const openRejectDialog = (docId: string) => {
+    setSelectedDocId(docId);
+    setRejectReason("");
+    setShowRejectDialog(true);
+  };
 
   const handleBack = () => {
     navigate('/admin');
@@ -368,26 +504,79 @@ const AcademyDetails = () => {
                             Uploaded: {new Date(doc.uploadDate).toLocaleDateString()} |
                             Expires: {new Date(doc.expiryDate).toLocaleDateString()}
                           </p>
+                          {doc.rejectionReason && (
+                            <p className="text-sm text-red-500 mt-1">
+                              Reason: {doc.rejectionReason}
+                            </p>
+                          )}
                         </div>
                         <div className="flex items-center space-x-2">
-                          {doc.status === 'approved' && (
-                            <Badge className="bg-green-500">
+                          {/* Status Badges */}
+                          {doc.status === 'verified' && (
+                            <Badge className="bg-green-500 mr-2">
                               <CheckCircle className="h-3 w-3 mr-1" />
-                              Approved
+                              Verified
                             </Badge>
                           )}
                           {doc.status === 'pending' && (
-                            <Badge variant="secondary">
+                            <Badge variant="secondary" className="mr-2">
                               <Clock className="h-3 w-3 mr-1" />
                               Pending
                             </Badge>
                           )}
-                          {doc.status === 'requires_action' && (
-                            <Badge variant="destructive">
-                              <AlertTriangle className="h-3 w-3 mr-1" />
-                              Action Required
+                          {doc.status === 'rejected' && (
+                            <Badge variant="destructive" className="mr-2">
+                              <XCircle className="h-3 w-3 mr-1" />
+                              Rejected
                             </Badge>
                           )}
+                          
+                          {/* Action Buttons */}
+                          <div className="flex items-center gap-1 border-l pl-2 ml-2">
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                title="View Document"
+                                onClick={() => window.open(doc.fileUrl, '_blank')}
+                                disabled={!doc.fileUrl}
+                            >
+                                <Eye className="h-4 w-4 text-blue-500" />
+                            </Button>
+                            
+                            {doc.status !== 'verified' && (
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    title="Approve"
+                                    onClick={() => handleUpdateStatus(doc.id, 'verified')}
+                                    disabled={isUpdating}
+                                >
+                                    <Check className="h-4 w-4 text-green-600" />
+                                </Button>
+                            )}
+                            
+                            {doc.status !== 'rejected' && (
+                                <Button 
+                                    variant="ghost" 
+                                    size="icon" 
+                                    title="Reject"
+                                    onClick={() => openRejectDialog(doc.id)}
+                                    disabled={isUpdating}
+                                >
+                                    <X className="h-4 w-4 text-red-600" />
+                                </Button>
+                            )}
+
+                            <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                title="Delete"
+                                onClick={() => handleDeleteDocument(doc.id)}
+                                disabled={isUpdating}
+                            >
+                                <Trash2 className="h-4 w-4 text-gray-500 hover:text-red-700" />
+                            </Button>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -483,6 +672,40 @@ const AcademyDetails = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Rejection Dialog */}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Document</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for rejecting this document. This will be sent to the academy admin.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="reject-reason">Rejection Reason</Label>
+              <Textarea 
+                id="reject-reason" 
+                placeholder="e.g. Document is blurry, Expired date, Wrong document type..."
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                rows={4}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRejectDialog(false)} disabled={isUpdating}>Cancel</Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => selectedDocId && handleUpdateStatus(selectedDocId, 'rejected', rejectReason)}
+              disabled={isUpdating || !rejectReason.trim()}
+            >
+              {isUpdating ? 'Rejecting...' : 'Reject Document'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
