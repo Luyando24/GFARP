@@ -2444,6 +2444,19 @@ export default function AdminDashboard() {
             </TabsContent>
 
           </Tabs>
+          {/* Footer */}
+          <footer className="mt-8 border-t border-slate-200 dark:border-slate-700 pt-6 pb-2">
+            <div className="flex flex-col md:flex-row justify-between items-center text-sm text-slate-500 dark:text-slate-400">
+              <div className="mb-2 md:mb-0">
+                &copy; {new Date().getFullYear()} <span className="font-semibold text-[#005391] dark:text-blue-400">Soccer Circular</span>. All rights reserved.
+              </div>
+              <div className="flex gap-4">
+                <a href="#" className="hover:text-[#005391] dark:hover:text-blue-400 transition-colors">Privacy Policy</a>
+                <a href="#" className="hover:text-[#005391] dark:hover:text-blue-400 transition-colors">Terms of Service</a>
+                <a href="#" className="hover:text-[#005391] dark:hover:text-blue-400 transition-colors">Support</a>
+              </div>
+            </div>
+          </footer>
         </main>
       </div>
 
