@@ -162,6 +162,57 @@ export default async function handler(
             }
         }
 
+        // Create In-App Notification
+        try {
+            if (docInfo.academy_id) {
+                // 1. Create Notification
+                const notificationType = status === 'verified' ? 'success' : 'error';
+                const notificationTitle = status === 'verified' ? 'Document Approved' : 'Document Rejected';
+                const notificationMessage = status === 'verified' 
+                    ? `Your document "${docInfo.document_name || 'Document'}" has been approved.`
+                    : `Your document "${docInfo.document_name || 'Document'}" was rejected. Reason: ${rejectionReason || 'Check details'}`;
+
+                const { data: notification, error: notifError } = await supabase
+                    .from('notifications')
+                    .insert({
+                        title: notificationTitle,
+                        message: notificationMessage,
+                        type: notificationType,
+                        category: 'compliance',
+                        priority: 'high',
+                        action_url: '/dashboard?tab=fifa-compliance' // Deep link to tab
+                    })
+                    .select()
+                    .single();
+
+                if (notifError) {
+                     console.error('[VERCEL] Error creating notification record:', notifError);
+                } else {
+                    // 2. Link to Academy Users
+                    // Find all staff users for this academy
+                    const { data: staffUsers, error: staffError } = await supabase
+                        .from('staff_users')
+                        .select('id')
+                        .eq('academy_id', docInfo.academy_id);
+
+                    if (staffUsers && staffUsers.length > 0) {
+                        const userNotifications = staffUsers.map((user: any) => ({
+                            notification_id: notification.id,
+                            user_id: user.id
+                        }));
+
+                        const { error: userNotifError } = await supabase
+                            .from('user_notifications')
+                            .insert(userNotifications);
+
+                        if (userNotifError) console.error('[VERCEL] Error linking notification to users:', userNotifError);
+                    }
+                }
+            }
+        } catch (notifError) {
+             console.error('[VERCEL] Failed to create in-app notification:', notifError);
+        }
+
         return res.json({
             success: true,
             message: `Document status updated to ${status}`,

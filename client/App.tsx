@@ -34,6 +34,9 @@ import SubscriptionCancel from "./pages/SubscriptionCancel";
 import SetupSuperAdmin from "./pages/SetupSuperAdmin";
 import VerifyEmail from "./pages/VerifyEmail";
 import VerificationPending from "./pages/VerificationPending";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+import Support from "./pages/Support";
 
 const queryClient = new QueryClient();
 
@@ -64,6 +67,9 @@ const App = () => {
               <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/verification-pending" element={<VerificationPending />} />
               <Route path="/complete-profile" element={<CompleteProfile />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              <Route path="/terms-of-service" element={<TermsOfService />} />
+              <Route path="/support" element={<Support />} />
 
               {/* Academy Dashboard - Protected route requiring authentication */}
               <Route element={<ProtectedRoute allowedRoles={["academy"]} />}>

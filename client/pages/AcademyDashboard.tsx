@@ -65,6 +65,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import ThemeToggle from '@/components/navigation/ThemeToggle';
+import { NotificationsPopover } from '@/components/navigation/NotificationsPopover';
 
 import PlayerManagement from '@/components/players/PlayerManagement';
 import FinancialTransactionsManager from '@/components/FinancialTransactionsManager';
@@ -1176,9 +1177,7 @@ export default function AcademyDashboard() {
 
             {/* User Menu */}
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm">
-                <Bell className="h-5 w-5" />
-              </Button>
+              <NotificationsPopover />
               <ThemeToggle />
               <div className="flex items-center gap-3">
                 <Avatar className="h-8 w-8">
@@ -2665,9 +2664,9 @@ export default function AcademyDashboard() {
                 &copy; {new Date().getFullYear()} <span className="font-semibold text-[#005391] dark:text-blue-400">Soccer Circular</span>. All rights reserved.
               </div>
               <div className="flex gap-4">
-                <a href="#" className="hover:text-[#005391] dark:hover:text-blue-400 transition-colors">Privacy Policy</a>
-                <a href="#" className="hover:text-[#005391] dark:hover:text-blue-400 transition-colors">Terms of Service</a>
-                <a href="#" className="hover:text-[#005391] dark:hover:text-blue-400 transition-colors">Support</a>
+                <Link to="/privacy-policy" className="hover:text-[#005391] dark:hover:text-blue-400 transition-colors">Privacy Policy</Link>
+                <Link to="/terms-of-service" className="hover:text-[#005391] dark:hover:text-blue-400 transition-colors">Terms of Service</Link>
+                <Link to="/support" className="hover:text-[#005391] dark:hover:text-blue-400 transition-colors">Support</Link>
               </div>
             </div>
           </footer>

@@ -121,6 +121,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Area, AreaChart, Bar, BarChart, Line, LineChart, Pie, PieChart, Cell, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import ThemeToggle from '@/components/navigation/ThemeToggle';
+import { NotificationsPopover } from '@/components/navigation/NotificationsPopover';
 
 // Real admin data will be fetched from API
 
@@ -1181,12 +1182,7 @@ export default function AdminDashboard() {
 
             {/* Admin Menu */}
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="sm" className="relative">
-                <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs text-white flex items-center justify-center">
-                  {systemStats.pendingApprovals}
-                </span>
-              </Button>
+              <NotificationsPopover />
               <ThemeToggle />
               <div className="flex items-center gap-3">
                 <Avatar className="h-8 w-8">
@@ -2451,9 +2447,9 @@ export default function AdminDashboard() {
                 &copy; {new Date().getFullYear()} <span className="font-semibold text-[#005391] dark:text-blue-400">Soccer Circular</span>. All rights reserved.
               </div>
               <div className="flex gap-4">
-                <a href="#" className="hover:text-[#005391] dark:hover:text-blue-400 transition-colors">Privacy Policy</a>
-                <a href="#" className="hover:text-[#005391] dark:hover:text-blue-400 transition-colors">Terms of Service</a>
-                <a href="#" className="hover:text-[#005391] dark:hover:text-blue-400 transition-colors">Support</a>
+                <Link to="/privacy-policy" className="hover:text-[#005391] dark:hover:text-blue-400 transition-colors">Privacy Policy</Link>
+                <Link to="/terms-of-service" className="hover:text-[#005391] dark:hover:text-blue-400 transition-colors">Terms of Service</Link>
+                <Link to="/support" className="hover:text-[#005391] dark:hover:text-blue-400 transition-colors">Support</Link>
               </div>
             </div>
           </footer>
