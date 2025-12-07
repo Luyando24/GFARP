@@ -41,9 +41,29 @@ export default function CompleteProfile() {
     const academyData = JSON.parse(localStorage.getItem('academy_data') || '{}');
 
     useEffect(() => {
-        // Pre-fill email from academy data
-        if (academyData.email) {
-            setFormData(prev => ({ ...prev, directorEmail: academyData.email }));
+        // Pre-fill data from academy data if available
+        // But ONLY if the user is not brand new (i.e. has some existing data)
+        // However, for a brand new registration flow, we usually want empty fields
+        // except maybe email and name which we already know.
+        
+        if (academyData) {
+            setFormData(prev => ({
+                ...prev,
+                // Pre-fill name if available, but don't overwrite if user already typed
+                name: prev.name || academyData.name || '', 
+                // Pre-fill email from academy data (this is usually correct/desired)
+                directorEmail: prev.directorEmail || academyData.email || '',
+                // Only pre-fill these if they actually exist in the data source and aren't just placeholders
+                // In a "new account" flow, these should be empty from the backend anyway due to my previous fix.
+                // But just in case local storage has stale data:
+                phone: academyData.phone || '',
+                address: academyData.address || '',
+                city: academyData.city || '',
+                country: academyData.country || 'United States', // Keep default
+                directorName: academyData.directorName || '',
+                directorPhone: academyData.directorPhone || '',
+                foundedYear: academyData.foundedYear ? String(academyData.foundedYear) : ''
+            }));
         }
     }, []);
 
