@@ -44,7 +44,7 @@ export default function Index() {
                   <Menu className="h-6 w-6" />
                 </Button>
 
-                {/* GFARP Logo */}
+                {/* Soccer Circular Logo */}
                 <Link to="/" className="flex items-center gap-3 group">
                   <div className="relative">
                     <div className="w-10 h-10 bg-gradient-to-br from-white to-gray-100 rounded-full flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-500 group-hover:scale-110">
@@ -56,7 +56,7 @@ export default function Index() {
                   </div>
                   <div className="text-white">
                     <div className="text-xl font-black tracking-tight bg-gradient-to-r from-white to-yellow-100 bg-clip-text text-transparent">
-                      GFARP
+                      Soccer Circular
                     </div>
                   </div>
                 </Link>
@@ -185,7 +185,7 @@ export default function Index() {
             {/* FIFA Badge */}
             <div className="mb-12 mt-8 inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full shadow-lg">
               <Trophy className="h-3 w-3 text-black" />
-              <span className="text-black font-bold text-xs tracking-wide">FIFA APPROVED PLATFORM</span>
+              <span className="text-black font-bold text-xs tracking-wide">SOCCER CIRCULAR PLATFORM</span>
               <div className="flex gap-0.5">
                 <Star className="h-2.5 w-2.5 text-black fill-current" />
                 <Star className="h-2.5 w-2.5 text-black fill-current" />
@@ -199,7 +199,7 @@ export default function Index() {
                 INVEST IN YOUR PLAYERS'
               </span>
               <span className="block bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 bg-clip-text text-transparent">
-                FUTURE WITH FIFA
+                FUTURE WITH SOCCER CIRCULAR
               </span>
             </h1>
 
@@ -254,7 +254,7 @@ export default function Index() {
               </span>
             </h2>
             <p className="text-xl text-blue-100 max-w-3xl mx-auto">
-              Four simple steps to secure your academy's financial future with FIFA
+              Four simple steps to secure your academy's financial future with Soccer Circular
             </p>
           </div>
 
@@ -264,7 +264,7 @@ export default function Index() {
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-white/20 hover:border-yellow-500/50 transition-all duration-300 transform hover:-translate-y-2">
               <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 w-12 h-12 rounded-full flex items-center justify-center mb-6 text-black font-bold text-xl">1</div>
               <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Register Academy</h3>
-              <p className="text-blue-100">Create your academy profile and verify your credentials with our FIFA-approved system.</p>
+              <p className="text-blue-100">Create your academy profile and verify your credentials with our Soccer Circular-approved system.</p>
             </div>
 
             {/* Step 2 */}
@@ -278,7 +278,7 @@ export default function Index() {
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-white/20 hover:border-yellow-500/50 transition-all duration-300 transform hover:-translate-y-2">
               <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 w-12 h-12 rounded-full flex items-center justify-center mb-6 text-black font-bold text-xl">3</div>
               <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Track Progress</h3>
-              <p className="text-blue-100">Monitor player development and transfers through our FIFA-connected dashboard.</p>
+              <p className="text-blue-100">Monitor player development and transfers through our Soccer Circular-connected dashboard.</p>
             </div>
 
             {/* Step 4 */}

@@ -95,9 +95,9 @@ export default function AuthLogin() {
               <Trophy className="h-10 w-10 text-white" />
             </div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-2">
-              Football Academy Management
+              Soccer Circular
             </h1>
-            <p className="text-sm text-gray-600">Professional Training Portal</p>
+            <p className="text-sm text-gray-600">Professional Academy Portal</p>
           </div>
           <CardTitle className="text-xl text-gray-800">Welcome Back</CardTitle>
           <p className="text-sm text-gray-600 mt-1">Sign in to access your academy dashboard</p>

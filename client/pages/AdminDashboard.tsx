@@ -1160,7 +1160,7 @@ export default function AdminDashboard() {
                 </div>
                 <div>
                   <h1 className="text-lg font-bold text-slate-900 dark:text-white">
-                    FIFA Platform Admin
+                    Soccer Circular Admin
                   </h1>
                   <p className="text-sm text-slate-600 dark:text-slate-400">System Administration</p>
                 </div>
@@ -1263,7 +1263,7 @@ export default function AdminDashboard() {
                     System Overview
                   </h2>
                   <p className="text-slate-600 dark:text-slate-400">
-                    FIFA Platform administration dashboard
+                    Soccer Circular administration dashboard
                   </p>
                 </div>
                 <Badge variant="secondary" className="text-sm bg-red-100 text-red-800 border-red-200">

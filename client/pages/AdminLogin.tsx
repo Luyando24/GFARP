@@ -63,7 +63,7 @@ export default function AdminLogin() {
             <div className="mx-auto w-16 h-16 bg-primary rounded-full flex items-center justify-center mb-3">
               <ShieldCheck className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-2xl font-bold text-primary mb-1">Admin Portal</h1>
+            <h1 className="text-2xl font-bold text-primary mb-1">Soccer Circular Admin</h1>
             <p className="text-sm text-muted-foreground">System Administration</p>
           </div>
           <CardTitle>Administrator Sign In</CardTitle>

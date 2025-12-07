@@ -222,7 +222,7 @@ export default function RegisterAcademy() {
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Trophy className="h-5 w-5 text-yellow-400" />
-            <span className="font-bold">FIFA Approved Platform</span>
+            <span className="font-bold">Soccer Circular Approved Platform</span>
           </div>
           <p className="text-blue-200 text-sm">© 2024 Soccer Circular. All rights reserved.</p>
         </div>
