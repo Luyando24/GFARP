@@ -21,7 +21,7 @@ export default function Index() {
             <div className="flex items-center justify-end gap-6">
               <a href="#about" className="hover:text-yellow-300 transition-colors font-medium">ABOUT US</a>
               <a href="#support" className="hover:text-yellow-300 transition-colors font-medium">SUPPORT</a>
-              <Link to="/shop" className="hover:text-yellow-300 transition-colors font-medium">SHOP</Link>
+              {/* <Link to="/shop" className="hover:text-yellow-300 transition-colors font-medium">SHOP</Link> */}
               <a href="#blog" className="hover:text-yellow-300 transition-colors font-medium">BLOG</a>
               <a href="#help" className="hover:text-yellow-300 transition-colors font-medium">HELP CENTER</a>
             </div>
@@ -83,11 +83,11 @@ export default function Index() {
 
               {/* Right side - Search, Language, User */}
               <div className="flex items-center gap-3">
-                <Link to="/shop">
+                {/* <Link to="/shop">
                   <Button variant="ghost" className="p-2 text-white hover:bg-white/20 rounded-lg hidden lg:flex">
                     <ShoppingCart className="h-5 w-5" />
                   </Button>
-                </Link>
+                </Link> */}
                 <Button variant="ghost" className="p-2 text-white hover:bg-white/20 rounded-lg hidden lg:flex">
                   <Globe className="h-5 w-5" />
                 </Button>
