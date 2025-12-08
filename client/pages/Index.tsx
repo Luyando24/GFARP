@@ -1056,7 +1056,7 @@ export default function Index() {
                 <Star className="absolute -top-1 -right-1 h-5 w-5 text-yellow-300 fill-current" />
               </div>
               <div>
-                <h3 className="text-2xl font-black text-white">GFARP</h3>
+                <h3 className="text-2xl font-black text-white">Soccer Circular</h3>
                 <p className="text-xs text-blue-200 font-bold tracking-wide">Global Football Academy Platform</p>
               </div>
             </div>
@@ -1064,25 +1064,25 @@ export default function Index() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-            {/* About GFARP */}
+            {/* About Soccer Circular */}
             <div className="bg-blue-900/30 p-6 rounded-2xl border border-blue-800/50">
               <div className="flex items-center space-x-2 mb-4">
                 <Users className="h-5 w-5 text-blue-400" />
-                <h4 className="text-lg font-bold text-blue-300">ABOUT GFARP</h4>
+                <h4 className="text-lg font-bold text-blue-300">ABOUT US</h4>
               </div>
               <ul className="space-y-3 text-sm text-slate-300">
-                <li><a href="#" className="hover:text-blue-300 transition-colors flex items-center space-x-2">
+                <li><Link to="/about" className="hover:text-blue-300 transition-colors flex items-center space-x-2">
                   <Trophy className="h-4 w-4" />
-                  <span>About GFARP</span>
-                </a></li>
-                <li><a href="#" className="hover:text-blue-300 transition-colors flex items-center space-x-2">
+                  <span>About Soccer Circular</span>
+                </Link></li>
+                <li><Link to="/about" className="hover:text-blue-300 transition-colors flex items-center space-x-2">
                   <Target className="h-4 w-4" />
                   <span>Our Mission</span>
-                </a></li>
-                <li><a href="#" className="hover:text-blue-300 transition-colors flex items-center space-x-2">
+                </Link></li>
+                <li><Link to="/compliance" className="hover:text-blue-300 transition-colors flex items-center space-x-2">
                   <Shield className="h-4 w-4" />
                   <span>FIFA Compliance</span>
-                </a></li>
+                </Link></li>
               </ul>
             </div>
 
@@ -1093,18 +1093,18 @@ export default function Index() {
                 <h4 className="text-lg font-bold text-green-300">ACADEMY SERVICES</h4>
               </div>
               <ul className="space-y-3 text-sm text-slate-300">
-                <li><a href="#" className="hover:text-green-300 transition-colors flex items-center space-x-2">
+                <li><Link to="/services" className="hover:text-green-300 transition-colors flex items-center space-x-2">
                   <User className="h-4 w-4" />
                   <span>Player Registration</span>
-                </a></li>
-                <li><a href="#" className="hover:text-green-300 transition-colors flex items-center space-x-2">
+                </Link></li>
+                <li><Link to="/services" className="hover:text-green-300 transition-colors flex items-center space-x-2">
                   <FileText className="h-4 w-4" />
                   <span>Document Management</span>
-                </a></li>
-                <li><a href="#" className="hover:text-green-300 transition-colors flex items-center space-x-2">
+                </Link></li>
+                <li><Link to="/services" className="hover:text-green-300 transition-colors flex items-center space-x-2">
                   <Award className="h-4 w-4" />
                   <span>Training Compensation</span>
-                </a></li>
+                </Link></li>
               </ul>
             </div>
 
@@ -1115,18 +1115,18 @@ export default function Index() {
                 <h4 className="text-lg font-bold text-purple-300">LEGAL & POLICIES</h4>
               </div>
               <ul className="space-y-3 text-sm text-slate-300">
-                <li><a href="#" className="hover:text-purple-300 transition-colors flex items-center space-x-2">
+                <li><Link to="/privacy-policy" className="hover:text-purple-300 transition-colors flex items-center space-x-2">
                   <FileText className="h-4 w-4" />
                   <span>Privacy Policy</span>
-                </a></li>
-                <li><a href="#" className="hover:text-purple-300 transition-colors flex items-center space-x-2">
+                </Link></li>
+                <li><Link to="/terms-of-service" className="hover:text-purple-300 transition-colors flex items-center space-x-2">
                   <BookOpen className="h-4 w-4" />
                   <span>Terms of Service</span>
-                </a></li>
-                <li><a href="#" className="hover:text-purple-300 transition-colors flex items-center space-x-2">
+                </Link></li>
+                <li><Link to="/compliance" className="hover:text-purple-300 transition-colors flex items-center space-x-2">
                   <CheckCircle className="h-4 w-4" />
                   <span>FIFA Regulations</span>
-                </a></li>
+                </Link></li>
               </ul>
             </div>
 
@@ -1137,25 +1137,25 @@ export default function Index() {
                 <h4 className="text-lg font-bold text-orange-300">SUPPORT & RESOURCES</h4>
               </div>
               <ul className="space-y-3 text-sm text-slate-300">
-                <li><a href="#" className="hover:text-orange-300 transition-colors flex items-center space-x-2">
+                <li><Link to="/support" className="hover:text-orange-300 transition-colors flex items-center space-x-2">
                   <Users className="h-4 w-4" />
                   <span>Contact Support</span>
-                </a></li>
-                <li><a href="#" className="hover:text-orange-300 transition-colors flex items-center space-x-2">
+                </Link></li>
+                <li><Link to="/support" className="hover:text-orange-300 transition-colors flex items-center space-x-2">
                   <ShoppingCart className="h-4 w-4" />
                   <span>Help Center</span>
-                </a></li>
-                <li><a href="#" className="hover:text-orange-300 transition-colors flex items-center space-x-2">
+                </Link></li>
+                <li><Link to="/api-docs" className="hover:text-orange-300 transition-colors flex items-center space-x-2">
                   <BookOpen className="h-4 w-4" />
                   <span>API Documentation</span>
-                </a></li>
+                </Link></li>
               </ul>
             </div>
           </div>
 
           <div className="border-t border-slate-800 mt-12 pt-8 text-center">
             <p className="text-slate-400 text-sm">
-              &copy; 2024 GFARP - Global Football Academy Registration Platform. All rights reserved.
+              &copy; 2024 Soccer Circular - Global Football Academy Registration Platform. All rights reserved.
             </p>
           </div>
         </div>
