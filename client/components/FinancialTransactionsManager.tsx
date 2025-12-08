@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
+import InvoiceGenerator from './InvoiceGenerator';
 import { 
   FinancialTransaction,
   BudgetCategory,
@@ -51,6 +52,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   // Modal states
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [showBudgetModal, setShowBudgetModal] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | null>(null);
   const [editingBudget, setEditingBudget] = useState<BudgetCategory | null>(null);
@@ -478,6 +480,33 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     setShowExportModal(false);
   };
 
+  const handleInvoiceSave = async (invoiceData: any) => {
+    try {
+      const response = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          ...invoiceData,
+          academy_id: academyId
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        setShowInvoiceModal(false);
+        fetchData(); // This will refresh the financial summary since the backend creates a transaction
+      } else {
+        throw new Error(result.error || 'Failed to save invoice');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save invoice transaction');
+    }
+  };
+
   if (loading && transactions.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -564,6 +593,14 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
             >
               <Plus className="h-4 w-4 mr-2" />
               Manage Budget
+            </button>
+
+            <button
+              onClick={() => setShowInvoiceModal(true)}
+              className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            >
+              <DollarSign className="h-4 w-4 mr-2" />
+              Create Invoice
             </button>
 
             <button
@@ -1116,6 +1153,15 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
             </div>
           </div>
         </div>
+      )}
+
+      {/* Invoice Modal */}
+      {showInvoiceModal && (
+        <InvoiceGenerator
+          academyId={academyId}
+          onClose={() => setShowInvoiceModal(false)}
+          onSave={handleInvoiceSave}
+        />
       )}
 
       {/* Export Modal */}

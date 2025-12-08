@@ -40,7 +40,7 @@ const handleGetSummary: RequestHandler = async (req, res) => {
     const { academyId } = req.params;
     const { period = 'monthly', year = new Date().getFullYear() } = req.query;
     
-    // Get total revenue and expenses
+    // 1. Get total revenue and expenses from Financial Transactions
     const summaryResult = await query(`
       SELECT 
         transaction_type,
@@ -56,7 +56,9 @@ const handleGetSummary: RequestHandler = async (req, res) => {
     let totalTransactions = 0;
 
     summaryResult.rows.forEach((row: any) => {
-      const amount = Number(row.total_amount);
+      const rawAmount = row.total_amount;
+      // Handle potential string formatting (e.g. if money type)
+      const amount = typeof rawAmount === 'string' ? parseFloat(rawAmount.replace(/[^0-9.-]+/g,"")) : Number(rawAmount);
       const count = Number(row.transaction_count);
       
       if (row.transaction_type === 'income') {
@@ -67,35 +69,97 @@ const handleGetSummary: RequestHandler = async (req, res) => {
       totalTransactions += count;
     });
 
+    // 2. Get revenue from Transfers that are NOT yet in financial_transactions
+    // This ensures we show transfer data even if the sync hasn't happened
+    const transferResult = await query(`
+      SELECT 
+        SUM(transfer_amount) as total_amount,
+        COUNT(*) as count
+      FROM transfers t
+      WHERE 
+        t.academy_id = $1 
+        AND t.status = 'completed' 
+        AND t.transfer_amount > 0
+        AND NOT EXISTS (
+          SELECT 1 FROM financial_transactions ft 
+          WHERE ft.reference_number = 'TRF-' || t.id::text
+        )
+    `, [academyId]);
+
+    if (transferResult.rows.length > 0) {
+      const transferRow = transferResult.rows[0];
+      const rawTransferAmount = transferRow.total_amount;
+      const transferAmount = typeof rawTransferAmount === 'string' ? parseFloat(rawTransferAmount.replace(/[^0-9.-]+/g,"")) : Number(rawTransferAmount || 0);
+      const transferCount = Number(transferRow.count || 0);
+
+      // Assuming transfers are income
+      totalRevenue += transferAmount;
+      totalTransactions += transferCount;
+    }
+
     const netProfit = totalRevenue - totalExpenses;
     const profitMargin = totalRevenue > 0 
       ? ((netProfit / totalRevenue) * 100).toFixed(1) 
       : '0';
 
-    // Category Breakdown
+    // 3. Category Breakdown (combine transactions and transfers)
     const categoryResult = await query(`
-      SELECT 
-        transaction_type,
-        category,
-        SUM(amount) as total_amount,
-        COUNT(*) as transaction_count
-      FROM financial_transactions
-      WHERE academy_id = $1 AND status = 'completed'
+      SELECT category, transaction_type, SUM(amount) as total_amount, COUNT(*) as transaction_count FROM (
+        SELECT transaction_type, category, amount
+        FROM financial_transactions
+        WHERE academy_id = $1 AND status = 'completed'
+        
+        UNION ALL
+        
+        SELECT 
+          'income' as transaction_type, 
+          'Transfer Fees' as category, 
+          transfer_amount as amount
+        FROM transfers t
+        WHERE 
+          t.academy_id = $1 
+          AND t.status = 'completed' 
+          AND t.transfer_amount > 0
+          AND NOT EXISTS (
+            SELECT 1 FROM financial_transactions ft 
+            WHERE ft.reference_number = 'TRF-' || t.id::text
+          )
+      ) as combined
       GROUP BY transaction_type, category
       ORDER BY total_amount DESC
     `, [academyId]);
 
-    // Monthly Breakdown
+    // 4. Monthly Breakdown
     const monthlyResult = await query(`
       SELECT 
         EXTRACT(MONTH FROM transaction_date) as month,
         transaction_type,
         SUM(amount) as total_amount
-      FROM financial_transactions
-      WHERE 
-        academy_id = $1 
-        AND status = 'completed'
-        AND EXTRACT(YEAR FROM transaction_date) = $2
+      FROM (
+        SELECT transaction_date, transaction_type, amount
+        FROM financial_transactions
+        WHERE 
+          academy_id = $1 
+          AND status = 'completed'
+          AND EXTRACT(YEAR FROM transaction_date) = $2
+          
+        UNION ALL
+        
+        SELECT 
+          transfer_date as transaction_date,
+          'income' as transaction_type,
+          transfer_amount as amount
+        FROM transfers t
+        WHERE 
+          t.academy_id = $1 
+          AND t.status = 'completed' 
+          AND t.transfer_amount > 0
+          AND EXTRACT(YEAR FROM t.transfer_date) = $2
+          AND NOT EXISTS (
+            SELECT 1 FROM financial_transactions ft 
+            WHERE ft.reference_number = 'TRF-' || t.id::text
+          )
+      ) as combined
       GROUP BY month, transaction_type
       ORDER BY month
     `, [academyId, year]);

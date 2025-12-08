@@ -43,6 +43,7 @@ import Compliance from "./pages/Compliance";
 import ApiDocs from "./pages/ApiDocs";
 import BlogList from "./pages/BlogList";
 import BlogDetails from "./pages/BlogDetails";
+import BlogEditor from "./pages/BlogEditor";
 
 const queryClient = new QueryClient();
 
@@ -101,6 +102,8 @@ const App = () => {
                 <Route path="/admin/super-admins" element={<SuperAdmins />} />
                 <Route path="/admin/academy/:id" element={<AcademyDetails />} />
                 <Route path="/admin/player-details/:id" element={<PlayerDetails />} />
+                <Route path="/admin/blog/new" element={<BlogEditor />} />
+                <Route path="/admin/blog/edit/:id" element={<BlogEditor />} />
               </Route>
 
               {/* Stripe payment/subscription outcome routes */}

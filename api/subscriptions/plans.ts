@@ -45,7 +45,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     price: 0,
                     currency: 'USD',
                     billingCycle: 'MONTHLY',
-                    playerLimit: 10,
+                    playerLimit: 3,
                     features: ['Basic player profiles', 'Limited storage'],
                     isActive: true,
                     isFree: true,

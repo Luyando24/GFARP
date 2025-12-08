@@ -908,7 +908,7 @@ export async function getAcademyDashboardStats(academyId: string): Promise<{
 // Financial Transactions API
 
 export interface FinancialTransaction {
-  id?: number;
+  id?: string | number;
   academy_id: string; // Changed from number to string for UUID support
   transaction_type: 'income' | 'expense';
   category: string;
@@ -923,6 +923,7 @@ export interface FinancialTransaction {
   created_by?: string; // Also changed to string for UUID support
   created_at?: string;
   updated_at?: string;
+  source_type?: 'transaction' | 'transfer';
 }
 
 export interface BudgetCategory {

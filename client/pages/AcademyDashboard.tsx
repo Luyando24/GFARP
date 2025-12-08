@@ -548,7 +548,7 @@ export default function AcademyDashboard() {
           endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
           autoRenew: true,
           daysRemaining: 365,
-          playerLimit: 1,
+          playerLimit: 3,
           playerCount: 0,
           playerUsagePercentage: 0
         });
@@ -2154,22 +2154,31 @@ export default function AcademyDashboard() {
                             <div>
                               <div className="flex justify-between text-sm mb-1">
                                 <span>Players</span>
-                                <span>{subscriptionData.playerCount || 0} / {subscriptionData.playerLimit}</span>
+                                <span>
+                                  {subscriptionData.playerCount || 0} / {subscriptionData.playerLimit === -1 ? 'Unlimited' : subscriptionData.playerLimit}
+                                </span>
                               </div>
                               <div className="w-full bg-slate-200 rounded-full h-2">
                                 <div
-                                  className={`h-2 rounded-full ${((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) >= 1
-                                    ? 'bg-red-600'
-                                    : ((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) >= 0.8
-                                      ? 'bg-yellow-600'
-                                      : 'bg-blue-600'
-                                    }`}
+                                  className={`h-2 rounded-full ${
+                                    subscriptionData.playerLimit === -1 
+                                      ? 'bg-blue-600'
+                                      : ((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) >= 1
+                                        ? 'bg-red-600'
+                                        : ((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) >= 0.8
+                                          ? 'bg-yellow-600'
+                                          : 'bg-blue-600'
+                                  }`}
                                   style={{
-                                    width: `${Math.min(((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) * 100, 100)}%`
+                                    width: `${
+                                      subscriptionData.playerLimit === -1 
+                                        ? 100 
+                                        : Math.min(((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) * 100, 100)
+                                    }%`
                                   }}
                                 ></div>
                               </div>
-                              {((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) >= 0.8 && (
+                              {subscriptionData.playerLimit !== -1 && ((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) >= 0.8 && (
                                 <div className="mt-2">
                                   <Button
                                     size="sm"
