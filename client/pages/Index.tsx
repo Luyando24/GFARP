@@ -276,8 +276,8 @@ export default function Index() {
             {/* Step 3 */}
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-white/20 hover:border-yellow-500/50 transition-all duration-300 transform hover:-translate-y-2">
               <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 w-12 h-12 rounded-full flex items-center justify-center mb-6 text-black font-bold text-xl">3</div>
-              <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Track Progress</h3>
-              <p className="text-blue-100">Monitor player development and transfers through our Soccer Circular-connected dashboard.</p>
+              <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Manage Finances</h3>
+              <p className="text-blue-100">Create professional invoices, track expenses, and monitor revenue with our integrated financial tools.</p>
             </div>
 
             {/* Step 4 */}
@@ -501,24 +501,24 @@ export default function Index() {
             {/* Benefit 2 - Training Compensation */}
             <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
               {/* Card Header */}
-              <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#005391] to-[#0066b3]"></div>
+              <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-green-500 to-emerald-600"></div>
 
               {/* Icon Badge */}
               <div className="relative mb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-[#005391]/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
+                <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-green-500/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
                   <DollarSign className="h-10 w-10 text-white" />
                 </div>
                 <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center">
-                  <Star className="h-4 w-4 text-black fill-current" />
+                  <Trophy className="h-4 w-4 text-black" />
                 </div>
               </div>
 
               {/* Content */}
-              <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-[#005391] transition-colors duration-300">
-                TRAINING COMPENSATION
+              <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-green-600 transition-colors duration-300">
+                FINANCIAL MANAGEMENT
               </h3>
               <p className="text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors duration-300">
-                Automated calculation and tracking of training compensation fees for player transfers with complete transparency.
+                Complete financial suite with invoice generation, expense tracking, and comprehensive revenue reports for your academy.
               </p>
             </div>
 
