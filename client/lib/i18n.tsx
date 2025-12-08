@@ -1044,6 +1044,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'common.uploaded': 'Téléchargé',
     'common.size': 'Taille',
     'common.actions': 'Actions',
+  },
   pt: {
     'nav.about': 'SOBRE NÓS',
     'nav.support': 'SUPORTE',
