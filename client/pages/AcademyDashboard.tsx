@@ -267,6 +267,162 @@ export default function AcademyDashboard() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Localized compliance mock data
+  const complianceData = {
+    overallScore: 95,
+    lastAudit: "December 2023",
+    nextReview: "March 2024",
+    status: "Active",
+    areas: [
+      {
+        id: 1,
+        name: t('dash.compliance.area.playerReg.name'),
+        score: 98,
+        status: "compliant",
+        lastCheck: "2024-01-15",
+        issues: 0,
+        description: t('dash.compliance.area.playerReg.desc')
+      },
+      {
+        id: 2,
+        name: t('dash.compliance.area.trainingComp.name'),
+        score: 95,
+        status: "compliant",
+        lastCheck: "2024-01-10",
+        issues: 0,
+        description: t('dash.compliance.area.trainingComp.desc')
+      },
+      {
+        id: 3,
+        name: t('dash.compliance.area.docs.name'),
+        score: 88,
+        status: "review_required",
+        lastCheck: "2024-01-08",
+        issues: 2,
+        description: t('dash.compliance.area.docs.desc')
+      },
+      {
+        id: 4,
+        name: t('dash.compliance.area.solidarity.name'),
+        score: 92,
+        status: "compliant",
+        lastCheck: "2024-01-12",
+        issues: 0,
+        description: t('dash.compliance.area.solidarity.desc')
+      },
+      {
+        id: 5,
+        name: t('dash.compliance.area.transfers.name'),
+        score: 90,
+        status: "compliant",
+        lastCheck: "2024-01-14",
+        issues: 1,
+        description: t('dash.compliance.area.transfers.desc')
+      },
+      {
+        id: 6,
+        name: t('dash.compliance.area.youth.name'),
+        score: 96,
+        status: "compliant",
+        lastCheck: "2024-01-16",
+        issues: 0,
+        description: t('dash.compliance.area.youth.desc')
+      }
+    ],
+    actionItems: [
+      {
+        id: 1,
+        title: t('dash.compliance.action.medical.title'),
+        priority: "high",
+        dueDate: "2024-02-01",
+        assignee: "Medical Team",
+        status: "in_progress",
+        description: t('dash.compliance.action.medical.desc')
+      },
+      {
+        id: 2,
+        title: t('dash.compliance.action.review.title'),
+        priority: "medium",
+        dueDate: "2024-02-15",
+        assignee: "Legal Team",
+        status: "pending",
+        description: t('dash.compliance.action.review.desc')
+      },
+      {
+        id: 3,
+        title: t('dash.compliance.action.audit.title'),
+        priority: "low",
+        dueDate: "2024-03-01",
+        assignee: "Compliance Officer",
+        status: "pending",
+        description: t('dash.compliance.action.audit.desc')
+      }
+    ],
+    auditHistory: [
+      {
+        id: 1,
+        date: "2023-12-15",
+        type: t('dash.compliance.audit.fifaInspection'),
+        result: "Passed",
+        score: 95,
+        inspector: "FIFA Regional Office",
+        notes: t('dash.compliance.audit.note1')
+      },
+      {
+        id: 2,
+        date: "2023-09-20",
+        type: t('dash.compliance.audit.internal'),
+        result: "Passed",
+        score: 93,
+        inspector: "Internal Team",
+        notes: t('dash.compliance.audit.note2')
+      },
+      {
+        id: 3,
+        date: "2023-06-10",
+        type: t('dash.compliance.audit.fifaInspection'),
+        result: "Passed",
+        score: 91,
+        inspector: "FIFA Regional Office",
+        notes: t('dash.compliance.audit.note3')
+      }
+    ],
+    documents: [
+      {
+        id: 1,
+        name: "FIFA Compliance Manual 2024",
+        type: "Manual",
+        lastUpdated: "2024-01-01",
+        status: "current",
+        size: "2.4 MB"
+      },
+      {
+        id: 2,
+        name: "Player Registration Forms",
+        type: "Forms",
+        lastUpdated: "2024-01-15",
+        status: "current",
+        size: "1.8 MB"
+      },
+      {
+        id: 3,
+        name: "Training Compensation Guidelines",
+        type: "Guidelines",
+        lastUpdated: "2023-12-20",
+        status: "review_needed",
+        size: "956 KB"
+      },
+      {
+        id: 4,
+        name: "Audit Report December 2023",
+        type: "Report",
+        lastUpdated: "2023-12-16",
+        status: "current",
+        size: "3.2 MB"
+      }
+    ]
+  };
+
   // Transfer management state
   const [transfers, setTransfers] = useState<Transfer[]>([]);
   const [isLoadingTransfers, setIsLoadingTransfers] = useState(false);
@@ -806,9 +962,8 @@ export default function AcademyDashboard() {
     transaction.amount.toString().includes(searchQuery)
   );
 
-  const complianceData = { overallScore: 95, nextReview: "March 15, 2025", areas: [{ id: 1, name: "Player Registration", status: "compliant", score: 100, lastCheck: "Jan 15", issues: 0, description: "All registrations compliant" }], auditHistory: [{ id: 1, type: "Annual Audit", date: "Dec 2024", inspector: "FIFA Officer", result: "Passed", score: 95, notes: "Excellent compliance" }], documents: [{ id: 1, name: "License Certificate", type: "PDF", size: "2MB", status: "current", lastUpdated: "Jan 2025" }] };
   const filteredComplianceAreas = complianceData.areas;
-  const filteredActionItems = [{ id: 1, title: "Update Documents", priority: "high", dueDate: "Feb 1", status: "in_progress" }];
+  const filteredActionItems = complianceData.actionItems;
 
   const handleLogout = () => {
     clearSession();
@@ -1256,14 +1411,14 @@ export default function AcademyDashboard() {
                   </div>
                   <div className="ml-3">
                     <p className="text-sm text-yellow-700">
-                      Your academy profile is incomplete. Please complete your profile to unlock all features.
+                      {t('dash.profile.incomplete')}
                     </p>
                   </div>
                 </div>
                 <div className="ml-4 flex-shrink-0">
                   <Link to="/complete-profile">
                     <Button variant="outline" size="sm" className="text-yellow-700 border-yellow-700 hover:bg-yellow-100">
-                      Complete Profile
+                      {t('dash.profile.complete')}
                     </Button>
                   </Link>
                 </div>
@@ -1278,9 +1433,10 @@ export default function AcademyDashboard() {
               <TabsList className="grid w-full grid-cols-7">
                 <TabsTrigger value="dashboard">{t('dash.menu.dashboard')}</TabsTrigger>
                 <TabsTrigger value="players">{t('dash.menu.players')}</TabsTrigger>
+                <TabsTrigger value="transfers">{t('dash.menu.transfers')}</TabsTrigger>
                 <TabsTrigger value="finances">{t('dash.menu.finances')}</TabsTrigger>
                 <TabsTrigger value="fifa-compliance">{t('dash.menu.compliance')}</TabsTrigger>
-                <TabsTrigger value="subscription">Subscription</TabsTrigger>
+                <TabsTrigger value="subscription">{t('dash.stats.subscription')}</TabsTrigger>
                 <TabsTrigger value="settings">{t('dash.menu.settings')}</TabsTrigger>
               </TabsList>
 
@@ -1292,7 +1448,7 @@ export default function AcademyDashboard() {
                       {t('dash.welcome')} {displayAcademyName}
                     </h2>
                     <p className="text-slate-600 dark:text-slate-400">
-                      Academy management dashboard overview
+                      {t('dash.stats.overview')}
                     </p>
                   </div>
                   <Badge variant="secondary" className="text-sm">
@@ -1306,7 +1462,7 @@ export default function AcademyDashboard() {
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Total Players</p>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">{t('dash.stats.players')}</p>
                           <p className="text-2xl font-bold text-slate-900 dark:text-white">
                             {isLoadingStats ? (
                               <Loader2 className="h-6 w-6 animate-spin" />
@@ -1324,7 +1480,7 @@ export default function AcademyDashboard() {
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Active Transfers</p>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">{t('dash.stats.transfers')}</p>
                           <p className="text-2xl font-bold text-slate-900 dark:text-white">
                             {isLoadingStats ? (
                               <Loader2 className="h-6 w-6 animate-spin" />
@@ -1342,7 +1498,7 @@ export default function AcademyDashboard() {
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Monthly Revenue</p>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">{t('dash.stats.revenue')}</p>
                           <p className="text-2xl font-bold text-slate-900 dark:text-white">
                             {isLoadingStats ? (
                               <Loader2 className="h-6 w-6 animate-spin" />
@@ -1362,7 +1518,7 @@ export default function AcademyDashboard() {
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm text-slate-600 dark:text-slate-400">Subscription</p>
+                          <p className="text-sm text-slate-600 dark:text-slate-400">{t('dash.stats.subscription')}</p>
                           <p className="text-lg font-bold text-slate-900 dark:text-white">
                             {isLoadingSubscription ? (
                               <Loader2 className="h-5 w-5 animate-spin" />
@@ -1378,7 +1534,7 @@ export default function AcademyDashboard() {
                               scrollToPlanManagement();
                             }}
                           >
-                            Manage Plan
+                            {t('dash.plan.manage')}
                           </Button>
                         </div>
                         <div className="flex flex-col items-end">
@@ -1391,7 +1547,7 @@ export default function AcademyDashboard() {
                                 : 'bg-red-50 text-red-700 border-red-200'
                                 } text-xs`}
                             >
-                              {subscriptionData.status === 'active' ? 'Active' : 'Inactive'}
+                              {subscriptionData.status === 'active' ? t('dash.plan.active') : t('dash.plan.inactive')}
                             </Badge>
                           )}
                         </div>
@@ -1405,7 +1561,7 @@ export default function AcademyDashboard() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <BarChart3 className="h-5 w-5" />
-                      Monthly Financial Performance
+                      {t('dash.financial.title')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -1419,15 +1575,15 @@ export default function AcademyDashboard() {
                         <div className="flex items-center justify-center gap-6 text-sm">
                           <div className="flex items-center gap-2">
                             <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-                            <span>Revenue</span>
+                            <span>{t('dash.financial.revenue')}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                            <span>Expenses</span>
+                            <span>{t('dash.financial.expenses')}</span>
                           </div>
                           <div className="flex items-center gap-2">
                             <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                            <span>Profit</span>
+                            <span>{t('dash.financial.profit')}</span>
                           </div>
                         </div>
 
@@ -1453,20 +1609,20 @@ export default function AcademyDashboard() {
                                   <div
                                     className="absolute bottom-0 w-full bg-green-500"
                                     style={{ height: `${revenueHeight}px` }}
-                                    title={`Revenue: $${monthData.revenue.toLocaleString()}`}
+                                    title={`${t('dash.financial.revenue')}: $${monthData.revenue.toLocaleString()}`}
                                   ></div>
                                   {/* Expenses bar (red) */}
                                   <div
                                     className="absolute bottom-0 w-full bg-red-500"
                                     style={{ height: `${expensesHeight}px` }}
-                                    title={`Expenses: $${monthData.expenses.toLocaleString()}`}
+                                    title={`${t('dash.financial.expenses')}: $${monthData.expenses.toLocaleString()}`}
                                   ></div>
                                   {/* Profit bar (blue) - only show if positive */}
                                   {monthData.profit > 0 && (
                                     <div
                                       className="absolute bottom-0 w-full bg-blue-500"
                                       style={{ height: `${profitHeight}px` }}
-                                      title={`Profit: $${monthData.profit.toLocaleString()}`}
+                                      title={`${t('dash.financial.profit')}: $${monthData.profit.toLocaleString()}`}
                                     ></div>
                                   )}
                                 </div>
@@ -1479,19 +1635,19 @@ export default function AcademyDashboard() {
                         {/* Summary */}
                         <div className="grid grid-cols-3 gap-4 pt-4 border-t">
                           <div className="text-center">
-                            <div className="text-sm text-slate-600">Total Revenue</div>
+                            <div className="text-sm text-slate-600">{t('dash.financial.revenue')}</div>
                             <div className="text-lg font-semibold text-green-600">
                               ${dashboardStats.monthlyFinancialPerformance?.reduce((sum, month) => sum + month.revenue, 0).toLocaleString() || '0'}
                             </div>
                           </div>
                           <div className="text-center">
-                            <div className="text-sm text-slate-600">Total Expenses</div>
+                            <div className="text-sm text-slate-600">{t('dash.financial.expenses')}</div>
                             <div className="text-lg font-semibold text-red-600">
                               ${dashboardStats.monthlyFinancialPerformance?.reduce((sum, month) => sum + month.expenses, 0).toLocaleString() || '0'}
                             </div>
                           </div>
                           <div className="text-center">
-                            <div className="text-sm text-slate-600">Net Profit</div>
+                            <div className="text-sm text-slate-600">{t('dash.financial.profit')}</div>
                             <div className="text-lg font-semibold text-blue-600">
                               ${dashboardStats.monthlyFinancialPerformance?.reduce((sum, month) => sum + month.profit, 0).toLocaleString() || '0'}
                             </div>
@@ -1547,25 +1703,25 @@ export default function AcademyDashboard() {
               {/* Other tabs would be implemented similarly */}
               <TabsContent value="transfers" className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Transfer Management</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('dash.transfers.title')}</h2>
                   <Button onClick={handleAddTransfer}>
                     <Plus className="h-4 w-4 mr-2" />
-                    New Transfer
+                    {t('dash.transfers.new')}
                   </Button>
                 </div>
 
                 <Alert>
                   <Shield className="h-4 w-4" />
                   <AlertDescription>
-                    All transfers must comply with FIFA regulations. Ensure proper documentation is submitted.
+                    {t('dash.transfers.alert')}
                   </AlertDescription>
                 </Alert>
 
                 <Card>
                   <CardHeader>
-                    <CardTitle>Transfer History</CardTitle>
+                    <CardTitle>{t('dash.transfers.history')}</CardTitle>
                     <CardDescription>
-                      Manage all player transfers and track their status
+                      {t('dash.transfers.historyDesc')}
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -1573,12 +1729,12 @@ export default function AcademyDashboard() {
                       {isLoadingTransfers ? (
                         <div className="text-center py-8">
                           <Loader2 className="h-8 w-8 mx-auto mb-4 animate-spin" />
-                          <p>Loading transfers...</p>
+                          <p>{t('dash.transfers.loading')}</p>
                         </div>
                       ) : transfers.length === 0 ? (
                         <div className="text-center py-8 text-slate-500">
                           <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                          <p>No transfers found. Click "New Transfer" to add one.</p>
+                          <p>{t('dash.transfers.empty')}</p>
                         </div>
                       ) : (
                         transfers.map((transfer) => (
@@ -1587,12 +1743,12 @@ export default function AcademyDashboard() {
                               <div className="flex-1">
                                 <h3 className="font-semibold text-lg">{transfer.player_name}</h3>
                                 <div className="grid grid-cols-2 gap-4 mt-2 text-sm text-slate-600">
-                                  <p><span className="font-medium">From:</span> {transfer.from_club}</p>
-                                  <p><span className="font-medium">To:</span> {transfer.to_club}</p>
-                                  <p><span className="font-medium">Date:</span> {new Date(transfer.transfer_date).toLocaleDateString()}</p>
-                                  <p><span className="font-medium">Amount:</span> {transfer.transfer_amount ? `${transfer.currency} ${transfer.transfer_amount.toLocaleString()}` : 'N/A'}</p>
-                                  <p><span className="font-medium">Type:</span> {transfer.transfer_type}</p>
-                                  <p><span className="font-medium">Priority:</span> {transfer.priority}</p>
+                                  <p><span className="font-medium">{t('dash.transfers.from')}:</span> {transfer.from_club}</p>
+                                  <p><span className="font-medium">{t('dash.transfers.to')}:</span> {transfer.to_club}</p>
+                                  <p><span className="font-medium">{t('dash.transfers.date')}:</span> {new Date(transfer.transfer_date).toLocaleDateString()}</p>
+                                  <p><span className="font-medium">{t('dash.transfers.amount')}:</span> {transfer.transfer_amount ? `${transfer.currency} ${transfer.transfer_amount.toLocaleString()}` : 'N/A'}</p>
+                                  <p><span className="font-medium">{t('dash.transfers.type')}:</span> {transfer.transfer_type}</p>
+                                  <p><span className="font-medium">{t('dash.transfers.priority')}:</span> {transfer.priority}</p>
                                 </div>
                               </div>
                               <div className="flex items-center gap-3">
@@ -1629,7 +1785,7 @@ export default function AcademyDashboard() {
                   <DialogContent className="sm:max-w-[600px]">
                     <DialogHeader>
                       <DialogTitle>
-                        {editingTransfer ? 'Edit Transfer' : 'Add New Transfer'}
+                        {editingTransfer ? 'Edit Transfer' : t('dash.transfers.new')}
                       </DialogTitle>
                       <DialogDescription>
                         {editingTransfer
@@ -1800,15 +1956,15 @@ export default function AcademyDashboard() {
               {/* Compliance Tab */}
               <TabsContent value="compliance" className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">FIFA Compliance Center</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('features.fifaComp.title')}</h2>
                   <div className="flex gap-2">
                     <Button variant="outline">
                       <FileText className="h-4 w-4 mr-2" />
-                      Generate Report
+                      {t('dash.compliance.report')}
                     </Button>
                     <Button variant="outline">
                       <Download className="h-4 w-4 mr-2" />
-                      Export Data
+                      {t('dash.compliance.data')}
                     </Button>
                     <Button
                       onClick={(e) => {
@@ -1819,7 +1975,7 @@ export default function AcademyDashboard() {
                       className="bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#0066b3] hover:to-[#005391] text-white"
                     >
                       <Settings className="h-4 w-4 mr-2" />
-                      Manage Documents
+                      {t('features.docMgmt.title')}
                     </Button>
                   </div>
                 </div>
@@ -1842,7 +1998,7 @@ export default function AcademyDashboard() {
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Compliant Areas</p>
+                          <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('dash.compliance.areas')}</p>
                           <p className="text-2xl font-bold text-[#005391]">
                             {complianceData.areas.filter(area => area.status === 'compliant').length}/{complianceData.areas.length}
                           </p>
@@ -1856,7 +2012,7 @@ export default function AcademyDashboard() {
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Open Issues</p>
+                          <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('dash.compliance.issues')}</p>
                           <p className="text-2xl font-bold text-orange-600">
                             {complianceData.areas.reduce((sum, area) => sum + area.issues, 0)}
                           </p>
@@ -1870,7 +2026,7 @@ export default function AcademyDashboard() {
                     <CardContent className="p-6">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Next Review</p>
+                          <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('dash.compliance.review')}</p>
                           <p className="text-lg font-bold text-slate-900 dark:text-white">{complianceData.nextReview}</p>
                         </div>
                         <Calendar className="h-8 w-8 text-slate-600" />
@@ -1884,8 +2040,8 @@ export default function AcademyDashboard() {
                   {/* Compliance Areas */}
                   <Card className="lg:col-span-2">
                     <CardHeader>
-                      <CardTitle>Compliance Areas</CardTitle>
-                      <CardDescription>Detailed breakdown of FIFA compliance requirements</CardDescription>
+                      <CardTitle>{t('dash.compliance.breakdown')}</CardTitle>
+                      <CardDescription>{t('dash.compliance.breakdownDesc')}</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
@@ -1931,8 +2087,8 @@ export default function AcademyDashboard() {
                   {/* Action Items */}
                   <Card>
                     <CardHeader>
-                      <CardTitle>Action Items</CardTitle>
-                      <CardDescription>Pending compliance tasks</CardDescription>
+                      <CardTitle>{t('dash.compliance.actions')}</CardTitle>
+                      <CardDescription>{t('dash.compliance.actionsDesc')}</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
@@ -1969,7 +2125,7 @@ export default function AcademyDashboard() {
                       </div>
                       <Button className="w-full mt-4" variant="outline">
                         <ClipboardCheck className="h-4 w-4 mr-2" />
-                        View All Tasks
+                        {t('dash.compliance.viewTasks')}
                       </Button>
                     </CardContent>
                   </Card>
@@ -1980,8 +2136,8 @@ export default function AcademyDashboard() {
                   {/* Audit History */}
                   <Card>
                     <CardHeader>
-                      <CardTitle>Audit History</CardTitle>
-                      <CardDescription>Recent compliance audits and inspections</CardDescription>
+                      <CardTitle>{t('dash.compliance.audit')}</CardTitle>
+                      <CardDescription>{t('dash.compliance.auditDesc')}</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
@@ -2003,7 +2159,7 @@ export default function AcademyDashboard() {
                       </div>
                       <Button className="w-full mt-4" variant="outline">
                         <Eye className="h-4 w-4 mr-2" />
-                        View Full History
+                        {t('dash.compliance.viewHistory')}
                       </Button>
                     </CardContent>
                   </Card>
@@ -2011,8 +2167,8 @@ export default function AcademyDashboard() {
                   {/* Document Management */}
                   <Card>
                     <CardHeader>
-                      <CardTitle>Compliance Documents</CardTitle>
-                      <CardDescription>Important FIFA compliance documentation</CardDescription>
+                      <CardTitle>{t('dash.compliance.documentsTitle')}</CardTitle>
+                      <CardDescription>{t('dash.compliance.documentsDesc')}</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-3">
@@ -2051,8 +2207,8 @@ export default function AcademyDashboard() {
                 <Alert>
                   <Shield className="h-4 w-4" />
                   <AlertDescription>
-                    <strong>Upcoming FIFA Review:</strong> Your academy is scheduled for a FIFA compliance review on {complianceData.nextReview}.
-                    Ensure all documentation is up to date and action items are completed before the review date.
+                    <strong>{t('dash.compliance.alert.reviewTitle')}</strong> {t('dash.compliance.alert.reviewMsg')} {complianceData.nextReview}.
+                    {t('dash.compliance.alert.reviewDesc')}
                   </AlertDescription>
                 </Alert>
               </TabsContent>
@@ -2065,13 +2221,13 @@ export default function AcademyDashboard() {
               {/* Subscription Tab */}
               <TabsContent value="subscription" className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Subscription Management</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('dash.stats.subscription')}</h2>
                   {subscriptionData && (
                     <Badge variant="outline" className={`${subscriptionData.status === 'active'
                       ? 'bg-green-50 text-green-700 border-green-200'
                       : 'bg-red-50 text-red-700 border-red-200'
                       }`}>
-                      {subscriptionData.status === 'active' ? 'Active Plan' : 'Inactive'}
+                      {subscriptionData.status === 'active' ? t('dash.plan.active') : t('dash.plan.inactive')}
                     </Badge>
                   )}
                 </div>
@@ -2079,7 +2235,7 @@ export default function AcademyDashboard() {
                 {isLoadingSubscription ? (
                   <div className="flex items-center justify-center py-8">
                     <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                    <span className="ml-2">Loading subscription data...</span>
+                    <span className="ml-2">{t('dash.transfers.loading')}</span>
                   </div>
                 ) : subscriptionData ? (
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -2088,7 +2244,7 @@ export default function AcademyDashboard() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <Star className="h-5 w-5 text-yellow-500" />
-                          Current Plan
+                          {t('dash.plan.current')}
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -2101,7 +2257,7 @@ export default function AcademyDashboard() {
                         <div className="space-y-2">
                           {subscriptionData.endDate && (
                             <div className="flex justify-between text-sm">
-                              <span>Next billing date:</span>
+                              <span>{t('dash.plan.nextBilling')}:</span>
                               <span className="font-medium">
                                 {new Date(subscriptionData.endDate).toLocaleDateString()}
                               </span>
@@ -2109,14 +2265,14 @@ export default function AcademyDashboard() {
                           )}
                           {subscriptionData.startDate && (
                             <div className="flex justify-between text-sm">
-                              <span>Plan started:</span>
+                              <span>{t('dash.plan.started')}</span>
                               <span className="font-medium">
                                 {new Date(subscriptionData.startDate).toLocaleDateString()}
                               </span>
                             </div>
                           )}
                           <div className="flex justify-between text-sm">
-                            <span>Status:</span>
+                            <span>{t('dash.plan.status')}</span>
                             <Badge variant="outline" className={`${subscriptionData.status === 'active'
                               ? 'bg-green-50 text-green-700 border-green-200'
                               : 'bg-red-50 text-red-700 border-red-200'
@@ -2126,14 +2282,14 @@ export default function AcademyDashboard() {
                           </div>
                           {subscriptionData.daysRemaining !== undefined && (
                             <div className="flex justify-between text-sm">
-                              <span>Days remaining:</span>
+                              <span>{t('dash.plan.daysRemaining')}</span>
                               <span className="font-medium">{subscriptionData.daysRemaining} days</span>
                             </div>
                           )}
                         </div>
                         {subscriptionData.features && (
                           <div className="pt-4 border-t">
-                            <h4 className="font-medium mb-2">Plan Features:</h4>
+                            <h4 className="font-medium mb-2">{t('dash.plan.features')}</h4>
                             <ul className="text-sm space-y-1 text-slate-600">
                               {subscriptionData.features.map((feature: string, index: number) => (
                                 <li key={index}>• {feature}</li>
@@ -2149,7 +2305,7 @@ export default function AcademyDashboard() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <BarChart3 className="h-5 w-5 text-blue-600" />
-                          Usage Statistics
+                          {t('dash.plan.usage')}
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -2157,7 +2313,7 @@ export default function AcademyDashboard() {
                           {subscriptionData.playerLimit && (
                             <div>
                               <div className="flex justify-between text-sm mb-1">
-                                <span>Players</span>
+                                <span>{t('dash.stats.players')}</span>
                                 <span>
                                   {subscriptionData.playerCount || 0} / {subscriptionData.playerLimit === -1 ? 'Unlimited' : subscriptionData.playerLimit}
                                 </span>
@@ -2211,7 +2367,7 @@ export default function AcademyDashboard() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <Receipt className="h-5 w-5 text-slate-600" />
-                          Billing History
+                          {t('dash.plan.billingHistory')}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
@@ -2240,7 +2396,7 @@ export default function AcademyDashboard() {
                             ))
                           ) : (
                             <div className="text-center text-slate-500 py-4">
-                              No billing history available
+                              {t('dash.finance.manager.noTrans')}
                             </div>
                           )}
                         </div>
@@ -2252,7 +2408,7 @@ export default function AcademyDashboard() {
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                           <Settings className="h-5 w-5 text-slate-600" />
-                          Plan Management
+                          {t('dash.plan.management')}
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="space-y-4">
@@ -2270,15 +2426,15 @@ export default function AcademyDashboard() {
                                       Upgrading...
                                     </>
                                   ) : (
-                                    'Select Plan'
+                                    t('dash.plan.select')
                                   )}
                                 </Button>
                               </DialogTrigger>
                               <DialogContent>
                                 <DialogHeader>
-                                  <DialogTitle>Select a Plan</DialogTitle>
+                                  <DialogTitle>{t('dash.plan.select')}</DialogTitle>
                                   <DialogDescription>
-                                    Choose a subscription plan for your academy.
+                                    {t('landing.pricing.title.choose')}
                                   </DialogDescription>
                                 </DialogHeader>
                                 <div className="space-y-4">
@@ -2298,7 +2454,7 @@ export default function AcademyDashboard() {
                                             <p className="text-sm text-slate-600">{plan.description}</p>
                                             {subscriptionData?.planName === plan.name && (
                                               <Badge className="mt-1 bg-blue-100 text-blue-800 border-blue-200">
-                                                Current Plan
+                                                {t('dash.plan.current')}
                                               </Badge>
                                             )}
                                           </div>
@@ -2318,10 +2474,10 @@ export default function AcademyDashboard() {
                           )}
 
                           <Button variant="outline" className="w-full">
-                            Change Payment Method
+                            {t('dash.plan.changePayment')}
                           </Button>
                           <Button variant="outline" className="w-full">
-                            Download Invoice
+                            {t('dash.plan.downloadInvoice')}
                           </Button>
 
                           {subscriptionData.status === 'active' && (
@@ -2338,19 +2494,19 @@ export default function AcademyDashboard() {
                                       Cancelling...
                                     </>
                                   ) : (
-                                    'Cancel Subscription'
+                                    t('dash.plan.cancel')
                                   )}
                                 </Button>
                               </DialogTrigger>
                               <DialogContent>
                                 <DialogHeader>
-                                  <DialogTitle>Cancel Subscription</DialogTitle>
+                                  <DialogTitle>{t('dash.plan.cancel')}</DialogTitle>
                                   <DialogDescription>
                                     Are you sure you want to cancel your subscription? This action cannot be undone.
                                   </DialogDescription>
                                 </DialogHeader>
                                 <DialogFooter>
-                                  <Button variant="outline">Keep Subscription</Button>
+                                  <Button variant="outline">{t('common.cancel')}</Button>
                                   <Button
                                     variant="destructive"
                                     onClick={handleCancelSubscription}
@@ -2389,23 +2545,23 @@ export default function AcademyDashboard() {
               {/* Settings Tab */}
               <TabsContent value="settings" className="space-y-6">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Academy Settings</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('dash.menu.settings')}</h2>
                   <div className="flex gap-2">
                     {isEditingSettings ? (
                       <>
                         <Button variant="outline" onClick={handleCancelEdit}>
                           <X className="h-4 w-4 mr-2" />
-                          Cancel
+                          {t('common.cancel')}
                         </Button>
                         <Button onClick={handleSaveSettings}>
                           <Save className="h-4 w-4 mr-2" />
-                          Save Changes
+                          {t('common.save')}
                         </Button>
                       </>
                     ) : (
                       <Button onClick={handleEditSettings}>
                         <Edit className="h-4 w-4 mr-2" />
-                        Edit Information
+                        {t('common.edit')}
                       </Button>
                     )}
                   </div>
@@ -2416,15 +2572,15 @@ export default function AcademyDashboard() {
                     <CardHeader>
                       <CardTitle className="flex items-center">
                         <Building className="h-5 w-5 mr-2" />
-                        Academy Information
+                        {t('dash.settings.academy')}
                       </CardTitle>
                       <CardDescription>
-                        Basic information about your football academy
+                        {t('dash.settings.academyDesc')}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div>
-                        <Label htmlFor="academy-name" className="text-sm font-medium">Academy Name</Label>
+                        <Label htmlFor="academy-name" className="text-sm font-medium">{t('dash.settings.labels.name')}</Label>
                         <Input
                           id="academy-name"
                           type="text"
@@ -2436,7 +2592,7 @@ export default function AcademyDashboard() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="location" className="text-sm font-medium">Location</Label>
+                        <Label htmlFor="location" className="text-sm font-medium">{t('dash.settings.labels.location')}</Label>
                         <Input
                           id="location"
                           type="text"
@@ -2448,7 +2604,7 @@ export default function AcademyDashboard() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="established" className="text-sm font-medium">Year Established</Label>
+                        <Label htmlFor="established" className="text-sm font-medium">{t('dash.settings.labels.established')}</Label>
                         <Input
                           id="established"
                           type="text"
@@ -2466,15 +2622,15 @@ export default function AcademyDashboard() {
                     <CardHeader>
                       <CardTitle className="flex items-center">
                         <Phone className="h-5 w-5 mr-2" />
-                        Contact Information
+                        {t('dash.settings.contact')}
                       </CardTitle>
                       <CardDescription>
-                        Primary contact details for the academy
+                        {t('dash.settings.contactDesc')}
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div>
-                        <Label htmlFor="email" className="text-sm font-medium">Academy Email</Label>
+                        <Label htmlFor="email" className="text-sm font-medium">{t('dash.settings.labels.email')}</Label>
                         <Input
                           id="email"
                           type="email"
@@ -2486,7 +2642,7 @@ export default function AcademyDashboard() {
                         />
                       </div>
                       <div>
-                        <Label htmlFor="phone" className="text-sm font-medium">Academy Phone</Label>
+                        <Label htmlFor="phone" className="text-sm font-medium">{t('dash.settings.labels.phone')}</Label>
                         <Input
                           id="phone"
                           type="tel"
@@ -2689,158 +2845,3 @@ export default function AcademyDashboard() {
   );
 }
 
-// Add new mock data for enhanced FIFA compliance
-const complianceData = {
-  overallScore: 95,
-  lastAudit: "December 2023",
-  nextReview: "March 2024",
-  status: "Active",
-  areas: [
-    {
-      id: 1,
-      name: "Player Registration",
-      score: 98,
-      status: "compliant",
-      lastCheck: "2024-01-15",
-      issues: 0,
-      description: "All player registrations are up to date and compliant with FIFA regulations"
-    },
-    {
-      id: 2,
-      name: "Training Compensation",
-      score: 95,
-      status: "compliant",
-      lastCheck: "2024-01-10",
-      issues: 0,
-      description: "Training compensation calculations and payments are properly managed"
-    },
-    {
-      id: 3,
-      name: "Documentation",
-      score: 88,
-      status: "review_required",
-      lastCheck: "2024-01-08",
-      issues: 2,
-      description: "Some documentation requires updates to meet latest FIFA standards"
-    },
-    {
-      id: 4,
-      name: "Solidarity Mechanism",
-      score: 92,
-      status: "compliant",
-      lastCheck: "2024-01-12",
-      issues: 0,
-      description: "Solidarity payments are calculated and distributed according to FIFA rules"
-    },
-    {
-      id: 5,
-      name: "Transfer Regulations",
-      score: 90,
-      status: "compliant",
-      lastCheck: "2024-01-14",
-      issues: 1,
-      description: "Transfer processes follow FIFA regulations with minor improvements needed"
-    },
-    {
-      id: 6,
-      name: "Youth Protection",
-      score: 96,
-      status: "compliant",
-      lastCheck: "2024-01-16",
-      issues: 0,
-      description: "Youth player protection measures exceed FIFA minimum requirements"
-    }
-  ],
-  actionItems: [
-    {
-      id: 1,
-      title: "Update Player Medical Records",
-      priority: "high",
-      dueDate: "2024-02-01",
-      assignee: "Medical Team",
-      status: "in_progress",
-      description: "Ensure all player medical records are current and properly documented"
-    },
-    {
-      id: 2,
-      title: "Review Training Compensation Agreements",
-      priority: "medium",
-      dueDate: "2024-02-15",
-      assignee: "Legal Team",
-      status: "pending",
-      description: "Review and update training compensation agreements with partner clubs"
-    },
-    {
-      id: 3,
-      title: "Conduct Internal Audit",
-      priority: "low",
-      dueDate: "2024-03-01",
-      assignee: "Compliance Officer",
-      status: "pending",
-      description: "Perform quarterly internal compliance audit before FIFA review"
-    }
-  ],
-  auditHistory: [
-    {
-      id: 1,
-      date: "2023-12-15",
-      type: "FIFA Inspection",
-      result: "Passed",
-      score: 95,
-      inspector: "FIFA Regional Office",
-      notes: "Excellent compliance standards maintained"
-    },
-    {
-      id: 2,
-      date: "2023-09-20",
-      type: "Internal Audit",
-      result: "Passed",
-      score: 93,
-      inspector: "Internal Team",
-      notes: "Minor improvements in documentation needed"
-    },
-    {
-      id: 3,
-      date: "2023-06-10",
-      type: "FIFA Inspection",
-      result: "Passed",
-      score: 91,
-      inspector: "FIFA Regional Office",
-      notes: "Good progress on previous recommendations"
-    }
-  ],
-  documents: [
-    {
-      id: 1,
-      name: "FIFA Compliance Manual 2024",
-      type: "Manual",
-      lastUpdated: "2024-01-01",
-      status: "current",
-      size: "2.4 MB"
-    },
-    {
-      id: 2,
-      name: "Player Registration Forms",
-      type: "Forms",
-      lastUpdated: "2024-01-15",
-      status: "current",
-      size: "1.8 MB"
-    },
-    {
-      id: 3,
-      name: "Training Compensation Guidelines",
-      type: "Guidelines",
-      lastUpdated: "2023-12-20",
-      status: "review_needed",
-      size: "956 KB"
-    },
-    {
-      id: 4,
-      name: "Audit Report December 2023",
-      type: "Report",
-      lastUpdated: "2023-12-16",
-      status: "current",
-      size: "3.2 MB"
-    }
-  ]
-};

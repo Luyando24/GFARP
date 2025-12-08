@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '@/lib/i18n';
 import {
     Upload,
     Eye,
@@ -49,6 +50,7 @@ interface AcademyComplianceTabProps {
 }
 
 export default function AcademyComplianceTab({ academyId }: AcademyComplianceTabProps) {
+    const { t } = useLanguage();
     const [documents, setDocuments] = useState<ComplianceDocument[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploading, setUploading] = useState(false);
@@ -110,7 +112,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
                 setDocuments(result.data);
             } else {
                 toast({
-                    title: "Error",
+                    title: t('common.error'),
                     description: "Failed to load compliance documents",
                     variant: "destructive",
                 });
@@ -118,7 +120,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
         } catch (error) {
             console.error('Error loading documents:', error);
             toast({
-                title: "Error",
+                title: t('common.error'),
                 description: "Failed to load compliance documents",
                 variant: "destructive",
             });
@@ -173,7 +175,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
 
             if (result.success) {
                 toast({
-                    title: "Success",
+                    title: t('common.success'),
                     description: "Document uploaded successfully",
                 });
                 await loadDocuments();
@@ -182,7 +184,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
                 setSelectedFile(null);
             } else {
                 toast({
-                    title: "Upload failed",
+                    title: t('common.error'),
                     description: result.message || "Failed to upload document",
                     variant: "destructive",
                 });
@@ -190,7 +192,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
         } catch (error) {
             console.error('Error uploading document:', error);
             toast({
-                title: "Error",
+                title: t('common.error'),
                 description: "Failed to upload document",
                 variant: "destructive",
             });
@@ -211,13 +213,13 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
 
             if (result.success) {
                 toast({
-                    title: "Success",
+                    title: t('common.success'),
                     description: "Document deleted successfully",
                 });
                 await loadDocuments();
             } else {
                 toast({
-                    title: "Delete failed",
+                    title: t('common.error'),
                     description: result.message || "Failed to delete document",
                     variant: "destructive",
                 });
@@ -225,7 +227,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
         } catch (error) {
             console.error('Error deleting document:', error);
             toast({
-                title: "Error",
+                title: t('common.error'),
                 description: "Failed to delete document",
                 variant: "destructive",
             });
@@ -278,22 +280,22 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
             <div className="flex items-center justify-between">
                 <div>
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                        FIFA Compliance Documents
+                        {t('dash.compliance.documentsTitle')}
                     </h2>
                     <p className="text-slate-600 dark:text-slate-400 mt-1">
-                        Manage your academy's compliance documentation
+                        {t('dash.compliance.documentsDesc')}
                     </p>
                 </div>
                 <Button onClick={() => setShowUploadDialog(true)}>
                     <Plus className="h-4 w-4 mr-2" />
-                    Upload Document
+                    {t('dash.compliance.upload')}
                 </Button>
             </div>
 
             {/* Required Documents Checklist */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Required Documents</CardTitle>
+                    <CardTitle>{t('dash.compliance.required')}</CardTitle>
                     <CardDescription>
                         {documents.length} of {requiredDocuments.length} required documents uploaded
                     </CardDescription>
@@ -322,7 +324,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
             {/* Documents Table */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Uploaded Documents</CardTitle>
+                    <CardTitle>{t('dash.compliance.uploadedTitle')}</CardTitle>
                     <CardDescription>
                         {documents.length} documents
                     </CardDescription>
@@ -331,9 +333,9 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
                     {documents.length === 0 ? (
                         <div className="text-center py-12">
                             <FileText className="h-12 w-12 text-slate-400 mx-auto mb-4" />
-                            <p className="text-slate-600">No documents uploaded yet</p>
+                            <p className="text-slate-600">{t('dash.compliance.noDocs')}</p>
                             <Button onClick={() => setShowUploadDialog(true)} className="mt-4">
-                                Upload Your First Document
+                                {t('dash.compliance.uploadFirst')}
                             </Button>
                         </div>
                     ) : (
@@ -408,15 +410,15 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
             <Dialog open={showUploadDialog} onOpenChange={setShowUploadDialog}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle>Upload Compliance Document</DialogTitle>
+                        <DialogTitle>{t('dash.compliance.dialog.title')}</DialogTitle>
                         <DialogDescription>
-                            Upload a new FIFA compliance document
+                            {t('dash.compliance.dialog.desc')}
                         </DialogDescription>
                     </DialogHeader>
 
                     <div className="space-y-4">
                         <div>
-                            <Label htmlFor="doc-name">Document Name *</Label>
+                            <Label htmlFor="doc-name">{t('dash.compliance.dialog.name')} *</Label>
                             <Input
                                 id="doc-name"
                                 value={newDocument.document_name}
@@ -426,7 +428,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
                         </div>
 
                         <div>
-                            <Label htmlFor="doc-type">Document Type *</Label>
+                            <Label htmlFor="doc-type">{t('dash.compliance.dialog.type')} *</Label>
                             <Select
                                 value={newDocument.document_type}
                                 onValueChange={(value) => setNewDocument({ ...newDocument, document_type: value })}
@@ -445,7 +447,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
                         </div>
 
                         <div>
-                            <Label htmlFor="description">Description</Label>
+                            <Label htmlFor="description">{t('dash.compliance.dialog.descLabel')}</Label>
                             <Textarea
                                 id="description"
                                 value={newDocument.description}
@@ -456,7 +458,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
                         </div>
 
                         <div>
-                            <Label htmlFor="expiry">Expiry Date (Optional)</Label>
+                            <Label htmlFor="expiry">{t('dash.compliance.dialog.expiry')}</Label>
                             <Input
                                 id="expiry"
                                 type="date"
@@ -466,7 +468,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
                         </div>
 
                         <div>
-                            <Label htmlFor="file">File * (Max 10MB)</Label>
+                            <Label htmlFor="file">{t('dash.compliance.dialog.file')} * (Max 10MB)</Label>
                             <Input
                                 id="file"
                                 type="file"
@@ -482,7 +484,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
 
                         <div className="flex justify-end gap-2 pt-4">
                             <Button variant="outline" onClick={() => setShowUploadDialog(false)}>
-                                Cancel
+                                {t('common.cancel')}
                             </Button>
                             <Button onClick={handleUploadDocument} disabled={uploading}>
                                 {uploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

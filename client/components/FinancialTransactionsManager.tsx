@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useLanguage } from '@/lib/i18n';
 import { 
   Plus, 
   Search, 
@@ -34,6 +35,7 @@ interface FinancialTransactionsManagerProps {
 }
 
 const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> = ({ academyId }) => {
+  const { t } = useLanguage();
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,24 +84,42 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
 
   // Predefined categories
   const incomeCategories = [
-    'Transfer Fees', 'Academy Fees', 'Training Programs', 'Merchandise Sales',
-    'Sponsorship', 'Grants', 'Tournament Prizes', 'Other Income'
+    { value: 'Transfer Fees', label: t('dash.finance.cat.transferFees') },
+    { value: 'Academy Fees', label: t('dash.finance.cat.academyFees') },
+    { value: 'Training Programs', label: t('dash.finance.cat.trainingPrograms') },
+    { value: 'Merchandise Sales', label: t('dash.finance.cat.merchandise') },
+    { value: 'Sponsorship', label: t('dash.finance.cat.sponsorship') },
+    { value: 'Grants', label: t('dash.finance.cat.grants') },
+    { value: 'Tournament Prizes', label: t('dash.finance.cat.tournamentPrizes') },
+    { value: 'Other Income', label: t('dash.finance.cat.otherIncome') }
   ];
   
   const expenseCategories = [
-    'Staff Salaries', 'Facility Maintenance', 'Equipment', 'Utilities',
-    'Marketing', 'Travel', 'Insurance', 'Agent Fees', 'Other Expenses'
+    { value: 'Staff Salaries', label: t('dash.finance.cat.staffSalaries') },
+    { value: 'Facility Maintenance', label: t('dash.finance.cat.facilityMaintenance') },
+    { value: 'Equipment', label: t('dash.finance.cat.equipment') },
+    { value: 'Utilities', label: t('dash.finance.cat.utilities') },
+    { value: 'Marketing', label: t('dash.finance.cat.marketing') },
+    { value: 'Travel', label: t('dash.finance.cat.travel') },
+    { value: 'Insurance', label: t('dash.finance.cat.insurance') },
+    { value: 'Agent Fees', label: t('dash.finance.cat.agentFees') },
+    { value: 'Other Expenses', label: t('dash.finance.cat.otherExpenses') }
   ];
 
   const paymentMethods = [
-    'Bank Transfer', 'Credit Card', 'Cash', 'Check', 'Online Payment', 'Other'
+    { value: 'Bank Transfer', label: t('dash.finance.method.bankTransfer') },
+    { value: 'Credit Card', label: t('dash.finance.method.creditCard') },
+    { value: 'Cash', label: t('dash.finance.method.cash') },
+    { value: 'Check', label: t('dash.finance.method.check') },
+    { value: 'Online Payment', label: t('dash.finance.method.online') },
+    { value: 'Other', label: t('dash.finance.method.other') }
   ];
 
   const statusOptions = [
-    { value: 'pending', label: 'Pending', color: 'bg-yellow-100 text-yellow-800' },
-    { value: 'completed', label: 'Completed', color: 'bg-green-100 text-green-800' },
-    { value: 'cancelled', label: 'Cancelled', color: 'bg-red-100 text-red-800' },
-    { value: 'refunded', label: 'Refunded', color: 'bg-blue-100 text-blue-800' }
+    { value: 'pending', label: t('dash.finance.status.pending'), color: 'bg-yellow-100 text-yellow-800' },
+    { value: 'completed', label: t('dash.finance.status.completed'), color: 'bg-green-100 text-green-800' },
+    { value: 'cancelled', label: t('dash.finance.status.cancelled'), color: 'bg-red-100 text-red-800' },
+    { value: 'refunded', label: t('dash.finance.status.refunded'), color: 'bg-blue-100 text-blue-800' }
   ];
 
   useEffect(() => {
@@ -137,7 +157,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       });
       setBudgetCategories(budgetRes.data || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch data');
+      setError(err instanceof Error ? err.message : t('common.error'));
       console.error("Error fetching financial data:", err);
     } finally {
       setLoading(false);
@@ -533,7 +553,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Revenue</p>
+              <p className="text-sm font-medium text-gray-600">{t('dash.financial.revenue')}</p>
               <p className="text-2xl font-bold text-green-600">{formatCurrency(summary.totalRevenue)}</p>
             </div>
             <TrendingUp className="h-8 w-8 text-green-600" />
@@ -543,7 +563,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Total Expenses</p>
+              <p className="text-sm font-medium text-gray-600">{t('dash.financial.expenses')}</p>
               <p className="text-2xl font-bold text-red-600">{formatCurrency(summary.totalExpenses)}</p>
             </div>
             <TrendingDown className="h-8 w-8 text-red-600" />
@@ -553,7 +573,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Net Profit</p>
+              <p className="text-sm font-medium text-gray-600">{t('dash.financial.profit')}</p>
               <p className={`text-2xl font-bold ${summary.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {formatCurrency(summary.netProfit)}
               </p>
@@ -565,7 +585,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Profit Margin</p>
+              <p className="text-sm font-medium text-gray-600">{t('dash.financial.margin')}</p>
               <p className={`text-2xl font-bold ${parseFloat(summary.profitMargin) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {summary.profitMargin}%
               </p>
@@ -584,7 +604,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Add Transaction
+              {t('dash.finance.manager.add')}
             </button>
             
             <button
@@ -592,7 +612,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
               className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Manage Budget
+              {t('dash.finance.manager.budget')}
             </button>
 
             <button
@@ -600,7 +620,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
               className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
             >
               <DollarSign className="h-4 w-4 mr-2" />
-              Create Invoice
+              {t('dash.finance.manager.invoice')}
             </button>
 
             <button
@@ -608,7 +628,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
               className="inline-flex items-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
             >
               <Download className="h-4 w-4 mr-2" />
-              Export
+              {t('dash.settings.export')}
             </button>
           </div>
 
@@ -617,7 +637,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search transactions..."
+                placeholder={t('dash.search')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -628,7 +648,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
               onClick={clearFilters}
               className="px-3 py-2 text-gray-600 hover:text-gray-800 transition-colors"
             >
-              Clear
+              {t('common.clear')}
             </button>
           </div>
         </div>
@@ -650,9 +670,9 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
             onChange={(e) => setFilterCategory(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            <option value="">All Categories</option>
+            <option value="">{t('dash.finance.filter.allCategories')}</option>
             {[...incomeCategories, ...expenseCategories].map(category => (
-              <option key={category} value={category}>{category}</option>
+              <option key={category.value} value={category.value}>{category.label}</option>
             ))}
           </select>
 
@@ -661,7 +681,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
             onChange={(e) => setFilterStatus(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            <option value="">All Status</option>
+            <option value="">{t('dash.finance.filter.allStatus')}</option>
             {statusOptions.map(status => (
               <option key={status.value} value={status.value}>{status.label}</option>
             ))}
@@ -672,7 +692,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="From Date"
+            placeholder={t('dash.finance.filter.fromDate')}
           />
 
           <input
@@ -680,7 +700,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="To Date"
+            placeholder={t('dash.finance.filter.toDate')}
           />
         </div>
       </div>
@@ -692,31 +712,33 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Date
+                  {t('dash.transfers.date')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Type
+                  {t('common.type')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Category
+                  {t('dash.finance.category')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Description
+                  {t('dash.finance.description')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Amount
+                  {t('dash.transfers.amount')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
+                  {t('common.status')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
+                  {t('common.actions')}
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {transactions.map((transaction) => {
                 const status = statusOptions.find(s => s.value === transaction.status);
+                const categoryLabel = [...incomeCategories, ...expenseCategories].find(c => c.value === transaction.category)?.label || transaction.category;
+                
                 return (
                   <tr key={transaction.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -728,11 +750,11 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {transaction.transaction_type === 'income' ? 'Income' : 'Expense'}
+                        {transaction.transaction_type === 'income' ? t('dash.finance.type.income') : t('dash.finance.type.expense')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {transaction.category}
+                      {categoryLabel}
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                       {transaction.description}
@@ -779,20 +801,20 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                 disabled={currentPage === 1}
                 className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
               >
-                Previous
+                {t('common.previous')}
               </button>
               <button
                 onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                 disabled={currentPage === totalPages}
                 className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
               >
-                Next
+                {t('common.next')}
               </button>
             </div>
             <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm text-gray-700">
-                  Page <span className="font-medium">{currentPage}</span> of{' '}
+                  {t('common.page')} <span className="font-medium">{currentPage}</span> {t('common.of')}{' '}
                   <span className="font-medium">{totalPages}</span>
                 </p>
               </div>
@@ -803,14 +825,14 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                     disabled={currentPage === 1}
                     className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                   >
-                    Previous
+                    {t('common.previous')}
                   </button>
                   <button
                     onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
                     className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
                   >
-                    Next
+                    {t('common.next')}
                   </button>
                 </nav>
               </div>
@@ -826,7 +848,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
             <div className="p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-gray-900">
-                  {editingTransaction ? 'Edit Transaction' : 'Add New Transaction'}
+                  {editingTransaction ? 'Edit Transaction' : t('dash.finance.manager.add')}
                 </h3>
                 <button
                   onClick={() => setShowTransactionModal(false)}
