@@ -44,6 +44,7 @@ import ApiDocs from "./pages/ApiDocs";
 import BlogList from "./pages/BlogList";
 import BlogDetails from "./pages/BlogDetails";
 import BlogEditor from "./pages/BlogEditor";
+import { LanguageProvider } from "@/lib/i18n";
 
 const queryClient = new QueryClient();
 
@@ -54,13 +55,14 @@ const App = () => {
   }, []);
   return (
     <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <ThemeProvider attribute="class" defaultTheme="light">
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
+      <LanguageProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <ThemeProvider attribute="class" defaultTheme="light">
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
               <Route path="/shop" element={<Shop />} />
               <Route path="/login" element={<AuthLogin />} />
               <Route path="/admin/login" element={<AdminLogin />} />
@@ -117,6 +119,7 @@ const App = () => {
           </BrowserRouter>
         </ThemeProvider>
       </TooltipProvider>
+      </LanguageProvider>
     </QueryClientProvider>
   );
 };

@@ -2,7 +2,9 @@ import { Trophy, Users, FileText, ShoppingCart, BookOpen, Globe, Shield, UserChe
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import ThemeToggle from "@/components/navigation/ThemeToggle";
+import LanguageToggle from "@/components/navigation/LanguageToggle";
 import { useState } from 'react';
+import { useTranslation } from '@/lib/i18n';
 
 import Chatbot from '@/components/Landing/Chatbot';
 import DemoModal from '@/components/Landing/DemoModal';
@@ -10,8 +12,10 @@ import DemoModal from '@/components/Landing/DemoModal';
 export default function Index() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { t, dir } = useTranslation();
+
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground" dir={dir}>
       <Chatbot />
       <DemoModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       <header className="sticky top-0 z-50">
@@ -19,11 +23,11 @@ export default function Index() {
         <div className="bg-[#005391] text-white text-xs">
           <div className="px-4 py-2">
             <div className="flex items-center justify-end gap-6">
-              <Link to="/about" className="hover:text-yellow-300 transition-colors font-medium">ABOUT US</Link>
-              <Link to="/support" className="hover:text-yellow-300 transition-colors font-medium">SUPPORT</Link>
+              <Link to="/about" className="hover:text-yellow-300 transition-colors font-medium">{t('nav.about')}</Link>
+              <Link to="/support" className="hover:text-yellow-300 transition-colors font-medium">{t('nav.support')}</Link>
               {/* <Link to="/shop" className="hover:text-yellow-300 transition-colors font-medium">SHOP</Link> */}
-              <Link to="/blog" className="hover:text-yellow-300 transition-colors font-medium">BLOG</Link>
-              <Link to="/support" className="hover:text-yellow-300 transition-colors font-medium">HELP CENTER</Link>
+              <Link to="/blog" className="hover:text-yellow-300 transition-colors font-medium">{t('nav.blog')}</Link>
+              <Link to="/support" className="hover:text-yellow-300 transition-colors font-medium">{t('nav.help')}</Link>
             </div>
           </div>
         </div>
@@ -64,11 +68,11 @@ export default function Index() {
               {/* Center - Desktop Navigation */}
               <nav className={`hidden lg:flex items-center gap-1 transition-all duration-300 ${isMenuOpen ? 'opacity-100' : 'opacity-100'}`}>
                 {[
-                  { href: "#features", label: "FEATURES" },
-                  { href: "#benefits", label: "BENEFITS" },
-                  { href: "#pricing", label: "PRICING" },
-                  { href: "#testimonials", label: "TESTIMONIALS" },
-                  { href: "#contact", label: "CONTACT" }
+                  { href: "#features", label: t('nav.features') },
+                  { href: "#benefits", label: t('nav.benefits') },
+                  { href: "#pricing", label: t('nav.pricing') },
+                  { href: "#testimonials", label: t('nav.testimonials') },
+                  { href: "#contact", label: t('nav.contact') }
                 ].map((item) => (
                   <a
                     key={item.href}
@@ -88,11 +92,11 @@ export default function Index() {
                     <ShoppingCart className="h-5 w-5" />
                   </Button>
                 </Link> */}
-                <Button variant="ghost" className="p-2 text-white hover:bg-white/20 rounded-lg hidden lg:flex">
-                  <Globe className="h-5 w-5" />
-                </Button>
+                <div className="hidden lg:block">
+                  <LanguageToggle variant="ghost" className="text-white hover:bg-white/20" />
+                </div>
                 <Button asChild className="bg-white text-[#005391] hover:bg-yellow-400 hover:text-black font-bold px-4 py-2 rounded-full text-xs lg:flex hidden">
-                  <Link to="/academy-registration">GET STARTED</Link>
+                  <Link to="/academy-registration">{t('nav.getStarted')}</Link>
                 </Button>
                 <Button variant="ghost" className="p-2 text-white hover:bg-white/20 rounded-lg">
                   <User className="h-5 w-5" />
@@ -100,7 +104,7 @@ export default function Index() {
 
                 {/* Mobile Sign In */}
                 <Button asChild className="bg-white text-[#005391] hover:bg-yellow-400 hover:text-black font-bold px-4 py-2 rounded-full text-sm lg:hidden">
-                  <Link to="/academy-registration">GET STARTED</Link>
+                  <Link to="/academy-registration">{t('nav.getStarted')}</Link>
                 </Button>
               </div>
             </div>
@@ -116,11 +120,11 @@ export default function Index() {
                 <div className="bg-gradient-to-b from-[#005391] to-[#0066b3] border-t-2 border-yellow-400 absolute top-full left-0 w-80 z-50 shadow-2xl">
                   <nav className="flex flex-col gap-2 p-6">
                     {[
-                      { href: "#features", label: "FEATURES" },
-                      { href: "#benefits", label: "BENEFITS" },
-                      { href: "#pricing", label: "PRICING" },
-                      { href: "#testimonials", label: "TESTIMONIALS" },
-                      { href: "#contact", label: "CONTACT" }
+                      { href: "#features", label: t('nav.features') },
+                      { href: "#benefits", label: t('nav.benefits') },
+                      { href: "#pricing", label: t('nav.pricing') },
+                      { href: "#testimonials", label: t('nav.testimonials') },
+                      { href: "#contact", label: t('nav.contact') }
                     ].map((item) => (
                       <a
                         key={item.href}
@@ -131,8 +135,11 @@ export default function Index() {
                         {item.label}
                       </a>
                     ))}
+                    <div className="py-2">
+                      <LanguageToggle variant="ghost" className="w-full justify-start text-white hover:bg-white/20" />
+                    </div>
                     <Button asChild className="mt-4 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 font-bold py-3 rounded-full shadow-xl">
-                      <Link to="/academy-registration">REGISTER ACADEMY</Link>
+                      <Link to="/academy-registration">{t('nav.register')}</Link>
                     </Button>
                   </nav>
                 </div>
@@ -184,7 +191,7 @@ export default function Index() {
             {/* FIFA Badge */}
             <div className="mb-12 mt-8 inline-flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full shadow-lg">
               <Trophy className="h-3 w-3 text-black" />
-              <span className="text-black font-bold text-xs tracking-wide">SOCCER CIRCULAR PLATFORM</span>
+              <span className="text-black font-bold text-xs tracking-wide">{t('hero.badge')}</span>
               <div className="flex gap-0.5">
                 <Star className="h-2.5 w-2.5 text-black fill-current" />
                 <Star className="h-2.5 w-2.5 text-black fill-current" />
@@ -195,17 +202,16 @@ export default function Index() {
             {/* Main Headline */}
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black leading-tight tracking-tight text-white mb-6">
               <span className="block bg-gradient-to-r from-white via-yellow-100 to-white bg-clip-text text-transparent">
-                INVEST IN YOUR PLAYERS'
+                {t('hero.title1')}
               </span>
               <span className="block bg-gradient-to-r from-yellow-400 via-yellow-300 to-yellow-400 bg-clip-text text-transparent">
-                FUTURE WITH SOCCER CIRCULAR
+                {t('hero.title2')}
               </span>
             </h1>
 
             {/* Subtitle */}
             <p className="text-lg sm:text-xl md:text-2xl text-blue-100 font-semibold max-w-4xl mx-auto leading-relaxed mb-10 px-4">
-              Register your academy players today • Secure future compensation payments •
-              <span className="text-yellow-300"> Your first step towards long-term financial stability</span>
+              {t('hero.subtitle')}
             </p>
 
             {/* CTA Buttons */}
@@ -213,14 +219,14 @@ export default function Index() {
               <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-black shadow-2xl hover:shadow-yellow-500/50 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/60 animate-pulse w-full sm:w-auto">
                 <Link to="/academy-registration" className="flex items-center gap-3 justify-center">
                   <Trophy className="h-5 w-5" />
-                  REGISTER ACADEMY
+                  {t('hero.cta.register')}
                 </Link>
               </Button>
 
               <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-white/10 hover:bg-white/20 text-white font-black shadow-xl hover:shadow-white/25 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/50 backdrop-blur-sm w-full sm:w-auto">
                 <Link to="/academy-dashboard" className="flex items-center gap-3 justify-center">
                   <Target className="h-6 w-6" />
-                  GET STARTED
+                  {t('hero.cta.start')}
                 </Link>
               </Button>
             </div>
@@ -313,12 +319,12 @@ export default function Index() {
           <div className="text-center mb-20">
             <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-[#005391] to-[#0066b3] rounded-full mb-6">
               <Trophy className="h-5 w-5 text-white" />
-              <span className="text-white font-bold text-sm tracking-wide">CHAMPIONSHIP FEATURES</span>
+              <span className="text-white font-bold text-sm tracking-wide">{t('features.title.sub')}</span>
             </div>
             <h2 className="text-4xl md:text-5xl font-black tracking-tight text-[#001a33] mb-6">
-              WORLD-CLASS
+              {t('features.title.main')}
               <span className="block bg-gradient-to-r from-[#005391] to-[#0066b3] bg-clip-text text-transparent">
-                PLATFORM FEATURES
+                {t('features.title.sub')}
               </span>
             </h2>
           </div>
@@ -343,16 +349,16 @@ export default function Index() {
 
                 {/* Content */}
                 <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-[#005391] transition-colors duration-300">
-                  PLAYER REGISTRATION SYSTEM
+                  {t('features.playerReg.title')}
                 </h3>
                 <p className="text-gray-600 leading-relaxed mb-6 group-hover:text-gray-700 transition-colors duration-300">
-                  Championship-level player registration with FIFA-compliant documentation, medical records, and comprehensive contract management system.
+                  {t('features.playerReg.desc')}
                 </p>
 
                 {/* CTA Button */}
                 <Button className="w-full bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#0066b3] hover:to-[#005391] text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 pointer-events-none">
                   <div className="flex items-center justify-center gap-2">
-                    GET STARTED
+                    {t('nav.getStarted')}
                     <Target className="h-4 w-4" />
                   </div>
                 </Button>
@@ -380,16 +386,16 @@ export default function Index() {
 
                 {/* Content */}
                 <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-yellow-600 transition-colors duration-300">
-                  DOCUMENT MANAGEMENT
+                  {t('features.docMgmt.title')}
                 </h3>
                 <p className="text-gray-600 leading-relaxed mb-6 group-hover:text-gray-700 transition-colors duration-300">
-                  Elite-grade secure cloud storage for player documents, contracts, medical certificates, and FIFA registration forms with military-level encryption.
+                  {t('features.docMgmt.desc')}
                 </p>
 
                 {/* CTA Button */}
                 <Button className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 pointer-events-none">
                   <div className="flex items-center justify-center gap-2">
-                    GET STARTED
+                    {t('nav.getStarted')}
                     <Target className="h-4 w-4" />
                   </div>
                 </Button>
@@ -417,16 +423,16 @@ export default function Index() {
 
                 {/* Content */}
                 <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-green-600 transition-colors duration-300">
-                  FIFA COMPLIANCE
+                  {t('features.fifaComp.title')}
                 </h3>
                 <p className="text-gray-600 leading-relaxed mb-6 group-hover:text-gray-700 transition-colors duration-300">
-                  World Cup-standard automated compliance checks, training compensation calculations, and solidarity mechanism management with real-time FIFA integration.
+                  {t('features.fifaComp.desc')}
                 </p>
 
                 {/* CTA Button */}
                 <Button className="w-full bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 pointer-events-none">
                   <div className="flex items-center justify-center gap-2">
-                    GET STARTED
+                    {t('nav.getStarted')}
                     <Target className="h-4 w-4" />
                   </div>
                 </Button>

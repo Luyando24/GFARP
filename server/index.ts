@@ -37,6 +37,7 @@ import subscriptionRouter from "./routes/subscription-management.js";
 import stripePaymentsRouter from "./routes/stripe-payments.js";
 import stripeWebhooksRouter from "./routes/stripe-webhooks.js";
 import stripeAdminRouter from "./routes/stripe-admin.js";
+import uploadsRouter from "./routes/uploads.js";
 import {
   handleUploadPlayerDocument,
   handleGetPlayerDocuments,
@@ -134,6 +135,10 @@ export function createServer() {
 
   // Stripe admin routes
   api.use("/stripe/admin", stripeAdminRouter);
+  
+  // Generic uploads
+  api.use("/uploads", uploadsRouter);
+
   console.log("[SERVER] Football & subscription routes registered");
 
   // Transfers routes

@@ -65,7 +65,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import ThemeToggle from '@/components/navigation/ThemeToggle';
+import LanguageToggle from '@/components/navigation/LanguageToggle';
 import { NotificationsPopover } from '@/components/navigation/NotificationsPopover';
+import { useTranslation } from '@/lib/i18n';
 
 import PlayerManagement from '@/components/players/PlayerManagement';
 import FinancialTransactionsManager from '@/components/FinancialTransactionsManager';
@@ -246,6 +248,7 @@ const financialData = {
 
 
 export default function AcademyDashboard() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState("main");
@@ -1119,12 +1122,12 @@ export default function AcademyDashboard() {
   };
 
   const sidebarItems = [
-    { id: "dashboard", label: "Dashboard", icon: Home },
-    { id: "players", label: "Players", icon: Users },
-    { id: "transfers", label: "Transfers", icon: TrendingUp },
-    { id: "finances", label: "Finances", icon: DollarSign },
-    { id: "fifa-compliance", label: "FIFA Compliance", icon: Shield },
-    { id: "settings", label: "Settings", icon: Settings }
+    { id: "dashboard", label: t('dash.menu.dashboard'), icon: Home },
+    { id: "players", label: t('dash.menu.players'), icon: Users },
+    { id: "transfers", label: t('dash.menu.transfers'), icon: TrendingUp },
+    { id: "finances", label: t('dash.menu.finances'), icon: DollarSign },
+    { id: "fifa-compliance", label: t('dash.menu.compliance'), icon: Shield },
+    { id: "settings", label: t('dash.menu.settings'), icon: Settings }
   ];
 
   return (
@@ -1167,7 +1170,7 @@ export default function AcademyDashboard() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
                 <input
                   type="text"
-                  placeholder="Search players, transactions, documents..."
+                  placeholder={t('dash.search')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -1178,6 +1181,7 @@ export default function AcademyDashboard() {
             {/* User Menu */}
             <div className="flex items-center gap-4">
               <NotificationsPopover />
+              <LanguageToggle />
               <ThemeToggle />
               <div className="flex items-center gap-3">
                 <Avatar className="h-8 w-8">
@@ -1189,7 +1193,7 @@ export default function AcademyDashboard() {
                     {displayName}
                   </p>
                   <p className="text-xs text-slate-600 dark:text-slate-400">
-                    Academy Director
+                    {t('dash.role')}
                   </p>
                 </div>
               </div>
@@ -1272,12 +1276,12 @@ export default function AcademyDashboard() {
           ) : (
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-7">
-                <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-                <TabsTrigger value="players">Players</TabsTrigger>
-                <TabsTrigger value="finances">Finances</TabsTrigger>
-                <TabsTrigger value="fifa-compliance">FIFA Compliance</TabsTrigger>
+                <TabsTrigger value="dashboard">{t('dash.menu.dashboard')}</TabsTrigger>
+                <TabsTrigger value="players">{t('dash.menu.players')}</TabsTrigger>
+                <TabsTrigger value="finances">{t('dash.menu.finances')}</TabsTrigger>
+                <TabsTrigger value="fifa-compliance">{t('dash.menu.compliance')}</TabsTrigger>
                 <TabsTrigger value="subscription">Subscription</TabsTrigger>
-                <TabsTrigger value="settings">Settings</TabsTrigger>
+                <TabsTrigger value="settings">{t('dash.menu.settings')}</TabsTrigger>
               </TabsList>
 
               {/* Dashboard Tab */}
@@ -1285,7 +1289,7 @@ export default function AcademyDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                      Welcome to {displayAcademyName}
+                      {t('dash.welcome')} {displayAcademyName}
                     </h2>
                     <p className="text-slate-600 dark:text-slate-400">
                       Academy management dashboard overview

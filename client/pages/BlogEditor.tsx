@@ -6,7 +6,9 @@ import {
     Image as ImageIcon,
     Menu,
     LogOut,
-    Users
+    Users,
+    Upload,
+    X
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -56,7 +58,9 @@ export default function BlogEditor() {
     
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isUploading, setIsUploading] = useState(false);
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const fileInputRef = React.useRef<HTMLInputElement>(null);
     
     const [formData, setFormData] = useState({
         title: "",
@@ -118,6 +122,70 @@ export default function BlogEditor() {
     const handleLogout = () => {
         clearSession();
         navigate('/admin/login');
+    };
+
+    const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        // Basic validation
+        if (!file.type.startsWith('image/')) {
+            toast({
+                title: "Error",
+                description: "Please upload an image file",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) { // 5MB
+            toast({
+                title: "Error",
+                description: "Image size should be less than 5MB",
+                variant: "destructive"
+            });
+            return;
+        }
+
+        setIsUploading(true);
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('folder', 'blog-images');
+
+            const response = await fetch('/api/uploads', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('football-auth-token')}`
+                },
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                setFormData(prev => ({ ...prev, image_url: result.data.url }));
+                toast({
+                    title: "Success",
+                    description: "Image uploaded successfully"
+                });
+            } else {
+                throw new Error(result.error || "Failed to upload image");
+            }
+        } catch (error: any) {
+            console.error('Upload error:', error);
+            toast({
+                title: "Error",
+                description: error.message || "Failed to upload image",
+                variant: "destructive"
+            });
+        } finally {
+            setIsUploading(false);
+            // Reset input
+            if (fileInputRef.current) {
+                fileInputRef.current.value = '';
+            }
+        }
     };
 
     const handleSubmit = async () => {
@@ -338,28 +406,63 @@ export default function BlogEditor() {
                                 </CardHeader>
                                 <CardContent className="space-y-4">
                                     <div className="space-y-2">
-                                        <Label htmlFor="image_url">Image URL</Label>
-                                        <div className="flex gap-2">
-                                            <Input
-                                                id="image_url"
-                                                value={formData.image_url}
-                                                onChange={(e) => setFormData({...formData, image_url: e.target.value})}
-                                                placeholder="https://..."
-                                            />
-                                        </div>
+                                        <Label>Post Image</Label>
+                                        <input 
+                                            type="file" 
+                                            ref={fileInputRef}
+                                            className="hidden" 
+                                            accept="image/*"
+                                            onChange={handleImageUpload}
+                                        />
+                                        
+                                        {!formData.image_url ? (
+                                            <div 
+                                                className="border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
+                                                onClick={() => fileInputRef.current?.click()}
+                                            >
+                                                <ImageIcon className="h-8 w-8 text-slate-400 mb-2" />
+                                                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                                                    {isUploading ? "Uploading..." : "Click to upload image"}
+                                                </p>
+                                                <p className="text-xs text-slate-400 mt-1">
+                                                    PNG, JPG, GIF up to 5MB
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                <div className="relative aspect-video rounded-md overflow-hidden border group">
+                                                    <img 
+                                                        src={formData.image_url} 
+                                                        alt="Featured" 
+                                                        className="object-cover w-full h-full"
+                                                    />
+                                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                        <Button 
+                                                            variant="secondary" 
+                                                            size="sm"
+                                                            onClick={() => fileInputRef.current?.click()}
+                                                        >
+                                                            <Upload className="h-4 w-4 mr-2" />
+                                                            Change
+                                                        </Button>
+                                                        <Button 
+                                                            variant="destructive" 
+                                                            size="sm"
+                                                            onClick={() => setFormData({...formData, image_url: ""})}
+                                                        >
+                                                            <X className="h-4 w-4 mr-2" />
+                                                            Remove
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                                <Input
+                                                    value={formData.image_url}
+                                                    readOnly
+                                                    className="text-xs text-muted-foreground bg-muted"
+                                                />
+                                            </div>
+                                        )}
                                     </div>
-                                    {formData.image_url && (
-                                        <div className="relative aspect-video rounded-md overflow-hidden border">
-                                            <img 
-                                                src={formData.image_url} 
-                                                alt="Preview" 
-                                                className="object-cover w-full h-full"
-                                                onError={(e) => {
-                                                    (e.target as HTMLImageElement).src = 'https://placehold.co/600x400?text=Invalid+Image';
-                                                }}
-                                            />
-                                        </div>
-                                    )}
                                 </CardContent>
                             </Card>
 
