@@ -103,7 +103,8 @@ import {
   Network,
   Cpu,
   MemoryStick,
-  HardDriveIcon
+  HardDriveIcon,
+  BookOpen
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -122,6 +123,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { Area, AreaChart, Bar, BarChart, Line, LineChart, Pie, PieChart, Cell, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import ThemeToggle from '@/components/navigation/ThemeToggle';
 import { NotificationsPopover } from '@/components/navigation/NotificationsPopover';
+import BlogManagement from '@/components/admin/BlogManagement';
 
 // Real admin data will be fetched from API
 
@@ -1117,6 +1119,7 @@ export default function AdminDashboard() {
     { id: "super-admins", label: "Super Admins", icon: Users },
     { id: "compliance", label: "FIFA Compliance", icon: Shield },
     { id: "finances", label: "Financial Overview", icon: DollarSign },
+    { id: "blog", label: "Blog Management", icon: BookOpen },
     { id: "system", label: "System Settings", icon: Settings },
     { id: "analytics", label: "Analytics", icon: BarChart3 }
   ];
@@ -1512,6 +1515,12 @@ export default function AdminDashboard() {
             <TabsContent value="academies" className="space-y-6">
               <AcademyManagement />
             </TabsContent>
+
+            {/* Blog Management Tab */}
+            <TabsContent value="blog" className="space-y-6">
+              <BlogManagement />
+            </TabsContent>
+
             <TabsContent value="compliance" className="space-y-6">
               {/* Compliance Statistics */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">

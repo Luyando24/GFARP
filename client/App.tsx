@@ -41,6 +41,8 @@ import About from "./pages/About";
 import Services from "./pages/Services";
 import Compliance from "./pages/Compliance";
 import ApiDocs from "./pages/ApiDocs";
+import BlogList from "./pages/BlogList";
+import BlogDetails from "./pages/BlogDetails";
 
 const queryClient = new QueryClient();
 
@@ -78,6 +80,8 @@ const App = () => {
               <Route path="/services" element={<Services />} />
               <Route path="/compliance" element={<Compliance />} />
               <Route path="/api-docs" element={<ApiDocs />} />
+              <Route path="/blog" element={<BlogList />} />
+              <Route path="/blog/:slug" element={<BlogDetails />} />
 
               {/* Academy Dashboard - Protected route requiring authentication */}
               <Route element={<ProtectedRoute allowedRoles={["academy"]} />}>

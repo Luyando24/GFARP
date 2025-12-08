@@ -19,11 +19,11 @@ export default function Index() {
         <div className="bg-[#005391] text-white text-xs">
           <div className="px-4 py-2">
             <div className="flex items-center justify-end gap-6">
-              <a href="#about" className="hover:text-yellow-300 transition-colors font-medium">ABOUT US</a>
-              <a href="#support" className="hover:text-yellow-300 transition-colors font-medium">SUPPORT</a>
+              <Link to="/about" className="hover:text-yellow-300 transition-colors font-medium">ABOUT US</Link>
+              <Link to="/support" className="hover:text-yellow-300 transition-colors font-medium">SUPPORT</Link>
               {/* <Link to="/shop" className="hover:text-yellow-300 transition-colors font-medium">SHOP</Link> */}
-              <a href="#blog" className="hover:text-yellow-300 transition-colors font-medium">BLOG</a>
-              <a href="#help" className="hover:text-yellow-300 transition-colors font-medium">HELP CENTER</a>
+              <Link to="/blog" className="hover:text-yellow-300 transition-colors font-medium">BLOG</Link>
+              <Link to="/support" className="hover:text-yellow-300 transition-colors font-medium">HELP CENTER</Link>
             </div>
           </div>
         </div>
