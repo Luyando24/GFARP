@@ -1,9 +1,10 @@
-import { Trophy, Users, FileText, ShoppingCart, BookOpen, Globe, Shield, UserCheck, Menu, Target, Calendar, BarChart3, DollarSign, Award, Star, CheckCircle, Building, Crown, User, Lightbulb } from 'lucide-react';
+import { Trophy, Users, FileText, ShoppingCart, BookOpen, Globe, Shield, UserCheck, Menu, Target, Calendar, BarChart3, DollarSign, Award, Star, CheckCircle, Building, Crown, User } from 'lucide-react';
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import ThemeToggle from "@/components/navigation/ThemeToggle";
 import LanguageToggle from "@/components/navigation/LanguageToggle";
-import { useState } from 'react';
 import { useTranslation } from '@/lib/i18n';
 
 import Chatbot from '@/components/Landing/Chatbot';
@@ -12,6 +13,7 @@ import DemoModal from '@/components/Landing/DemoModal';
 export default function Index() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const { t, dir } = useTranslation();
 
   return (
@@ -237,74 +239,7 @@ export default function Index() {
 
       </section>
 
-      {/* How It Works Section */}
-      <section className="py-24 bg-gradient-to-b from-[#001a33] to-[#003366] relative overflow-hidden" id="how-it-works">
-        {/* Background Elements */}
-        <div className="absolute inset-0">
-          <div className="absolute top-20 left-10 w-96 h-96 bg-gradient-to-r from-yellow-400/10 to-yellow-500/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-10 w-80 h-80 bg-gradient-to-r from-[#005391]/10 to-[#0066b3]/10 rounded-full blur-3xl"></div>
-        </div>
 
-        <div className="container mx-auto px-4 relative z-10">
-          {/* Section Header */}
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-yellow-500 to-yellow-600 rounded-full mb-6">
-              <Lightbulb className="h-5 w-5 text-black" />
-              <span className="text-black font-bold text-sm tracking-wide">SIMPLE PROCESS</span>
-            </div>
-            <h2 className="text-4xl md:text-5xl font-black tracking-tight text-white mb-6">
-              HOW IT
-              <span className="block bg-gradient-to-r from-yellow-400 to-yellow-500 bg-clip-text text-transparent">
-                WORKS
-              </span>
-            </h2>
-            <p className="text-xl text-blue-100 max-w-3xl mx-auto">
-              Four simple steps to secure your academy's financial future with Soccer Circular
-            </p>
-          </div>
-
-          {/* Steps */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8 mb-16 px-4">
-            {/* Step 1 */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-white/20 hover:border-yellow-500/50 transition-all duration-300 transform hover:-translate-y-2">
-              <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 w-12 h-12 rounded-full flex items-center justify-center mb-6 text-black font-bold text-xl">1</div>
-              <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Register Academy</h3>
-              <p className="text-blue-100">Create your academy profile and verify your credentials with our Soccer Circular-approved system.</p>
-            </div>
-
-            {/* Step 2 */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-white/20 hover:border-yellow-500/50 transition-all duration-300 transform hover:-translate-y-2">
-              <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 w-12 h-12 rounded-full flex items-center justify-center mb-6 text-black font-bold text-xl">2</div>
-              <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Add Players</h3>
-              <p className="text-blue-100">Register all your players with complete profiles, documentation, and training history.</p>
-            </div>
-
-            {/* Step 3 */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-white/20 hover:border-yellow-500/50 transition-all duration-300 transform hover:-translate-y-2">
-              <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 w-12 h-12 rounded-full flex items-center justify-center mb-6 text-black font-bold text-xl">3</div>
-              <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Manage Finances</h3>
-              <p className="text-blue-100">Create professional invoices, track expenses, and monitor revenue with our integrated financial tools.</p>
-            </div>
-
-            {/* Step 4 */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-6 md:p-8 border border-white/20 hover:border-yellow-500/50 transition-all duration-300 transform hover:-translate-y-2">
-              <div className="bg-gradient-to-r from-yellow-500 to-yellow-600 w-12 h-12 rounded-full flex items-center justify-center mb-6 text-black font-bold text-xl">4</div>
-              <h3 className="text-xl md:text-2xl font-bold text-white mb-4">Receive Compensation</h3>
-              <p className="text-blue-100">Get automatic notifications and secure payments when your players advance to professional clubs.</p>
-            </div>
-          </div>
-
-          {/* CTA Button */}
-          <div className="text-center">
-            <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-black shadow-2xl hover:shadow-yellow-500/50 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/60">
-              <Link to="/academy-registration" className="flex items-center gap-3">
-                <Trophy className="h-5 w-5" />
-                START YOUR JOURNEY TODAY
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </section>
 
       {/* Key Features Section - FIFA Tournament Style */}
       <section className="py-32 bg-gradient-to-b from-white to-gray-50 relative overflow-hidden" id="features">
@@ -655,6 +590,26 @@ export default function Index() {
             </h2>
           </div>
 
+          {/* Billing Cycle Toggle */}
+          <div className="flex justify-center items-center gap-4 mb-12">
+            <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-white' : 'text-blue-200'}`}>
+              {t('landing.pricing.toggle.monthly')}
+            </span>
+            <Switch
+              checked={billingCycle === 'yearly'}
+              onCheckedChange={(checked) => setBillingCycle(checked ? 'yearly' : 'monthly')}
+              className="bg-blue-900 border-2 border-yellow-400 data-[state=checked]:bg-yellow-400"
+            />
+            <div className="flex items-center gap-2">
+              <span className={`text-sm font-bold ${billingCycle === 'yearly' ? 'text-white' : 'text-blue-200'}`}>
+                {t('landing.pricing.toggle.yearly')}
+              </span>
+              <span className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full">
+                {t('landing.pricing.save')}
+              </span>
+            </div>
+          </div>
+
           {/* Pricing Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
 
@@ -674,7 +629,10 @@ export default function Index() {
                 </div>
                 <h3 className="text-2xl font-black text-[#001a33] mb-2">{t('landing.pricing.tier1.name')}</h3>
                 <div className="text-3xl font-black text-[#001a33] mb-2">
-                  {t('landing.pricing.tier1.price')}<span className="text-lg text-gray-600 font-bold">{t('landing.pricing.month')}</span>
+                  {billingCycle === 'monthly' ? t('landing.pricing.tier1.price') : t('landing.pricing.tier1.priceYearly')}
+                  <span className="text-lg text-gray-600 font-bold">
+                    {billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year')}
+                  </span>
                 </div>
                 <p className="text-gray-600 font-bold text-sm">{t('landing.pricing.tier1.desc')}</p>
               </div>
@@ -732,7 +690,10 @@ export default function Index() {
                 </div>
                 <h3 className="text-2xl font-black text-[#001a33] mb-1">{t('landing.pricing.tier2.name')}</h3>
                 <div className="text-3xl font-black text-[#001a33] mb-1">
-                  {t('landing.pricing.tier2.price')}<span className="text-lg text-gray-600 font-bold">{t('landing.pricing.month')}</span>
+                  {billingCycle === 'monthly' ? t('landing.pricing.tier2.price') : t('landing.pricing.tier2.priceYearly')}
+                  <span className="text-lg text-gray-600 font-bold">
+                    {billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year')}
+                  </span>
                 </div>
                 <p className="text-gray-600 font-bold text-sm">{t('landing.pricing.tier2.ideal')}</p>
               </div>
@@ -784,7 +745,10 @@ export default function Index() {
                 </div>
                 <h3 className="text-2xl font-black text-[#001a33] mb-1">{t('landing.pricing.tier3.name')}</h3>
                 <div className="text-3xl font-black text-[#001a33] mb-1">
-                  {t('landing.pricing.tier3.price')}<span className="text-lg text-gray-600 font-bold">{t('landing.pricing.month')}</span>
+                  {billingCycle === 'monthly' ? t('landing.pricing.tier3.price') : t('landing.pricing.tier3.priceYearly')}
+                  <span className="text-lg text-gray-600 font-bold">
+                    {billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year')}
+                  </span>
                 </div>
                 <p className="text-gray-600 font-bold text-sm">{t('landing.pricing.tier3.worldClass')}</p>
               </div>
@@ -837,220 +801,7 @@ export default function Index() {
         </div>
       </section>
 
-      {/* Testimonials Section - FIFA Player Cards Style */}
-      <section className="py-12 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 relative overflow-hidden" id="testimonials">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.1%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%222%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
-        </div>
 
-        <div className="container mx-auto px-4 relative z-10">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-amber-500/20 to-yellow-500/20 rounded-full border border-amber-500/30 mb-6">
-              <Trophy className="w-4 h-4 text-amber-400 mr-2" />
-              <span className="text-amber-300 font-semibold text-sm tracking-wide">{t('landing.testimonials.title.sub')}</span>
-            </div>
-            <h2 className="text-4xl font-black tracking-tight mb-8">
-              <span className="bg-gradient-to-r from-white via-blue-100 to-white bg-clip-text text-transparent">
-                {t('landing.testimonials.title.main1')}
-              </span>
-              <br />
-              <span className="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 bg-clip-text text-transparent">
-                {t('landing.testimonials.title.main2')}
-              </span>
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-7xl mx-auto">
-            {/* Player Card 1 - Marco Rodriguez */}
-            <div className="group relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-600/20 to-purple-600/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500"></div>
-              <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-sm p-8 rounded-3xl border border-blue-500/30 hover:border-blue-400/50 transition-all duration-500 group-hover:scale-105 group-hover:shadow-2xl group-hover:shadow-blue-500/25">
-                {/* Card Header */}
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center">
-                    <div className="relative">
-                      <div className="h-16 w-16 rounded-full bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white font-black text-xl shadow-lg">
-                        MR
-                      </div>
-                      <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-amber-400 to-yellow-500 rounded-full flex items-center justify-center">
-                        <Star className="w-3 h-3 text-white" />
-                      </div>
-                    </div>
-                    <div className="ml-4">
-                      <h4 className="font-black text-white text-lg">Marco Rodriguez</h4>
-                      <p className="text-blue-300 text-sm font-semibold">Director</p>
-                      <p className="text-blue-400/80 text-xs">Barcelona Youth Academy</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-amber-400 font-black text-2xl">95</div>
-                    <div className="text-amber-300 text-xs font-semibold">{t('landing.testimonials.stat.rating')}</div>
-                  </div>
-                </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
-                  <div className="text-center">
-                    <div className="text-green-400 font-black text-lg">300+</div>
-                    <div className="text-slate-400 text-xs">{t('landing.testimonials.stat.players')}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-blue-400 font-black text-lg">5★</div>
-                    <div className="text-slate-400 text-xs">{t('landing.testimonials.stat.rating')}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-purple-400 font-black text-lg">2Y</div>
-                    <div className="text-slate-400 text-xs">{t('landing.testimonials.stat.using')}</div>
-                  </div>
-                </div>
-
-                {/* Quote */}
-                <div className="relative">
-                  <div className="absolute -top-2 -left-2 text-blue-500/30 text-3xl font-black">"</div>
-                  <p className="text-slate-300 text-sm leading-relaxed italic pl-6">
-                    GFARP has revolutionized how we handle FIFA registrations for our 300+ players. What used to take our staff weeks now takes hours. The compliance monitoring has saved us from potential FIFA sanctions.
-                  </p>
-                </div>
-
-                {/* Achievement Badge */}
-                <div className="mt-6 inline-flex items-center px-3 py-1 bg-gradient-to-r from-green-500/20 to-emerald-500/20 rounded-full border border-green-500/30">
-                  <CheckCircle className="w-3 h-3 text-green-400 mr-2" />
-                  <span className="text-green-300 text-xs font-semibold">{t('landing.testimonials.badge.compliant')}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Player Card 2 - James Smith */}
-            <div className="group relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-red-600/20 to-orange-600/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500"></div>
-              <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-sm p-8 rounded-3xl border border-red-500/30 hover:border-red-400/50 transition-all duration-500 group-hover:scale-105 group-hover:shadow-2xl group-hover:shadow-red-500/25">
-                {/* Card Header */}
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center">
-                    <div className="relative">
-                      <div className="h-16 w-16 rounded-full bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white font-black text-xl shadow-lg">
-                        JS
-                      </div>
-                      <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-amber-400 to-yellow-500 rounded-full flex items-center justify-center">
-                        <Star className="w-3 h-3 text-white" />
-                      </div>
-                    </div>
-                    <div className="ml-4">
-                      <h4 className="font-black text-white text-lg">James Smith</h4>
-                      <p className="text-red-300 text-sm font-semibold">Academy Manager</p>
-                      <p className="text-red-400/80 text-xs">Manchester United Academy</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-amber-400 font-black text-2xl">98</div>
-                    <div className="text-amber-300 text-xs font-semibold">{t('landing.testimonials.stat.rating')}</div>
-                  </div>
-                </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
-                  <div className="text-center">
-                    <div className="text-green-400 font-black text-lg">450+</div>
-                    <div className="text-slate-400 text-xs">{t('landing.testimonials.stat.players')}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-blue-400 font-black text-lg">5★</div>
-                    <div className="text-slate-400 text-xs">{t('landing.testimonials.stat.rating')}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-purple-400 font-black text-lg">3Y</div>
-                    <div className="text-slate-400 text-xs">{t('landing.testimonials.stat.using')}</div>
-                  </div>
-                </div>
-
-                {/* Quote */}
-                <div className="relative">
-                  <div className="absolute -top-2 -left-2 text-red-500/30 text-3xl font-black">"</div>
-                  <p className="text-slate-300 text-sm leading-relaxed italic pl-6">
-                    The training compensation tracking feature has been a game-changer. We can now accurately calculate and manage solidarity payments, ensuring we're fully compliant with FIFA regulations while maximizing our revenue.
-                  </p>
-                </div>
-
-                {/* Achievement Badge */}
-                <div className="mt-6 inline-flex items-center px-3 py-1 bg-gradient-to-r from-blue-500/20 to-cyan-500/20 rounded-full border border-blue-500/30">
-                  <DollarSign className="w-3 h-3 text-blue-400 mr-2" />
-                  <span className="text-blue-300 text-xs font-semibold">{t('landing.testimonials.badge.revenue')}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Player Card 3 - Andrea Lopez */}
-            <div className="group relative">
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-600/20 to-pink-600/20 rounded-3xl blur-xl group-hover:blur-2xl transition-all duration-500"></div>
-              <div className="relative bg-gradient-to-br from-slate-800/90 to-slate-900/90 backdrop-blur-sm p-8 rounded-3xl border border-purple-500/30 hover:border-purple-400/50 transition-all duration-500 group-hover:scale-105 group-hover:shadow-2xl group-hover:shadow-purple-500/25">
-                {/* Card Header */}
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center">
-                    <div className="relative">
-                      <div className="h-16 w-16 rounded-full bg-gradient-to-br from-purple-500 to-purple-700 flex items-center justify-center text-white font-black text-xl shadow-lg">
-                        AL
-                      </div>
-                      <div className="absolute -top-1 -right-1 w-6 h-6 bg-gradient-to-r from-amber-400 to-yellow-500 rounded-full flex items-center justify-center">
-                        <Star className="w-3 h-3 text-white" />
-                      </div>
-                    </div>
-                    <div className="ml-4">
-                      <h4 className="font-black text-white text-lg">Andrea Lopez</h4>
-                      <p className="text-purple-300 text-sm font-semibold">Operations Director</p>
-                      <p className="text-purple-400/80 text-xs">Real Madrid Academy</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-amber-400 font-black text-2xl">96</div>
-                    <div className="text-amber-300 text-xs font-semibold">{t('landing.testimonials.stat.rating')}</div>
-                  </div>
-                </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
-                  <div className="text-center">
-                    <div className="text-green-400 font-black text-lg">500+</div>
-                    <div className="text-slate-400 text-xs">{t('landing.testimonials.stat.players')}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-blue-400 font-black text-lg">4★</div>
-                    <div className="text-slate-400 text-xs">{t('landing.testimonials.stat.rating')}</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-purple-400 font-black text-lg">1Y</div>
-                    <div className="text-slate-400 text-xs">{t('landing.testimonials.stat.using')}</div>
-                  </div>
-                </div>
-
-                {/* Quote */}
-                <div className="relative">
-                  <div className="absolute -top-2 -left-2 text-purple-500/30 text-3xl font-black">"</div>
-                  <p className="text-slate-300 text-sm leading-relaxed italic pl-6">
-                    As one of the world's largest academies, we needed a robust solution that could scale. GFARP's Elite plan handles our 500+ players effortlessly, and the analytics help us make data-driven decisions about our youth development program.
-                  </p>
-                </div>
-
-                {/* Achievement Badge */}
-                <div className="mt-6 inline-flex items-center px-3 py-1 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full border border-purple-500/30">
-                  <BarChart3 className="w-3 h-3 text-purple-400 mr-2" />
-                  <span className="text-purple-300 text-xs font-semibold">{t('landing.testimonials.badge.scale')}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Call to Action */}
-          <div className="text-center mt-16">
-            <Link to="/academy-registration">
-              <Button className="bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-600 hover:to-yellow-600 text-black font-black px-8 py-4 rounded-2xl text-lg shadow-lg hover:shadow-xl hover:shadow-amber-500/25 transition-all duration-300 group">
-                <Trophy className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform duration-300" />
-                {t('landing.cta.join')}
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </section>
 
       {/* Footer */}
       <footer className="bg-slate-900 text-white py-16">

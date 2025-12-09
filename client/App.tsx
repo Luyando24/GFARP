@@ -13,6 +13,8 @@ import NotFound from "./pages/NotFound";
 import AuthLogin from "./pages/AuthLogin";
 import AdminLogin from "./pages/AdminLogin";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Shop from "./pages/Shop";
 import RegisterAcademy from "./pages/RegisterAcademy";
 import CompleteProfile from "./pages/CompleteProfile";
@@ -67,6 +69,8 @@ const App = () => {
               <Route path="/login" element={<AuthLogin />} />
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
 
               {/* Temporary Setup Route */}
               <Route path="/setup-super-admin" element={<SetupSuperAdmin />} />

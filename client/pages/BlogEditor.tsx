@@ -4,7 +4,6 @@ import {
     ArrowLeft, 
     Save, 
     Image as ImageIcon,
-    Menu,
     LogOut,
     Users,
     Upload,
@@ -25,7 +24,6 @@ import {
 } from "@/components/ui/select";
 import { useToast } from '@/hooks/use-toast';
 import { MarkdownEditor } from '@/components/ui/MarkdownEditor';
-import AdminSidebar from '@/components/dashboard/AdminSidebar';
 import ThemeToggle from '@/components/navigation/ThemeToggle';
 import {
     DropdownMenu,
@@ -59,7 +57,6 @@ export default function BlogEditor() {
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
-    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
     
     const [formData, setFormData] = useState({
@@ -241,23 +238,10 @@ export default function BlogEditor() {
 
     return (
         <div className="flex h-screen bg-background">
-            <AdminSidebar 
-                collapsed={sidebarCollapsed} 
-                onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
-            />
-            
             <div className="flex-1 flex flex-col overflow-hidden">
                 {/* Header */}
                 <header className="bg-card border-b px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                            className="lg:hidden"
-                        >
-                            <Menu className="h-4 w-4" />
-                        </Button>
                         <div className="flex items-center gap-2">
                             <Button variant="ghost" size="icon" onClick={() => navigate('/admin')}>
                                 <ArrowLeft className="h-4 w-4" />

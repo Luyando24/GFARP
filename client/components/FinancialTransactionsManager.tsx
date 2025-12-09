@@ -32,9 +32,10 @@ import {
 
 interface FinancialTransactionsManagerProps {
   academyId: string;
+  academyDetails?: any;
 }
 
-const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> = ({ academyId }) => {
+const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> = ({ academyId, academyDetails }) => {
   const { t } = useLanguage();
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>([]);
@@ -59,6 +60,11 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | null>(null);
   const [editingBudget, setEditingBudget] = useState<BudgetCategory | null>(null);
   
+  // Invoice state
+  const [activeTab, setActiveTab] = useState<'transactions' | 'budgets' | 'invoices'>('transactions');
+  const [invoices, setInvoices] = useState<any[]>([]);
+  const [editingInvoice, setEditingInvoice] = useState<any>(null);
+
   // Form states
   const [transactionForm, setTransactionForm] = useState<Partial<FinancialTransaction>>({
     transaction_type: 'income',
@@ -500,10 +506,40 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     setShowExportModal(false);
   };
 
+  const fetchInvoices = async () => {
+    try {
+      const response = await fetch(`/api/invoices?academy_id=${academyId}`, {
+         headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      const data = await response.json();
+      if (data.success) {
+        setInvoices(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching invoices:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'invoices') {
+      fetchInvoices();
+    }
+  }, [activeTab]);
+
+  const handleEditInvoice = (invoice: any) => {
+    setEditingInvoice(invoice);
+    setShowInvoiceModal(true);
+  };
+
   const handleInvoiceSave = async (invoiceData: any) => {
     try {
-      const response = await fetch('/api/invoices', {
-        method: 'POST',
+      const url = editingInvoice ? `/api/invoices/${editingInvoice.id}` : '/api/invoices';
+      const method = editingInvoice ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method: method,
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -518,6 +554,8 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       
       if (result.success) {
         setShowInvoiceModal(false);
+        setEditingInvoice(null);
+        if (activeTab === 'invoices') fetchInvoices();
         fetchData(); // This will refresh the financial summary since the backend creates a transaction
       } else {
         throw new Error(result.error || 'Failed to save invoice');
@@ -595,6 +633,46 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         </div>
       </div>
 
+      {/* Tab Navigation */}
+      <div className="bg-white rounded-lg shadow mb-6">
+        <div className="border-b px-6">
+          <div className="flex -mb-px space-x-8">
+            <button
+              onClick={() => setActiveTab('transactions')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'transactions'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Transactions
+            </button>
+            <button
+              onClick={() => setActiveTab('budgets')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'budgets'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Budgets
+            </button>
+            <button
+              onClick={() => setActiveTab('invoices')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'invoices'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Invoices
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {activeTab === 'transactions' && (
+      <>
       {/* Controls */}
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
@@ -840,6 +918,111 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
           </div>
         )}
       </div>
+      </>
+      )}
+
+      {activeTab === 'invoices' && (
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          {/* ... (rest of invoices content) */}
+          <div className="p-6 border-b flex justify-between items-center">
+            <h3 className="text-lg font-medium text-gray-900">Invoices</h3>
+            <button
+              onClick={() => {
+                setEditingInvoice(null);
+                setShowInvoiceModal(true);
+              }}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              {t('dash.finance.manager.invoice')}
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Invoice #
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Client
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Amount
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {invoices.length > 0 ? (
+                  invoices.map((invoice) => (
+                    <tr key={invoice.id || invoice.invoice_number} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
+                        {invoice.invoice_number}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {invoice.client_name}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {invoice.issue_date}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
+                         {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(invoice.total_amount)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          invoice.status === 'paid' ? 'bg-green-100 text-green-800' : 
+                          invoice.status === 'sent' ? 'bg-blue-100 text-blue-800' : 
+                          'bg-gray-100 text-gray-800'
+                        }`}>
+                          {invoice.status || 'Draft'}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <button
+                          onClick={() => handleEditInvoice(invoice)}
+                          className="text-indigo-600 hover:text-indigo-900 mr-4"
+                        >
+                          Edit
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                      No invoices found. Create one to get started.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'budgets' && (
+        <div className="bg-white rounded-lg shadow p-12 text-center">
+          <DollarSign className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">Budget Management</h3>
+          <p className="text-gray-500 mb-6">Manage your academy budgets and track spending against targets.</p>
+          <button
+            onClick={() => setShowBudgetModal(true)}
+            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Create Budget
+          </button>
+        </div>
+      )}
 
       {/* Transaction Modal */}
       {showTransactionModal && (
@@ -1181,7 +1364,12 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       {showInvoiceModal && (
         <InvoiceGenerator
           academyId={academyId}
-          onClose={() => setShowInvoiceModal(false)}
+          academyDetails={academyDetails}
+          initialData={editingInvoice}
+          onClose={() => {
+            setShowInvoiceModal(false);
+            setEditingInvoice(null);
+          }}
           onSave={handleInvoiceSave}
         />
       )}

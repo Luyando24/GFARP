@@ -22,20 +22,28 @@ interface InvoiceItem {
 
 interface InvoiceGeneratorProps {
   academyId: string;
+  academyDetails?: {
+    name: string;
+    address?: string;
+    email?: string;
+    phone?: string;
+    logo?: string;
+  };
+  initialData?: any;
   onClose: () => void;
   onSave?: (invoiceData: any) => void;
 }
 
-const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, onClose, onSave }) => {
-  const [invoiceNumber, setInvoiceNumber] = useState(`INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`);
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-  const [dueDate, setDueDate] = useState(new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
-  const [clientName, setClientName] = useState('');
-  const [clientEmail, setClientEmail] = useState('');
-  const [clientAddress, setClientAddress] = useState('');
-  const [notes, setNotes] = useState('Thank you for your business!');
+const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyDetails, initialData, onClose, onSave }) => {
+  const [invoiceNumber, setInvoiceNumber] = useState(initialData?.invoice_number || `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`);
+  const [date, setDate] = useState(initialData?.issue_date || new Date().toISOString().split('T')[0]);
+  const [dueDate, setDueDate] = useState(initialData?.due_date || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [clientName, setClientName] = useState(initialData?.client_name || '');
+  const [clientEmail, setClientEmail] = useState(initialData?.client_email || '');
+  const [clientAddress, setClientAddress] = useState(initialData?.client_address || '');
+  const [notes, setNotes] = useState(initialData?.notes || 'Thank you for your business!');
   
-  const [items, setItems] = useState<InvoiceItem[]>([
+  const [items, setItems] = useState<InvoiceItem[]>(initialData?.items || [
     { id: '1', description: 'Training Session', quantity: 1, unitPrice: 0, amount: 0 }
   ]);
 
@@ -82,10 +90,26 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, onClose,
     doc.setTextColor(0, 53, 145); // Primary Blue
     doc.text('INVOICE', 105, 20, { align: 'center' });
 
-    // Company Info (Placeholder - could be dynamic based on academy settings)
+    // Company Info
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text('Soccer Academy', 105, 26, { align: 'center' });
+    const academyName = academyDetails?.name || 'Soccer Academy';
+    doc.text(academyName, 105, 26, { align: 'center' });
+    
+    if (academyDetails) {
+        let yPos = 31;
+        if (academyDetails.address) {
+            doc.text(academyDetails.address, 105, yPos, { align: 'center' });
+            yPos += 5;
+        }
+        if (academyDetails.email) {
+            doc.text(academyDetails.email, 105, yPos, { align: 'center' });
+            yPos += 5;
+        }
+        if (academyDetails.phone) {
+            doc.text(academyDetails.phone, 105, yPos, { align: 'center' });
+        }
+    }
 
     // Invoice Details
     doc.setFontSize(10);

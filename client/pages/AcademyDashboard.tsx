@@ -2215,7 +2215,10 @@ export default function AcademyDashboard() {
 
               {/* Finances Tab */}
               <TabsContent value="finances" className="space-y-6">
-                <FinancialTransactionsManager academyId={academyInfo?.id || academyData.id} />
+                <FinancialTransactionsManager 
+                  academyId={academyInfo?.id || academyData.id} 
+                  academyDetails={academyInfo || academyData}
+                />
               </TabsContent>
 
               {/* Subscription Tab */}

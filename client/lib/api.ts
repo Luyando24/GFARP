@@ -312,6 +312,22 @@ export const Api = {
     });
   },
 
+  async requestPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
+    if (USE_MOCK) return mock.requestPasswordReset(email);
+    return http<{ success: boolean; message: string }>("/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  async resetPassword(token: string, password: string): Promise<{ success: boolean; message: string }> {
+    if (USE_MOCK) return mock.resetPassword(token, password);
+    return http<{ success: boolean; message: string }>("/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify({ token, password }),
+    });
+  },
+
   async createTask(payload: CreateTaskRequest): Promise<CreateTaskResponse> {
     if (USE_MOCK) return mock.createTask(payload);
     return http<CreateTaskResponse>("/tasks", {
@@ -507,6 +523,30 @@ const mock = {
       role: role,
       schoolId: user.schoolId,
       tokens: { accessToken: uuidv4(), expiresInSec: 3600 },
+    };
+  },
+
+  async requestPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // In mock mode, we just return success to simulate the email being sent
+    // We could check if user exists, but typically for security we return success anyway
+    return { 
+      success: true, 
+      message: "If an account exists with this email, a password reset link has been sent." 
+    };
+  },
+
+  async resetPassword(token: string, password: string): Promise<{ success: boolean; message: string }> {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // In a real mock, we would validate the token and update the user's password
+    // For now, we just simulate success
+    return { 
+      success: true, 
+      message: "Password successfully reset" 
     };
   },
   async registerSchool(payload: {
