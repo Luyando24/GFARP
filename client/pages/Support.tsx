@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, HelpCircle, Mail, Phone, MessageSquare, Send } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { faqs } from '../lib/faqs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -53,7 +52,7 @@ export default function Support() {
                     </Link>
                     <div className="flex items-center gap-3 mb-4">
                         <HelpCircle className="h-8 w-8 text-[#005391]" />
-                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Help Center</h1>
+                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Support Center</h1>
                     </div>
                     <p className="text-slate-600 dark:text-slate-400">We're here to help. Find answers to common questions or get in touch with our team.</p>
                 </div>
@@ -169,16 +168,24 @@ export default function Support() {
                             </CardHeader>
                             <CardContent>
                                 <Accordion type="single" collapsible className="w-full">
-                                    {faqs.map((faq, index) => (
-                                        <AccordionItem key={index} value={`item-${index + 1}`}>
-                                            <AccordionTrigger className="text-left font-medium">
-                                                {faq.question}
-                                            </AccordionTrigger>
-                                            <AccordionContent className="text-slate-600 dark:text-slate-400">
-                                                {faq.answer}
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                    ))}
+                                    <AccordionItem value="item-1">
+                                        <AccordionTrigger>How do I reset my password?</AccordionTrigger>
+                                        <AccordionContent>
+                                            You can reset your password by clicking on the "Forgot Password" link on the login page.
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                    <AccordionItem value="item-2">
+                                        <AccordionTrigger>How do I add a new player?</AccordionTrigger>
+                                        <AccordionContent>
+                                            Navigate to the "Players" tab in your dashboard and click the "Add Player" button.
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                    <AccordionItem value="item-3">
+                                        <AccordionTrigger>Is my data secure?</AccordionTrigger>
+                                        <AccordionContent>
+                                            Yes, we use industry-standard encryption and security measures to protect your data.
+                                        </AccordionContent>
+                                    </AccordionItem>
                                 </Accordion>
                             </CardContent>
                         </Card>
