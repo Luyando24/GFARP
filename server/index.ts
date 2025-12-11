@@ -33,6 +33,7 @@ import financialTransactionsRouter from "./routes/financial-transactions.js";
 import financialRouter from "./routes/financial.js";
 import invoicesRouter from "./routes/invoices.js";
 import fifaComplianceRouter from "./routes/fifa-compliance.js";
+import complianceDocumentsRouter from "./routes/compliance-documents.js";
 import subscriptionRouter from "./routes/subscription-management.js";
 import stripePaymentsRouter from "./routes/stripe-payments.js";
 import stripeWebhooksRouter from "./routes/stripe-webhooks.js";
@@ -155,6 +156,7 @@ export function createServer() {
 
   // FIFA compliance routes
   api.use("/fifa-compliance", fifaComplianceRouter);
+  api.use("/compliance-documents", complianceDocumentsRouter);
   console.log("[SERVER] Transfer & financial routes registered");
 
   // Player documents routes

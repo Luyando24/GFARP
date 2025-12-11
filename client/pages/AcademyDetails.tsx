@@ -496,13 +496,22 @@ const AcademyDetails = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    {fifaCompliance.documents.map((doc: any) => (
+                    {fifaCompliance.documents.map((doc: any) => {
+                      const isExpired = doc.expiryDate && new Date(doc.expiryDate) < new Date();
+                      return (
                       <div key={doc.id} className="flex items-center justify-between p-4 border rounded-lg">
                         <div className="flex-1">
-                          <h4 className="font-medium">{doc.name}</h4>
+                          <h4 className="font-medium flex items-center">
+                            {doc.name}
+                            {isExpired && (
+                              <Badge variant="destructive" className="ml-2 text-xs h-5">Expired</Badge>
+                            )}
+                          </h4>
                           <p className="text-sm text-muted-foreground">
                             Uploaded: {new Date(doc.uploadDate).toLocaleDateString()} |
-                            Expires: {new Date(doc.expiryDate).toLocaleDateString()}
+                            <span className={isExpired ? "text-red-500 font-medium ml-1" : "ml-1"}>
+                              Expires: {new Date(doc.expiryDate).toLocaleDateString()}
+                            </span>
                           </p>
                           {doc.rejectionReason && (
                             <p className="text-sm text-red-500 mt-1">
@@ -512,11 +521,17 @@ const AcademyDetails = () => {
                         </div>
                         <div className="flex items-center space-x-2">
                           {/* Status Badges */}
-                          {doc.status === 'verified' && (
+                          {doc.status === 'verified' && !isExpired && (
                             <Badge className="bg-green-500 mr-2">
                               <CheckCircle className="h-3 w-3 mr-1" />
                               Verified
                             </Badge>
+                          )}
+                          {doc.status === 'verified' && isExpired && (
+                             <Badge variant="outline" className="text-red-500 border-red-500 mr-2">
+                               <AlertTriangle className="h-3 w-3 mr-1" />
+                               Expired (Verified)
+                             </Badge>
                           )}
                           {doc.status === 'pending' && (
                             <Badge variant="secondary" className="mr-2">
@@ -579,7 +594,8 @@ const AcademyDetails = () => {
                           </div>
                         </div>
                       </div>
-                    ))}
+                    );
+                  })}
                   </div>
                 </CardContent>
               </Card>

@@ -233,6 +233,110 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
       [id]
     );
 
+    // Fetch Compliance Data
+    let complianceData = null;
+    try {
+        // Get the compliance record ID for this academy
+        const complianceRecordResult = await query(
+            `SELECT id, status, compliance_score, due_date FROM fifa_compliance WHERE academy_id = $1 ORDER BY created_at DESC LIMIT 1`,
+            [id]
+        );
+
+        let complianceId = null;
+        let complianceInfo = null;
+
+        if (complianceRecordResult.rows.length > 0) {
+            complianceInfo = complianceRecordResult.rows[0];
+            complianceId = complianceInfo.id;
+        }
+
+        // Get documents
+        let documents: any[] = [];
+        if (complianceId) {
+            const docsResult = await query(
+                `SELECT id, document_name as name, document_type, file_path as "fileUrl", 
+                        upload_date as "uploadDate", expiry_date as "expiryDate", 
+                        status, rejection_reason as "rejectionReason"
+                 FROM fifa_compliance_documents 
+                 WHERE compliance_id = $1
+                 ORDER BY upload_date DESC`,
+                [complianceId]
+            );
+            documents = docsResult.rows;
+        }
+
+        // Calculate score and status
+        const now = new Date();
+        const verifiedDocs = documents.filter(d => {
+            const isExpired = d.expiryDate && new Date(d.expiryDate) < now;
+            return d.status === 'verified' && !isExpired;
+        });
+        
+        // Simple score calculation (cap at 100)
+        // Assuming 10 verified documents is a good target for 100% for now
+        const score = Math.min(Math.round((verifiedDocs.length / 10) * 100), 100);
+        
+        // Determine status based on score or existing status
+        const calculatedStatus = score >= 80 ? 'approved' : (score > 30 ? 'under_review' : 'requires_action');
+        
+        const complianceStatus = complianceInfo?.status && complianceInfo.status !== 'pending' 
+            ? complianceInfo.status 
+            : calculatedStatus;
+
+        // Generate requirements list with status
+        const highlyValuableList = [
+            'Official rosters', 'Registration forms', 'League match lists', 
+            'Training attendance sheets', 'Tournament rosters', 'Photos/videos with visible timestamps', 
+            'Coach evaluations', 'Player ID records', 'Tryout acceptance documents', 
+            'Emails confirming registration', 'National association registration history'
+        ];
+        
+        const supportingList = [
+            'Press releases', 'Website archives', 'Payment receipts', 'Social-media posts showing training'
+        ];
+
+        const requirements = [
+            ...highlyValuableList.map((name, idx) => {
+                // Fuzzy match name
+                const isCompleted = documents.some(d => 
+                    d.status === 'verified' && 
+                    (d.name.toLowerCase().includes(name.toLowerCase().split(' ')[0]) || 
+                     d.document_type === name.toLowerCase().split(' ')[0])
+                );
+                return {
+                    id: `hv-${idx}`,
+                    name: name,
+                    description: 'Highly Valuable Evidence',
+                    status: isCompleted ? 'completed' : 'requires_attention'
+                };
+            }),
+            ...supportingList.map((name, idx) => {
+                const isCompleted = documents.some(d => 
+                    d.status === 'verified' && 
+                    (d.name.toLowerCase().includes(name.toLowerCase().split(' ')[0]) || 
+                     d.document_type === name.toLowerCase().split(' ')[0])
+                );
+                return {
+                    id: `sup-${idx}`,
+                    name: name,
+                    description: 'Supporting Evidence',
+                    status: isCompleted ? 'completed' : 'requires_attention'
+                };
+            })
+        ];
+
+        complianceData = {
+            complianceScore: complianceInfo?.compliance_score || score,
+            overallStatus: complianceStatus,
+            nextReviewDate: complianceInfo?.due_date || new Date(Date.now() + 30*24*60*60*1000).toISOString(),
+            documents: documents,
+            requirements: requirements
+        };
+
+    } catch (err) {
+        console.error('Error fetching compliance data', err);
+    }
+
     // For now, we'll return basic academy data with players
     // Subscriptions and other relations can be added later if needed
     const academyData = {
@@ -243,10 +347,11 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
       isActive: academy.status === 'active',
       subscriptionPlan: academy.subscription_plan || 'Free Plan',
       players: playersResult.rows,
+      compliance: complianceData,
       player_count: parseInt(playerCountResult.rows[0].count) || 0,
       _count: {
         players: parseInt(playerCountResult.rows[0].count) || 0,
-        documents: 0, // Can be implemented later
+        documents: complianceData?.documents?.length || 0,
         payments: 0   // Can be implemented later
       }
     };
