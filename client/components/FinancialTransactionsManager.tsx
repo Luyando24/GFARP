@@ -213,7 +213,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     }
   };
 
-  const handleDeleteTransaction = async (id: number) => {
+  const handleDeleteTransaction = async (id: string | number) => {
     if (!confirm('Are you sure you want to delete this transaction?')) return;
 
     try {
@@ -227,7 +227,10 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   const openTransactionModal = (transaction?: FinancialTransaction) => {
     if (transaction) {
       setEditingTransaction(transaction);
-      setTransactionForm(transaction);
+      setTransactionForm({
+        ...transaction,
+        transaction_date: transaction.transaction_date.split('T')[0]
+      });
     } else {
       setEditingTransaction(null);
       setTransactionForm({

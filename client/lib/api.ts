@@ -1068,7 +1068,7 @@ export async function createFinancialTransaction(transaction: Omit<FinancialTran
   }
 }
 
-export async function updateFinancialTransaction(id: number, transaction: Partial<FinancialTransaction>): Promise<{ success: boolean; data: FinancialTransaction }> {
+export async function updateFinancialTransaction(id: string | number, transaction: Partial<FinancialTransaction>): Promise<{ success: boolean; data: FinancialTransaction }> {
   try {
     const response = await fetch(`${BASE_URL}/financial-transactions/${id}`, {
       method: 'PUT',
@@ -1091,7 +1091,7 @@ export async function updateFinancialTransaction(id: number, transaction: Partia
   }
 }
 
-export async function deleteFinancialTransaction(id: number): Promise<{ success: boolean; message: string }> {
+export async function deleteFinancialTransaction(id: string | number): Promise<{ success: boolean; message: string }> {
   try {
     const response = await fetch(`${BASE_URL}/financial-transactions/${id}`, {
       method: 'DELETE',
