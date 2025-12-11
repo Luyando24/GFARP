@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Trophy, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -25,6 +25,7 @@ export default function RegisterAcademy() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
 
   const validate = (): boolean => {
@@ -48,11 +49,14 @@ export default function RegisterAcademy() {
     if (!validate()) return;
     setIsSubmitting(true);
     try {
+      const searchParams = new URLSearchParams(location.search);
+      const plan = searchParams.get('plan');
+
       const submitData = {
         email: formData.email,
-        password: formData.password
+        password: formData.password,
+        subscriptionPlan: plan
       };
-
       const response = await fetch('/api/football-auth/academy/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

@@ -701,7 +701,7 @@ export default function Index() {
               </div>
 
               {/* Header */}
-              <div className="text-center mb-6 pt-3">
+              <div className="text-center mb-6 pt-8">
                 <div className="w-16 h-16 bg-gradient-to-br from-slate-600 to-slate-700 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg group-hover:shadow-xl group-hover:shadow-slate-600/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
                   <User className="h-8 w-8 text-white" />
                 </div>
@@ -753,7 +753,7 @@ export default function Index() {
               </div>
 
               {/* Header */}
-              <div className="text-center mb-6 pt-3">
+              <div className="text-center mb-6 pt-8">
                 <div className="w-16 h-16 bg-gradient-to-br from-amber-600 to-amber-700 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg group-hover:shadow-xl group-hover:shadow-amber-600/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
                   <Shield className="h-8 w-8 text-white" />
                 </div>
@@ -813,7 +813,7 @@ export default function Index() {
               </div>
 
               {/* Header */}
-              <div className="text-center mb-5 pt-6">
+              <div className="text-center mb-5 pt-8">
                 <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-2xl group-hover:shadow-3xl group-hover:shadow-yellow-500/50 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
                   <Trophy className="h-8 w-8 text-black" />
                 </div>
@@ -867,7 +867,7 @@ export default function Index() {
               </div>
 
               {/* Header */}
-              <div className="text-center mb-5 pt-3">
+              <div className="text-center mb-6 pt-8">
                 <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg group-hover:shadow-xl group-hover:shadow-purple-600/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
                   <Award className="h-8 w-8 text-white" />
                 </div>
