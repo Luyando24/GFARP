@@ -31,17 +31,21 @@ export default async function handler(
     try {
         const academyId = req.query.academyId as string;
         
+        if (!academyId || academyId === 'undefined') {
+             return res.status(400).json({ 
+                 success: false, 
+                 message: 'Academy ID is required' 
+             });
+        }
+
         // Calculate total revenue and expenses from transactions
         let query = supabase
             .from('financial_transactions')
-            .select('amount, transaction_type, status, transaction_date');
+            .select('amount, transaction_type, status, transaction_date')
+            .eq('academy_id', academyId);
             
-        if (academyId) {
-            query = query.eq('academy_id', academyId);
-        }
-        
-        // Only include completed transactions
-        query = query.eq('status', 'completed');
+        // Only include completed transactions (case insensitive)
+        query = query.ilike('status', 'completed');
         
         const { data: transactions, error } = await query;
 
@@ -65,12 +69,13 @@ export default async function handler(
             const amount = Number(tx.amount) || 0;
             const date = new Date(tx.transaction_date);
             const monthKey = date.toLocaleString('default', { month: 'short' });
+            const type = tx.transaction_type?.toLowerCase();
 
-            if (tx.transaction_type === 'income') {
+            if (type === 'income') {
                 totalRevenue += amount;
                 // Only update monthly stats if the key exists (i.e., within the last 6 months)
                 if (monthlyStats[monthKey]) monthlyStats[monthKey].revenue += amount;
-            } else if (tx.transaction_type === 'expense') {
+            } else if (type === 'expense') {
                 totalExpenses += amount;
                 if (monthlyStats[monthKey]) monthlyStats[monthKey].expenses += amount;
             }
@@ -81,12 +86,9 @@ export default async function handler(
         let transferQuery = supabase
             .from('transfers')
             .select('transfer_amount, status, transfer_type, transfer_date, created_at')
-            .eq('status', 'completed');
+            .eq('academy_id', academyId)
+            .ilike('status', 'completed');
             
-        if (academyId) {
-            transferQuery = transferQuery.eq('academy_id', academyId);
-        }
-        
         const { data: transfers, error: transferError } = await transferQuery;
         
         if (!transferError && transfers) {
@@ -116,15 +118,21 @@ export default async function handler(
             profit: stats.revenue - stats.expenses
         }));
 
+        const totalTransactions = (transactions?.length || 0) + (transfers?.length || 0);
+
         return res.status(200).json({
             success: true,
             data: {
-                totalRevenue,
-                totalExpenses,
-                netProfit,
-                profitMargin,
-                monthlyGrowth,
-                monthlyData
+                summary: {
+                    totalRevenue,
+                    totalExpenses,
+                    netProfit,
+                    profitMargin,
+                    monthlyGrowth,
+                    totalTransactions
+                },
+                categoryBreakdown: [],
+                monthlyBreakdown: monthlyData
             }
         });
     } catch (error: any) {

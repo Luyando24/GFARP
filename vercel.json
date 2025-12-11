@@ -38,7 +38,7 @@
     },
     {
       "source": "/api/financial-transactions/:academyId/summary",
-      "destination": "/api/financial/summary"
+      "destination": "/api/financial/summary?academyId=:academyId"
     },
     {
       "source": "/api/financial-transactions/:academyId/budget-categories",
