@@ -51,6 +51,7 @@ import {
   Upload,
   Crown
 } from 'lucide-react';
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -252,6 +253,7 @@ export default function AcademyDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState("main");
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [searchQuery, setSearchQuery] = useState("");
   const [isEditingSettings, setIsEditingSettings] = useState(false);
   const [settingsFormData, setSettingsFormData] = useState({
@@ -777,8 +779,17 @@ export default function AcademyDashboard() {
     setSelectedPlanForUpgrade({
       id: selectedPlan.id,
       name: selectedPlan.name,
-      price: selectedPlan.price,
-      isFree: selectedPlan.price === 0
+      price: billingCycle === 'yearly' 
+        ? (selectedPlan.name === 'Basic' || selectedPlan.name === t('landing.pricing.tier1.name') 
+            ? parseInt(t('landing.pricing.tier1.priceYearly').replace(/[^0-9]/g, '')) 
+            : selectedPlan.name === 'Pro' || selectedPlan.name === t('landing.pricing.tier2.name')
+            ? parseInt(t('landing.pricing.tier2.priceYearly').replace(/[^0-9]/g, ''))
+            : selectedPlan.name === 'Elite' || selectedPlan.name === t('landing.pricing.tier3.name')
+            ? parseInt(t('landing.pricing.tier3.priceYearly').replace(/[^0-9]/g, ''))
+            : Math.round(selectedPlan.price * 12 * 0.8))
+        : selectedPlan.price,
+      isFree: selectedPlan.price === 0,
+      billingCycle: billingCycle
     });
     setShowPaymentModal(true);
   };
@@ -2440,8 +2451,42 @@ export default function AcademyDashboard() {
                                     {t('landing.pricing.title.choose')}
                                   </DialogDescription>
                                 </DialogHeader>
+                                
+                                <div className="flex justify-center items-center gap-4 mb-4">
+                                  <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-blue-900' : 'text-slate-500'}`}>
+                                    {t('landing.pricing.toggle.monthly')}
+                                  </span>
+                                  <Switch
+                                    checked={billingCycle === 'yearly'}
+                                    onCheckedChange={(checked) => setBillingCycle(checked ? 'yearly' : 'monthly')}
+                                    className="bg-blue-900 data-[state=checked]:bg-yellow-400"
+                                  />
+                                  <div className="flex items-center gap-2">
+                                    <span className={`text-sm font-bold ${billingCycle === 'yearly' ? 'text-blue-900' : 'text-slate-500'}`}>
+                                      {t('landing.pricing.toggle.yearly')}
+                                    </span>
+                                    <span className="bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full">
+                                      {t('landing.pricing.save')}
+                                    </span>
+                                  </div>
+                                </div>
+
                                 <div className="space-y-4">
-                                  {availablePlans.map((plan: any) => (
+                                  {availablePlans.map((plan: any) => {
+                                    let displayPrice = `$${plan.price}`;
+                                    if (billingCycle === 'yearly') {
+                                        if (plan.name === 'Basic' || plan.name === t('landing.pricing.tier1.name')) {
+                                            displayPrice = t('landing.pricing.tier1.priceYearly');
+                                        } else if (plan.name === 'Pro' || plan.name === t('landing.pricing.tier2.name')) {
+                                            displayPrice = t('landing.pricing.tier2.priceYearly');
+                                        } else if (plan.name === 'Elite' || plan.name === t('landing.pricing.tier3.name')) {
+                                            displayPrice = t('landing.pricing.tier3.priceYearly');
+                                        } else {
+                                            displayPrice = `$${Math.round(plan.price * 12 * 0.8)}`;
+                                        }
+                                    }
+
+                                    return (
                                     <Card
                                       key={plan.id}
                                       className={`cursor-pointer hover:bg-slate-50 ${subscriptionData?.planName === plan.name
@@ -2462,7 +2507,7 @@ export default function AcademyDashboard() {
                                             )}
                                           </div>
                                           <div className="text-right">
-                                            <div className="font-bold">${plan.price}/month</div>
+                                            <div className="font-bold">{displayPrice}/{billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year')}</div>
                                             <div className="text-sm text-slate-600">
                                               {plan.playerLimit} players
                                             </div>
@@ -2470,7 +2515,7 @@ export default function AcademyDashboard() {
                                         </div>
                                       </CardContent>
                                     </Card>
-                                  ))}
+                                  )})}
                                 </div>
                               </DialogContent>
                             </Dialog>
