@@ -448,6 +448,7 @@ const handleCreateTransaction: RequestHandler = async (req, res) => {
 const handleUpdateTransaction: RequestHandler = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log('Update Transaction Request:', { id, body: req.body });
     const transaction: Partial<FinancialTransaction> = req.body;
 
     const result = await query(`
@@ -516,10 +517,6 @@ const handleDeleteTransaction: RequestHandler = async (req, res) => {
 
 // --- Route Definitions ---
 
-// Summary
-// Put this first to ensure it's matched before :academyId
-router.get('/:academyId/summary', handleGetSummary);
-
 // Budget Categories
 // Put this second to ensure it's matched before :academyId
 router.get('/:academyId/budget-categories', handleGetBudgetCategories);
@@ -531,7 +528,7 @@ router.delete('/budget-categories/:id', handleDeleteBudgetCategory);
 router.post('/', handleCreateTransaction);
 router.put('/:id', handleUpdateTransaction);
 router.delete('/:id', handleDeleteTransaction);
-// This matches anything not matched above, so it must be last
+router.get('/:academyId/summary', handleGetSummary);
 router.get('/:academyId', handleGetTransactions);
 
 export default router;

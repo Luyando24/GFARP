@@ -556,6 +556,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     try {
       const url = editingInvoice ? `/api/invoices/${editingInvoice.id}` : '/api/invoices';
       const method = editingInvoice ? 'PUT' : 'POST';
+      console.log('Invoice Save Request:', { url, method, id: editingInvoice?.id });
       
       const response = await fetch(url, {
         method: method,

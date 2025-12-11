@@ -163,6 +163,7 @@ const handleCreateInvoice: RequestHandler = async (req, res) => {
 const handleUpdateInvoice: RequestHandler = async (req, res) => {
     try {
         const { id } = req.params;
+        console.log('Update Invoice Request:', { id, body: req.body });
         const {
             academy_id,
             invoice_number,
@@ -240,10 +241,10 @@ const handleUpdateInvoice: RequestHandler = async (req, res) => {
     }
 };
 
-router.get('/', handleGetInvoices);
-router.get('/:academyId', handleGetInvoices);
 router.get('/detail/:id', handleGetInvoiceDetail);
+router.get('/', handleGetInvoices);
 router.post('/', handleCreateInvoice);
 router.put('/:id', handleUpdateInvoice);
+router.get('/:academyId', handleGetInvoices);
 
 export default router;
