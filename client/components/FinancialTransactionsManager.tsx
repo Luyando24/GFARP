@@ -214,22 +214,31 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   };
 
   const handleDeleteTransaction = async (id: string | number) => {
+    console.debug('Delete button clicked:', { transactionId: id, idType: typeof id });
     if (!confirm('Are you sure you want to delete this transaction?')) return;
 
     try {
       await deleteFinancialTransaction(id);
       fetchData();
     } catch (err) {
+      console.error('Delete transaction error:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete transaction');
     }
   };
 
   const openTransactionModal = (transaction?: FinancialTransaction) => {
+    console.debug('Edit button clicked:', { transactionId: transaction?.id, rawDate: transaction?.transaction_date });
     if (transaction) {
       setEditingTransaction(transaction);
+      let formattedDate = '';
+      try {
+        formattedDate = transaction.transaction_date ? new Date(transaction.transaction_date).toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+      } catch (e) {
+        formattedDate = new Date().toISOString().split('T')[0];
+      }
       setTransactionForm({
         ...transaction,
-        transaction_date: transaction.transaction_date.split('T')[0]
+        transaction_date: formattedDate
       });
     } else {
       setEditingTransaction(null);
@@ -378,11 +387,18 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
+    try {
+      if (!dateString) return 'N/A';
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return 'Invalid Date';
+      return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (e) {
+      return 'Error';
+    }
   };
 
   const clearFilters = () => {
@@ -1077,7 +1093,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                     >
                       <option value="">Select Category</option>
                       {(transactionForm.transaction_type === 'income' ? incomeCategories : expenseCategories).map(category => (
-                        <option key={category} value={category}>{category}</option>
+                        <option key={category.value} value={category.value}>{category.label}</option>
                       ))}
                     </select>
                   </div>
