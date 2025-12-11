@@ -1,4 +1,4 @@
-import { Trophy, Users, FileText, ShoppingCart, BookOpen, Globe, Shield, UserCheck, Menu, Target, Calendar, BarChart3, DollarSign, Award, Star, CheckCircle, Building, Crown, User } from 'lucide-react';
+import { Trophy, Users, FileText, ShoppingCart, BookOpen, Globe, Shield, UserCheck, Menu, Target, Calendar, BarChart3, DollarSign, Award, Star, CheckCircle, Building, Crown, User, AlertCircle, Clock, TrendingUp, X } from 'lucide-react';
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -923,6 +923,76 @@ export default function Index() {
                 {t('landing.pricing.compare')}
               </Link>
             </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Common Pitfalls Section */}
+      <section className="py-20 bg-slate-900 text-white relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-red-500/20 text-red-300 rounded-full mb-4 border border-red-500/30">
+              <AlertCircle className="h-4 w-4" />
+              <span className="font-bold text-sm tracking-wide">CRITICAL WARNINGS</span>
+            </div>
+            <h2 className="text-3xl md:text-5xl font-black mb-6">
+              Common Pitfalls That Cause <br />
+              <span className="text-red-400">Clubs to Lose Their Money</span>
+            </h2>
+            <p className="text-xl text-slate-300 max-w-3xl mx-auto">
+              Avoid these costly mistakes to ensure your academy receives the compensation it deserves.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[
+              {
+                title: "Missing documentation",
+                desc: "The #1 reason claims fail.",
+                icon: <FileText className="h-10 w-10 text-red-400" />
+              },
+              {
+                title: "Incorrect training dates",
+                desc: "Even a one-year mistake can forfeit thousands.",
+                icon: <Calendar className="h-10 w-10 text-red-400" />
+              },
+              {
+                title: "Assuming pay-to-play means you are ineligible",
+                desc: "It does not.",
+                icon: <DollarSign className="h-10 w-10 text-red-400" />
+              },
+              {
+                title: "Waiting too long to file",
+                desc: "Claims older than ~5 years often fail.",
+                icon: <Clock className="h-10 w-10 text-red-400" />
+              },
+              {
+                title: "Thinking only “big academies” qualify",
+                desc: "Even small neighborhood clubs qualify.",
+                icon: <Building className="h-10 w-10 text-red-400" />
+              },
+              {
+                title: "Not understanding that transfers at age 27 still generate Solidarity",
+                desc: "Training years (12–23) always count, even for late-career transfers.",
+                icon: <TrendingUp className="h-10 w-10 text-red-400" />
+              }
+            ].map((pitfall, index) => (
+              <div key={index} className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 p-8 rounded-2xl hover:bg-slate-800 transition-all duration-300 group">
+                <div className="mb-6 bg-slate-900/50 w-20 h-20 rounded-2xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300 border border-slate-700">
+                  {pitfall.icon}
+                </div>
+                <div className="flex items-start gap-3 mb-3">
+                  <X className="h-6 w-6 text-red-500 flex-shrink-0 mt-1" />
+                  <h3 className="text-xl font-bold text-white leading-tight">{pitfall.title}</h3>
+                </div>
+                <p className="text-slate-400 pl-9 text-lg font-medium">{pitfall.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>

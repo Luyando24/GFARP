@@ -16,7 +16,8 @@ import {
     Save,
     AlertTriangle,
     XCircle,
-    Loader2
+    Loader2,
+    Star
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -86,17 +87,30 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
         "other"
     ];
 
-    // Required FIFA compliance documents
-    const requiredDocuments = [
-        { name: 'FIFA Statutes and Regulations', type: 'other' },
-        { name: 'Player Registration System Manual', type: 'other' },
-        { name: 'Anti-Doping Policy', type: 'safeguarding_policy' },
-        { name: 'Financial Fair Play Guidelines', type: 'financial_statements' },
-        { name: 'Referee Guidelines and Laws', type: 'other' },
-        { name: 'Stadium Safety Standards', type: 'facility_inspection_report' },
-        { name: 'Medical Regulations', type: 'medical_certificate' },
-        { name: 'Disciplinary Code', type: 'other' }
+    // Required FIFA compliance documents - Global Standard
+    const highlyValuableDocuments = [
+        { name: 'Official rosters', type: 'roster' },
+        { name: 'Registration forms', type: 'registration' },
+        { name: 'League match lists', type: 'match_list' },
+        { name: 'Training attendance sheets', type: 'attendance' },
+        { name: 'Tournament rosters', type: 'roster' },
+        { name: 'Photos/videos with visible timestamps', type: 'media' },
+        { name: 'Coach evaluations', type: 'evaluation' },
+        { name: 'Player ID records', type: 'id_record' },
+        { name: 'Tryout acceptance documents', type: 'acceptance' },
+        { name: 'Emails confirming registration', type: 'email' },
+        { name: 'National association registration history', type: 'history' }
     ];
+
+    const supportingDocuments = [
+        { name: 'Press releases', type: 'press' },
+        { name: 'Website archives', type: 'archive' },
+        { name: 'Payment receipts', type: 'receipt' },
+        { name: 'Social-media posts showing training', type: 'social' }
+    ];
+    
+    // Combine for total count calculation
+    const allRequiredDocs = [...highlyValuableDocuments, ...supportingDocuments];
 
     useEffect(() => {
         loadDocuments();
@@ -292,31 +306,63 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
                 </Button>
             </div>
 
-            {/* Required Documents Checklist */}
+            {/* Documentation Checklist for Clubs (Global Standard) */}
             <Card>
                 <CardHeader>
-                    <CardTitle>{t('dash.compliance.required')}</CardTitle>
+                    <CardTitle>Documentation Checklist for Clubs (Global Standard)</CardTitle>
                     <CardDescription>
-                        {documents.length} of {requiredDocuments.length} required documents uploaded
+                        The more documentation, the stronger the claim.
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        {requiredDocuments.map((req, index) => {
-                            const uploaded = documents.find(doc =>
-                                doc.document_name.toLowerCase().includes(req.name.toLowerCase().split(' ')[0])
-                            );
-                            return (
-                                <div key={index} className="flex items-center gap-2 p-2 rounded border">
-                                    {uploaded ? (
-                                        <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-                                    ) : (
-                                        <XCircle className="h-4 w-4 text-slate-400 flex-shrink-0" />
-                                    )}
-                                    <span className="text-sm">{req.name}</span>
-                                </div>
-                            );
-                        })}
+                <CardContent className="space-y-6">
+                    {/* Highly Valuable Evidence */}
+                    <div>
+                        <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                            <Star className="h-5 w-5 text-yellow-500 fill-current" />
+                            Highly Valuable Evidence
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {highlyValuableDocuments.map((req, index) => {
+                                const uploaded = documents.find(doc =>
+                                    doc.document_name.toLowerCase().includes(req.name.toLowerCase().split(' ')[0])
+                                );
+                                return (
+                                    <div key={index} className="flex items-center gap-2 p-2 rounded border bg-slate-50 dark:bg-slate-900/50">
+                                        {uploaded ? (
+                                            <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                        ) : (
+                                            <XCircle className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                        )}
+                                        <span className="text-sm font-medium">{req.name}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Supporting Evidence */}
+                    <div>
+                        <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                            <FileText className="h-5 w-5 text-blue-500" />
+                            Supporting Evidence
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {supportingDocuments.map((req, index) => {
+                                const uploaded = documents.find(doc =>
+                                    doc.document_name.toLowerCase().includes(req.name.toLowerCase().split(' ')[0])
+                                );
+                                return (
+                                    <div key={index} className="flex items-center gap-2 p-2 rounded border bg-slate-50 dark:bg-slate-900/50">
+                                        {uploaded ? (
+                                            <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
+                                        ) : (
+                                            <XCircle className="h-4 w-4 text-slate-400 flex-shrink-0" />
+                                        )}
+                                        <span className="text-sm font-medium">{req.name}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </CardContent>
             </Card>
