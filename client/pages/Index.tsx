@@ -26,7 +26,6 @@ export default function Index() {
           <div className="px-4 py-2">
             <div className="flex items-center justify-end gap-6">
               <Link to="/about" className="hover:text-yellow-300 transition-colors font-medium">{t('nav.about')}</Link>
-              <Link to="/support" className="hover:text-yellow-300 transition-colors font-medium">{t('nav.support')}</Link>
               {/* <Link to="/shop" className="hover:text-yellow-300 transition-colors font-medium">SHOP</Link> */}
               <Link to="/blog" className="hover:text-yellow-300 transition-colors font-medium">{t('nav.blog')}</Link>
               <Link to="/support" className="hover:text-yellow-300 transition-colors font-medium">{t('nav.help')}</Link>
@@ -73,7 +72,7 @@ export default function Index() {
                   { href: "#features", label: t('nav.features') },
                   { href: "#benefits", label: t('nav.benefits') },
                   { href: "#pricing", label: t('nav.pricing') },
-                  { href: "#testimonials", label: t('nav.testimonials') },
+                  // { href: "#testimonials", label: t('nav.testimonials') },
                   { href: "#contact", label: t('nav.contact') }
                 ].map((item) => (
                   <a
@@ -125,8 +124,8 @@ export default function Index() {
                       { href: "#features", label: t('nav.features') },
                       { href: "#benefits", label: t('nav.benefits') },
                       { href: "#pricing", label: t('nav.pricing') },
-                      { href: "#testimonials", label: t('nav.testimonials') },
-                      { href: "#contact", label: t('nav.contact') }
+                  // { href: "#testimonials", label: t('nav.testimonials') },
+                  { href: "#contact", label: t('nav.contact') }
                     ].map((item) => (
                       <a
                         key={item.href}

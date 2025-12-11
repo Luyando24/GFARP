@@ -53,7 +53,7 @@ export default function Support() {
                     </Link>
                     <div className="flex items-center gap-3 mb-4">
                         <HelpCircle className="h-8 w-8 text-[#005391]" />
-                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Support Center</h1>
+                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Help Center</h1>
                     </div>
                     <p className="text-slate-600 dark:text-slate-400">We're here to help. Find answers to common questions or get in touch with our team.</p>
                 </div>
