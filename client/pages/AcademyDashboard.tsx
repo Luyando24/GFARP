@@ -631,8 +631,13 @@ export default function AcademyDashboard() {
         : 0;
 
       // Process financial data
-      const financialSummary = financialResult.success ? financialResult.data : { totalRevenue: 0, monthlyData: [] };
-      const monthlyFinancialData = financialResult.success && financialResult.data.monthlyData ? financialResult.data.monthlyData : [];
+      const financialSummary = financialResult.success 
+        ? (financialResult.data.summary || financialResult.data) 
+        : { totalRevenue: 0 };
+        
+      const monthlyFinancialData = financialResult.success 
+        ? (financialResult.data.monthlyBreakdown || financialResult.data.monthlyData || []) 
+        : [];
 
       // Get recent transfers from the transfers list (already fetched)
       const recentTransfers = transfersResult.success
