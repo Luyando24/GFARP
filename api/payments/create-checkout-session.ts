@@ -24,7 +24,7 @@ export default async function handler(
     }
 
     try {
-        const { academyId, planId, successUrl, cancelUrl } = req.body;
+        const { academyId, planId, successUrl, cancelUrl, billingCycle = 'monthly' } = req.body;
 
         if (!academyId || !planId) {
             return res.status(400).json({
@@ -140,28 +140,54 @@ export default async function handler(
             metadata: {
                 academyId: academy.id,
                 planId: plan.id,
-                planName: plan.name
+                planName: plan.name,
+                billingCycle
             }
         };
 
         // Add line item
-        if (plan.stripe_price_id) {
+        // Use stripe_price_id only for monthly plans if available
+        if (plan.stripe_price_id && billingCycle !== 'yearly') {
             sessionConfig.line_items?.push({
                 price: plan.stripe_price_id,
                 quantity: 1,
             });
         } else {
-            // Use price_data if no Stripe Price ID
+            // Calculate price based on billing cycle
+            let unitAmount = Math.round(plan.price * 100);
+            let interval: Stripe.Checkout.SessionCreateParams.LineItem.PriceData.Recurring.Interval = 'month';
+            let priceDescription = `Subscription to ${plan.name}`;
+
+            if (billingCycle === 'yearly') {
+                interval = 'year';
+                priceDescription = `Yearly Subscription to ${plan.name}`;
+                
+                // Check for specific plan names to apply fixed yearly pricing
+                // Matching frontend logic
+                const planNameLower = plan.name.toLowerCase();
+                if (planNameLower.includes('basic') || planNameLower.includes('tier 1')) {
+                    unitAmount = 27900; // $279.00
+                } else if (planNameLower.includes('pro') || planNameLower.includes('tier 2')) {
+                    unitAmount = 56900; // $569.00
+                } else if (planNameLower.includes('elite') || planNameLower.includes('tier 3')) {
+                    unitAmount = 94900; // $949.00
+                } else {
+                    // Default 20% discount calculation if no specific match
+                    unitAmount = Math.round(plan.price * 12 * 0.8 * 100);
+                }
+            }
+
+            // Use price_data
             sessionConfig.line_items?.push({
                 price_data: {
                     currency: 'usd',
                     product_data: {
-                        name: plan.name,
-                        description: `Subscription to ${plan.name}`,
+                        name: `${plan.name} (${billingCycle === 'yearly' ? 'Yearly' : 'Monthly'})`,
+                        description: priceDescription,
                     },
-                    unit_amount: Math.round(plan.price * 100), // Amount in cents
+                    unit_amount: unitAmount,
                     recurring: {
-                        interval: 'month', // Default to monthly
+                        interval: interval,
                     },
                 },
                 quantity: 1,

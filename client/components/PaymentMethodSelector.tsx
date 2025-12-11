@@ -15,6 +15,7 @@ interface PaymentMethodSelectorProps {
     name: string;
     price: number;
     isFree: boolean;
+    billingCycle?: 'monthly' | 'yearly';
   } | null;
   academyId: string;
   onSuccess: () => void;
@@ -106,6 +107,7 @@ export default function PaymentMethodSelector({
           body: JSON.stringify({
             academyId,
             planId: selectedPlan.id,
+            billingCycle: selectedPlan.billingCycle || 'monthly',
             successUrl: `${window.location.origin}/academy-dashboard?tab=subscription&payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
             cancelUrl: `${window.location.origin}/academy-dashboard?tab=subscription&payment_cancelled=true`
           }),
