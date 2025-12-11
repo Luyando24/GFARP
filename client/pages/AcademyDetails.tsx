@@ -25,7 +25,9 @@ import {
   Trash2,
   X,
   Check,
-  MessageSquare
+  MessageSquare,
+  UserPlus,
+  FileText
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
@@ -658,7 +660,10 @@ const AcademyDetails = () => {
                   {activities.map((activity, index) => (
                     <div key={activity.id || `activity-${index}-${activity.timestamp || Date.now()}`} className="flex items-start pb-4 border-b last:border-0">
                       <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mr-4">
-                        <Clock className="h-5 w-5 text-primary" />
+                        {activity.type === 'status' && <Shield className="h-5 w-5 text-primary" />}
+                        {activity.type === 'document' && <FileText className="h-5 w-5 text-primary" />}
+                        {activity.type === 'player' && <UserPlus className="h-5 w-5 text-primary" />}
+                        {!activity.type && <Clock className="h-5 w-5 text-primary" />}
                       </div>
                       <div>
                         <p className="font-medium">{activity.action}</p>
@@ -673,7 +678,7 @@ const AcademyDetails = () => {
                           )}
                         </div>
                         {activity.details && (
-                          <p className="text-sm mt-2">{activity.details}</p>
+                          <p className="text-sm mt-2 text-gray-600">{activity.details}</p>
                         )}
                       </div>
                     </div>

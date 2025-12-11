@@ -235,6 +235,8 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
 
     // Fetch Compliance Data
     let complianceData = null;
+    let documents: any[] = []; // Lifted scope for activities usage
+
     try {
         // Get the compliance record ID for this academy
         const complianceRecordResult = await query(
@@ -251,7 +253,6 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
         }
 
         // Get documents
-        let documents: any[] = [];
         if (complianceId) {
             const docsResult = await query(
                 `SELECT id, document_name as name, document_type, file_path as "fileUrl", 
@@ -337,6 +338,62 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
         console.error('Error fetching compliance data', err);
     }
 
+    // Fetch Activities
+    let activities: any[] = [];
+    try {
+        // 1. Activation History
+        const activationHistory = await query(
+            `SELECT action_type, admin_email, reason, created_at 
+             FROM academy_activation_history 
+             WHERE academy_id = $1 
+             ORDER BY created_at DESC LIMIT 20`,
+            [id]
+        );
+
+        activities.push(...activationHistory.rows.map(h => ({
+            id: `act-${new Date(h.created_at).getTime()}`,
+            type: 'status',
+            action: h.action_type.charAt(0).toUpperCase() + h.action_type.slice(1) + ' Status Change',
+            user: h.admin_email || 'System',
+            timestamp: h.created_at,
+            details: `Status changed to ${h.action_type} - Reason: ${h.reason || 'N/A'}`
+        })));
+
+        // 2. Compliance Documents
+        if (documents && documents.length > 0) {
+             activities.push(...documents.map(d => ({
+                id: `doc-${d.id}`,
+                type: 'document',
+                action: `Document Uploaded: ${d.name}`,
+                user: 'Academy Admin',
+                timestamp: d.uploadDate,
+                details: `Type: ${d.document_type}`
+             })));
+        }
+
+        // 3. Player Registrations
+        const players = playersResult.rows;
+        if (players && players.length > 0) {
+             activities.push(...players.map(p => ({
+                id: `player-${p.id}`,
+                type: 'player',
+                action: `Player Registered: ${p.firstName} ${p.lastName}`,
+                user: 'Academy Staff',
+                timestamp: p.registrationDate || p.createdAt,
+                details: `Position: ${p.position}`
+             })));
+        }
+
+        // Sort by timestamp desc
+        activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        
+        // Limit to 50
+        activities = activities.slice(0, 50);
+
+    } catch (err) {
+        console.error('Error fetching activities:', err);
+    }
+
     // For now, we'll return basic academy data with players
     // Subscriptions and other relations can be added later if needed
     const academyData = {
@@ -348,6 +405,7 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
       subscriptionPlan: academy.subscription_plan || 'Free Plan',
       players: playersResult.rows,
       compliance: complianceData,
+      activities: activities, // Added activities
       player_count: parseInt(playerCountResult.rows[0].count) || 0,
       _count: {
         players: parseInt(playerCountResult.rows[0].count) || 0,
