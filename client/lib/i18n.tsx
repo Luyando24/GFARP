@@ -1389,6 +1389,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'common.uploaded': 'Enviado',
     'common.size': 'Tamanho',
     'common.actions': 'Ações',
+  },
   de: {
     'nav.about': 'ÜBER UNS',
     'nav.support': 'SUPPORT',
@@ -1698,6 +1699,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'common.uploaded': 'Hochgeladen',
     'common.size': 'Größe',
     'common.actions': 'Aktionen',
+  },
   it: {
     'nav.about': 'CHI SIAMO',
     'nav.support': 'SUPPORTO',
@@ -2317,6 +2319,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'common.uploaded': 'تم الرفع',
     'common.size': 'الحجم',
     'common.actions': 'إجراءات',
+  },
   zh: {
     'nav.about': '关于我们',
     'nav.support': '支持',
