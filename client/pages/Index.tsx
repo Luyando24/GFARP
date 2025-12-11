@@ -3,12 +3,90 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import ThemeToggle from "@/components/navigation/ThemeToggle";
 import LanguageToggle from "@/components/navigation/LanguageToggle";
 import { useTranslation } from '@/lib/i18n';
 
 import Chatbot from '@/components/Landing/Chatbot';
 import DemoModal from '@/components/Landing/DemoModal';
+
+
+const faqData = [
+    {
+        question: "1. What are “Training Compensation” (TC) and “Solidarity Payments” (SP)?",
+        answer: (
+            <div className="space-y-2">
+                <p><strong>Training Compensation (TC):</strong> A payment made when a youth-developed player signs their first professional contract abroad or transfers internationally before age 23. It compensates the clubs that trained the player between ages 12–21.</p>
+                <p><strong>Solidarity Payments (SP):</strong> When an internationally transferred professional player changes clubs, 5% of the transfer fee is redistributed among the clubs that trained the player between ages 12–23.</p>
+            </div>
+        )
+    },
+    {
+        question: "2. Do U.S. clubs need to be affiliated with FIFA to receive TC/SP?",
+        answer: "No. FIFA affiliation is not required. What matters is that the club has proper training documentation."
+    },
+    {
+        question: "3. Does being a “pay-to-play” club disqualify you from receiving TC/SP?",
+        answer: "No. Pay-to-play status does not disqualify a club. As long as training was structured and documented, such clubs are eligible."
+    },
+    {
+        question: "4. What kind of documentation is needed to claim TC/SP?",
+        answer: "Clubs need robust evidence, such as: rosters, registration history, training logs, attendance records, tournament or ID-camp participation, coach evaluations, tryout acceptance and registration forms. Without proper documentation, claims likely will be rejected."
+    },
+    {
+        question: "5. Do informal, grassroots, or recreational clubs qualify?",
+        answer: "Yes. Even weekend-based recreational programs can qualify, provided their training was structured and documented."
+    },
+    {
+        question: "6. Does high school or college soccer count toward TC/SP eligibility?",
+        answer: "No. High school and college (e.g. NCAA) programs are not regarded as “training clubs” under FIFA regulations, so they are ineligible."
+    },
+    {
+        question: "7. Does academy status (e.g. MLS NEXT) matter for eligibility?",
+        answer: "No. What matters is documentation of training, not whether the club is part of a formal academy program."
+    },
+    {
+        question: "8. Do domestic transfers within the U.S. trigger TC or SP?",
+        answer: "No. TC and SP only apply to international transfers (i.e. transfer between clubs belonging to different national associations). Domestic U.S.–only transfers are excluded."
+    },
+    {
+        question: "9. What about loan deals, do they generate any payments?",
+        answer: "Only if the loan includes a transfer fee. If there is no transfer fee, then it does not trigger a Solidarity Payment."
+    },
+    {
+        question: "10. How are payments split if a player trained at multiple clubs?",
+        answer: "Payment is divided proportionally based on the number of years the player spent at each club during the eligible training ages."
+    },
+    {
+        question: "11. What if a club merged with another, or changed name, can the new entity claim TC/SP?",
+        answer: "Yes, the successor club may inherit the training rights, if there is documentation showing continuity of the training history."
+    },
+    {
+        question: "12. What if a club lost original records (e.g. old paper rosters)? Is there a fallback?",
+        answer: "Clubs can attempt to reconstruct records (e.g. old emails, archived tournament rosters, dated photos, coach statements, league archives, etc.). But FIFA expects evidence, so reconstructed or partial documentation will be scrutinized."
+    },
+    {
+        question: "13. Is a club required to hire an attorney to file a claim?",
+        answer: "Technically, no, but it is strongly advised. Having a qualified sports-law attorney familiar with U.S. and FIFA regulations helps avoid errors that might lead to rejection or disputes."
+    },
+    {
+        question: "14. What kind of payments are we talking about, are amounts significant?",
+        answer: "Potentially, yes. Training Compensation could range from roughly $10,000 up to over $200,000 depending on the caliber and category of the buying club. For Solidarity Payments, the amount depends on the transfer fee — e.g. a $5 million transfer could yield $250,000 to be divided among eligible training clubs."
+    },
+    {
+        question: "15. Can a player or their parent/guardian block a club from claiming TC/SP?",
+        answer: "No. These payments are made between clubs; they are not tied to the player’s contract or personal consent."
+    },
+    {
+        question: "16. Does a player need to have played official matches (games/minutes) for the club to be eligible for compensation?",
+        answer: "No. Match appearances do not matter. What counts is documented training even if the player never appeared in a formal game."
+    },
+    {
+        question: "17. What’s the time window for filing a claim?",
+        answer: "Clubs generally have up to five years from the date when the compensation obligation was triggered to file a claim. Waiting too long may forfeit eligibility."
+    }
+];
 
 export default function Index() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -611,7 +689,59 @@ export default function Index() {
           </div>
 
           {/* Pricing Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 max-w-7xl mx-auto">
+
+            {/* Free Tier - Starter */}
+            <div className="group relative bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-3 border-2 border-transparent hover:border-slate-400/30 overflow-hidden">
+              {/* Tier Badge */}
+              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                <div className="bg-gradient-to-r from-slate-600 to-slate-700 text-white px-4 py-1.5 rounded-full font-black text-xs tracking-wide shadow-lg">
+                  STARTER
+                </div>
+              </div>
+
+              {/* Header */}
+              <div className="text-center mb-6 pt-3">
+                <div className="w-16 h-16 bg-gradient-to-br from-slate-600 to-slate-700 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg group-hover:shadow-xl group-hover:shadow-slate-600/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
+                  <User className="h-8 w-8 text-white" />
+                </div>
+                <h3 className="text-2xl font-black text-[#001a33] mb-2">Free</h3>
+                <div className="text-3xl font-black text-[#001a33] mb-2">
+                  $0
+                  <span className="text-lg text-gray-600 font-bold">
+                    {billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year')}
+                  </span>
+                </div>
+                <p className="text-gray-600 font-bold text-sm">Perfect for small academies</p>
+              </div>
+
+              {/* Features */}
+              <ul className="space-y-3 mb-6">
+                {[
+                  "Max 3 players",
+                  t('landing.pricing.feature.compliance'),
+                  t('landing.pricing.feature.support')
+                ].map((feature, index) => (
+                  <li key={index} className="flex items-center">
+                    <div className="w-5 h-5 bg-gradient-to-r from-slate-400 to-slate-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
+                      <CheckCircle className="h-3 w-3 text-white" />
+                    </div>
+                    <span className="text-gray-700 font-medium text-sm">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+
+              {/* CTA Button */}
+              <Button className="w-full bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white font-black py-4 text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                <Link to="/academy-registration?plan=free" className="flex items-center justify-center gap-2">
+                  Get Started
+                  <User className="h-4 w-4" />
+                </Link>
+              </Button>
+
+              {/* Hover Overlay */}
+              <div className="absolute inset-0 bg-gradient-to-br from-slate-600/5 to-slate-700/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"></div>
+            </div>
 
             {/* Basic Tier - Bronze */}
             <div className="group relative bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-3 border-2 border-transparent hover:border-yellow-400/30 overflow-hidden">
@@ -641,7 +771,6 @@ export default function Index() {
               <ul className="space-y-3 mb-6">
                 {[
                   t('landing.pricing.feature.players').replace('{count}', '50'),
-                  t('landing.pricing.feature.storage').replace('{size}', '5GB'),
                   t('landing.pricing.feature.compliance'),
                   t('landing.pricing.feature.support'),
                   t('landing.pricing.feature.registration')
@@ -702,7 +831,6 @@ export default function Index() {
               <ul className="space-y-2.5 mb-5">
                 {[
                   t('landing.pricing.feature.players').replace('{count}', '200'),
-                  t('landing.pricing.feature.storage').replace('{size}', '25GB'),
                   t('landing.pricing.feature.fullCompliance').replace('Full', 'Advanced'), // Using existing key but slightly modified text if needed, or just map 'Advanced FIFA compliance' to a new key. I'll stick to 'Advanced FIFA compliance' if I didn't add a key for it. Wait, I added 'landing.pricing.feature.fullCompliance' as "Full FIFA compliance suite". The English text was "Advanced FIFA compliance". I'll use `landing.pricing.feature.fullCompliance` as it's close enough or just hardcode "Advanced" if specific key missing. Actually I see I didn't add 'Advanced FIFA compliance' key. I'll use 'landing.pricing.feature.fullCompliance' for now as it's similar concept.
                   t('landing.pricing.feature.prioritySupport'),
                   t('landing.pricing.feature.trainingTracking'),
@@ -757,7 +885,6 @@ export default function Index() {
               <ul className="space-y-2.5 mb-5">
                 {[
                   t('landing.pricing.feature.unlimitedPlayers'),
-                  t('landing.pricing.feature.storage').replace('{size}', '100GB'),
                   t('landing.pricing.feature.fullCompliance'),
                   t('landing.pricing.feature.247Support'),
                   t('landing.pricing.feature.solidarity'),
@@ -801,7 +928,28 @@ export default function Index() {
         </div>
       </section>
 
-
+      {/* FAQ Section */}
+      <section className="py-20 bg-slate-50 dark:bg-slate-800">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-12">
+                <h2 className="text-3xl font-black text-[#001a33] dark:text-white mb-4">Frequently Asked Questions</h2>
+                <p className="text-xl text-gray-600 dark:text-gray-300">Common questions about Training Compensation & Solidarity Payments</p>
+            </div>
+            
+            <Accordion type="single" collapsible className="w-full bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6">
+                {faqData.map((faq, index) => (
+                    <AccordionItem key={index} value={`item-${index}`} className="border-b border-slate-200 dark:border-slate-700 last:border-0">
+                        <AccordionTrigger className="text-left font-bold text-lg py-4 hover:no-underline hover:text-[#005391] dark:hover:text-blue-400 transition-colors">
+                            {faq.question}
+                        </AccordionTrigger>
+                        <AccordionContent className="text-slate-600 dark:text-slate-300 text-base leading-relaxed pb-4">
+                            {faq.answer}
+                        </AccordionContent>
+                    </AccordionItem>
+                ))}
+            </Accordion>
+        </div>
+      </section>
 
       {/* Footer */}
       <footer className="bg-slate-900 text-white py-16">
