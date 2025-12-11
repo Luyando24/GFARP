@@ -1180,7 +1180,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                     >
                       <option value="">Select Payment Method</option>
                       {paymentMethods.map(method => (
-                        <option key={method} value={method}>{method}</option>
+                        <option key={method.value} value={method.value}>{method.label}</option>
                       ))}
                     </select>
                   </div>
