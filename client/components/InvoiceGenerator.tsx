@@ -7,7 +7,8 @@ import {
   DollarSign,
   Calendar,
   User,
-  X
+  X,
+  Save
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import { formatCurrency } from '../lib/stripe'; // Assuming this helper exists or I'll implement a simple one
@@ -78,6 +79,27 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyD
   const removeItem = (id: string) => {
     if (items.length > 1) {
       setItems(items.filter(item => item.id !== id));
+    }
+  };
+
+  const handleSave = () => {
+    if (onSave) {
+      const total = calculateTotal();
+      onSave({
+        id: initialData?.id, // Preserve ID if editing
+        academy_id: academyId,
+        invoice_number: invoiceNumber,
+        client_name: clientName,
+        client_email: clientEmail,
+        client_address: clientAddress,
+        issue_date: date,
+        due_date: dueDate,
+        notes: notes,
+        subtotal: total,
+        total_amount: total,
+        status: initialData?.status || 'draft',
+        items: items
+      });
     }
   };
 
@@ -177,24 +199,6 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyD
     doc.text('Thank you for your business!', 105, 280, { align: 'center' });
 
     doc.save(`Invoice-${invoiceNumber}.pdf`);
-
-    // Save invoice to database
-    if (onSave) {
-      onSave({
-        academy_id: academyId,
-        invoice_number: invoiceNumber,
-        client_name: clientName,
-        client_email: clientEmail,
-        client_address: clientAddress,
-        issue_date: date,
-        due_date: dueDate,
-        notes: notes,
-        subtotal: total,
-        total_amount: total,
-        status: 'draft', // Saved invoices start as draft
-        items: items
-      });
-    }
   };
 
   const _formatCurrency = (amount: number) => {
@@ -389,19 +393,37 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyD
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-sm"
               />
             </div>
-            <div className="w-full md:w-1/3 space-y-3">
-              <div className="flex justify-between items-center text-lg font-bold text-gray-900 pt-2 border-t">
-                <span>Total Amount</span>
-                <span>{formatCurrency(calculateTotal())}</span>
+            {/* Actions */}
+            <div className="w-full md:w-1/3 space-y-4">
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Actions</h3>
+              <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+                <div className="flex justify-between items-center text-sm">
+                  <span className="text-gray-600">Subtotal:</span>
+                  <span className="font-medium">{formatCurrency(calculateTotal())}</span>
+                </div>
+                <div className="flex justify-between items-center text-lg font-bold">
+                  <span>Total:</span>
+                  <span className="text-blue-600">{formatCurrency(calculateTotal())}</span>
+                </div>
               </div>
-              <button
-                onClick={generatePDF}
-                disabled={!clientName || calculateTotal() === 0}
-                className="w-full flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed mt-4 shadow-sm"
-              >
-                <Download className="h-5 w-5 mr-2" />
-                Download Invoice PDF
-              </button>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={handleSave}
+                  className="flex-1 flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"
+                >
+                  <Save className="h-5 w-5 mr-2" />
+                  Save Invoice
+                </button>
+                
+                <button
+                  onClick={generatePDF}
+                  className="flex-1 flex items-center justify-center px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                >
+                  <Download className="h-5 w-5 mr-2" />
+                  Download PDF
+                </button>
+              </div>
             </div>
           </div>
         </div>
