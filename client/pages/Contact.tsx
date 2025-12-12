@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Mail, Phone, MapPin, Send } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, Send, Instagram, Linkedin, Facebook } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -161,6 +161,20 @@ export default function Contact() {
                                             123 Soccer Avenue<br />
                                             Sports City, SC 90210
                                         </p>
+                                    </div>
+                                </div>
+                                <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+                                    <p className="font-medium mb-3">Follow Us</p>
+                                    <div className="flex gap-4">
+                                        <a href="https://www.instagram.com/safwanamireh?igsh=NTc4MTIwNjQ2YQ%3D%3D&utm_source=qr" target="_blank" rel="noopener noreferrer" className="bg-slate-100 p-2 rounded-full text-slate-600 hover:text-pink-600 hover:bg-pink-50 transition-colors">
+                                            <Instagram className="h-5 w-5" />
+                                        </a>
+                                        <a href="https://www.linkedin.com/in/safwanamireh?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" target="_blank" rel="noopener noreferrer" className="bg-slate-100 p-2 rounded-full text-slate-600 hover:text-blue-600 hover:bg-blue-50 transition-colors">
+                                            <Linkedin className="h-5 w-5" />
+                                        </a>
+                                        <a href="https://www.facebook.com/profile.php?id=61584639460003&mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" className="bg-slate-100 p-2 rounded-full text-slate-600 hover:text-blue-800 hover:bg-blue-50 transition-colors">
+                                            <Facebook className="h-5 w-5" />
+                                        </a>
                                     </div>
                                 </div>
                             </CardContent>
