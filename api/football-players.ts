@@ -236,7 +236,7 @@ export default async function handler(
                     )
                 `)
                 .eq('academy_id', body.academyId)
-                .eq('status', 'active')
+                .in('status', ['active', 'ACTIVE'])
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .single();
@@ -250,8 +250,8 @@ export default async function handler(
                 });
             }
 
-            // Determine player limit (default to 1 for free/no subscription)
-            const playerLimit = subscription?.subscription_plans?.player_limit || 1;
+            // Determine player limit (default to 3 for free/no subscription)
+            const playerLimit = subscription?.subscription_plans?.player_limit || 3;
 
             console.log('[VERCEL] Player limit check:', {
                 currentCount: currentPlayerCount,
