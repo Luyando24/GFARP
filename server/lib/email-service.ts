@@ -196,7 +196,7 @@ class EmailService {
           `}
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.CLIENT_URL || 'http://localhost:8080'}" 
+            <a href="${process.env.CLIENT_URL || 'https://soccercircular.com'}" 
                style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
               Access Platform
             </a>
@@ -287,7 +287,7 @@ class EmailService {
           `}
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.CLIENT_URL || 'http://localhost:8080'}" 
+            <a href="${process.env.CLIENT_URL || 'https://soccercircular.com'}" 
                style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
               Access Platform
             </a>
@@ -349,7 +349,7 @@ class EmailService {
           </div>
           
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${process.env.CLIENT_URL || 'http://localhost:8080'}/admin/academies" 
+            <a href="${process.env.CLIENT_URL || 'https://soccercircular.com'}/admin/academies" 
                style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
               View Academy Management
             </a>

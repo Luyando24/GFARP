@@ -84,7 +84,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             });
 
             // Determine base URL
-            const baseUrl = process.env.VITE_APP_URL || 'http://localhost:5173'; 
+            const baseUrl = process.env.VITE_APP_URL || 'https://soccercircular.com'; 
             const verificationLink = `${baseUrl}/verify-email?token=${verificationToken}`;
 
             await transporter.sendMail({

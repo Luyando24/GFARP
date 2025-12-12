@@ -10,8 +10,8 @@ const port = process.env.PORT || 8080;
 
 app.listen(port, () => {
   console.log(`🚀 Fusion Starter server running on port ${port}`);
-  console.log(`📱 Frontend: http://localhost:${port}`);
-  console.log(`🔧 API: http://localhost:${port}/api`);
+  console.log(`📱 Frontend: ${process.env.VITE_APP_URL || `http://localhost:${port}`}`);
+  console.log(`🔧 API: ${process.env.VITE_APP_URL || `http://localhost:${port}`}/api`);
 });
 
 // Graceful shutdown
