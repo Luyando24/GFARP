@@ -11,10 +11,20 @@ const encrypt = (text: string) => {
   return Buffer.from(text, 'utf8');
 };
 
-// Simple decryption function (in production, use proper decryption)
-const decrypt = (buffer: Buffer) => {
-  if (!buffer) return null;
-  return buffer.toString('utf8');
+// Robust decryption function to handle various input types
+const decrypt = (value: any) => {
+  if (!value) return '';
+  if (typeof value === 'string' && value.startsWith('\\x')) {
+    return Buffer.from(value.slice(2), 'hex').toString('utf8');
+  }
+  if (Buffer.isBuffer(value)) {
+    return value.toString('utf8');
+  }
+  if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
+    return Buffer.from(value).toString('utf8');
+  }
+  if (typeof value === 'string') return value;
+  return String(value);
 };
 
 // Create Player
@@ -293,11 +303,6 @@ export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
 
     const offset = (page - 1) * limit;
 
-    const decrypt = (buffer: Buffer) => {
-      if (!buffer) return null;
-      return buffer.toString('utf8');
-    };
-
     const baseSelect = `
       SELECT id, player_card_id, first_name_cipher, last_name_cipher, dob_cipher, 
              position, email_cipher, phone_cipher, jersey_number, height_cm, weight_kg,
@@ -376,11 +381,6 @@ export const handleSearchPlayers: RequestHandler = async (req, res) => {
       });
     }
 
-    const decrypt = (buffer: Buffer) => {
-      if (!buffer) return null;
-      return buffer.toString('utf8');
-    };
-
     // Search in encrypted first_name and last_name fields
     // Note: This is a simplified search - in production you'd want more sophisticated search
     const searchQuery = `
@@ -435,12 +435,7 @@ export const handleSearchPlayers: RequestHandler = async (req, res) => {
 export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
   try {
     const { playerId } = req.params;
-
-    // Simple decryption function (in production, use proper decryption)
-    const decrypt = (buffer: Buffer) => {
-      if (!buffer) return null;
-      return buffer.toString('utf8');
-    };
+    console.log(`[GetPlayerDetails] Fetching details for player: ${playerId}`);
 
     // Fetch player from database
     const playerQuery = `SELECT id, player_card_id, first_name_cipher, last_name_cipher, 
@@ -458,6 +453,7 @@ export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
     const playerResult = await query(playerQuery, [playerId]);
 
     if (playerResult.rows.length === 0) {
+      console.log(`[GetPlayerDetails] Player not found: ${playerId}`);
       return res.status(404).json({
         success: false,
         message: 'Player not found'
@@ -465,6 +461,7 @@ export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
     }
 
     const player = playerResult.rows[0];
+    console.log(`[GetPlayerDetails] Player found. Decrypting...`);
 
     res.json({
       success: true,
@@ -512,10 +509,7 @@ export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
 
   } catch (error) {
     console.error('Get player details error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Internal server error'
-    });
+    res.status(500).json({ success: false, message: 'Internal server error' });
   }
 }
 
