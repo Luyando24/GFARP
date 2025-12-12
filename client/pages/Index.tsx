@@ -250,16 +250,16 @@ export default function Index() {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-6 justify-center mb-12 px-4">
-              <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-black shadow-2xl hover:shadow-yellow-500/50 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/60 animate-pulse w-full sm:w-auto">
-                <Link to="#" onClick={() => setIsModalOpen(true)} className="flex items-center gap-3 justify-center">
-                  <Trophy className="h-5 w-5" />
-                  {t('hero.cta.start')}
+              <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-black shadow-2xl hover:shadow-yellow-500/50 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/60 w-full sm:w-auto">
+                <Link to="/academy-registration" className="flex items-center gap-3 justify-center">
+                  {t('hero.cta.register')}
                 </Link>
               </Button>
 
               <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-white/10 hover:bg-white/20 text-white font-black shadow-xl hover:shadow-white/25 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/50 backdrop-blur-sm w-full sm:w-auto">
-                <Link to="/academy-registration" className="flex items-center gap-3 justify-center">
-                   {t('hero.cta.register')}
+                <Link to="#" className="flex items-center gap-3 justify-center">
+                  <Trophy className="h-5 w-5" />
+                  {t('hero.cta.start')}
                 </Link>
               </Button>
             </div>
