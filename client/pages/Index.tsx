@@ -452,11 +452,11 @@ export default function Index() {
                 </Link>
               </Button>
 
-              <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-white/10 hover:bg-white/20 text-white font-black shadow-xl hover:shadow-white/25 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/50 backdrop-blur-sm w-full sm:w-auto">
-                <Link to="#" className="flex items-center gap-3 justify-center">
+              <Button asChild size="lg" className="text-lg px-10 py-6 rounded-full bg-white/10 hover:bg-white/20 text-white font-black shadow-xl hover:shadow-white/25 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/50 backdrop-blur-sm w-full sm:w-auto">
+                <a href="https://calendly.com/amirehsofwan" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 justify-center">
                   <Trophy className="h-5 w-5" />
                   {t('hero.cta.start')}
-                </Link>
+                </a>
               </Button>
             </div>
 
