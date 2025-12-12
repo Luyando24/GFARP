@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import ThemeToggle from "@/components/navigation/ThemeToggle";
 import LanguageToggle from "@/components/navigation/LanguageToggle";
 import { useTranslation } from '@/lib/i18n';
@@ -47,6 +48,179 @@ export default function Index() {
     { question: t('landing.faq.q16'), answer: t('landing.faq.a16') },
     { question: t('landing.faq.q17'), answer: t('landing.faq.a17') }
   ];
+
+  const pricingTiers = [
+    {
+      id: 'free',
+      name: t('landing.pricing.free.name'),
+      price: '$0',
+      desc: t('landing.pricing.free.ideal'),
+      badge: t('landing.pricing.free.badge'),
+      icon: User,
+      features: [
+        t('landing.pricing.free.maxPlayers'),
+        t('landing.pricing.feature.compliance'),
+        t('landing.pricing.feature.support')
+      ],
+      ctaLink: "/academy-registration?plan=free",
+      ctaText: t('landing.pricing.getStarted'),
+      ctaIcon: User,
+      highlight: false,
+      styles: {
+        card: "border-transparent hover:border-slate-400/30 hover:-translate-y-3",
+        badge: "from-slate-600 to-slate-700 text-white",
+        iconBg: "from-slate-600 to-slate-700",
+        iconColor: "text-white",
+        button: "from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white",
+        overlay: "from-slate-600/5 to-slate-700/5"
+      }
+    },
+    {
+      id: 'basic',
+      name: t('landing.pricing.tier1.name'),
+      price: billingCycle === 'monthly' ? t('landing.pricing.tier1.price') : t('landing.pricing.tier1.priceYearly'),
+      desc: t('landing.pricing.tier1.desc'),
+      badge: t('landing.pricing.tier1.badge'),
+      icon: Shield,
+      features: [
+        t('landing.pricing.feature.players').replace('{count}', '50'),
+        t('landing.pricing.feature.compliance'),
+        t('landing.pricing.feature.support'),
+        t('landing.pricing.feature.registration')
+      ],
+      ctaLink: "/academy-registration?plan=basic",
+      ctaText: t('landing.pricing.start.bronze'),
+      ctaIcon: Trophy,
+      highlight: false,
+      styles: {
+        card: "border-transparent hover:border-yellow-400/30 hover:-translate-y-3",
+        badge: "from-amber-600 to-amber-700 text-white",
+        iconBg: "from-amber-600 to-amber-700",
+        iconColor: "text-white",
+        button: "from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white",
+        overlay: "from-amber-600/5 to-amber-700/5"
+      }
+    },
+    {
+      id: 'pro',
+      name: t('landing.pricing.tier2.name'),
+      price: billingCycle === 'monthly' ? t('landing.pricing.tier2.price') : t('landing.pricing.tier2.priceYearly'),
+      desc: t('landing.pricing.tier2.ideal'),
+      badge: t('landing.pricing.tier2.badge'),
+      icon: Trophy,
+      features: [
+        t('landing.pricing.feature.players').replace('{count}', '200'),
+        t('landing.pricing.feature.fullCompliance'),
+        t('landing.pricing.feature.prioritySupport'),
+        t('landing.pricing.feature.trainingTracking'),
+        t('landing.pricing.feature.analytics')
+      ],
+      ctaLink: "/academy-registration?plan=pro",
+      ctaText: t('landing.pricing.start.gold'),
+      ctaIcon: Star,
+      highlight: true,
+      popularBadge: t('landing.pricing.popular'),
+      styles: {
+        card: "border-4 border-yellow-400 shadow-2xl hover:shadow-3xl hover:shadow-yellow-500/50 hover:-translate-y-4",
+        badge: "from-yellow-400 to-yellow-500 text-black",
+        iconBg: "from-yellow-400 to-yellow-500",
+        iconColor: "text-black",
+        button: "from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black",
+        overlay: "from-yellow-400/10 to-yellow-500/10"
+      }
+    },
+    {
+      id: 'elite',
+      name: t('landing.pricing.tier3.name'),
+      price: billingCycle === 'monthly' ? t('landing.pricing.tier3.price') : t('landing.pricing.tier3.priceYearly'),
+      desc: t('landing.pricing.tier3.worldClass'),
+      badge: t('landing.pricing.tier3.badge'),
+      icon: Award,
+      features: [
+        t('landing.pricing.feature.unlimitedPlayers'),
+        t('landing.pricing.feature.fullCompliance'),
+        t('landing.pricing.feature.247Support'),
+        t('landing.pricing.feature.solidarity'),
+        t('landing.pricing.feature.advancedAnalytics'),
+        t('landing.pricing.feature.customIntegrations')
+      ],
+      ctaLink: "/academy-registration?plan=elite",
+      ctaText: t('landing.pricing.start.platinum'),
+      ctaIcon: Award,
+      highlight: false,
+      styles: {
+        card: "border-transparent hover:border-purple-400/30 hover:-translate-y-4",
+        badge: "from-purple-600 to-purple-700 text-white",
+        iconBg: "from-purple-600 to-purple-700",
+        iconColor: "text-white",
+        button: "from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white",
+        overlay: "from-purple-600/5 to-purple-700/5"
+      }
+    }
+  ];
+
+  const renderPricingCard = (tier: any) => {
+    const Icon = tier.icon;
+    const CTAIcon = tier.ctaIcon;
+    
+    return (
+      <div className={`group relative bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 border-2 h-full flex flex-col ${tier.styles.card}`}>
+        {/* Highlight Badge */}
+        {tier.popularBadge && (
+          <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
+            <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black px-5 py-2 rounded-full font-black text-xs tracking-wide shadow-2xl animate-pulse">
+              🏆 {tier.popularBadge} 🏆
+            </div>
+          </div>
+        )}
+
+        {/* Tier Badge */}
+        <div className={`absolute -top-3 left-1/2 transform -translate-x-1/2 z-10 ${tier.highlight ? 'mt-7' : ''}`}>
+          <div className={`bg-gradient-to-r ${tier.styles.badge} px-4 py-1.5 rounded-full font-black text-xs tracking-wide shadow-lg`}>
+            {tier.badge}
+          </div>
+        </div>
+
+        {/* Header */}
+        <div className="text-center mb-6 pt-8">
+          <div className={`w-16 h-16 bg-gradient-to-br ${tier.styles.iconBg} rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg group-hover:shadow-xl transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3`}>
+            <Icon className={`h-8 w-8 ${tier.styles.iconColor}`} />
+          </div>
+          <h3 className="text-2xl font-black text-[#001a33] mb-2">{tier.name}</h3>
+          <div className="text-3xl font-black text-[#001a33] mb-2">
+            {tier.price}
+            <span className="text-lg text-gray-600 font-bold ml-1">
+              {tier.period}
+            </span>
+          </div>
+          <p className="text-gray-600 font-bold text-sm">{tier.desc}</p>
+        </div>
+
+        {/* Features */}
+        <ul className="space-y-3 mb-6 flex-grow">
+          {tier.features.map((feature: string, index: number) => (
+            <li key={index} className="flex items-start text-left">
+              <div className="w-5 h-5 bg-gradient-to-r from-green-400 to-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0 mt-0.5">
+                <CheckCircle className="h-3 w-3 text-white" />
+              </div>
+              <span className="text-gray-700 font-medium text-sm leading-tight">{feature}</span>
+            </li>
+          ))}
+        </ul>
+
+        {/* CTA Button */}
+        <Button className={`w-full bg-gradient-to-r ${tier.styles.button} font-black py-4 text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 mt-auto`}>
+          <Link to={tier.ctaLink} className="flex items-center justify-center gap-2 w-full">
+            {tier.ctaText}
+            <CTAIcon className={`h-4 w-4 ${tier.styles.iconColor}`} />
+          </Link>
+        </Button>
+
+        {/* Hover Overlay */}
+        <div className={`absolute inset-0 bg-gradient-to-br ${tier.styles.overlay} opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl pointer-events-none`}></div>
+      </div>
+    );
+  };
 
 
   return (
@@ -664,227 +838,32 @@ export default function Index() {
           </div>
 
           {/* Pricing Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 max-w-7xl mx-auto">
-
-            {/* Free Tier - Starter */}
-            <div className="group relative bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-3 border-2 border-transparent hover:border-slate-400/30 overflow-hidden">
-              {/* Tier Badge */}
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <div className="bg-gradient-to-r from-slate-600 to-slate-700 text-white px-4 py-1.5 rounded-full font-black text-xs tracking-wide shadow-lg">
-                  {t('landing.pricing.free.badge')}
-                </div>
-              </div>
-
-              {/* Header */}
-              <div className="text-center mb-6 pt-8">
-                <div className="w-16 h-16 bg-gradient-to-br from-slate-600 to-slate-700 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg group-hover:shadow-xl group-hover:shadow-slate-600/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
-                  <User className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-black text-[#001a33] mb-2">{t('landing.pricing.free.name')}</h3>
-                <div className="text-3xl font-black text-[#001a33] mb-2">
-                  $0
-                  <span className="text-lg text-gray-600 font-bold">
-                    {billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year')}
-                  </span>
-                </div>
-                <p className="text-gray-600 font-bold text-sm">{t('landing.pricing.free.ideal')}</p>
-              </div>
-
-              {/* Features */}
-              <ul className="space-y-3 mb-6">
-                {[
-                  t('landing.pricing.free.maxPlayers'),
-                  t('landing.pricing.feature.compliance'),
-                  t('landing.pricing.feature.support')
-                ].map((feature, index) => (
-                  <li key={index} className="flex items-center">
-                    <div className="w-5 h-5 bg-gradient-to-r from-slate-400 to-slate-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                      <CheckCircle className="h-3 w-3 text-white" />
-                    </div>
-                    <span className="text-gray-700 font-medium text-sm">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* CTA Button */}
-              <Button className="w-full bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white font-black py-4 text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <Link to="/academy-registration?plan=free" className="flex items-center justify-center gap-2">
-                  {t('landing.pricing.getStarted')}
-                  <User className="h-4 w-4" />
-                </Link>
-              </Button>
-
-              {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-slate-600/5 to-slate-700/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"></div>
+          {/* Pricing Grid */}
+          <div className="max-w-7xl mx-auto">
+            {/* Mobile Carousel */}
+            <div className="md:hidden px-4">
+              <Carousel className="w-full max-w-sm mx-auto" opts={{ loop: true }}>
+                <CarouselContent>
+                  {pricingTiers.map((tier) => (
+                    <CarouselItem key={tier.id}>
+                      <div className="p-1 h-full pt-6">
+                        {renderPricingCard(tier)}
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <CarouselPrevious className="-left-2" />
+                <CarouselNext className="-right-2" />
+              </Carousel>
             </div>
 
-            {/* Basic Tier - Bronze */}
-            <div className="group relative bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-3 border-2 border-transparent hover:border-yellow-400/30 overflow-hidden">
-              {/* Tier Badge */}
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <div className="bg-gradient-to-r from-amber-600 to-amber-700 text-white px-4 py-1.5 rounded-full font-black text-xs tracking-wide shadow-lg">
-                  {t('landing.pricing.tier1.badge')}
+            {/* Desktop Grid */}
+            <div className="hidden md:grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+              {pricingTiers.map((tier) => (
+                <div key={tier.id} className="h-full pt-6">
+                  {renderPricingCard(tier)}
                 </div>
-              </div>
-
-              {/* Header */}
-              <div className="text-center mb-6 pt-8">
-                <div className="w-16 h-16 bg-gradient-to-br from-amber-600 to-amber-700 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg group-hover:shadow-xl group-hover:shadow-amber-600/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
-                  <Shield className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-black text-[#001a33] mb-2">{t('landing.pricing.tier1.name')}</h3>
-                <div className="text-3xl font-black text-[#001a33] mb-2">
-                  {billingCycle === 'monthly' ? t('landing.pricing.tier1.price') : t('landing.pricing.tier1.priceYearly')}
-                  <span className="text-lg text-gray-600 font-bold">
-                    {billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year')}
-                  </span>
-                </div>
-                <p className="text-gray-600 font-bold text-sm">{t('landing.pricing.tier1.desc')}</p>
-              </div>
-
-              {/* Features */}
-              <ul className="space-y-3 mb-6">
-                {[
-                  t('landing.pricing.feature.players').replace('{count}', '50'),
-                  t('landing.pricing.feature.compliance'),
-                  t('landing.pricing.feature.support'),
-                  t('landing.pricing.feature.registration')
-                ].map((feature, index) => (
-                  <li key={index} className="flex items-center">
-                    <div className="w-5 h-5 bg-gradient-to-r from-green-400 to-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                      <CheckCircle className="h-3 w-3 text-white" />
-                    </div>
-                    <span className="text-gray-700 font-medium text-sm">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* CTA Button */}
-              <Button className="w-full bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white font-black py-4 text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <Link to="/academy-registration?plan=basic" className="flex items-center justify-center gap-2">
-                  {t('landing.pricing.start.bronze')}
-                  <Trophy className="h-4 w-4" />
-                </Link>
-              </Button>
-
-              {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-amber-600/5 to-amber-700/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"></div>
-            </div>
-
-            {/* Pro Tier - Gold (Featured) */}
-            <div className="group relative bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-2xl hover:shadow-3xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-4 border-yellow-400 overflow-hidden">
-              {/* Featured Badge */}
-              <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 z-10">
-                <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black px-5 py-2 rounded-full font-black text-xs tracking-wide shadow-2xl animate-pulse">
-                  🏆 {t('landing.pricing.popular')} 🏆
-                </div>
-              </div>
-
-              {/* Tier Badge */}
-              <div className="absolute -top-1 left-1/2 transform -translate-x-1/2 z-10">
-                <div className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black px-4 py-1.5 rounded-full font-black text-xs tracking-wide shadow-lg mt-6">
-                  {t('landing.pricing.tier2.badge')}
-                </div>
-              </div>
-
-              {/* Header */}
-              <div className="text-center mb-5 pt-8">
-                <div className="w-16 h-16 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-2xl group-hover:shadow-3xl group-hover:shadow-yellow-500/50 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
-                  <Trophy className="h-8 w-8 text-black" />
-                </div>
-                <h3 className="text-2xl font-black text-[#001a33] mb-1">{t('landing.pricing.tier2.name')}</h3>
-                <div className="text-3xl font-black text-[#001a33] mb-1">
-                  {billingCycle === 'monthly' ? t('landing.pricing.tier2.price') : t('landing.pricing.tier2.priceYearly')}
-                  <span className="text-lg text-gray-600 font-bold">
-                    {billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year')}
-                  </span>
-                </div>
-                <p className="text-gray-600 font-bold text-sm">{t('landing.pricing.tier2.ideal')}</p>
-              </div>
-
-              {/* Features */}
-              <ul className="space-y-2.5 mb-5">
-                {[
-                  t('landing.pricing.feature.players').replace('{count}', '200'),
-                  t('landing.pricing.feature.fullCompliance').replace('Full', 'Advanced'), // Using existing key but slightly modified text if needed, or just map 'Advanced FIFA compliance' to a new key. I'll stick to 'Advanced FIFA compliance' if I didn't add a key for it. Wait, I added 'landing.pricing.feature.fullCompliance' as "Full FIFA compliance suite". The English text was "Advanced FIFA compliance". I'll use `landing.pricing.feature.fullCompliance` as it's close enough or just hardcode "Advanced" if specific key missing. Actually I see I didn't add 'Advanced FIFA compliance' key. I'll use 'landing.pricing.feature.fullCompliance' for now as it's similar concept.
-                  t('landing.pricing.feature.prioritySupport'),
-                  t('landing.pricing.feature.trainingTracking'),
-                  t('landing.pricing.feature.analytics')
-                ].map((feature, index) => (
-                  <li key={index} className="flex items-center">
-                    <div className="w-5 h-5 bg-gradient-to-r from-green-400 to-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                      <CheckCircle className="h-3 w-3 text-white" />
-                    </div>
-                    <span className="text-gray-700 font-medium text-sm">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* CTA Button */}
-              <Button className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black font-black py-4 text-sm rounded-xl shadow-2xl hover:shadow-3xl transition-all duration-300 transform hover:scale-105">
-                <Link to="/academy-registration?plan=pro" className="flex items-center justify-center gap-2">
-                  {t('landing.pricing.start.gold')}
-                  <Star className="h-4 w-4 fill-current" />
-                </Link>
-              </Button>
-
-              {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/10 to-yellow-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"></div>
-            </div>
-
-            {/* Elite Tier - Platinum */}
-            <div className="group relative bg-white/95 backdrop-blur-sm rounded-2xl p-5 shadow-2xl hover:shadow-3xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-purple-400/30 overflow-hidden">
-              {/* Tier Badge */}
-              <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
-                <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-4 py-1.5 rounded-full font-black text-xs tracking-wide shadow-lg">
-                  {t('landing.pricing.tier3.badge')}
-                </div>
-              </div>
-
-              {/* Header */}
-              <div className="text-center mb-6 pt-8">
-                <div className="w-16 h-16 bg-gradient-to-br from-purple-600 to-purple-700 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg group-hover:shadow-xl group-hover:shadow-purple-600/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
-                  <Award className="h-8 w-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-black text-[#001a33] mb-1">{t('landing.pricing.tier3.name')}</h3>
-                <div className="text-3xl font-black text-[#001a33] mb-1">
-                  {billingCycle === 'monthly' ? t('landing.pricing.tier3.price') : t('landing.pricing.tier3.priceYearly')}
-                  <span className="text-lg text-gray-600 font-bold">
-                    {billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year')}
-                  </span>
-                </div>
-                <p className="text-gray-600 font-bold text-sm">{t('landing.pricing.tier3.worldClass')}</p>
-              </div>
-
-              {/* Features */}
-              <ul className="space-y-2.5 mb-5">
-                {[
-                  t('landing.pricing.feature.unlimitedPlayers'),
-                  t('landing.pricing.feature.fullCompliance'),
-                  t('landing.pricing.feature.247Support'),
-                  t('landing.pricing.feature.solidarity'),
-                  t('landing.pricing.feature.advancedAnalytics'),
-                  t('landing.pricing.feature.customIntegrations')
-                ].map((feature, index) => (
-                  <li key={index} className="flex items-center">
-                    <div className="w-5 h-5 bg-gradient-to-r from-green-400 to-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
-                      <CheckCircle className="h-3 w-3 text-white" />
-                    </div>
-                    <span className="text-gray-700 font-medium text-sm">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {/* CTA Button */}
-              <Button className="w-full bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white font-black py-4 text-sm rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
-                <Link to="/academy-registration?plan=elite" className="flex items-center justify-center gap-2">
-                  {t('landing.pricing.start.platinum')}
-                  <Award className="h-4 w-4" />
-                </Link>
-              </Button>
-
-              {/* Hover Overlay */}
-              <div className="absolute inset-0 bg-gradient-to-br from-purple-600/5 to-purple-700/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-2xl"></div>
+              ))}
             </div>
           </div>
 
