@@ -525,6 +525,68 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     setShowExportModal(false);
   };
 
+  const exportInvoiceToPDF = (invoice: any) => {
+    const doc = new jsPDF();
+    
+    // Add company/academy header
+    doc.setFontSize(22);
+    doc.setTextColor(0, 0, 0);
+    doc.text(academyDetails?.name || 'Academy Invoice', 20, 20);
+    
+    doc.setFontSize(10);
+    doc.text(academyDetails?.location || '', 20, 30);
+    doc.text(academyDetails?.email || '', 20, 35);
+    
+    // Invoice details
+    doc.setFontSize(16);
+    doc.text('INVOICE', 150, 20);
+    
+    doc.setFontSize(10);
+    doc.text(`Invoice #: ${invoice.invoice_number}`, 150, 30);
+    doc.text(`Date: ${invoice.issue_date}`, 150, 35);
+    doc.text(`Status: ${invoice.status || 'Draft'}`, 150, 40);
+    
+    // Bill To
+    doc.setFontSize(12);
+    doc.text('Bill To:', 20, 50);
+    doc.setFontSize(10);
+    doc.text(invoice.client_name || 'N/A', 20, 60);
+    if (invoice.client_email) doc.text(invoice.client_email, 20, 65);
+    
+    // Line items header
+    doc.line(20, 75, 190, 75);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text('Description', 20, 80);
+    doc.text('Amount', 160, 80);
+    doc.setFont("helvetica", "normal");
+    doc.line(20, 85, 190, 85);
+    
+    // Items
+    let yPos = 95;
+    
+    if (invoice.items && Array.isArray(invoice.items)) {
+        invoice.items.forEach((item: any) => {
+            doc.text(item.description || 'Item', 20, yPos);
+            doc.text(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.amount || 0), 160, yPos);
+            yPos += 10;
+        });
+    } else {
+        doc.text('Invoice Total', 20, yPos);
+        doc.text(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(invoice.total_amount || 0), 160, yPos);
+        yPos += 10;
+    }
+    
+    // Total
+    doc.line(20, yPos, 190, yPos);
+    yPos += 10;
+    doc.setFont("helvetica", "bold");
+    doc.text('Total:', 130, yPos);
+    doc.text(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(invoice.total_amount || 0), 160, yPos);
+    
+    doc.save(`Invoice_${invoice.invoice_number}.pdf`);
+  };
+
   const fetchInvoices = async () => {
     try {
       const response = await fetch(`/api/invoices?academy_id=${academyId}`, {
@@ -1012,6 +1074,13 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                           className="text-indigo-600 hover:text-indigo-900 mr-4"
                         >
                           Edit
+                        </button>
+                        <button
+                          onClick={() => exportInvoiceToPDF(invoice)}
+                          className="text-green-600 hover:text-green-900"
+                        >
+                          <Download className="h-4 w-4 inline mr-1" />
+                          PDF
                         </button>
                       </td>
                     </tr>
