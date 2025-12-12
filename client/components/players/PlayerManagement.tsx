@@ -261,6 +261,7 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
           variant: "destructive"
         });
       }
+      throw error; // Re-throw error so the form component knows submission failed
     } finally {
       setLoading(false);
     }

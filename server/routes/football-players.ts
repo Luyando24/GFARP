@@ -73,7 +73,7 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
         FROM academy_subscriptions asub
         JOIN subscription_plans sp ON asub.plan_id = sp.id
         WHERE asub.academy_id = $1 
-          AND asub.status = 'active'
+          AND asub.status = 'ACTIVE'
           AND asub.end_date > NOW()
         ORDER BY asub.created_at DESC
         LIMIT 1

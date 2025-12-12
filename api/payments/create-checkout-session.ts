@@ -194,7 +194,35 @@ export default async function handler(
             });
         }
 
-        const session = await stripe.checkout.sessions.create(sessionConfig);
+        let session;
+        try {
+            session = await stripe.checkout.sessions.create(sessionConfig);
+        } catch (stripeError: any) {
+            // Handle invalid customer ID (e.g. from test mode vs live mode)
+            if (stripeError.code === 'resource_missing' && stripeError.param === 'customer') {
+                console.warn('[VERCEL] Invalid Stripe customer ID found. Creating new customer...');
+                
+                const newCustomer = await stripe.customers.create({
+                    email: academy.email,
+                    name: academy.name,
+                    metadata: {
+                        academyId: academy.id
+                    }
+                });
+                
+                // Update academy with new customer ID
+                await supabase
+                    .from('academies')
+                    .update({ stripe_customer_id: newCustomer.id })
+                    .eq('id', academyId);
+                
+                // Retry creating session with new customer ID
+                sessionConfig.customer = newCustomer.id;
+                session = await stripe.checkout.sessions.create(sessionConfig);
+            } else {
+                throw stripeError;
+            }
+        }
 
         return res.status(200).json({
             success: true,

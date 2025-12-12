@@ -2512,9 +2512,9 @@ export default function AcademyDashboard() {
                                             )}
                                           </div>
                                           <div className="text-right">
-                                            <div className="font-bold">{displayPrice}/{billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year')}</div>
+                                            <div className="font-bold">{displayPrice}{billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year')}</div>
                                             <div className="text-sm text-slate-600">
-                                              {plan.playerLimit} players
+                                              {plan.playerLimit || plan.player_limit} players
                                             </div>
                                           </div>
                                         </div>
