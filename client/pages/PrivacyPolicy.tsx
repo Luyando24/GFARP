@@ -100,7 +100,7 @@ export default function PrivacyPolicy() {
                         <p>If you have questions or comments about this Privacy Policy, please contact us at:</p>
                         <div className="mt-4">
                             <p className="font-semibold">Soccer Circular</p>
-                            <p>Email: support@soccercircular.com</p>
+                            <p>Email: sofwan@rihlasoccer.com</p>
                             <p>Phone: +1 (555) 123-4567</p>
                         </div>
                     </CardContent>

@@ -86,7 +86,7 @@ export default function TermsOfService() {
                         <p>In order to resolve a complaint regarding the Site or to receive further information regarding use of the Site, please contact us at:</p>
                         <div className="mt-4">
                             <p className="font-semibold">Soccer Circular</p>
-                            <p>Email: legal@soccercircular.com</p>
+                            <p>Email: sofwan@rihlasoccer.com</p>
                         </div>
                     </CardContent>
                 </Card>

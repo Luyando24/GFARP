@@ -168,7 +168,7 @@ export default function Support() {
                                     </div>
                                     <div>
                                         <p className="font-medium">Email Us</p>
-                                        <p className="text-sm text-slate-500">support@soccercircular.com</p>
+                                        <p className="text-sm text-slate-500">sofwan@rihlasoccer.com</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">
