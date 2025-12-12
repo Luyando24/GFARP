@@ -2,18 +2,20 @@ import { ShoppingCart, Star, Filter, Search, Grid, List, Heart, Eye, Package, Tr
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useState } from 'react';
+import { useTranslation } from '@/lib/i18n';
 
 export default function Shop() {
+  const { t, dir } = useTranslation();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const categories = [
-    { id: 'all', name: 'All Products' },
-    { id: 'equipment', name: 'Training Equipment' },
-    { id: 'apparel', name: 'Apparel' },
-    { id: 'accessories', name: 'Accessories' },
-    { id: 'books', name: 'Training Guides' }
+    { id: 'all', name: t('shop.category.all') },
+    { id: 'equipment', name: t('shop.category.equipment') },
+    { id: 'apparel', name: t('shop.category.apparel') },
+    { id: 'accessories', name: t('shop.category.accessories') },
+    { id: 'books', name: t('shop.category.guides') }
   ];
 
   const products = [
@@ -85,23 +87,31 @@ export default function Shop() {
     }
   ];
 
+  const getBadgeTranslation = (badge: string | null) => {
+    if (!badge) return null;
+    if (badge === 'Best Seller') return t('shop.badge.bestSeller');
+    if (badge === 'New') return t('shop.badge.new');
+    if (badge === 'Sale') return t('shop.badge.sale');
+    return badge;
+  };
+
   const filteredProducts = selectedCategory === 'all' 
     ? products 
     : products.filter(product => product.category === selectedCategory);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" dir={dir}>
       {/* Navigation Header */}
       <header className="sticky top-0 z-50">
         {/* Top Bar */}
         <div className="bg-[#005391] text-white text-xs">
           <div className="px-4 py-2">
             <div className="flex items-center justify-end gap-6">
-              <a href="#about" className="hover:text-yellow-300 transition-colors font-medium">ABOUT US</a>
-              <a href="#support" className="hover:text-yellow-300 transition-colors font-medium">SUPPORT</a>
+              <Link to="/about" className="hover:text-yellow-300 transition-colors font-medium">{t('nav.about')}</Link>
+              <Link to="/support" className="hover:text-yellow-300 transition-colors font-medium">{t('nav.support')}</Link>
               <Link to="/shop" className="hover:text-yellow-300 transition-colors font-medium text-yellow-300">SHOP</Link>
-              <a href="#blog" className="hover:text-yellow-300 transition-colors font-medium">BLOG</a>
-              <a href="#help" className="hover:text-yellow-300 transition-colors font-medium">HELP CENTER</a>
+              <Link to="/blog" className="hover:text-yellow-300 transition-colors font-medium">{t('nav.blog')}</Link>
+              <Link to="/support" className="hover:text-yellow-300 transition-colors font-medium">{t('nav.help')}</Link>
             </div>
           </div>
         </div>
@@ -143,9 +153,9 @@ export default function Shop() {
               <nav className={`hidden lg:flex items-center gap-1 transition-all duration-300 ${isMenuOpen ? 'opacity-100' : 'opacity-100'}`}>
                 {[
                   { href: "/", label: "HOME" },
-                  { href: "#features", label: "FEATURES" },
-                  { href: "#benefits", label: "BENEFITS" },
-                  { href: "#pricing", label: "PRICING" },
+                  { href: "/#features", label: t('nav.features') },
+                  { href: "/#benefits", label: t('nav.benefits') },
+                  { href: "/#pricing", label: t('nav.pricing') },
                   { href: "/shop", label: "SHOP" }
                 ].map((item) => (
                   <Link 
@@ -170,7 +180,7 @@ export default function Shop() {
                   <Globe className="h-5 w-5" />
                 </Button>
                 <Button asChild className="bg-white text-[#005391] hover:bg-yellow-400 hover:text-black font-bold px-4 py-2 rounded-full text-xs lg:flex hidden">
-                  <Link to="/academy-registration">GET STARTED</Link>
+                  <Link to="/academy-registration">{t('nav.getStarted')}</Link>
                 </Button>
                 <Button variant="ghost" className="p-2 text-white hover:bg-white/20 rounded-lg">
                   <User className="h-5 w-5" />
@@ -178,7 +188,7 @@ export default function Shop() {
                 
                 {/* Mobile Sign In */}
                 <Button asChild className="bg-white text-[#005391] hover:bg-yellow-400 hover:text-black font-bold px-4 py-2 rounded-full text-sm lg:hidden">
-                  <Link to="/academy-registration">GET STARTED</Link>
+                  <Link to="/academy-registration">{t('nav.getStarted')}</Link>
                 </Button>
               </div>
             </div>
@@ -195,9 +205,9 @@ export default function Shop() {
                   <nav className="flex flex-col gap-2 p-6">
                   {[
                     { href: "/", label: "HOME" },
-                    { href: "#features", label: "FEATURES" },
-                    { href: "#benefits", label: "BENEFITS" },
-                    { href: "#pricing", label: "PRICING" },
+                    { href: "/#features", label: t('nav.features') },
+                    { href: "/#benefits", label: t('nav.benefits') },
+                    { href: "/#pricing", label: t('nav.pricing') },
                     { href: "/shop", label: "SHOP" }
                   ].map((item) => (
                     <Link 
@@ -210,7 +220,7 @@ export default function Shop() {
                     </Link>
                   ))}
                   <Button asChild className="mt-4 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 font-bold py-3 rounded-full shadow-xl">
-                    <Link to="/academy-registration">REGISTER ACADEMY</Link>
+                    <Link to="/academy-registration">{t('nav.register')}</Link>
                   </Button>
                 </nav>
               </div>
@@ -224,9 +234,9 @@ export default function Shop() {
       <div className="bg-gradient-to-r from-[#005391] via-[#0066b3] to-[#005391] text-white py-16">
         <div className="container mx-auto px-4">
           <div className="text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Soccer Circular Shop</h1>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">{t('shop.title')}</h1>
             <p className="text-xl text-blue-100 max-w-2xl mx-auto">
-              Premium football training equipment and academy merchandise
+              {t('shop.subtitle')}
             </p>
           </div>
         </div>
@@ -240,7 +250,7 @@ export default function Shop() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               <input
                 type="text"
-                placeholder="Search products..."
+                placeholder={t('shop.searchPlaceholder')}
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
@@ -294,7 +304,7 @@ export default function Shop() {
                     product.badge === 'New' ? 'bg-green-500 text-white' :
                     'bg-blue-500 text-white'
                   }`}>
-                    {product.badge}
+                    {getBadgeTranslation(product.badge)}
                   </span>
                 )}
                 <div className="absolute top-2 right-2 flex gap-2">

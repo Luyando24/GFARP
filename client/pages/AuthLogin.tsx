@@ -7,9 +7,11 @@ import { Api } from "@/lib/api";
 import { saveSession, useAuth } from "@/lib/auth";
 import { handleError, validateEmail, validateRequired } from "@/lib/errors";
 import { Trophy, Eye, EyeOff, ArrowLeft } from "lucide-react";
+import { useTranslation } from "@/lib/i18n";
 
 export default function AuthLogin() {
   const navigate = useNavigate();
+  const { t, dir } = useTranslation();
   const { session } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -35,7 +37,7 @@ export default function AuthLogin() {
       validateRequired(password, "Password");
       
       if (!validateEmail(email)) {
-        throw new Error("Please enter a valid email address");
+        throw new Error(t('auth.error.invalidEmail'));
       }
       
       // Academy login only
@@ -58,7 +60,7 @@ export default function AuthLogin() {
         saveSession(session);
         navigate("/academy-dashboard");
       } else {
-        throw new Error(response.message || 'Academy login failed');
+        throw new Error(response.message || t('auth.error.loginFailed'));
       }
     } catch (e: any) {
       const errorMessage = String(e?.message || e);
@@ -70,7 +72,7 @@ export default function AuthLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-green-700 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-blue-900 via-blue-800 to-green-700 flex items-center justify-center p-4 relative overflow-hidden" dir={dir}>
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 left-20 w-32 h-32 border-2 border-white rounded-full"></div>
@@ -85,7 +87,7 @@ export default function AuthLogin() {
         className="absolute top-6 left-6 flex items-center gap-2 text-white hover:text-yellow-300 transition-colors duration-200 z-10"
       >
         <ArrowLeft className="h-5 w-5" />
-        <span className="text-sm font-medium">Back to Home</span>
+        <span className="text-sm font-medium">{t('common.backHome')}</span>
       </Link>
 
       <Card className="w-full max-w-md shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
@@ -97,16 +99,16 @@ export default function AuthLogin() {
             <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-2">
               Soccer Circular
             </h1>
-            <p className="text-sm text-gray-600">Professional Academy Portal</p>
+            <p className="text-sm text-gray-600">{t('auth.portalTitle')}</p>
           </div>
-          <CardTitle className="text-xl text-gray-800">Welcome Back</CardTitle>
-          <p className="text-sm text-gray-600 mt-1">Sign in to access your academy dashboard</p>
+          <CardTitle className="text-xl text-gray-800">{t('auth.welcome')}</CardTitle>
+          <p className="text-sm text-gray-600 mt-1">{t('auth.login.subtitle')}</p>
         </CardHeader>
         <CardContent className="space-y-6">
           <form className="space-y-5" onSubmit={onSubmit}>
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700" htmlFor="email">
-                Email Address
+                {t('auth.email')}
               </label>
               <Input
                 id="email"
@@ -121,7 +123,7 @@ export default function AuthLogin() {
             
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700" htmlFor="password">
-                Password
+                {t('auth.password')}
               </label>
               <div className="relative">
                 <Input
@@ -145,10 +147,10 @@ export default function AuthLogin() {
             <div className="flex justify-between items-center">
               <label className="flex items-center space-x-2 text-sm">
                 <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                <span className="text-gray-600">Remember me</span>
+                <span className="text-gray-600">{t('auth.remember')}</span>
               </label>
               <Link to="/forgot-password" className="text-sm text-blue-600 hover:text-blue-800 hover:underline">
-                Forgot password?
+                {t('auth.forgotPassword')}
               </Link>
             </div>
 
@@ -166,19 +168,19 @@ export default function AuthLogin() {
               {loading ? (
                 <div className="flex items-center gap-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Signing in...
+                  {t('auth.signingIn')}
                 </div>
               ) : (
-                "Sign In"
+                t('auth.signIn')
               )}
             </Button>
           </form>
 
           <div className="text-center pt-4 border-t border-gray-200">
             <p className="text-sm text-gray-600">
-               New to our academy?{" "}
+               {t('auth.newToAcademy')}{" "}
                <Link className="text-blue-600 hover:text-blue-800 hover:underline font-medium" to="/academy-registration">
-                 Register here
+                 {t('auth.registerHere')}
                </Link>
              </p>
           </div>

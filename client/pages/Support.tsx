@@ -57,8 +57,8 @@ export default function Support() {
         await new Promise(resolve => setTimeout(resolve, 1500));
 
         toast({
-            title: "Message Sent",
-            description: "We've received your message and will get back to you shortly.",
+            title: t('contact.form.successTitle'),
+            description: t('contact.form.successDesc'),
         });
 
         setFormData({
@@ -99,21 +99,21 @@ export default function Support() {
                                 <form onSubmit={handleSubmit} className="space-y-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
-                                            <Label htmlFor="name">Name</Label>
+                                            <Label htmlFor="name">{t('contact.form.name')}</Label>
                                             <Input 
                                                 id="name" 
-                                                placeholder="Your name" 
+                                                placeholder={t('contact.form.namePlaceholder')} 
                                                 value={formData.name}
                                                 onChange={(e) => setFormData({...formData, name: e.target.value})}
                                                 required 
                                             />
                                         </div>
                                         <div className="space-y-2">
-                                            <Label htmlFor="email">Email</Label>
+                                            <Label htmlFor="email">{t('contact.form.email')}</Label>
                                             <Input 
                                                 id="email" 
                                                 type="email" 
-                                                placeholder="your@email.com" 
+                                                placeholder={t('contact.form.emailPlaceholder')} 
                                                 value={formData.email}
                                                 onChange={(e) => setFormData({...formData, email: e.target.value})}
                                                 required 
@@ -121,20 +121,20 @@ export default function Support() {
                                         </div>
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="subject">Subject</Label>
+                                        <Label htmlFor="subject">{t('contact.form.subject')}</Label>
                                         <Input 
                                             id="subject" 
-                                            placeholder="How can we help?" 
+                                            placeholder={t('contact.form.subjectPlaceholder')} 
                                             value={formData.subject}
                                             onChange={(e) => setFormData({...formData, subject: e.target.value})}
                                             required 
                                         />
                                     </div>
                                     <div className="space-y-2">
-                                        <Label htmlFor="message">Message</Label>
+                                        <Label htmlFor="message">{t('contact.form.message')}</Label>
                                         <Textarea 
                                             id="message" 
-                                            placeholder="Tell us more about your issue..." 
+                                            placeholder={t('contact.form.messagePlaceholder')} 
                                             rows={5}
                                             value={formData.message}
                                             onChange={(e) => setFormData({...formData, message: e.target.value})}
@@ -143,10 +143,10 @@ export default function Support() {
                                     </div>
                                     <Button type="submit" className="w-full bg-[#005391] hover:bg-[#004275]" disabled={isSubmitting}>
                                         {isSubmitting ? (
-                                            "Sending..."
+                                            t('contact.form.sending')
                                         ) : (
                                             <>
-                                                <Send className="mr-2 h-4 w-4" /> Send Message
+                                                <Send className="mr-2 h-4 w-4" /> {t('contact.form.submit')}
                                             </>
                                         )}
                                     </Button>
@@ -159,7 +159,7 @@ export default function Support() {
                     <div className="space-y-6">
                         <Card>
                             <CardHeader>
-                                <CardTitle>Contact Information</CardTitle>
+                                <CardTitle>{t('contact.info.title')}</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div className="flex items-center gap-3">
@@ -167,7 +167,7 @@ export default function Support() {
                                         <Mail className="h-5 w-5 text-[#005391]" />
                                     </div>
                                     <div>
-                                        <p className="font-medium">Email Us</p>
+                                        <p className="font-medium">{t('contact.info.email')}</p>
                                         <p className="text-sm text-slate-500">sofwan@rihlasoccer.com</p>
                                     </div>
                                 </div>
@@ -176,7 +176,7 @@ export default function Support() {
                                         <Phone className="h-5 w-5 text-[#005391]" />
                                     </div>
                                     <div>
-                                        <p className="font-medium">Call Us</p>
+                                        <p className="font-medium">{t('contact.info.call')}</p>
                                         <p className="text-sm text-slate-500">(626) 200 3339</p>
                                     </div>
                                 </div>
@@ -185,12 +185,12 @@ export default function Support() {
                                         <MessageSquare className="h-5 w-5 text-[#005391]" />
                                     </div>
                                     <div>
-                                        <p className="font-medium">Live Chat</p>
-                                        <p className="text-sm text-slate-500">Available Mon-Fri, 9am-5pm EST</p>
+                                        <p className="font-medium">{t('support.liveChat')}</p>
+                                        <p className="text-sm text-slate-500">{t('support.liveChatDesc')}</p>
                                     </div>
                                 </div>
                                 <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-                                    <p className="font-medium mb-3">Follow Us</p>
+                                    <p className="font-medium mb-3">{t('contact.info.follow')}</p>
                                     <div className="flex gap-4">
                                         <a href="https://www.instagram.com/safwanamireh?igsh=NTc4MTIwNjQ2YQ%3D%3D&utm_source=qr" target="_blank" rel="noopener noreferrer" className="bg-slate-100 p-2 rounded-full text-slate-600 hover:text-pink-600 hover:bg-pink-50 transition-colors">
                                             <Instagram className="h-5 w-5" />

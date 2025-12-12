@@ -436,7 +436,7 @@ export default function Index() {
             <Button size="lg" className="text-xl px-12 py-6 rounded-full bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#0066b3] hover:to-[#005391] text-white font-black shadow-2xl hover:shadow-[#005391]/25 transition-all duration-500 transform hover:scale-110">
               <Link to="/academy-registration" className="flex items-center gap-3">
                 <Trophy className="h-6 w-6" />
-                START YOUR CHAMPIONSHIP JOURNEY
+                {t('hero.cta.startJourney')}
               </Link>
             </Button>
           </div>
@@ -671,7 +671,7 @@ export default function Index() {
               {/* Tier Badge */}
               <div className="absolute -top-3 left-1/2 transform -translate-x-1/2">
                 <div className="bg-gradient-to-r from-slate-600 to-slate-700 text-white px-4 py-1.5 rounded-full font-black text-xs tracking-wide shadow-lg">
-                  STARTER
+                  {t('landing.pricing.free.badge')}
                 </div>
               </div>
 
@@ -680,20 +680,20 @@ export default function Index() {
                 <div className="w-16 h-16 bg-gradient-to-br from-slate-600 to-slate-700 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg group-hover:shadow-xl group-hover:shadow-slate-600/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
                   <User className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-2xl font-black text-[#001a33] mb-2">Free</h3>
+                <h3 className="text-2xl font-black text-[#001a33] mb-2">{t('landing.pricing.free.name')}</h3>
                 <div className="text-3xl font-black text-[#001a33] mb-2">
                   $0
                   <span className="text-lg text-gray-600 font-bold">
                     {billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year')}
                   </span>
                 </div>
-                <p className="text-gray-600 font-bold text-sm">Perfect for small academies</p>
+                <p className="text-gray-600 font-bold text-sm">{t('landing.pricing.free.ideal')}</p>
               </div>
 
               {/* Features */}
               <ul className="space-y-3 mb-6">
                 {[
-                  "Max 3 players",
+                  t('landing.pricing.free.maxPlayers'),
                   t('landing.pricing.feature.compliance'),
                   t('landing.pricing.feature.support')
                 ].map((feature, index) => (
@@ -709,7 +709,7 @@ export default function Index() {
               {/* CTA Button */}
               <Button className="w-full bg-gradient-to-r from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white font-black py-4 text-base rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                 <Link to="/academy-registration?plan=free" className="flex items-center justify-center gap-2">
-                  Get Started
+                  {t('landing.pricing.getStarted')}
                   <User className="h-4 w-4" />
                 </Link>
               </Button>
@@ -863,8 +863,8 @@ export default function Index() {
                   t('landing.pricing.feature.fullCompliance'),
                   t('landing.pricing.feature.247Support'),
                   t('landing.pricing.feature.solidarity'),
-                  t('landing.pricing.feature.analytics').replace('Analytics dashboard', 'Advanced analytics & reporting'), // Manually adjusting text if key doesn't match perfectly or just use key. I'll use key for base and maybe concat. Actually "Advanced analytics & reporting" is slightly diff from "Analytics dashboard". I'll just use the key for analytics.
-                  "Custom integrations" // No key for this one. I missed it. I'll leave it hardcoded or add key. Let's add key 'landing.pricing.feature.customIntegrations' later if needed, or just leave it English for now as "Custom integrations" is fairly standard. I'll leave it as string for now to avoid breaking if I don't add key.
+                  t('landing.pricing.feature.advancedAnalytics'),
+                  t('landing.pricing.feature.customIntegrations')
                 ].map((feature, index) => (
                   <li key={index} className="flex items-center">
                     <div className="w-5 h-5 bg-gradient-to-r from-green-400 to-green-500 rounded-full flex items-center justify-center mr-3 flex-shrink-0">
@@ -918,7 +918,7 @@ export default function Index() {
             </div>
             <h2 className="text-3xl md:text-5xl font-black mb-6">
               {t('landing.pitfalls.title')} <br />
-              <span className="text-red-400">Clubs to Lose Their Money</span>
+              <span className="text-red-400">{t('landing.pitfalls.title2')}</span>
             </h2>
             <p className="text-xl text-slate-300 max-w-3xl mx-auto">
               {t('landing.pitfalls.subtitle')}

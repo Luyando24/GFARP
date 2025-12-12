@@ -3,28 +3,31 @@ import { ArrowLeft, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTranslation } from '@/lib/i18n';
 
 export default function TermsOfService() {
+    const { t, dir } = useTranslation();
+
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8" dir={dir}>
             <div className="max-w-4xl mx-auto">
                 <div className="mb-8">
                     <Link to="/">
                         <Button variant="ghost" className="mb-4">
                             <ArrowLeft className="mr-2 h-4 w-4" />
-                            Back to Home
+                            {t('services.back')}
                         </Button>
                     </Link>
                     <div className="flex items-center gap-3 mb-4">
                         <FileText className="h-8 w-8 text-[#005391]" />
-                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Terms of Service</h1>
+                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{t('footer.legal.terms')}</h1>
                     </div>
-                    <p className="text-slate-600 dark:text-slate-400">Last updated: {new Date().toLocaleDateString()}</p>
+                    <p className="text-slate-600 dark:text-slate-400">{t('common.lastUpdated')} {new Date().toLocaleDateString()}</p>
                 </div>
 
                 <Card className="mb-8">
                     <CardHeader>
-                        <CardTitle>Agreement to Terms</CardTitle>
+                        <CardTitle>{t('terms.agreement')}</CardTitle>
                     </CardHeader>
                     <CardContent className="prose dark:prose-invert max-w-none text-slate-700 dark:text-slate-300">
                         <p>
@@ -38,7 +41,7 @@ export default function TermsOfService() {
 
                 <Card className="mb-8">
                     <CardHeader>
-                        <CardTitle>Intellectual Property Rights</CardTitle>
+                        <CardTitle>{t('terms.intellectual')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 text-slate-700 dark:text-slate-300">
                         <p>
@@ -49,7 +52,7 @@ export default function TermsOfService() {
 
                 <Card className="mb-8">
                     <CardHeader>
-                        <CardTitle>User Representations</CardTitle>
+                        <CardTitle>{t('terms.userRep')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 text-slate-700 dark:text-slate-300">
                         <p>By using the Site, you represent and warrant that:</p>
@@ -66,7 +69,7 @@ export default function TermsOfService() {
 
                 <Card className="mb-8">
                     <CardHeader>
-                        <CardTitle>Subscription and Payments</CardTitle>
+                        <CardTitle>{t('terms.subscription')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 text-slate-700 dark:text-slate-300">
                         <p>
@@ -80,7 +83,7 @@ export default function TermsOfService() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Contact Us</CardTitle>
+                        <CardTitle>{t('common.contactUs')}</CardTitle>
                     </CardHeader>
                     <CardContent className="text-slate-700 dark:text-slate-300">
                         <p>In order to resolve a complaint regarding the Site or to receive further information regarding use of the Site, please contact us at:</p>

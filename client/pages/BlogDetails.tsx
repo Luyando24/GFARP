@@ -4,11 +4,9 @@ import { ArrowLeft, Calendar, User, Tag, Share2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { useTranslation } from '@/lib/i18n';
 import ReactMarkdown from 'react-markdown'; // Assuming installed or I'll use simple whitespace pre-wrap if not. 
 // Since I cannot install packages, I will use a simple renderer for now or dangerouslySetInnerHTML if safe content is assumed (Admin created).
-// I'll use dangerouslySetInnerHTML for now as it's standard for rich text from DB, assuming Admin input is trusted. 
-// But to be safer and cleaner without deps, I'll just render text with line breaks or basic formatting if I can't add libraries.
-// Actually, typically projects have markdown support. I'll try to use a simple display.
 
 interface BlogPost {
     id: string;
@@ -24,6 +22,7 @@ interface BlogPost {
 }
 
 export default function BlogDetails() {
+    const { t, dir } = useTranslation();
     const { slug } = useParams();
     const [blog, setBlog] = useState<BlogPost | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -62,11 +61,11 @@ export default function BlogDetails() {
 
     if (!blog) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 text-center px-4">
-                <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">Article Not Found</h1>
-                <p className="text-slate-600 dark:text-slate-400 mb-8">The article you are looking for does not exist or has been removed.</p>
+            <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900 text-center px-4" dir={dir}>
+                <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-4">{t('blog.notFound.title')}</h1>
+                <p className="text-slate-600 dark:text-slate-400 mb-8">{t('blog.notFound.desc')}</p>
                 <Link to="/blog">
-                    <Button>Back to Blog</Button>
+                    <Button>{t('blog.back')}</Button>
                 </Link>
             </div>
         );
@@ -78,7 +77,7 @@ export default function BlogDetails() {
     const readTime = Math.ceil(wordCount / wordsPerMinute);
 
     return (
-        <div className="min-h-screen bg-white dark:bg-slate-900">
+        <div className="min-h-screen bg-white dark:bg-slate-900" dir={dir}>
             {/* Hero Section */}
             <div className="relative h-[60vh] min-h-[400px] w-full bg-slate-900">
                 {blog.image_url && (
@@ -97,7 +96,7 @@ export default function BlogDetails() {
                         <Link to="/blog">
                             <Button variant="outline" className="text-white border-white hover:bg-white/20 hover:text-white bg-transparent backdrop-blur-sm">
                                 <ArrowLeft className="mr-2 h-4 w-4" />
-                                Back to Blog
+                                {t('blog.back')}
                             </Button>
                         </Link>
                     </div>
@@ -125,7 +124,7 @@ export default function BlogDetails() {
                             </div>
                             <div className="flex items-center gap-2">
                                 <Clock className="h-4 w-4" />
-                                <span>{readTime} min read</span>
+                                <span>{readTime} {t('blog.readTime')}</span>
                             </div>
                         </div>
                     </div>
@@ -149,7 +148,7 @@ export default function BlogDetails() {
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                         <div className="flex items-center gap-2">
                             <Tag className="h-4 w-4 text-slate-500" />
-                            <span className="text-sm text-slate-500">Tags:</span>
+                            <span className="text-sm text-slate-500">{t('blog.tags')}</span>
                             <div className="flex gap-2">
                                 {blog.tags && blog.tags.map(tag => (
                                     <span key={tag} className="text-sm text-[#005391] font-medium hover:underline cursor-pointer">
@@ -164,11 +163,11 @@ export default function BlogDetails() {
                                 url: window.location.href
                             }).catch(() => {
                                 navigator.clipboard.writeText(window.location.href);
-                                alert('Link copied to clipboard!');
+                                alert(t('blog.linkCopied'));
                             });
                         }}>
                             <Share2 className="mr-2 h-4 w-4" />
-                            Share Article
+                            {t('blog.share')}
                         </Button>
                     </div>
                 </div>

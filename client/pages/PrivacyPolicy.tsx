@@ -3,28 +3,31 @@ import { ArrowLeft, Shield } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useTranslation } from '@/lib/i18n';
 
 export default function PrivacyPolicy() {
+    const { t, dir } = useTranslation();
+
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8" dir={dir}>
             <div className="max-w-4xl mx-auto">
                 <div className="mb-8">
                     <Link to="/">
                         <Button variant="ghost" className="mb-4">
                             <ArrowLeft className="mr-2 h-4 w-4" />
-                            Back to Home
+                            {t('services.back')}
                         </Button>
                     </Link>
                     <div className="flex items-center gap-3 mb-4">
                         <Shield className="h-8 w-8 text-[#005391]" />
-                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">Privacy Policy</h1>
+                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{t('footer.legal.privacy')}</h1>
                     </div>
-                    <p className="text-slate-600 dark:text-slate-400">Last updated: {new Date().toLocaleDateString()}</p>
+                    <p className="text-slate-600 dark:text-slate-400">{t('common.lastUpdated')} {new Date().toLocaleDateString()}</p>
                 </div>
 
                 <Card className="mb-8">
                     <CardHeader>
-                        <CardTitle>Introduction</CardTitle>
+                        <CardTitle>{t('privacy.intro')}</CardTitle>
                     </CardHeader>
                     <CardContent className="prose dark:prose-invert max-w-none">
                         <p>
@@ -38,7 +41,7 @@ export default function PrivacyPolicy() {
 
                 <Card className="mb-8">
                     <CardHeader>
-                        <CardTitle>Information We Collect</CardTitle>
+                        <CardTitle>{t('privacy.collect')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 text-slate-700 dark:text-slate-300">
                         <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Personal Data</h3>
@@ -60,7 +63,7 @@ export default function PrivacyPolicy() {
 
                 <Card className="mb-8">
                     <CardHeader>
-                        <CardTitle>Use of Your Information</CardTitle>
+                        <CardTitle>{t('privacy.use')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2 text-slate-700 dark:text-slate-300">
                         <p>Having accurate information about you permits us to provide you with a smooth, efficient, and customized experience. Specifically, we may use information collected about you via the Site to:</p>
@@ -79,7 +82,7 @@ export default function PrivacyPolicy() {
 
                 <Card className="mb-8">
                     <CardHeader>
-                        <CardTitle>Disclosure of Your Information</CardTitle>
+                        <CardTitle>{t('privacy.disclosure')}</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4 text-slate-700 dark:text-slate-300">
                         <p>
@@ -94,7 +97,7 @@ export default function PrivacyPolicy() {
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Contact Us</CardTitle>
+                        <CardTitle>{t('common.contactUs')}</CardTitle>
                     </CardHeader>
                     <CardContent className="text-slate-700 dark:text-slate-300">
                         <p>If you have questions or comments about this Privacy Policy, please contact us at:</p>

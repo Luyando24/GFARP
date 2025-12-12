@@ -141,8 +141,10 @@ export const handleGetPlayerDocuments: RequestHandler = async (req, res) => {
       return res.status(400).json({ error: 'Player ID is required' });
     }
 
-    // Get all active documents for the player
-    const result = await query(`
+    // Check if we should include inactive documents (history)
+    const includeInactive = req.query.include_inactive === 'true';
+
+    let queryText = `
       SELECT 
         id,
         document_type,
@@ -151,11 +153,21 @@ export const handleGetPlayerDocuments: RequestHandler = async (req, res) => {
         file_size,
         mime_type,
         upload_date,
-        uploaded_by
+        uploaded_by,
+        is_active
       FROM player_documents 
-      WHERE player_id = $1 AND is_active = true
-      ORDER BY document_type, upload_date DESC
-    `, [playerId]);
+      WHERE player_id = $1
+    `;
+
+    // Filter by active status unless specifically requested to include inactive
+    if (!includeInactive) {
+      queryText += ` AND is_active = true`;
+    }
+
+    queryText += ` ORDER BY document_type, upload_date DESC`;
+
+    // Get documents for the player
+    const result = await query(queryText, [playerId]);
 
     const documents = result.rows.map(doc => {
       // Get public URL for each document
@@ -171,6 +183,7 @@ export const handleGetPlayerDocuments: RequestHandler = async (req, res) => {
         mimeType: doc.mime_type,
         uploadDate: doc.upload_date,
         uploadedBy: doc.uploaded_by,
+        isActive: doc.is_active,
         url: urlData.publicUrl
       };
     });

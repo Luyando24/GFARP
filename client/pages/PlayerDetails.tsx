@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
   ArrowLeft,
   Save,
@@ -86,6 +86,8 @@ interface DetailedPlayer extends Player {
 const PlayerDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isAdmin = location.pathname.startsWith('/admin');
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
@@ -174,7 +176,7 @@ const PlayerDetails = () => {
   const loadPlayerDocuments = async (playerId: string) => {
     try {
       setDocumentLoading(true);
-      const result = await getPlayerDocuments(playerId);
+      const result = await getPlayerDocuments(playerId, isAdmin);
       if (result.success) {
         setSavedDocuments(result.documents);
       }
@@ -401,7 +403,9 @@ const PlayerDetails = () => {
 
   // Helper functions for saved documents
   const getSavedDocument = (documentType: 'passport_id' | 'player_photo' | 'proof_of_training' | 'birth_certificate') => {
-    return savedDocuments.find(doc => doc.document_type === documentType);
+    // Return the active document of this type, or the first one if all are inactive (fallback)
+    // But logically for the "current state" we only care about active ones
+    return savedDocuments.find(doc => doc.document_type === documentType && doc.is_active !== false);
   };
 
   const hasUploadedFile = (fieldName: keyof typeof uploadedFiles) => {
@@ -1067,17 +1071,22 @@ const PlayerDetails = () => {
                   <div>
                     <h4 className="font-medium mb-3">Saved Documents</h4>
                     <div className="space-y-2">
-                      {savedDocuments.map((doc) => (
-                        <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg bg-green-50">
+                      {savedDocuments.map((doc) => {
+                        const isInactive = doc.is_active === false;
+                        return (
+                        <div key={doc.id} className={`flex items-center justify-between p-3 border rounded-lg ${isInactive ? 'bg-gray-50 opacity-75' : 'bg-green-50'}`}>
                           <div className="flex-1">
-                            <p className="font-medium">{doc.document_type.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}</p>
+                            <p className="font-medium flex items-center gap-2">
+                              {doc.document_type.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                              {isInactive && <Badge variant="secondary" className="text-xs h-5">Archived</Badge>}
+                            </p>
                             <p className="text-sm text-gray-500">{doc.original_filename}</p>
                             <p className="text-xs text-gray-400">
                               Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <Badge variant="default">Saved</Badge>
+                            {!isInactive && <Badge variant="default">Saved</Badge>}
                             <Button
                               type="button"
                               variant="outline"
@@ -1086,7 +1095,8 @@ const PlayerDetails = () => {
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
-                            {isEditing && (
+                            {/* Only allow deleting active documents, or allow deleting history if needed. Usually history is permanent. */}
+                            {isEditing && !isInactive && (
                               <Button
                                 type="button"
                                 variant="destructive"
@@ -1098,7 +1108,8 @@ const PlayerDetails = () => {
                             )}
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '../hooks/use-toast';
 import { saveSession } from '@/lib/auth';
+import { useTranslation } from '@/lib/i18n';
 
 interface FormData {
   email: string;
@@ -19,6 +20,7 @@ const initialFormData: FormData = {
 };
 
 export default function RegisterAcademy() {
+  const { t, dir } = useTranslation();
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -30,11 +32,11 @@ export default function RegisterAcademy() {
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!formData.email.trim()) newErrors.email = 'Email is required';
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = 'Enter a valid email address';
-    if (!formData.password || formData.password.length < 8) newErrors.password = 'Password must be at least 8 characters';
-    if (!formData.confirmPassword) newErrors.confirmPassword = 'Please confirm your password';
-    else if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Passwords do not match';
+    if (!formData.email.trim()) newErrors.email = t('auth.error.emailRequired');
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = t('auth.error.invalidEmail');
+    if (!formData.password || formData.password.length < 8) newErrors.password = t('auth.error.passwordLength');
+    if (!formData.confirmPassword) newErrors.confirmPassword = t('auth.error.confirmRequired');
+    else if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = t('auth.error.passwordMismatch');
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -74,8 +76,8 @@ export default function RegisterAcademy() {
         
         if (data.data.requireVerification) {
            toast({ 
-             title: 'Registration Successful', 
-             description: 'Please check your email to verify your account before logging in.',
+             title: t('auth.success.title'), 
+             description: t('auth.success.verifyEmail'),
              duration: 6000 
            });
            // Clear any potential session data
@@ -94,21 +96,21 @@ export default function RegisterAcademy() {
            localStorage.setItem('academy_data', JSON.stringify(data.data.academy));
            localStorage.setItem('isNewRegistration', 'true');
            saveSession(session);
-           toast({ title: 'Registration Successful', description: 'Let\'s complete your academy profile!' });
+           toast({ title: t('auth.success.title'), description: t('auth.success.desc') });
            navigate('/complete-profile');
         }
       } else {
-        throw new Error(data.message || 'Registration failed');
+        throw new Error(data.message || t('common.error'));
       }
     } catch (error: any) {
-      toast({ title: 'Registration Failed', description: error?.message || 'Unexpected error', variant: 'destructive' });
+      toast({ title: t('common.error'), description: error?.message || 'Unexpected error', variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white" dir={dir}>
       <header className="bg-gradient-to-r from-[#005391] via-[#0066b3] to-[#005391] shadow-xl">
         <div className="container mx-auto px-4 py-6">
           <div className="flex items-center justify-between">
@@ -118,14 +120,14 @@ export default function RegisterAcademy() {
               </div>
               <div className="text-white">
                 <div className="text-xl font-black tracking-tight">Soccer Circular</div>
-                <div className="text-xs text-blue-100">Academy Registration</div>
+                <div className="text-xs text-blue-100">{t('auth.register.title')}</div>
               </div>
             </Link>
 
             <Button variant="ghost" asChild className="text-white hover:bg-white/20">
               <Link to="/" className="flex items-center gap-2">
                 <ArrowLeft className="h-4 w-4" />
-                Back to Home
+                {t('common.backHome')}
               </Link>
             </Button>
           </div>
@@ -140,15 +142,15 @@ export default function RegisterAcademy() {
                 <div className="mx-auto w-16 h-16 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-full flex items-center justify-center mb-3 shadow-lg">
                   <Trophy className="h-8 w-8 text-white" />
                 </div>
-                <h1 className="text-xl font-bold text-[#001a33]">Create Your Account</h1>
-                <p className="text-sm text-gray-600">Sign up with email and password</p>
+                <h1 className="text-xl font-bold text-[#001a33]">{t('auth.register.createAccount')}</h1>
+                <p className="text-sm text-gray-600">{t('auth.register.subtitle')}</p>
               </div>
-              <CardTitle className="sr-only">Register Academy</CardTitle>
+              <CardTitle className="sr-only">{t('auth.register.title')}</CardTitle>
             </CardHeader>
             <CardContent className="p-6">
               <form className="space-y-6" onSubmit={handleSubmit}>
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="email">Email Address</label>
+                  <label className="text-sm font-medium text-gray-700" htmlFor="email">{t('auth.email')}</label>
                   <input
                     id="email"
                     type="email"
@@ -162,7 +164,7 @@ export default function RegisterAcademy() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="password">Password</label>
+                  <label className="text-sm font-medium text-gray-700" htmlFor="password">{t('auth.password')}</label>
                   <div className="relative">
                     <input
                       id="password"
@@ -184,7 +186,7 @@ export default function RegisterAcademy() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="confirmPassword">Confirm Password</label>
+                  <label className="text-sm font-medium text-gray-700" htmlFor="confirmPassword">{t('auth.confirmPassword')}</label>
                   <div className="relative">
                     <input
                       id="confirmPassword"
@@ -210,12 +212,12 @@ export default function RegisterAcademy() {
                   disabled={isSubmitting}
                   className="w-full h-11 bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#0066b3] hover:to-[#005391] text-white font-bold shadow-lg"
                 >
-                  {isSubmitting ? 'Registering...' : 'Create Account'}
+                  {isSubmitting ? t('auth.registering') : t('auth.createAccount')}
                 </Button>
               </form>
 
               <div className="text-center text-sm mt-4">
-                Already have an account? <Link to="/academy-dashboard" className="text-[#005391] hover:underline">Login</Link>
+                {t('auth.alreadyHaveAccount')} <Link to="/academy-dashboard" className="text-[#005391] hover:underline">{t('auth.loginLink')}</Link>
               </div>
             </CardContent>
           </Card>
@@ -226,9 +228,9 @@ export default function RegisterAcademy() {
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Trophy className="h-5 w-5 text-yellow-400" />
-            <span className="font-bold">Soccer Circular Approved Platform</span>
+            <span className="font-bold">{t('auth.footer.approved')}</span>
           </div>
-          <p className="text-blue-200 text-sm">© 2024 Soccer Circular. All rights reserved.</p>
+          <p className="text-blue-200 text-sm">© 2024 Soccer Circular. {t('footer.copyright')}</p>
         </div>
       </footer>
     </div>
