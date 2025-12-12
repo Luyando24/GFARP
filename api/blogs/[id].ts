@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Handle CORS
     res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'PUT, DELETE, OPTIONS');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, DELETE, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
     if (req.method === 'OPTIONS') {
@@ -27,9 +27,33 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     try {
+        // Handle GET - Fetch blog by ID
+        if (req.method === 'GET') {
+            const { data, error } = await supabase
+                .from('blogs')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (error) {
+                if (error.code === 'PGRST116') {
+                    return res.status(404).json({
+                        success: false,
+                        message: 'Blog post not found'
+                    });
+                }
+                throw error;
+            }
+
+            return res.status(200).json({
+                success: true,
+                data
+            });
+        }
+
         if (req.method === 'PUT') {
             const body = req.body;
-            
+
             // Updates object
             const updates: any = {
                 updated_at: new Date().toISOString()
@@ -44,7 +68,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (body.seo_title) updates.seo_title = body.seo_title;
             if (body.seo_description) updates.seo_description = body.seo_description;
             if (body.tags) updates.tags = body.tags;
-            
+
             if (body.status) {
                 updates.status = body.status;
                 if (body.status === 'published') {
@@ -54,11 +78,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     // Actually simpler: let client handle it or just set if transitioning to published.
                     // We'll rely on client passing published_at if they want to control it, or we default.
                     if (!body.published_at) {
-                         // Check if already published to avoid resetting date
-                         const { data: current } = await supabase.from('blogs').select('published_at').eq('id', id).single();
-                         if (!current?.published_at) {
-                             updates.published_at = new Date().toISOString();
-                         }
+                        // Check if already published to avoid resetting date
+                        const { data: current } = await supabase.from('blogs').select('published_at').eq('id', id).single();
+                        if (!current?.published_at) {
+                            updates.published_at = new Date().toISOString();
+                        }
                     }
                 }
             }

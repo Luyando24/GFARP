@@ -96,6 +96,7 @@ const PlayerDetails = () => {
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(searchParams.get('edit') === 'true');
   const [formData, setFormData] = useState<Partial<DetailedPlayer>>({});
+  const [error, setError] = useState<string | null>(null);
 
   // Document upload state
   const [uploadedFiles, setUploadedFiles] = useState({
@@ -137,9 +138,22 @@ const PlayerDetails = () => {
 
   const fetchPlayerDetails = async () => {
     try {
+      console.log('[PlayerDetails] Fetching player with ID:', id);
       setLoading(true);
-      const response = await Api.getPlayer(id!);
-      if (response.success) {
+      setError(null);
+
+      if (!id) {
+        const errorMsg = 'No player ID provided';
+        console.error('[PlayerDetails]', errorMsg);
+        setError(errorMsg);
+        setLoading(false);
+        return;
+      }
+
+      const response = await Api.getPlayer(id);
+      console.log('[PlayerDetails] API response:', { success: response.success, hasData: !!response.data });
+
+      if (response.success && response.data) {
         // Parse the combined phone number
         const { countryCode, phoneNumber } = parsePhoneNumber(response.data.phone || '');
 
@@ -150,22 +164,28 @@ const PlayerDetails = () => {
           phone: phoneNumber
         });
 
+        console.log('[PlayerDetails] Player data loaded successfully:', playerData.firstName, playerData.lastName);
         setPlayer(playerData);
         setFormData(playerData);
         // Load existing documents
         await loadPlayerDocuments(response.data.id);
       } else {
+        const errorMsg = response.message || 'Failed to load player details';
+        console.error('[PlayerDetails] API returned error:', errorMsg);
+        setError(errorMsg);
         toast({
           title: "Error",
-          description: "Failed to load player details",
+          description: errorMsg,
           variant: "destructive"
         });
       }
-    } catch (error) {
-      console.error("Error fetching player details:", error);
+    } catch (error: any) {
+      const errorMsg = error.message || 'Failed to load player details';
+      console.error('[PlayerDetails] Error fetching player details:', error);
+      setError(errorMsg);
       toast({
         title: "Error",
-        description: "Failed to load player details",
+        description: errorMsg,
         variant: "destructive"
       });
     } finally {
@@ -450,12 +470,19 @@ const PlayerDetails = () => {
     );
   }
 
-  if (!player) {
+  if (!player && !loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
+        <div className="text-center max-w-md">
           <h2 className="text-2xl font-bold mb-2">Player Not Found</h2>
-          <p className="text-gray-600 mb-4">The requested player could not be found.</p>
+          <p className="text-gray-600 mb-2">The requested player could not be found.</p>
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 mt-4">
+              <p className="text-sm text-red-800 font-medium mb-1">Error Details:</p>
+              <p className="text-sm text-red-700">{error}</p>
+              {id && <p className="text-xs text-red-600 mt-2">Player ID: {id}</p>}
+            </div>
+          )}
           <Button onClick={() => navigate(-1)}>
             <ArrowLeft className="mr-2 h-4 w-4" />
             Go Back
@@ -1074,40 +1101,40 @@ const PlayerDetails = () => {
                       {savedDocuments.map((doc) => {
                         const isInactive = doc.is_active === false;
                         return (
-                        <div key={doc.id} className={`flex items-center justify-between p-3 border rounded-lg ${isInactive ? 'bg-gray-50 opacity-75' : 'bg-green-50'}`}>
-                          <div className="flex-1">
-                            <p className="font-medium flex items-center gap-2">
-                              {doc.document_type.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                              {isInactive && <Badge variant="secondary" className="text-xs h-5">Archived</Badge>}
-                            </p>
-                            <p className="text-sm text-gray-500">{doc.original_filename}</p>
-                            <p className="text-xs text-gray-400">
-                              Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}
-                            </p>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {!isInactive && <Badge variant="default">Saved</Badge>}
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openPreview(null, doc.document_type, doc.file_url)}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            {/* Only allow deleting active documents, or allow deleting history if needed. Usually history is permanent. */}
-                            {isEditing && !isInactive && (
+                          <div key={doc.id} className={`flex items-center justify-between p-3 border rounded-lg ${isInactive ? 'bg-gray-50 opacity-75' : 'bg-green-50'}`}>
+                            <div className="flex-1">
+                              <p className="font-medium flex items-center gap-2">
+                                {doc.document_type.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                                {isInactive && <Badge variant="secondary" className="text-xs h-5">Archived</Badge>}
+                              </p>
+                              <p className="text-sm text-gray-500">{doc.original_filename}</p>
+                              <p className="text-xs text-gray-400">
+                                Uploaded: {new Date(doc.uploaded_at).toLocaleDateString()}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {!isInactive && <Badge variant="default">Saved</Badge>}
                               <Button
                                 type="button"
-                                variant="destructive"
+                                variant="outline"
                                 size="sm"
-                                onClick={() => handleDeleteDocument(doc.id)}
+                                onClick={() => openPreview(null, doc.document_type, doc.file_url)}
                               >
-                                Delete
+                                <Eye className="h-4 w-4" />
                               </Button>
-                            )}
+                              {/* Only allow deleting active documents, or allow deleting history if needed. Usually history is permanent. */}
+                              {isEditing && !isInactive && (
+                                <Button
+                                  type="button"
+                                  variant="destructive"
+                                  size="sm"
+                                  onClick={() => handleDeleteDocument(doc.id)}
+                                >
+                                  Delete
+                                </Button>
+                              )}
+                            </div>
                           </div>
-                        </div>
                         );
                       })}
                     </div>

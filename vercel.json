@@ -81,6 +81,18 @@
       "destination": "/api/financial/categories"
     },
     {
+      "source": "/api/blogs/slug/:slug",
+      "destination": "/api/blogs/slug/[slug]"
+    },
+    {
+      "source": "/api/blogs/:id",
+      "destination": "/api/blogs/[id]"
+    },
+    {
+      "source": "/api/blogs",
+      "destination": "/api/blogs/index"
+    },
+    {
       "source": "/api/setup-admin",
       "destination": "/api/setup-admin"
     },
