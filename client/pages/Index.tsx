@@ -1,4 +1,4 @@
-import { Trophy, Users, FileText, ShoppingCart, BookOpen, Globe, Shield, UserCheck, Menu, Target, Calendar, BarChart3, DollarSign, Award, Star, CheckCircle, Building, Crown, User, AlertCircle, Clock, TrendingUp, X } from 'lucide-react';
+import { Trophy, Users, FileText, ShoppingCart, BookOpen, Globe, Shield, UserCheck, Menu, Target, Calendar, BarChart3, DollarSign, Award, Star, CheckCircle, Building, Crown, User, AlertCircle, Clock, TrendingUp, X, Instagram, Linkedin, Facebook } from 'lucide-react';
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -12,87 +12,42 @@ import Chatbot from '@/components/Landing/Chatbot';
 import DemoModal from '@/components/Landing/DemoModal';
 
 
-const faqData = [
-    {
-        question: "1. What are “Training Compensation” (TC) and “Solidarity Payments” (SP)?",
-        answer: (
-            <div className="space-y-2">
-                <p><strong>Training Compensation (TC):</strong> A payment made when a youth-developed player signs their first professional contract abroad or transfers internationally before age 23. It compensates the clubs that trained the player between ages 12–21.</p>
-                <p><strong>Solidarity Payments (SP):</strong> When an internationally transferred professional player changes clubs, 5% of the transfer fee is redistributed among the clubs that trained the player between ages 12–23.</p>
-            </div>
-        )
-    },
-    {
-        question: "2. Do U.S. clubs need to be affiliated with FIFA to receive TC/SP?",
-        answer: "No. FIFA affiliation is not required. What matters is that the club has proper training documentation."
-    },
-    {
-        question: "3. Does being a “pay-to-play” club disqualify you from receiving TC/SP?",
-        answer: "No. Pay-to-play status does not disqualify a club. As long as training was structured and documented, such clubs are eligible."
-    },
-    {
-        question: "4. What kind of documentation is needed to claim TC/SP?",
-        answer: "Clubs need robust evidence, such as: rosters, registration history, training logs, attendance records, tournament or ID-camp participation, coach evaluations, tryout acceptance and registration forms. Without proper documentation, claims likely will be rejected."
-    },
-    {
-        question: "5. Do informal, grassroots, or recreational clubs qualify?",
-        answer: "Yes. Even weekend-based recreational programs can qualify, provided their training was structured and documented."
-    },
-    {
-        question: "6. Does high school or college soccer count toward TC/SP eligibility?",
-        answer: "No. High school and college (e.g. NCAA) programs are not regarded as “training clubs” under FIFA regulations, so they are ineligible."
-    },
-    {
-        question: "7. Does academy status (e.g. MLS NEXT) matter for eligibility?",
-        answer: "No. What matters is documentation of training, not whether the club is part of a formal academy program."
-    },
-    {
-        question: "8. Do domestic transfers within the U.S. trigger TC or SP?",
-        answer: "No. TC and SP only apply to international transfers (i.e. transfer between clubs belonging to different national associations). Domestic U.S.–only transfers are excluded."
-    },
-    {
-        question: "9. What about loan deals, do they generate any payments?",
-        answer: "Only if the loan includes a transfer fee. If there is no transfer fee, then it does not trigger a Solidarity Payment."
-    },
-    {
-        question: "10. How are payments split if a player trained at multiple clubs?",
-        answer: "Payment is divided proportionally based on the number of years the player spent at each club during the eligible training ages."
-    },
-    {
-        question: "11. What if a club merged with another, or changed name, can the new entity claim TC/SP?",
-        answer: "Yes, the successor club may inherit the training rights, if there is documentation showing continuity of the training history."
-    },
-    {
-        question: "12. What if a club lost original records (e.g. old paper rosters)? Is there a fallback?",
-        answer: "Clubs can attempt to reconstruct records (e.g. old emails, archived tournament rosters, dated photos, coach statements, league archives, etc.). But FIFA expects evidence, so reconstructed or partial documentation will be scrutinized."
-    },
-    {
-        question: "13. Is a club required to hire an attorney to file a claim?",
-        answer: "Technically, no, but it is strongly advised. Having a qualified sports-law attorney familiar with U.S. and FIFA regulations helps avoid errors that might lead to rejection or disputes."
-    },
-    {
-        question: "14. What kind of payments are we talking about, are amounts significant?",
-        answer: "Potentially, yes. Training Compensation could range from roughly $10,000 up to over $200,000 depending on the caliber and category of the buying club. For Solidarity Payments, the amount depends on the transfer fee — e.g. a $5 million transfer could yield $250,000 to be divided among eligible training clubs."
-    },
-    {
-        question: "15. Can a player or their parent/guardian block a club from claiming TC/SP?",
-        answer: "No. These payments are made between clubs; they are not tied to the player’s contract or personal consent."
-    },
-    {
-        question: "16. Does a player need to have played official matches (games/minutes) for the club to be eligible for compensation?",
-        answer: "No. Match appearances do not matter. What counts is documented training even if the player never appeared in a formal game."
-    },
-    {
-        question: "17. What’s the time window for filing a claim?",
-        answer: "Clubs generally have up to five years from the date when the compensation obligation was triggered to file a claim. Waiting too long may forfeit eligibility."
-    }
-];
+const faqData = [];
 
 export default function Index() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const { t, dir } = useTranslation();
+
+  const faqItems = [
+    {
+        question: t('landing.faq.q1'),
+        answer: (
+            <div className="space-y-2">
+                <p><strong>{t('landing.faq.a1').split('|')[0]}</strong> {t('landing.faq.a1').split('|')[1]}</p>
+                <p><strong>{t('landing.faq.a1').split('|')[2]}</strong> {t('landing.faq.a1').split('|')[3]}</p>
+            </div>
+        )
+    },
+    { question: t('landing.faq.q2'), answer: t('landing.faq.a2') },
+    { question: t('landing.faq.q3'), answer: t('landing.faq.a3') },
+    { question: t('landing.faq.q4'), answer: t('landing.faq.a4') },
+    { question: t('landing.faq.q5'), answer: t('landing.faq.a5') },
+    { question: t('landing.faq.q6'), answer: t('landing.faq.a6') },
+    { question: t('landing.faq.q7'), answer: t('landing.faq.a7') },
+    { question: t('landing.faq.q8'), answer: t('landing.faq.a8') },
+    { question: t('landing.faq.q9'), answer: t('landing.faq.a9') },
+    { question: t('landing.faq.q10'), answer: t('landing.faq.a10') },
+    { question: t('landing.faq.q11'), answer: t('landing.faq.a11') },
+    { question: t('landing.faq.q12'), answer: t('landing.faq.a12') },
+    { question: t('landing.faq.q13'), answer: t('landing.faq.a13') },
+    { question: t('landing.faq.q14'), answer: t('landing.faq.a14') },
+    { question: t('landing.faq.q15'), answer: t('landing.faq.a15') },
+    { question: t('landing.faq.q16'), answer: t('landing.faq.a16') },
+    { question: t('landing.faq.q17'), answer: t('landing.faq.a17') }
+  ];
+
 
   return (
     <div className="min-h-screen bg-background text-foreground" dir={dir}>
@@ -106,7 +61,7 @@ export default function Index() {
               <Link to="/about" className="hover:text-yellow-300 transition-colors font-medium">{t('nav.about')}</Link>
               {/* <Link to="/shop" className="hover:text-yellow-300 transition-colors font-medium">SHOP</Link> */}
               <Link to="/blog" className="hover:text-yellow-300 transition-colors font-medium">{t('nav.blog')}</Link>
-              <Link to="/support" className="hover:text-yellow-300 transition-colors font-medium">{t('nav.help')}</Link>
+              <Link to="/support" className="hover:text-yellow-300 transition-colors font-medium">{t('nav.support')}</Link>
             </div>
           </div>
         </div>
@@ -296,16 +251,15 @@ export default function Index() {
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-6 justify-center mb-12 px-4">
               <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-black shadow-2xl hover:shadow-yellow-500/50 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/60 animate-pulse w-full sm:w-auto">
-                <Link to="/academy-registration" className="flex items-center gap-3 justify-center">
+                <Link to="#" onClick={() => setIsModalOpen(true)} className="flex items-center gap-3 justify-center">
                   <Trophy className="h-5 w-5" />
-                  {t('hero.cta.register')}
+                  {t('hero.cta.start')}
                 </Link>
               </Button>
 
               <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-white/10 hover:bg-white/20 text-white font-black shadow-xl hover:shadow-white/25 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/50 backdrop-blur-sm w-full sm:w-auto">
-                <Link to="/academy-dashboard" className="flex items-center gap-3 justify-center">
-                  <Target className="h-6 w-6" />
-                  {t('hero.cta.start')}
+                <Link to="/academy-registration" className="flex items-center gap-3 justify-center">
+                   {t('hero.cta.register')}
                 </Link>
               </Button>
             </div>
@@ -467,7 +421,7 @@ export default function Index() {
         </div>
       </section>
 
-      {/* Benefits Section - Why Choose GFARP */}
+      {/* Benefits Section - Why Choose Soccer Circular */}
       <section className="py-32 bg-gradient-to-b from-white to-gray-50 relative overflow-hidden" id="benefits">
         {/* Background Elements */}
         <div className="absolute inset-0">
@@ -938,47 +892,47 @@ export default function Index() {
           <div className="text-center mb-16">
             <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-red-500/20 text-red-300 rounded-full mb-4 border border-red-500/30">
               <AlertCircle className="h-4 w-4" />
-              <span className="font-bold text-sm tracking-wide">CRITICAL WARNINGS</span>
+              <span className="font-bold text-sm tracking-wide">{t('landing.pitfalls.badge')}</span>
             </div>
             <h2 className="text-3xl md:text-5xl font-black mb-6">
-              Common Pitfalls That Cause <br />
+              {t('landing.pitfalls.title')} <br />
               <span className="text-red-400">Clubs to Lose Their Money</span>
             </h2>
             <p className="text-xl text-slate-300 max-w-3xl mx-auto">
-              Avoid these costly mistakes to ensure your academy receives the compensation it deserves.
+              {t('landing.pitfalls.subtitle')}
             </p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[
               {
-                title: "Missing documentation",
-                desc: "The #1 reason claims fail.",
+                title: t('landing.pitfalls.item1.title'),
+                desc: t('landing.pitfalls.item1.desc'),
                 icon: <FileText className="h-10 w-10 text-red-400" />
               },
               {
-                title: "Incorrect training dates",
-                desc: "Even a one-year mistake can forfeit thousands.",
+                title: t('landing.pitfalls.item2.title'),
+                desc: t('landing.pitfalls.item2.desc'),
                 icon: <Calendar className="h-10 w-10 text-red-400" />
               },
               {
-                title: "Assuming pay-to-play means you are ineligible",
-                desc: "It does not.",
+                title: t('landing.pitfalls.item3.title'),
+                desc: t('landing.pitfalls.item3.desc'),
                 icon: <DollarSign className="h-10 w-10 text-red-400" />
               },
               {
-                title: "Waiting too long to file",
-                desc: "Claims older than ~5 years often fail.",
+                title: t('landing.pitfalls.item4.title'),
+                desc: t('landing.pitfalls.item4.desc'),
                 icon: <Clock className="h-10 w-10 text-red-400" />
               },
               {
-                title: "Thinking only “big academies” qualify",
-                desc: "Even small neighborhood clubs qualify.",
+                title: t('landing.pitfalls.item5.title'),
+                desc: t('landing.pitfalls.item5.desc'),
                 icon: <Building className="h-10 w-10 text-red-400" />
               },
               {
-                title: "Not understanding that transfers at age 27 still generate Solidarity",
-                desc: "Training years (12–23) always count, even for late-career transfers.",
+                title: t('landing.pitfalls.item6.title'),
+                desc: t('landing.pitfalls.item6.desc'),
                 icon: <TrendingUp className="h-10 w-10 text-red-400" />
               }
             ].map((pitfall, index) => (
@@ -1001,12 +955,12 @@ export default function Index() {
       <section className="py-20 bg-slate-50 dark:bg-slate-800">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center mb-12">
-                <h2 className="text-3xl font-black text-[#001a33] dark:text-white mb-4">Frequently Asked Questions</h2>
-                <p className="text-xl text-gray-600 dark:text-gray-300">Common questions about Training Compensation & Solidarity Payments</p>
+                <h2 className="text-3xl font-black text-[#001a33] dark:text-white mb-4">{t('landing.faq.title')}</h2>
+                <p className="text-xl text-gray-600 dark:text-gray-300">{t('landing.faq.subtitle')}</p>
             </div>
             
             <Accordion type="single" collapsible className="w-full bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6">
-                {faqData.map((faq, index) => (
+                {faqItems.map((faq, index) => (
                     <AccordionItem key={index} value={`item-${index}`} className="border-b border-slate-200 dark:border-slate-700 last:border-0">
                         <AccordionTrigger className="text-left font-bold text-lg py-4 hover:no-underline hover:text-[#005391] dark:hover:text-blue-400 transition-colors">
                             {faq.question}
@@ -1034,7 +988,18 @@ export default function Index() {
                 <p className="text-xs text-blue-200 font-bold tracking-wide">{t('footer.tagline')}</p>
               </div>
             </div>
-            <p className="text-slate-400 max-w-2xl mx-auto">{t('footer.description')}</p>
+            <p className="text-slate-400 max-w-2xl mx-auto mb-6">{t('footer.description')}</p>
+            <div className="flex items-center justify-center gap-6">
+              <a href="https://www.instagram.com/safwanamireh?igsh=NTc4MTIwNjQ2YQ%3D%3D&utm_source=qr" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-pink-500 transition-colors transform hover:scale-110">
+                <Instagram className="h-6 w-6" />
+              </a>
+              <a href="https://www.linkedin.com/in/safwanamireh?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-blue-500 transition-colors transform hover:scale-110">
+                <Linkedin className="h-6 w-6" />
+              </a>
+              <a href="https://www.facebook.com/profile.php?id=61584639460003&mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-blue-600 transition-colors transform hover:scale-110">
+                <Facebook className="h-6 w-6" />
+              </a>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">

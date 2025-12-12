@@ -106,7 +106,34 @@ export type TranslationKey =
   | 'dash.finance.type.income' | 'dash.finance.type.expense'
   | 'dash.finance.filter.allCategories' | 'dash.finance.filter.allStatus' | 'dash.finance.filter.fromDate' | 'dash.finance.filter.toDate'
   | 'dash.finance.modal.edit' | 'dash.finance.label.type' | 'dash.finance.label.amount' | 'dash.finance.label.date' | 'dash.finance.label.method' | 'dash.finance.label.reference'
-  | 'common.previous' | 'common.next' | 'common.page' | 'common.of';
+  | 'common.previous' | 'common.next' | 'common.page' | 'common.of'
+  // Pitfalls
+  | 'landing.pitfalls.title' | 'landing.pitfalls.badge' | 'landing.pitfalls.subtitle'
+  | 'landing.pitfalls.item1.title' | 'landing.pitfalls.item1.desc'
+  | 'landing.pitfalls.item2.title' | 'landing.pitfalls.item2.desc'
+  | 'landing.pitfalls.item3.title' | 'landing.pitfalls.item3.desc'
+  | 'landing.pitfalls.item4.title' | 'landing.pitfalls.item4.desc'
+  | 'landing.pitfalls.item5.title' | 'landing.pitfalls.item5.desc'
+  | 'landing.pitfalls.item6.title' | 'landing.pitfalls.item6.desc'
+  // FAQ
+  | 'landing.faq.title' | 'landing.faq.subtitle'
+  | 'landing.faq.q1' | 'landing.faq.a1'
+  | 'landing.faq.q2' | 'landing.faq.a2'
+  | 'landing.faq.q3' | 'landing.faq.a3'
+  | 'landing.faq.q4' | 'landing.faq.a4'
+  | 'landing.faq.q5' | 'landing.faq.a5'
+  | 'landing.faq.q6' | 'landing.faq.a6'
+  | 'landing.faq.q7' | 'landing.faq.a7'
+  | 'landing.faq.q8' | 'landing.faq.a8'
+  | 'landing.faq.q9' | 'landing.faq.a9'
+  | 'landing.faq.q10' | 'landing.faq.a10'
+  | 'landing.faq.q11' | 'landing.faq.a11'
+  | 'landing.faq.q12' | 'landing.faq.a12'
+  | 'landing.faq.q13' | 'landing.faq.a13'
+  | 'landing.faq.q14' | 'landing.faq.a14'
+  | 'landing.faq.q15' | 'landing.faq.a15'
+  | 'landing.faq.q16' | 'landing.faq.a16'
+  | 'landing.faq.q17' | 'landing.faq.a17';
 
 // Translations dictionary
 const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>> = {
@@ -126,8 +153,8 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'hero.title1': "INVEST IN YOUR PLAYERS'",
     'hero.title2': 'FUTURE WITH SOCCER CIRCULAR',
     'hero.subtitle': 'Register your academy players today • Secure future compensation payments',
-    'hero.cta.register': 'REGISTER ACADEMY',
-    'hero.cta.start': 'GET STARTED',
+    'hero.cta.register': 'GET STARTED',
+    'hero.cta.start': 'BOOK DEMO',
     'features.title.main': 'WORLD-CLASS',
     'features.title.sub': 'PLATFORM FEATURES',
     'features.playerReg.title': 'PLAYER REGISTRATION SYSTEM',
@@ -222,7 +249,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pricing.start.platinum': 'START PLATINUM TIER',
     'landing.benefits.title.sub': 'CHAMPIONSHIP BENEFITS',
     'landing.benefits.title.main': 'WHY CHOOSE',
-    'landing.benefits.title.platform': 'GFARP PLATFORM',
+    'landing.benefits.title.platform': 'SOCCER CIRCULAR PLATFORM',
     'landing.benefits.item1.title': 'FIFA REGISTRATION SIMPLIFIED',
     'landing.benefits.item1.desc': 'Streamline FIFA player registration with automated compliance checks and document validation for seamless academy operations.',
     'landing.benefits.item2.title': 'FINANCIAL MANAGEMENT',
@@ -256,6 +283,62 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.testimonials.badge.revenue': 'REVENUE OPTIMIZED',
     'landing.testimonials.badge.scale': 'ELITE SCALE',
     'landing.cta.join': 'JOIN THE CHAMPIONS',
+    
+    // Pitfalls
+    'landing.pitfalls.title': 'Common Pitfalls That Cause',
+    'landing.pitfalls.badge': 'CRITICAL WARNINGS',
+    'landing.pitfalls.subtitle': 'Avoid these costly mistakes to ensure your academy receives the compensation it deserves.',
+    'landing.pitfalls.item1.title': 'Missing documentation',
+    'landing.pitfalls.item1.desc': 'The #1 reason claims fail.',
+    'landing.pitfalls.item2.title': 'Incorrect training dates',
+    'landing.pitfalls.item2.desc': 'Even a one-year mistake can forfeit thousands.',
+    'landing.pitfalls.item3.title': 'Assuming pay-to-play means you are ineligible',
+    'landing.pitfalls.item3.desc': 'It does not.',
+    'landing.pitfalls.item4.title': 'Waiting too long to file',
+    'landing.pitfalls.item4.desc': 'Claims older than ~5 years often fail.',
+    'landing.pitfalls.item5.title': 'Thinking only “big academies” qualify',
+    'landing.pitfalls.item5.desc': 'Even small neighborhood clubs qualify.',
+    'landing.pitfalls.item6.title': 'Not understanding that transfers at age 27 still generate Solidarity',
+    'landing.pitfalls.item6.desc': 'Training years (12–23) always count, even for late-career transfers.',
+
+    // FAQ
+    'landing.faq.title': 'Frequently Asked Questions',
+    'landing.faq.subtitle': 'Common questions about Training Compensation & Solidarity Payments',
+    'landing.faq.q1': '1. What are “Training Compensation” (TC) and “Solidarity Payments” (SP)?',
+    'landing.faq.a1': 'Training Compensation (TC):| A payment made when a youth-developed player signs their first professional contract abroad or transfers internationally before age 23. It compensates the clubs that trained the player between ages 12–21.|Solidarity Payments (SP):| When an internationally transferred professional player changes clubs, 5% of the transfer fee is redistributed among the clubs that trained the player between ages 12–23.',
+    'landing.faq.q2': '2. Do U.S. clubs need to be affiliated with FIFA to receive TC/SP?',
+    'landing.faq.a2': 'No. FIFA affiliation is not required. What matters is that the club has proper training documentation.',
+    'landing.faq.q3': '3. Does being a “pay-to-play” club disqualify you from receiving TC/SP?',
+    'landing.faq.a3': 'No. Pay-to-play status does not disqualify a club. As long as training was structured and documented, such clubs are eligible.',
+    'landing.faq.q4': '4. What kind of documentation is needed to claim TC/SP?',
+    'landing.faq.a4': 'Clubs need robust evidence, such as: rosters, registration history, training logs, attendance records, tournament or ID-camp participation, coach evaluations, tryout acceptance and registration forms. Without proper documentation, claims likely will be rejected.',
+    'landing.faq.q5': '5. Do informal, grassroots, or recreational clubs qualify?',
+    'landing.faq.a5': 'Yes. Even weekend-based recreational programs can qualify, provided their training was structured and documented.',
+    'landing.faq.q6': '6. Does high school or college soccer count toward TC/SP eligibility?',
+    'landing.faq.a6': 'No. High school and college (e.g. NCAA) programs are not regarded as “training clubs” under FIFA regulations, so they are ineligible.',
+    'landing.faq.q7': '7. Does academy status (e.g. MLS NEXT) matter for eligibility?',
+    'landing.faq.a7': 'No. What matters is documentation of training, not whether the club is part of a formal academy program.',
+    'landing.faq.q8': '8. Do domestic transfers within the U.S. trigger TC or SP?',
+    'landing.faq.a8': 'No. TC and SP only apply to international transfers (i.e. transfer between clubs belonging to different national associations). Domestic U.S.–only transfers are excluded.',
+    'landing.faq.q9': '9. What about loan deals, do they generate any payments?',
+    'landing.faq.a9': 'Only if the loan includes a transfer fee. If there is no transfer fee, then it does not trigger a Solidarity Payment.',
+    'landing.faq.q10': '10. How are payments split if a player trained at multiple clubs?',
+    'landing.faq.a10': 'Payment is divided proportionally based on the number of years the player spent at each club during the eligible training ages.',
+    'landing.faq.q11': '11. What if a club merged with another, or changed name, can the new entity claim TC/SP?',
+    'landing.faq.a11': 'Yes, the successor club may inherit the training rights, if there is documentation showing continuity of the training history.',
+    'landing.faq.q12': '12. What if a club lost original records (e.g. old paper rosters)? Is there a fallback?',
+    'landing.faq.a12': 'Clubs can attempt to reconstruct records (e.g. old emails, archived tournament rosters, dated photos, coach statements, league archives, etc.). But FIFA expects evidence, so reconstructed or partial documentation will be scrutinized.',
+    'landing.faq.q13': '13. Is a club required to hire an attorney to file a claim?',
+    'landing.faq.a13': 'Technically, no, but it is strongly advised. Having a qualified sports-law attorney familiar with U.S. and FIFA regulations helps avoid errors that might lead to rejection or disputes.',
+    'landing.faq.q14': '14. What kind of payments are we talking about, are amounts significant?',
+    'landing.faq.a14': 'Potentially, yes. Training Compensation could range from roughly $10,000 up to over $200,000 depending on the caliber and category of the buying club. For Solidarity Payments, the amount depends on the transfer fee — e.g. a $5 million transfer could yield $250,000 to be divided among eligible training clubs.',
+    'landing.faq.q15': '15. Can a player or their parent/guardian block a club from claiming TC/SP?',
+    'landing.faq.a15': 'No. These payments are made between clubs; they are not tied to the player’s contract or personal consent.',
+    'landing.faq.q16': '16. Does a player need to have played official matches (games/minutes) for the club to be eligible for compensation?',
+    'landing.faq.a16': 'No. Match appearances do not matter. What counts is documented training even if the player never appeared in a formal game.',
+    'landing.faq.q17': '17. What’s the time window for filing a claim?',
+    'landing.faq.a17': 'Clubs generally have up to five years from the date when the compensation obligation was triggered to file a claim. Waiting too long may forfeit eligibility.',
+
     'footer.tagline': 'Global Football Academy Platform',
     'footer.description': "Join the world's most trusted FIFA registration platform used by elite academies worldwide",
     'footer.about': 'ABOUT US',
@@ -542,7 +625,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pricing.start.platinum': 'COMENZAR NIVEL PLATINO',
     'landing.benefits.title.sub': 'BENEFICIOS DE CAMPEONATO',
     'landing.benefits.title.main': 'POR QUÉ ELEGIR',
-    'landing.benefits.title.platform': 'PLATAFORMA GFARP',
+    'landing.benefits.title.platform': 'SOCCER CIRCULAR PLATAFORMA',
     'landing.benefits.item1.title': 'REGISTRO FIFA SIMPLIFICADO',
     'landing.benefits.item1.desc': 'Agilice el registro de jugadores FIFA con verificaciones de cumplimiento automatizadas y validación de documentos para operaciones de academia sin problemas.',
     'landing.benefits.item2.title': 'GESTIÓN FINANCIERA',
@@ -862,7 +945,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pricing.start.platinum': 'COMMENCER NIVEAU PLATINE',
     'landing.benefits.title.sub': 'AVANTAGES CHAMPIONNAT',
     'landing.benefits.title.main': 'POURQUOI CHOISIR',
-    'landing.benefits.title.platform': 'PLATEFORME GFARP',
+    'landing.benefits.title.platform': 'PLATEFORME SOCCER CIRCULAR',
     'landing.benefits.item1.title': 'INSCRIPTION FIFA SIMPLIFIÉE',
     'landing.benefits.item1.desc': 'Simplifiez l\'inscription des joueurs FIFA avec des vérifications de conformité automatisées et validation de documents.',
     'landing.benefits.item2.title': 'GESTION FINANCIÈRE',
@@ -1182,7 +1265,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pricing.start.platinum': 'COMEÇAR NÍVEL PLATINA',
     'landing.benefits.title.sub': 'BENEFÍCIOS DE CAMPEONATO',
     'landing.benefits.title.main': 'POR QUE ESCOLHER',
-    'landing.benefits.title.platform': 'PLATAFORMA GFARP',
+    'landing.benefits.title.platform': 'SOCCER CIRCULAR PLATAFORMA',
     'landing.benefits.item1.title': 'REGISTRO FIFA SIMPLIFICADO',
     'landing.benefits.item1.desc': 'Simplifique o registro de jogadores da FIFA com verificações de conformidade automatizadas e validação de documentos.',
     'landing.benefits.item2.title': 'GESTÃO FINANCEIRA',
@@ -1492,7 +1575,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pricing.start.platinum': 'PLATIN-STUFE STARTEN',
     'landing.benefits.title.sub': 'MEISTERSCHAFTS-VORTEILE',
     'landing.benefits.title.main': 'WARUM',
-    'landing.benefits.title.platform': 'GFARP-PLATTFORM WÄHLEN',
+    'landing.benefits.title.platform': 'SOCCER CIRCULAR-PLATTFORM WÄHLEN',
     'landing.benefits.item1.title': 'FIFA-REGISTRIERUNG VEREINFACHT',
     'landing.benefits.item1.desc': 'Optimieren Sie die FIFA-Spielerregistrierung mit automatisierten Compliance-Prüfungen und Dokumentenvalidierung.',
     'landing.benefits.item2.title': 'FINANZMANAGEMENT',
@@ -1802,7 +1885,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pricing.start.platinum': 'INIZIA LIVELLO PLATINO',
     'landing.benefits.title.sub': 'VANTAGGI CAMPIONATO',
     'landing.benefits.title.main': 'PERCHÉ SCEGLIERE',
-    'landing.benefits.title.platform': 'PIATTAFORMA GFARP',
+    'landing.benefits.title.platform': 'PIATTAFORMA SOCCER CIRCULAR',
     'landing.benefits.item1.title': 'REGISTRAZIONE FIFA SEMPLIFICATA',
     'landing.benefits.item1.desc': 'Semplifica la registrazione dei giocatori FIFA con controlli di conformità automatizzati e convalida dei documenti.',
     'landing.benefits.item2.title': 'GESTIONE FINANZIARIA',
@@ -2027,8 +2110,16 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'hero.title2': 'لاعبيك مع سوكر سيركولار',
     'hero.subtitle': 'سجل لاعبي أكاديميتك اليوم • اضمن مدفوعات التعويض المستقبلية',
     'hero.cta.register': 'تسجيل الأكاديمية',
-    'hero.cta.start': 'ابدأ الآن',
-    'dash.menu.dashboard': 'لوحة القيادة',
+    'features.title.main': 'عالمي المستوى',
+    'features.title.sub': 'ميزات المنصة',
+    'features.playerReg.title': 'نظام تسجيل اللاعبين',
+    'features.playerReg.desc': 'تسجيل اللاعبين بمستوى البطولة مع وثائق متوافقة مع الفيفا وسجلات طبية ونظام شامل لإدارة العقود.',
+    'features.docMgmt.title': 'إدارة المستندات',
+    'features.docMgmt.desc': 'تخزين سحابي آمن من الدرجة النخبة لمستندات اللاعبين والعقود والشهادات الطبية ونماذج تسجيل الفيفا مع تشفير بمستوى عسكري.',
+    'features.finMgmt.title': 'الإدارة المالية',
+    'features.finMgmt.desc': 'مجموعة مالية كاملة مع إنشاء الفواتير وتتبع النفقات ومراقبة الإيرادات وحسابات التعويض الآلية.',
+    'features.fifaComp.title': 'الامتثال للفيفا',
+    'features.fifaComp.desc': 'فحوصات امتثال آلية بمعايير كأس العالم وحسابات تعويض التدريب وإدارة آلية التضامن مع تكامل الفيفا في الوقت الفعلي.',
     'dash.menu.players': 'اللاعبين',
     'dash.menu.transfers': 'الانتقالات',
     'dash.menu.finances': 'المالية',
@@ -2112,7 +2203,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pricing.start.platinum': 'ابدأ المستوى البلاتيني',
     'landing.benefits.title.sub': 'مزايا البطولة',
     'landing.benefits.title.main': 'لماذا تختار',
-    'landing.benefits.title.platform': 'منصة GFARP',
+    'landing.benefits.title.platform': 'منصة سوكر سيركولار',
     'landing.benefits.item1.title': 'تسجيل فيفا مبسط',
     'landing.benefits.item1.desc': 'بسط تسجيل لاعبي الفيفا مع فحوصات الامتثال الآلية والتحقق من المستندات.',
     'landing.benefits.item2.title': 'الإدارة المالية',
@@ -2319,6 +2410,61 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'common.uploaded': 'تم الرفع',
     'common.size': 'الحجم',
     'common.actions': 'إجراءات',
+
+    // Pitfalls
+    'landing.pitfalls.title': 'المخاطر الشائعة التي تسبب',
+    'landing.pitfalls.badge': 'تحذيرات حرجة',
+    'landing.pitfalls.subtitle': 'تجنب هذه الأخطاء المكلفة لضمان حصول أكاديميتك على التعويض الذي تستحقه.',
+    'landing.pitfalls.item1.title': 'الوثائق المفقودة',
+    'landing.pitfalls.item1.desc': 'السبب رقم 1 لفشل المطالبات.',
+    'landing.pitfalls.item2.title': 'تواريخ التدريب غير الصحيحة',
+    'landing.pitfalls.item2.desc': 'حتى خطأ لمدة عام واحد قد يؤدي إلى خسارة الآلاف.',
+    'landing.pitfalls.item3.title': 'الافتراض أن الدفع مقابل اللعب يعني أنك غير مؤهل',
+    'landing.pitfalls.item3.desc': 'هذا غير صحيح.',
+    'landing.pitfalls.item4.title': 'الانتظار طويلاً لتقديم الطلب',
+    'landing.pitfalls.item4.desc': 'المطالبات الأقدم من 5 سنوات غالبًا ما تفشل.',
+    'landing.pitfalls.item5.title': 'الاعتقاد بأن "الأكاديميات الكبيرة" فقط هي المؤهلة',
+    'landing.pitfalls.item5.desc': 'حتى الأندية الصغيرة في الأحياء مؤهلة.',
+    'landing.pitfalls.item6.title': 'عدم فهم أن الانتقالات في سن 27 لا تزال تولد تضامنًا',
+    'landing.pitfalls.item6.desc': 'سنوات التدريب (12-23) تحسب دائمًا، حتى للانتقالات في وقت متأخر من المسيرة المهنية.',
+
+    // FAQ
+    'landing.faq.title': 'الأسئلة الشائعة',
+    'landing.faq.subtitle': 'أسئلة شائعة حول تعويض التدريب ومدفوعات التضامن',
+    'landing.faq.q1': '1. ما هما "تعويض التدريب" (TC) و "مدفوعات التضامن" (SP)؟',
+    'landing.faq.a1': 'تعويض التدريب (TC):| دفعة تتم عندما يوقع لاعب تم تطويره في سن الشباب أول عقد احترافي له في الخارج أو ينتقل دوليًا قبل سن 23 عامًا. يعوض الأندية التي دربت اللاعب بين سن 12 و 21 عامًا.|مدفوعات التضامن (SP):| عندما يغير لاعب محترف تم نقله دوليًا الأندية، يتم إعادة توزيع 5٪ من رسوم النقل بين الأندية التي دربت اللاعب بين سن 12 و 23 عامًا.',
+    'landing.faq.q2': '2. هل تحتاج الأندية الأمريكية إلى أن تكون تابعة للفيفا لتلقي TC/SP؟',
+    'landing.faq.a2': 'لا. لا يلزم الانتماء للفيفا. ما يهم هو أن النادي لديه وثائق تدريب مناسبة.',
+    'landing.faq.q3': '3. هل كون النادي "يدفع للعب" يجعله غير مؤهل لتلقي TC/SP؟',
+    'landing.faq.a3': 'لا. حالة الدفع للعب لا تجعل النادي غير مؤهل. طالما كان التدريب منظمًا وموثقًا، فإن هذه الأندية مؤهلة.',
+    'landing.faq.q4': '4. ما نوع الوثائق اللازمة للمطالبة بـ TC/SP؟',
+    'landing.faq.a4': 'تحتاج الأندية إلى أدلة قوية، مثل: القوائم، وتاريخ التسجيل، وسجلات التدريب، وسجلات الحضور، والمشاركة في البطولات أو معسكرات التعريف، وتقييمات المدربين، وقبول الاختبارات ونماذج التسجيل. بدون وثائق مناسبة، من المحتمل أن يتم رفض المطالبات.',
+    'landing.faq.q5': '5. هل الأندية غير الرسمية أو الشعبية أو الترفيهية مؤهلة؟',
+    'landing.faq.a5': 'نعم. حتى البرامج الترفيهية في عطلة نهاية الأسبوع يمكن أن تكون مؤهلة، بشرط أن يكون تدريبها منظمًا وموثقًا.',
+    'landing.faq.q6': '6. هل تحتسب كرة القدم في المدرسة الثانوية أو الكلية ضمن أهلية TC/SP؟',
+    'landing.faq.a6': 'لا. لا تعتبر برامج المدرسة الثانوية والكلية (مثل NCAA) "أندية تدريب" بموجب لوائح الفيفا، لذا فهي غير مؤهلة.',
+    'landing.faq.q7': '7. هل وضع الأكاديمية (مثل MLS NEXT) مهم للأهلية؟',
+    'landing.faq.a7': 'لا. ما يهم هو توثيق التدريب، وليس ما إذا كان النادي جزءًا من برنامج أكاديمية رسمي.',
+    'landing.faq.q8': '8. هل تؤدي الانتقالات المحلية داخل الولايات المتحدة إلى تفعيل TC أو SP؟',
+    'landing.faq.a8': 'لا. تنطبق TC و SP فقط على الانتقالات الدولية (أي الانتقال بين أندية تنتمي إلى اتحادات وطنية مختلفة). يتم استبعاد الانتقالات المحلية داخل الولايات المتحدة فقط.',
+    'landing.faq.q9': '9. ماذا عن صفقات الإعارة، هل تولد أي مدفوعات؟',
+    'landing.faq.a9': 'فقط إذا تضمنت الإعارة رسوم نقل. إذا لم تكن هناك رسوم نقل، فلا يؤدي ذلك إلى تفعيل مدفوعات التضامن.',
+    'landing.faq.q10': '10. كيف يتم تقسيم المدفوعات إذا تدرب لاعب في أندية متعددة؟',
+    'landing.faq.a10': 'يتم تقسيم الدفع بشكل متناسب بناءً على عدد السنوات التي قضاها اللاعب في كل نادٍ خلال سنوات التدريب المؤهلة.',
+    'landing.faq.q11': '11. ماذا لو اندمج نادٍ مع آخر، أو غير اسمه، هل يمكن للكيان الجديد المطالبة بـ TC/SP؟',
+    'landing.faq.a11': 'نعم، قد يرث النادي الخلف حقوق التدريب، إذا كانت هناك وثائق تظهر استمرارية تاريخ التدريب.',
+    'landing.faq.q12': '12. ماذا لو فقد النادي السجلات الأصلية (مثل القوائم الورقية القديمة)؟ هل هناك بديل؟',
+    'landing.faq.a12': 'يمكن للأندية محاولة إعادة بناء السجلات (مثل رسائل البريد الإلكتروني القديمة، وقوائم البطولات المؤرشفة، والصور المؤرخة، وبيانات المدربين، وأرشيف الدوري، وما إلى ذلك). لكن الفيفا يتوقع أدلة، لذلك سيتم التدقيق في الوثائق المعاد بناؤها أو الجزئية.',
+    'landing.faq.q13': '13. هل النادي ملزم بتعيين محام لتقديم مطالبة؟',
+    'landing.faq.a13': 'من الناحية الفنية، لا، لكن ينصح بشدة بذلك. يساعد وجود محام رياضي مؤهل على دراية بلوائح الولايات المتحدة والفيفا في تجنب الأخطاء التي قد تؤدي إلى الرفض أو النزاعات.',
+    'landing.faq.q14': '14. عن أي نوع من المدفوعات نتحدث، هل المبالغ كبيرة؟',
+    'landing.faq.a14': 'من المحتمل، نعم. يمكن أن يتراوح تعويض التدريب من حوالي 10,000 دولار إلى أكثر من 200,000 دولار اعتمادًا على عيار وفئة النادي المشتري. بالنسبة لمدفوعات التضامن، يعتمد المبلغ على رسوم النقل - على سبيل المثال، يمكن أن يدر انتقال بقيمة 5 ملايين دولار 250,000 دولار لتقسيمها بين أندية التدريب المؤهلة.',
+    'landing.faq.q15': '15. هل يمكن للاعب أو ولي أمره منع النادي من المطالبة بـ TC/SP؟',
+    'landing.faq.a15': 'لا. تتم هذه المدفوعات بين الأندية؛ وهي ليست مرتبطة بعقد اللاعب أو موافقته الشخصية.',
+    'landing.faq.q16': '16. هل يحتاج اللاعب إلى لعب مباريات رسمية (مباريات/دقائق) للنادي ليكون مؤهلاً للتعويض؟',
+    'landing.faq.a16': 'لا. ظهور المباريات لا يهم. ما يهم هو التدريب الموثق حتى لو لم يظهر اللاعب أبدًا في لعبة رسمية.',
+    'landing.faq.q17': '17. ما هي النافذة الزمنية لتقديم مطالبة؟',
+    'landing.faq.a17': 'لدى الأندية عمومًا ما يصل إلى خمس سنوات من التاريخ الذي تم فيه تفعيل التزام التعويض لتقديم مطالبة. الانتظار طويلاً قد يؤدي إلى فقدان الأهلية.',
   },
   zh: {
     'nav.about': '关于我们',
@@ -2422,7 +2568,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pricing.start.platinum': '开始白金级别',
     'landing.benefits.title.sub': '锦标赛优势',
     'landing.benefits.title.main': '为什么选择',
-    'landing.benefits.title.platform': 'GFARP 平台',
+    'landing.benefits.title.platform': 'Soccer Circular 平台',
     'landing.benefits.item1.title': '简化的 FIFA 注册',
     'landing.benefits.item1.desc': '通过自动合规性检查和文件验证简化 FIFA 球员注册。',
     'landing.benefits.item2.title': '财务管理',

@@ -30,7 +30,7 @@ export default function Shop() {
     },
     {
       id: 2,
-      name: 'GFARP Academy Jersey',
+      name: 'Soccer Circular Academy Jersey',
       price: 49.99,
       originalPrice: null,
       image: '/placeholder.svg',
@@ -121,7 +121,7 @@ export default function Shop() {
                   <Menu className="h-6 w-6" />
                 </Button>
                 
-                {/* GFARP Logo */}
+                {/* Soccer Circular Logo */}
                 <Link to="/" className="flex items-center gap-3 group">
                   <div className="relative">
                     <div className="w-10 h-10 bg-gradient-to-br from-white to-gray-100 rounded-full flex items-center justify-center shadow-xl group-hover:shadow-2xl transition-all duration-500 group-hover:scale-110">
@@ -133,7 +133,7 @@ export default function Shop() {
                   </div>
                   <div className="text-white">
                     <div className="text-xl font-black tracking-tight bg-gradient-to-r from-white to-yellow-100 bg-clip-text text-transparent">
-                      GFARP
+                      Soccer Circular
                     </div>
                   </div>
                 </Link>
@@ -224,7 +224,7 @@ export default function Shop() {
       <div className="bg-gradient-to-r from-[#005391] via-[#0066b3] to-[#005391] text-white py-16">
         <div className="container mx-auto px-4">
           <div className="text-center">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">GFARP Shop</h1>
+            <h1 className="text-4xl md:text-5xl font-bold mb-4">Soccer Circular Shop</h1>
             <p className="text-xl text-blue-100 max-w-2xl mx-auto">
               Premium football training equipment and academy merchandise
             </p>

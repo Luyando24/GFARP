@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
+import { useTranslation } from '@/lib/i18n';
 
 interface BlogPost {
     id: string;
@@ -19,6 +20,7 @@ interface BlogPost {
 }
 
 export default function BlogList() {
+    const { t, dir } = useTranslation();
     const [blogs, setBlogs] = useState<BlogPost[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState("");
@@ -47,20 +49,20 @@ export default function BlogList() {
     );
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8" dir={dir}>
             <div className="max-w-7xl mx-auto">
                 <div className="mb-12 text-center">
                     <Link to="/">
                         <Button variant="ghost" className="mb-6 absolute left-4 top-4 md:static md:mb-6">
                             <ArrowLeft className="mr-2 h-4 w-4" />
-                            Back to Home
+                            {t('common.previous')}
                         </Button>
                     </Link>
                     <h1 className="text-4xl font-extrabold text-slate-900 dark:text-white mb-4">
-                        Soccer Circular Blog
+                        Soccer Circular {t('nav.blog')}
                     </h1>
                     <p className="text-xl text-slate-600 dark:text-slate-400 max-w-2xl mx-auto">
-                        Latest news, updates, and insights from the world of football academy management.
+                        {t('footer.description')}
                     </p>
                 </div>
 
@@ -68,7 +70,7 @@ export default function BlogList() {
                 <div className="max-w-md mx-auto mb-12 relative">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
                     <Input
-                        placeholder="Search articles..."
+                        placeholder={t('dash.search')}
                         className="pl-10 py-6 rounded-full shadow-sm"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -83,7 +85,7 @@ export default function BlogList() {
                     </div>
                 ) : filteredBlogs.length === 0 ? (
                     <div className="text-center py-12">
-                        <p className="text-slate-500 text-lg">No articles found matching your search.</p>
+                        <p className="text-slate-500 text-lg">{t('dash.finance.manager.noTrans')}</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -134,7 +136,7 @@ export default function BlogList() {
                                 <CardFooter className="border-t border-slate-100 dark:border-slate-700 pt-4">
                                     <Button variant="ghost" className="w-full group text-[#005391] hover:text-[#004275]" asChild>
                                         <Link to={`/blog/${blog.slug}`}>
-                                            Read Article 
+                                            {t('common.view')}
                                             <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
                                         </Link>
                                     </Button>
