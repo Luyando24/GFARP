@@ -40,12 +40,19 @@ export default async function handler(
     if (req.method === 'GET') {
         try {
             // id is playerId
-            const { data: documents, error } = await supabase
+            const includeInactive = req.query.include_inactive === 'true';
+
+            let query = supabase
                 .from('player_documents')
                 .select('*')
-                .eq('player_id', id)
-                .eq('is_active', true)
-                .order('upload_date', { ascending: false });
+                .eq('player_id', id);
+
+            // Only filter by is_active if we don't want inactive documents
+            if (!includeInactive) {
+                query = query.eq('is_active', true);
+            }
+
+            const { data: documents, error } = await query.order('upload_date', { ascending: false });
 
             if (error) {
                 console.error('[VERCEL] Error fetching documents:', error);
@@ -59,13 +66,14 @@ export default async function handler(
 
                 return {
                     id: doc.id,
-                    document_type: doc.document_type,
-                    original_filename: doc.original_filename,
-                    file_size: doc.file_size,
-                    mime_type: doc.mime_type,
-                    uploaded_at: doc.upload_date,
-                    uploaded_by: doc.uploaded_by,
-                    file_url: urlData.publicUrl
+                    documentType: doc.document_type,  // Changed from document_type to documentType
+                    originalFilename: doc.original_filename,  // Changed from original_filename to originalFilename
+                    fileSize: doc.file_size,  // Changed from file_size to fileSize
+                    mimeType: doc.mime_type,  // Changed from mime_type to mimeType  
+                    uploadDate: doc.upload_date,  // Changed from uploaded_at to uploadDate
+                    uploadedBy: doc.uploaded_by,  // Keep camelCase
+                    url: urlData.publicUrl,  // Changed from file_url to url
+                    isActive: doc.is_active  // Added missing is_active field as isActive
                 };
             });
 
@@ -81,7 +89,7 @@ export default async function handler(
     if (req.method === 'DELETE') {
         try {
             // id is documentId
-            
+
             // First get the file path
             const { data: doc, error: fetchError } = await supabase
                 .from('player_documents')

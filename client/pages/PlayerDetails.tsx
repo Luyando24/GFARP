@@ -195,13 +195,18 @@ const PlayerDetails = () => {
 
   const loadPlayerDocuments = async (playerId: string) => {
     try {
+      console.log('[PlayerDetails] Loading documents for player:', playerId, 'isAdmin:', isAdmin);
       setDocumentLoading(true);
+      // Pass includeInactive=true for admin users to see document history
       const result = await getPlayerDocuments(playerId, isAdmin);
+      console.log('[PlayerDetails] Documents loaded:', result.success, 'count:', result.documents?.length);
       if (result.success) {
         setSavedDocuments(result.documents);
+      } else {
+        console.warn('[PlayerDetails] Failed to load documents');
       }
     } catch (error) {
-      console.error("Error loading player documents:", error);
+      console.error('[PlayerDetails] Error loading player documents:', error);
     } finally {
       setDocumentLoading(false);
     }
