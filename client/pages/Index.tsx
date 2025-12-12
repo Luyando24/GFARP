@@ -106,16 +106,27 @@ export default function Index() {
                   { href: "#benefits", label: t('nav.benefits') },
                   { href: "#pricing", label: t('nav.pricing') },
                   { href: "#testimonials", label: t('nav.testimonials') },
-                  { href: "#contact", label: t('nav.contact') }
+                  { href: "/contact", label: t('nav.contact') }
                 ].map((item) => (
-                  <a
-                    key={item.href}
-                    href={item.href}
-                    className="px-3 py-2 text-white font-bold text-xs tracking-wide hover:bg-white/20 rounded-lg transition-all duration-300 hover:scale-105 hover:text-yellow-300 relative group"
-                  >
-                    {item.label}
-                    <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-yellow-400 group-hover:w-full transition-all duration-300"></div>
-                  </a>
+                  item.href.startsWith('#') ? (
+                    <a
+                      key={item.href}
+                      href={item.href}
+                      className="px-3 py-2 text-white font-bold text-xs tracking-wide hover:bg-white/20 rounded-lg transition-all duration-300 hover:scale-105 hover:text-yellow-300 relative group"
+                    >
+                      {item.label}
+                      <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-yellow-400 group-hover:w-full transition-all duration-300"></div>
+                    </a>
+                  ) : (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      className="px-3 py-2 text-white font-bold text-xs tracking-wide hover:bg-white/20 rounded-lg transition-all duration-300 hover:scale-105 hover:text-yellow-300 relative group"
+                    >
+                      {item.label}
+                      <div className="absolute bottom-0 left-0 w-0 h-0.5 bg-yellow-400 group-hover:w-full transition-all duration-300"></div>
+                    </Link>
+                  )
                 ))}
               </nav>
 
@@ -158,16 +169,27 @@ export default function Index() {
                       { href: "#benefits", label: t('nav.benefits') },
                       { href: "#pricing", label: t('nav.pricing') },
                       { href: "#testimonials", label: t('nav.testimonials') },
-                      { href: "#contact", label: t('nav.contact') }
+                      { href: "/contact", label: t('nav.contact') }
                     ].map((item) => (
-                      <a
-                        key={item.href}
-                        href={item.href}
-                        className="text-white font-bold py-3 px-4 hover:bg-white/20 rounded-lg transition-all duration-300 hover:text-yellow-300 border-l-4 border-transparent hover:border-yellow-400"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        {item.label}
-                      </a>
+                      item.href.startsWith('#') ? (
+                        <a
+                          key={item.href}
+                          href={item.href}
+                          className="text-white font-bold py-3 px-4 hover:bg-white/20 rounded-lg transition-all duration-300 hover:text-yellow-300 border-l-4 border-transparent hover:border-yellow-400"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          {item.label}
+                        </a>
+                      ) : (
+                        <Link
+                          key={item.href}
+                          to={item.href}
+                          className="text-white font-bold py-3 px-4 hover:bg-white/20 rounded-lg transition-all duration-300 hover:text-yellow-300 border-l-4 border-transparent hover:border-yellow-400"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          {item.label}
+                        </Link>
+                      )
                     ))}
                     <div className="py-2">
                       <LanguageToggle variant="ghost" className="w-full justify-start text-white hover:bg-white/20" />

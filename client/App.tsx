@@ -27,6 +27,7 @@ import AdminSupportManagement from "./pages/AdminSupportManagement";
 import SuperAdmins from "./pages/SuperAdmins";
 import PlayerDetails from "./pages/PlayerDetails";
 import AcademyDetails from "./pages/AcademyDetails";
+import Contact from "./pages/Contact";
 import { useEffect } from "react";
 import { syncService } from "@/lib/sync";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -83,6 +84,7 @@ const App = () => {
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               <Route path="/terms-of-service" element={<TermsOfService />} />
               <Route path="/support" element={<Support />} />
+              <Route path="/contact" element={<Contact />} />
               <Route path="/about" element={<About />} />
               <Route path="/services" element={<Services />} />
               <Route path="/compliance" element={<Compliance />} />

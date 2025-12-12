@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowLeft, HelpCircle, Mail, Phone, MessageSquare, Send } from 'lucide-react';
+import { ArrowLeft, Mail, Phone, MapPin, Send } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,10 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useTranslation } from '@/lib/i18n';
 
-export default function Support() {
+export default function Contact() {
     const { toast } = useToast();
     const { t, dir } = useTranslation();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,34 +19,6 @@ export default function Support() {
         subject: '',
         message: ''
     });
-
-    const faqItems = [
-        {
-            question: t('landing.faq.q1'),
-            answer: (
-                <div className="space-y-2">
-                    <p><strong>{t('landing.faq.a1').split('|')[0]}</strong> {t('landing.faq.a1').split('|')[1]}</p>
-                    <p><strong>{t('landing.faq.a1').split('|')[2]}</strong> {t('landing.faq.a1').split('|')[3]}</p>
-                </div>
-            )
-        },
-        { question: t('landing.faq.q2'), answer: t('landing.faq.a2') },
-        { question: t('landing.faq.q3'), answer: t('landing.faq.a3') },
-        { question: t('landing.faq.q4'), answer: t('landing.faq.a4') },
-        { question: t('landing.faq.q5'), answer: t('landing.faq.a5') },
-        { question: t('landing.faq.q6'), answer: t('landing.faq.a6') },
-        { question: t('landing.faq.q7'), answer: t('landing.faq.a7') },
-        { question: t('landing.faq.q8'), answer: t('landing.faq.a8') },
-        { question: t('landing.faq.q9'), answer: t('landing.faq.a9') },
-        { question: t('landing.faq.q10'), answer: t('landing.faq.a10') },
-        { question: t('landing.faq.q11'), answer: t('landing.faq.a11') },
-        { question: t('landing.faq.q12'), answer: t('landing.faq.a12') },
-        { question: t('landing.faq.q13'), answer: t('landing.faq.a13') },
-        { question: t('landing.faq.q14'), answer: t('landing.faq.a14') },
-        { question: t('landing.faq.q15'), answer: t('landing.faq.a15') },
-        { question: t('landing.faq.q16'), answer: t('landing.faq.a16') },
-        { question: t('landing.faq.q17'), answer: t('landing.faq.a17') }
-    ];
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -81,19 +52,19 @@ export default function Support() {
                         </Button>
                     </Link>
                     <div className="flex items-center gap-3 mb-4">
-                        <HelpCircle className="h-8 w-8 text-[#005391]" />
-                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{t('nav.support')}</h1>
+                        <Mail className="h-8 w-8 text-[#005391]" />
+                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{t('nav.contact')}</h1>
                     </div>
-                    <p className="text-slate-600 dark:text-slate-400">{t('footer.support.help')}</p>
+                    <p className="text-slate-600 dark:text-slate-400">Get in touch with our team</p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Contact Form */}
                     <div className="lg:col-span-2">
                         <Card>
                             <CardHeader>
-                                <CardTitle>{t('nav.contact')}</CardTitle>
-                                <CardDescription>{t('footer.support.contact')}</CardDescription>
+                                <CardTitle>Send us a Message</CardTitle>
+                                <CardDescription>Fill out the form below and we'll get back to you as soon as possible.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -124,7 +95,7 @@ export default function Support() {
                                         <Label htmlFor="subject">Subject</Label>
                                         <Input 
                                             id="subject" 
-                                            placeholder="How can we help?" 
+                                            placeholder="What is this regarding?" 
                                             value={formData.subject}
                                             onChange={(e) => setFormData({...formData, subject: e.target.value})}
                                             required 
@@ -134,7 +105,7 @@ export default function Support() {
                                         <Label htmlFor="message">Message</Label>
                                         <Textarea 
                                             id="message" 
-                                            placeholder="Tell us more about your issue..." 
+                                            placeholder="Your message..." 
                                             rows={5}
                                             value={formData.message}
                                             onChange={(e) => setFormData({...formData, message: e.target.value})}
@@ -161,9 +132,9 @@ export default function Support() {
                             <CardHeader>
                                 <CardTitle>Contact Information</CardTitle>
                             </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-blue-100 p-2 rounded-full">
+                            <CardContent className="space-y-6">
+                                <div className="flex items-start gap-3">
+                                    <div className="bg-blue-100 p-2 rounded-full mt-1">
                                         <Mail className="h-5 w-5 text-[#005391]" />
                                     </div>
                                     <div>
@@ -171,8 +142,8 @@ export default function Support() {
                                         <p className="text-sm text-slate-500">sofwan@rihlasoccer.com</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-blue-100 p-2 rounded-full">
+                                <div className="flex items-start gap-3">
+                                    <div className="bg-blue-100 p-2 rounded-full mt-1">
                                         <Phone className="h-5 w-5 text-[#005391]" />
                                     </div>
                                     <div>
@@ -180,39 +151,22 @@ export default function Support() {
                                         <p className="text-sm text-slate-500">(626) 200 3339</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <div className="bg-blue-100 p-2 rounded-full">
-                                        <MessageSquare className="h-5 w-5 text-[#005391]" />
+                                <div className="flex items-start gap-3">
+                                    <div className="bg-blue-100 p-2 rounded-full mt-1">
+                                        <MapPin className="h-5 w-5 text-[#005391]" />
                                     </div>
                                     <div>
-                                        <p className="font-medium">Live Chat</p>
-                                        <p className="text-sm text-slate-500">Available Mon-Fri, 9am-5pm EST</p>
+                                        <p className="font-medium">Visit Us</p>
+                                        <p className="text-sm text-slate-500">
+                                            123 Soccer Avenue<br />
+                                            Sports City, SC 90210
+                                        </p>
                                     </div>
                                 </div>
                             </CardContent>
                         </Card>
                     </div>
                 </div>
-
-                {/* FAQ Section */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="text-2xl text-[#005391]">{t('landing.faq.title')}</CardTitle>
-                        <CardDescription>{t('landing.faq.subtitle')}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <Accordion type="single" collapsible className="w-full">
-                            {faqItems.map((faq, index) => (
-                                <AccordionItem key={index} value={`item-${index}`}>
-                                    <AccordionTrigger className="text-left font-medium">{faq.question}</AccordionTrigger>
-                                    <AccordionContent className="text-slate-600 dark:text-slate-300">
-                                        {faq.answer}
-                                    </AccordionContent>
-                                </AccordionItem>
-                            ))}
-                        </Accordion>
-                    </CardContent>
-                </Card>
             </div>
         </div>
     );
