@@ -4,6 +4,22 @@ import { emailService } from '../lib/email-service.js';
 
 const router = Router();
 
+// Decrypt function
+const decrypt = (value: any) => {
+    if (!value) return '';
+    if (typeof value === 'string' && value.startsWith('\\x')) {
+        return Buffer.from(value.slice(2), 'hex').toString('utf8');
+    }
+    if (Buffer.isBuffer(value)) {
+        return value.toString('utf8');
+    }
+    if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
+        return Buffer.from(value).toString('utf8');
+    }
+    if (typeof value === 'string') return value;
+    return String(value);
+};
+
 // Helper function to log activation history
 async function logActivationHistory(
   academyId: string,
@@ -199,17 +215,10 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
     const academy = academyResult.rows[0];
 
     // Get academy players - using encrypted columns and decrypting them
-    // For now, we'll use placeholder names since we need to implement decryption
     const playersResult = await query(
       `SELECT id, 
-              CASE 
-                WHEN first_name_cipher IS NOT NULL THEN CONCAT('Player ', ROW_NUMBER() OVER (ORDER BY created_at))
-                ELSE 'Unknown Player'
-              END as "firstName",
-              CASE 
-                WHEN last_name_cipher IS NOT NULL THEN CONCAT('#', jersey_number)
-                ELSE CONCAT('ID-', SUBSTRING(id::text, 1, 6))
-              END as "lastName",
+              first_name_cipher,
+              last_name_cipher,
               position, 
               nationality, 
               COALESCE(is_active, true) as "isActive",
@@ -226,6 +235,14 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
        FROM players WHERE academy_id = $1 ORDER BY created_at DESC`,
       [id]
     );
+
+    const decryptedPlayers = playersResult.rows.map(p => ({
+        ...p,
+        firstName: decrypt(p.first_name_cipher),
+        lastName: decrypt(p.last_name_cipher),
+        first_name_cipher: undefined,
+        last_name_cipher: undefined
+    }));
 
     // Get player count
     const playerCountResult = await query(
@@ -372,7 +389,7 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
         }
 
         // 3. Player Registrations
-        const players = playersResult.rows;
+        const players = decryptedPlayers;
         if (players && players.length > 0) {
              activities.push(...players.map(p => ({
                 id: `player-${p.id}`,
@@ -403,7 +420,7 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
       updatedAt: academy.updated_at,
       isActive: academy.status === 'active',
       subscriptionPlan: academy.subscription_plan || 'Free Plan',
-      players: playersResult.rows,
+      players: decryptedPlayers,
       compliance: complianceData,
       activities: activities, // Added activities
       player_count: parseInt(playerCountResult.rows[0].count) || 0,
