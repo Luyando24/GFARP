@@ -296,12 +296,23 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
 
     if (referralCode) {
       try {
-        const agentRes = await query('SELECT id, commission_rate FROM sales_agents WHERE code = $1', [referralCode]);
-        if (agentRes.rows.length > 0) {
-          salesAgentId = agentRes.rows[0].id;
+          const cleanCode = referralCode.trim();
+          console.log('[academy/register] Looking up referral code:', cleanCode);
+          // Use TRANSLATE to handle potential 0 (zero) vs O (letter) confusion
+          // We normalize both to 'o' for comparison
+          const agentRes = await query(
+            `SELECT id, commission_rate FROM sales_agents 
+             WHERE TRANSLATE(LOWER(code), '0', 'o') = TRANSLATE(LOWER($1), '0', 'o')`, 
+            [cleanCode]
+          );
+          if (agentRes.rows.length > 0) {
+            salesAgentId = agentRes.rows[0].id;
           if (agentRes.rows[0].commission_rate) {
             commissionRate = parseFloat(agentRes.rows[0].commission_rate);
           }
+          console.log('[academy/register] Found sales agent:', { id: salesAgentId, rate: commissionRate });
+        } else {
+          console.log('[academy/register] No sales agent found for code:', referralCode);
         }
       } catch (err) {
         console.warn('Failed to lookup sales agent:', err);
