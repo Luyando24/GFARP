@@ -28,6 +28,7 @@ export default function RegisterAcademy() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isReferralLocked, setIsReferralLocked] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
@@ -37,6 +38,7 @@ export default function RegisterAcademy() {
     const refCode = searchParams.get('ref') || searchParams.get('referralCode');
     if (refCode) {
       setFormData(prev => ({ ...prev, referralCode: refCode }));
+      setIsReferralLocked(true);
     }
   }, [location.search]);
 
@@ -219,14 +221,15 @@ export default function RegisterAcademy() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="referralCode">{t('auth.label.referralCode', 'Referral Code (Optional)')}</label>
+                  <label className="text-sm font-medium text-gray-700" htmlFor="referralCode">{t('auth.label.referralCode', 'Referral code')}</label>
                   <input
                     id="referralCode"
                     type="text"
                     value={formData.referralCode || ''}
                     onChange={(e) => handleInputChange('referralCode', e.target.value)}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#005391] focus:outline-none"
+                    className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#005391] focus:outline-none ${isReferralLocked ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
                     placeholder={t('auth.placeholder.referralCode', 'Enter code if you have one')}
+                    disabled={isReferralLocked}
                   />
                 </div>
 

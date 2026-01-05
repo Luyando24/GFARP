@@ -166,6 +166,7 @@ export type TranslationKey =
   | 'auth.error.emailRequired' | 'auth.error.confirmRequired'
   | 'auth.registering' | 'auth.createAccount' | 'auth.alreadyHaveAccount' | 'auth.loginLink'
   | 'auth.footer.approved' | 'auth.success.title' | 'auth.success.desc' | 'auth.success.verifyEmail'
+  | 'auth.label.referralCode' | 'auth.placeholder.referralCode'
    | 'common.backHome' | 'common.404.subtitle'
    // Blog
    | 'blog.back' | 'blog.notFound.title' | 'blog.notFound.desc' | 'blog.readTime' | 'blog.tags' | 'blog.share' | 'blog.linkCopied';
@@ -259,6 +260,8 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'auth.success.title': 'Registration Successful',
     'auth.success.desc': "Let's complete your academy profile!",
     'auth.success.verifyEmail': 'Please check your email to verify your account before logging in.',
+    'auth.label.referralCode': 'Referral code',
+    'auth.placeholder.referralCode': 'Enter code if you have one',
      'common.backHome': 'Back to Home',
     'common.404.subtitle': 'Oops! Page not found',
     'common.save': 'Save',
