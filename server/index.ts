@@ -38,6 +38,7 @@ import subscriptionRouter from "./routes/subscription-management.js";
 import stripePaymentsRouter from "./routes/stripe-payments.js";
 import stripeWebhooksRouter from "./routes/stripe-webhooks.js";
 import stripeAdminRouter from "./routes/stripe-admin.js";
+import adminSalesRouter from "./routes/admin-sales.js";
 import uploadsRouter from "./routes/uploads.js";
 import {
   handleUploadPlayerDocument,

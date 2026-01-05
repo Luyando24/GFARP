@@ -11,12 +11,14 @@ interface FormData {
   email: string;
   password: string;
   confirmPassword: string;
+  referralCode?: string;
 }
 
 const initialFormData: FormData = {
   email: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
+  referralCode: ''
 };
 
 export default function RegisterAcademy() {
@@ -57,7 +59,8 @@ export default function RegisterAcademy() {
       const submitData = {
         email: formData.email,
         password: formData.password,
-        subscriptionPlan: plan
+        subscriptionPlan: plan,
+        referralCode: formData.referralCode
       };
       const response = await fetch('/api/football-auth/academy/register', {
         method: 'POST',
@@ -205,6 +208,18 @@ export default function RegisterAcademy() {
                     </button>
                   </div>
                   {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700" htmlFor="referralCode">{t('auth.label.referralCode', 'Referral Code (Optional)')}</label>
+                  <input
+                    id="referralCode"
+                    type="text"
+                    value={formData.referralCode || ''}
+                    onChange={(e) => handleInputChange('referralCode', e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#005391] focus:outline-none"
+                    placeholder={t('auth.placeholder.referralCode', 'Enter code if you have one')}
+                  />
                 </div>
 
                 <Button

@@ -124,6 +124,7 @@ import { Area, AreaChart, Bar, BarChart, Line, LineChart, Pie, PieChart, Cell, C
 import ThemeToggle from '@/components/navigation/ThemeToggle';
 import { NotificationsPopover } from '@/components/navigation/NotificationsPopover';
 import BlogManagement from '@/components/admin/BlogManagement';
+import SalesAgentsManager from '@/components/admin/SalesAgentsManager';
 
 // Real admin data will be fetched from API
 
@@ -1253,6 +1254,10 @@ export default function AdminDashboard() {
         {/* Main Content */}
         <main className="flex-1 p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
+
+            <TabsContent value="sales" className="space-y-6">
+              <SalesAgentsManager />
+            </TabsContent>
 
             {/* Dashboard Tab */}
             <TabsContent value="dashboard" className="space-y-6">

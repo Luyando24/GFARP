@@ -200,6 +200,7 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
     let foundedYear: number | string | undefined;
     let description: string | undefined;
     let subscriptionPlan: string | undefined;
+    let referralCode: string | undefined;
 
     const assignFrom = (src: any) => {
       if (!src || typeof src !== 'object') return;
@@ -214,6 +215,7 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
       foundedYear = foundedYear ?? (src.foundedYear ?? src.establishedYear);
       description = description ?? src.description;
       subscriptionPlan = subscriptionPlan ?? (src.subscriptionPlan ?? src.selectedPlan);
+      referralCode = referralCode ?? src.referralCode;
     };
 
     // Prefer JSON-parsed body
@@ -288,6 +290,19 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
       });
     }
 
+    // Lookup sales agent if referral code provided
+    let salesAgentId = null;
+    if (referralCode) {
+      try {
+        const agentRes = await query('SELECT id FROM sales_agents WHERE code = $1', [referralCode]);
+        if (agentRes.rows.length > 0) {
+          salesAgentId = agentRes.rows[0].id;
+        }
+      } catch (err) {
+        console.warn('Failed to lookup sales agent:', err);
+      }
+    }
+
     // Use transaction to ensure all operations succeed or fail together
     const result = await transaction(async (client) => {
       const runtimeSchemaGuards = (process.env.DB_RUNTIME_GUARDS || 'on').toLowerCase() === 'on';
@@ -340,17 +355,17 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
         INSERT INTO academies (
           id, name, code, email, address, district, province, phone, website,
           academy_type, status, director_name, director_email, director_phone,
-          founded_year, password_hash
+          founded_year, password_hash, sales_agent_id
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
         RETURNING id, name, email, code
       ` : `
         INSERT INTO academies (
           name, code, email, address, district, province, phone, website,
           academy_type, status, director_name, director_email, director_phone,
-          founded_year, password_hash
+          founded_year, password_hash, sales_agent_id
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
         RETURNING id, name, email, code
       `;
 
@@ -371,7 +386,8 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
         email || null,
         phone || null,
         foundedYear ? parseInt(foundedYear.toString()) : null,
-        hashedPassword
+        hashedPassword,
+        salesAgentId
       ] : [
         defaultName,
         academyCode,
@@ -387,7 +403,8 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
         email || null,
         phone || null,
         foundedYear ? parseInt(foundedYear.toString()) : null,
-        hashedPassword
+        hashedPassword,
+        salesAgentId
       ];
 
       const academyResult = await client.query(academyInsertQuery, academyInsertValues);
@@ -481,6 +498,30 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
           plan.id,
           'Initial subscription on academy registration'
         ]);
+      }
+
+      // Record commission if sales agent linked
+      if (salesAgentId) {
+        try {
+          let amount = 0;
+          let notes = 'Academy sign-up';
+          
+          if (plan && plan.price) {
+             const price = parseFloat(plan.price) || 0;
+             amount = (price * commissionRate) / 100;
+             notes = `Commission for ${plan.name} (${plan.price})`;
+          }
+  
+          const commissionId = uuidv4();
+          await client.query(`
+            INSERT INTO commissions (
+              id, sales_agent_id, academy_id, amount, status, notes
+            ) VALUES ($1, $2, $3, $4, 'pending', $5)
+          `, [commissionId, salesAgentId, academy.id, amount, notes]);
+        } catch (commErr) {
+          console.error('Failed to record commission:', commErr);
+          // Don't fail the registration if commission fails
+        }
       }
 
       return { academy, subscription, plan };
