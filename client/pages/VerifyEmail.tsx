@@ -47,9 +47,13 @@ export default function VerifyEmail() {
               tokens: { accessToken: data.data.token, expiresInSec: 24 * 3600 }
             };
             
-            // Fetch full academy details to store in local storage (optional but good for UX)
-            // For now, we rely on what we have or subsequent calls
             localStorage.setItem('isNewRegistration', 'false'); // Clear new reg flag
+            
+            // Store full academy data for the dashboard
+            if (data.data.academy) {
+               localStorage.setItem('academy_data', JSON.stringify(data.data.academy));
+            }
+            
             saveSession(session);
             
             toast({

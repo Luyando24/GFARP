@@ -428,7 +428,18 @@ export default function AcademyDashboard() {
     const raw = localStorage.getItem('academy_data');
     if (raw) {
       try {
-        setAcademyInfo(JSON.parse(raw));
+        const data = JSON.parse(raw);
+        setAcademyInfo(data);
+
+        // Check for profile completion
+         // If critical fields are missing, redirect to complete profile
+         if (!data.profileComplete && !data.profileSkipped && (!data.phone || !data.address || !data.directorName)) {
+          console.log("Profile incomplete, redirecting to completion page");
+          // Use a small timeout to ensure state is settled/toast can be seen if we add one
+          setTimeout(() => {
+            navigate('/complete-profile');
+          }, 100);
+        }
       } catch {
         setAcademyInfo(null);
       }
@@ -761,16 +772,7 @@ export default function AcademyDashboard() {
     }
   }, []);
 
-  // Load transfers when academy info is available
-  useEffect(() => {
-    if (academyInfo?.id) {
-      loadTransfers();
-      loadDashboardStats();
-      loadSubscriptionData();
-      loadSubscriptionHistory();
-      loadAvailablePlans();
-    }
-  }, [academyInfo?.id]);
+
 
   // Load transfers when academy info is available
   useEffect(() => {
@@ -2084,8 +2086,8 @@ export default function AcademyDashboard() {
               {/* Finances Tab */}
               <TabsContent value="finances" className="space-y-6">
                 <FinancialTransactionsManager 
-                  academyId={academyInfo?.id || academyData.id} 
-                  academyDetails={academyInfo || academyData}
+                  academyId={academyInfo?.id} 
+                  academyDetails={academyInfo}
                 />
               </TabsContent>
 

@@ -725,10 +725,76 @@ export const handleAcademyLogin: RequestHandler = async (req, res) => {
   }
 }
 
+// Email Verification
+export const handleVerifyEmail: RequestHandler = async (req, res) => {
+  try {
+    const { token } = req.body;
+    
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Token is required' });
+    }
+
+    // Verify the token
+    let decoded: any;
+    try {
+      decoded = jwt.verify(token, JWT_SECRET);
+    } catch (err) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired token' });
+    }
+
+    // In a real app, you might have a dedicated verification token or check a 'is_verified' flag
+    // For now, we'll assume the token contains the academy ID and we just need to confirm it exists
+    // and potentially mark it as verified if you had such a column.
+    
+    // We'll return the user data so the frontend can auto-login
+    const academyResult = await query(`
+      SELECT *
+      FROM academies 
+      WHERE id = $1
+    `, [decoded.id]);
+
+    if (academyResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Academy not found' });
+    }
+
+    const academy = academyResult.rows[0];
+    
+    // Remove sensitive data
+    delete academy.password_hash;
+    
+    // Generate a new long-lived token for login
+    const loginToken = jwt.sign(
+      { id: academy.id, email: academy.email, role: 'ACADEMY_ADMIN' },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    return res.json({
+      success: true,
+      message: 'Email verified successfully',
+      data: {
+        user: {
+          id: academy.id,
+          academy_id: academy.id, // Ensure compatibility with frontend expecting academy_id
+          name: academy.name,
+          email: academy.email
+        },
+        academy: academy, // Return full academy object for local storage
+        token: loginToken
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Verify email error:', error);
+    return res.status(500).json({ success: false, message: 'Verification failed', error: error.message });
+  }
+};
+
 // Define the router and routes
 const footballAuthRouter = Router();
 footballAuthRouter.post('/academy/register', handleAcademyRegister);
 footballAuthRouter.post('/academy/login', handleAcademyLogin);
+footballAuthRouter.post('/verify-email', handleVerifyEmail);
 
 // Export the router as the default export
 export default footballAuthRouter;

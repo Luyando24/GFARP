@@ -151,6 +151,13 @@ export default function CompleteProfile() {
     };
 
     const handleSkip = () => {
+        // Set a flag to prevent immediate redirection back to this page
+        const currentData = JSON.parse(localStorage.getItem('academy_data') || '{}');
+        localStorage.setItem('academy_data', JSON.stringify({
+            ...currentData,
+            profileSkipped: true
+        }));
+
         toast({
             title: 'Profile Incomplete',
             description: 'You can complete your profile anytime from the dashboard settings.',
