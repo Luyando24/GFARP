@@ -1297,11 +1297,6 @@ export default function AcademyDashboard() {
                   >
                     {t('dash.menu.settings')}
                   </Button>
-                  <Link to="/complete-profile">
-                    <Button variant="outline" size="sm" className="text-yellow-700 border-yellow-700 hover:bg-yellow-100">
-                      {t('dash.profile.complete')}
-                    </Button>
-                  </Link>
                 </div>
               </div>
             </div>
