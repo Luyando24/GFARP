@@ -292,11 +292,16 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
 
     // Lookup sales agent if referral code provided
     let salesAgentId = null;
+    let commissionRate = 10; // Default commission rate
+
     if (referralCode) {
       try {
-        const agentRes = await query('SELECT id FROM sales_agents WHERE code = $1', [referralCode]);
+        const agentRes = await query('SELECT id, commission_rate FROM sales_agents WHERE code = $1', [referralCode]);
         if (agentRes.rows.length > 0) {
           salesAgentId = agentRes.rows[0].id;
+          if (agentRes.rows[0].commission_rate) {
+            commissionRate = parseFloat(agentRes.rows[0].commission_rate);
+          }
         }
       } catch (err) {
         console.warn('Failed to lookup sales agent:', err);
