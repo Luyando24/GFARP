@@ -16,6 +16,8 @@ const router = Router();
 
 // Create Stripe customer for academy
 router.post('/create-customer', authenticateToken, (async (req, res) => {
+  // Create subscription with Stripe (Legacy - keep for backward compatibility or direct calls)
+router.post('/create-subscription', authenticateToken, (async (req, res) => {
   try {
     const academyId = (req as any).user?.id;
 
@@ -82,8 +84,126 @@ router.post('/create-customer', authenticateToken, (async (req, res) => {
   }
 }) as RequestHandler);
 
-// Create subscription with Stripe
-router.post('/create-subscription', authenticateToken, (async (req, res) => {
+// Create checkout session for subscription upgrade
+router.post('/create-checkout-session', authenticateToken, (async (req, res) => {
+  try {
+    const academyId = (req as any).user?.id;
+    const { planId, billingCycle, successUrl, cancelUrl, promoCodeId } = req.body;
+
+    if (!academyId || !planId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Academy ID and plan ID are required'
+      });
+    }
+
+    // Get plan details
+    const planResult = await query(
+      'SELECT * FROM subscription_plans WHERE id = $1',
+      [planId]
+    );
+
+    if (planResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Plan not found'
+      });
+    }
+
+    const plan = planResult.rows[0];
+    let price = Number(plan.price);
+    
+    // Apply billing cycle adjustment
+    if (billingCycle === 'yearly') {
+      // Logic for yearly pricing (e.g., 20% off)
+      // This should ideally match the frontend calculation or be stored in DB
+      if (plan.name === 'Basic') price = 299; // Example fixed yearly price
+      else if (plan.name === 'Pro') price = 599;
+      else if (plan.name === 'Elite') price = 999;
+      else price = Math.round(price * 12 * 0.8);
+    }
+
+    // Apply Promo Code
+    let discountAmount = 0;
+    if (promoCodeId) {
+      const promoRes = await query(
+        `SELECT * FROM promo_codes 
+         WHERE id = $1 AND status = 'active' 
+         AND (expires_at IS NULL OR expires_at > NOW())
+         AND (max_uses IS NULL OR used_count < max_uses)`,
+        [promoCodeId]
+      );
+
+      if (promoRes.rows.length > 0) {
+        const promo = promoRes.rows[0];
+        const percent = parseFloat(promo.discount_percent);
+        discountAmount = (price * percent) / 100;
+        price = Math.max(0, price - discountAmount);
+        
+        // Increment usage count
+        await query('UPDATE promo_codes SET used_count = used_count + 1 WHERE id = $1', [promoCodeId]);
+      }
+    }
+
+    // Get academy details for customer creation
+    const academyResult = await query(
+      'SELECT name, email, stripe_customer_id FROM academies WHERE id = $1',
+      [academyId]
+    );
+    const academy = academyResult.rows[0];
+
+    // Ensure Stripe customer exists
+    let customerId = academy.stripe_customer_id;
+    if (!customerId) {
+      const customer = await createStripeCustomer(academy.email, academy.name, { academyId });
+      customerId = customer.id;
+      await query('UPDATE academies SET stripe_customer_id = $1 WHERE id = $2', [customerId, academyId]);
+    }
+
+    // Create Checkout Session
+    const stripe = getStripe();
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `${plan.name} Plan (${billingCycle})`,
+              description: promoCodeId ? `Includes discount` : undefined,
+            },
+            unit_amount: Math.round(price * 100), // Stripe expects cents
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment', // Using payment mode for simplicity, or 'subscription' if using Stripe Products
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata: {
+        academyId,
+        planId,
+        billingCycle,
+        promoCodeId: promoCodeId || null
+      }
+    });
+
+    res.json({
+      success: true,
+      url: session.url,
+      sessionId: session.id
+    });
+
+  } catch (error: any) {
+    console.error('Create checkout session error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to create checkout session',
+      error: error.message
+    });
+  }
+}) as RequestHandler);
   try {
     const academyId = (req as any).user?.id;
     const { planId } = req.body;

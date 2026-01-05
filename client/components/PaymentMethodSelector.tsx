@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CreditCard, Wallet, DollarSign, Loader2 } from 'lucide-react';
+import { CreditCard, Wallet, DollarSign, Loader2, CheckCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 
 interface PaymentMethodSelectorProps {
@@ -30,7 +30,58 @@ export default function PaymentMethodSelector({
 }: PaymentMethodSelectorProps) {
   const [paymentMethod, setPaymentMethod] = useState<string>('CARD'); // Default to CARD
   const [isProcessing, setIsProcessing] = useState(false);
+  const [promoCode, setPromoCode] = useState('');
+  const [appliedDiscount, setAppliedDiscount] = useState<{ code: string; percent: number; id: string } | null>(null);
+  const [validatingPromo, setValidatingPromo] = useState(false);
   const { toast } = useToast();
+
+  const handleValidatePromo = async () => {
+    if (!promoCode.trim()) return;
+    
+    setValidatingPromo(true);
+    try {
+      const res = await fetch('/api/admin/discounts/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: promoCode })
+      });
+      const data = await res.json();
+      
+      if (data.success) {
+        setAppliedDiscount({
+          code: data.data.code,
+          percent: data.data.discount_percent,
+          id: data.data.id
+        });
+        toast({
+          title: "Promo Code Applied!",
+          description: `${data.data.discount_percent}% discount applied.`,
+        });
+      } else {
+        toast({
+          title: "Invalid Code",
+          description: data.message || "Promo code is invalid or expired",
+          variant: "destructive"
+        });
+        setAppliedDiscount(null);
+      }
+    } catch (error) {
+      console.error('Promo validation error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to validate promo code",
+        variant: "destructive"
+      });
+    } finally {
+      setValidatingPromo(false);
+    }
+  };
+
+  const getDiscountedPrice = () => {
+    if (!selectedPlan || !appliedDiscount) return selectedPlan?.price;
+    const discountAmount = (selectedPlan.price * appliedDiscount.percent) / 100;
+    return Math.max(0, selectedPlan.price - discountAmount); // Ensure price doesn't go below 0
+  };
 
   const handlePaymentMethodChange = (value: string) => {
     setPaymentMethod(value);
@@ -109,7 +160,8 @@ export default function PaymentMethodSelector({
             planId: selectedPlan.id,
             billingCycle: selectedPlan.billingCycle || 'monthly',
             successUrl: `${window.location.origin}/academy-dashboard?tab=subscription&payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
-            cancelUrl: `${window.location.origin}/academy-dashboard?tab=subscription&payment_cancelled=true`
+            cancelUrl: `${window.location.origin}/academy-dashboard?tab=subscription&payment_cancelled=true`,
+            promoCodeId: appliedDiscount?.id
           }),
         });
 
@@ -166,6 +218,51 @@ export default function PaymentMethodSelector({
             </Card>
           ) : (
             <>
+              {/* Promo Code Section */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Promo Code</Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="text"
+                      value={promoCode}
+                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                      placeholder="Enter promo code"
+                      disabled={!!appliedDiscount}
+                      className="w-full px-3 py-2 border rounded-md uppercase text-sm"
+                    />
+                    {appliedDiscount && (
+                      <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 h-4 w-4" />
+                    )}
+                  </div>
+                  {appliedDiscount ? (
+                    <Button 
+                      variant="outline" 
+                      onClick={() => {
+                        setAppliedDiscount(null);
+                        setPromoCode('');
+                      }}
+                      className="text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      Remove
+                    </Button>
+                  ) : (
+                    <Button 
+                      variant="secondary" 
+                      onClick={handleValidatePromo}
+                      disabled={!promoCode || validatingPromo}
+                    >
+                      {validatingPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
+                    </Button>
+                  )}
+                </div>
+                {appliedDiscount && (
+                  <p className="text-xs text-green-600 font-medium">
+                    {appliedDiscount.percent}% discount applied! New price: ${getDiscountedPrice()?.toFixed(2)}
+                  </p>
+                )}
+              </div>
+
               <div>
                 <Label className="text-base font-medium">Select Payment Method</Label>
                 <RadioGroup value={paymentMethod} onValueChange={handlePaymentMethodChange} className="mt-2">
@@ -202,7 +299,7 @@ export default function PaymentMethodSelector({
             {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isProcessing
               ? 'Redirecting...'
-              : (selectedPlan.isFree ? 'Activate Plan' : `Pay $${selectedPlan.price}`)
+              : (selectedPlan.isFree ? 'Activate Plan' : `Pay $${getDiscountedPrice()?.toFixed(2)}`)
             }
           </Button>
         </DialogFooter>

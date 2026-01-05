@@ -125,6 +125,7 @@ import ThemeToggle from '@/components/navigation/ThemeToggle';
 import { NotificationsPopover } from '@/components/navigation/NotificationsPopover';
 import BlogManagement from '@/components/admin/BlogManagement';
 import SalesAgentsManager from '@/components/admin/SalesAgentsManager';
+import DiscountManager from '@/components/admin/DiscountManager';
 
 // Real admin data will be fetched from API
 
@@ -1119,6 +1120,7 @@ export default function AdminDashboard() {
     { id: "academies", label: "Academy Management", icon: Building },
     { id: "super-admins", label: "Super Admins", icon: Users },
     { id: "sales", label: "Sales Agents", icon: UserCheck },
+    { id: "discounts", label: "Discounts", icon: Percent },
     { id: "compliance", label: "FIFA Compliance", icon: Shield },
     { id: "finances", label: "Financial Overview", icon: DollarSign },
     { id: "blog", label: "Blog Management", icon: BookOpen },
@@ -1525,6 +1527,16 @@ export default function AdminDashboard() {
             {/* Blog Management Tab */}
             <TabsContent value="blog" className="space-y-6">
               <BlogManagement />
+            </TabsContent>
+
+            {/* Sales Agents Tab */}
+            <TabsContent value="sales" className="space-y-6">
+              <SalesAgentsManager />
+            </TabsContent>
+
+            {/* Discounts Tab */}
+            <TabsContent value="discounts" className="space-y-6">
+              <DiscountManager />
             </TabsContent>
 
             <TabsContent value="compliance" className="space-y-6">
