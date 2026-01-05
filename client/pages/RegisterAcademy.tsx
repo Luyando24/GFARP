@@ -32,6 +32,14 @@ export default function RegisterAcademy() {
   const location = useLocation();
   const { toast } = useToast();
 
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const refCode = searchParams.get('ref') || searchParams.get('referralCode');
+    if (refCode) {
+      setFormData(prev => ({ ...prev, referralCode: refCode }));
+    }
+  }, [location.search]);
+
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
     if (!formData.email.trim()) newErrors.email = t('auth.error.emailRequired');

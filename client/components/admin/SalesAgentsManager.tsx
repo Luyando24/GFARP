@@ -156,6 +156,28 @@ const SalesAgentsManager: React.FC = () => {
     setShowModal(true);
   };
 
+  const generateCode = () => {
+    // Generate a random 6-character code: e.g. SA-A1B2
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    return `SA-${random}`;
+  };
+
+  const getReferralLink = (code: string) => {
+    return `${window.location.origin}/academy-registration?ref=${code}`;
+  };
+
+  const openAddModal = () => {
+    setEditingAgent(null);
+    setFormData({ 
+      name: '', 
+      email: '', 
+      phone: '', 
+      code: generateCode(), 
+      commission_rate: '10.00' 
+    });
+    setShowModal(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -164,11 +186,7 @@ const SalesAgentsManager: React.FC = () => {
           Sales Agents
         </h2>
         <button
-          onClick={() => {
-            setEditingAgent(null);
-            setFormData({ name: '', email: '', phone: '', code: '', commission_rate: '10.00' });
-            setShowModal(true);
-          }}
+          onClick={openAddModal}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
         >
           <Plus className="h-4 w-4" />
@@ -211,9 +229,20 @@ const SalesAgentsManager: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded font-mono">
-                        {agent.code}
-                      </span>
+                      <div className="flex flex-col gap-1">
+                        <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded font-mono w-fit">
+                          {agent.code}
+                        </span>
+                        <span 
+                          className="text-xs text-blue-500 cursor-pointer hover:underline"
+                          onClick={() => {
+                             navigator.clipboard.writeText(getReferralLink(agent.code));
+                             alert('Link copied!');
+                          }}
+                        >
+                          Copy Link
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4 text-gray-600 dark:text-gray-300">
                       {agent.commission_rate}%
@@ -355,15 +384,31 @@ const SalesAgentsManager: React.FC = () => {
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div>
+                <div className="relative">
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Referral Code</label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.code}
-                    onChange={e => setFormData({...formData, code: e.target.value})}
-                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      required
+                      value={formData.code}
+                      onChange={e => setFormData({...formData, code: e.target.value})}
+                      className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                    />
+                    {!editingAgent && (
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, code: generateCode() }))}
+                        className="px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-xs"
+                      >
+                        Gen
+                      </button>
+                    )}
+                  </div>
+                  {formData.code && (
+                    <p className="text-xs text-gray-500 mt-1 break-all">
+                      Link: {getReferralLink(formData.code)}
+                    </p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Commission (%)</label>
