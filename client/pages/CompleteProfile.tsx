@@ -81,22 +81,28 @@ export default function CompleteProfile() {
         // except maybe email and name which we already know.
         
         if (academyData) {
+            // Check for potential mock data residue from previous versions
+            // If the name is "Elite Football Academy" or director is "Michael Banda", treat it as mock data and do not pre-fill
+            const isMockName = academyData.name === 'Elite Football Academy';
+            const isMockDirector = academyData.directorName === 'Michael Banda' || academyData.directorName === 'Michael';
+            
             setFormData(prev => ({
                 ...prev,
                 // Pre-fill name if available, but don't overwrite if user already typed
-                name: prev.name || academyData.name || '', 
+                // And skip if it's the mock name
+                name: (isMockName ? '' : (prev.name || academyData.name || '')), 
                 // Pre-fill email from academy data (this is usually correct/desired)
                 directorEmail: prev.directorEmail || academyData.email || '',
                 // Only pre-fill these if they actually exist in the data source and aren't just placeholders
                 // In a "new account" flow, these should be empty from the backend anyway due to my previous fix.
                 // But just in case local storage has stale data:
-                phone: academyData.phone || '',
-                address: academyData.address || '',
-                city: academyData.city || '',
-                country: academyData.country || 'United States', // Keep default
-                directorName: academyData.directorName || '',
-                directorPhone: academyData.directorPhone || '',
-                foundedYear: academyData.foundedYear ? String(academyData.foundedYear) : ''
+                phone: (isMockName ? '' : (academyData.phone || '')),
+                address: (isMockName ? '' : (academyData.address || '')),
+                city: (isMockName ? '' : (academyData.city || '')),
+                country: (isMockName ? 'United States' : (academyData.country || 'United States')), // Keep default
+                directorName: (isMockDirector ? '' : (academyData.directorName || '')),
+                directorPhone: (isMockDirector ? '' : (academyData.directorPhone || '')),
+                foundedYear: (isMockName ? '' : (academyData.foundedYear ? String(academyData.foundedYear) : ''))
             }));
         }
     }, []);

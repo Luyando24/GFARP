@@ -76,22 +76,7 @@ import PaymentMethodSelector from '@/components/PaymentMethodSelector';
 import AcademyComplianceTab from '@/components/academy/AcademyComplianceTab';
 import { Player, Transfer, getTransfers, createTransfer, updateTransfer, deleteTransfer, getAcademyDashboardStats, Api } from '@/lib/api';
 
-// Mock data for academy dashboard
-const academyData = {
-  id: "550e8400-e29b-41d4-a716-446655440000", // Valid UUID format
-  name: "Elite Football Academy",
-  location: "Lusaka, Zambia",
-  established: "2018",
-  email: "admin@elitefootball.zm",
-  phone: "+260 97 123 4567",
-  logo: "/images/academy-logo.jpg",
-  director: {
-    name: "Michael Banda",
-    email: "m.banda@elitefootball.zm",
-    phone: "+260 97 987 6543"
-  }
-};
-
+// Mock data removed
 // Player positions for dropdown
 const playerPositions = [
   "Goalkeeper",
@@ -106,145 +91,12 @@ const playerPositions = [
   "Attacking Midfielder"
 ];
 
-const playersData = [
-  { id: 1, name: "John Mwanza", age: 16, position: "Forward", status: "active", rating: 85, currentClub: "Elite Football Academy" },
-  { id: 2, name: "Sarah Phiri", age: 15, position: "Midfielder", status: "active", rating: 82, currentClub: "Elite Football Academy" },
-  { id: 3, name: "David Tembo", age: 17, position: "Defender", status: "active", rating: 78, currentClub: "Elite Football Academy" },
-  { id: 4, name: "Grace Lungu", age: 16, position: "Goalkeeper", status: "injured", rating: 88, currentClub: "Elite Football Academy" },
-  { id: 5, name: "Peter Zulu", age: 15, position: "Winger", status: "active", rating: 80, currentClub: "Elite Football Academy" },
-  { id: 6, name: "Michael Banda", age: 17, position: "Forward", status: "active", rating: 87, currentClub: "Youth Stars FC" },
-  { id: 7, name: "Alice Mulenga", age: 16, position: "Midfielder", status: "active", rating: 84, currentClub: "Rising Eagles" },
-  { id: 8, name: "Joseph Chisanga", age: 15, position: "Defender", status: "active", rating: 79, currentClub: "Future Champions" },
-  { id: 9, name: "Ruth Kasonde", age: 17, position: "Winger", status: "active", rating: 83, currentClub: "Dream Team Academy" },
-  { id: 10, name: "Emmanuel Mwale", age: 16, position: "Goalkeeper", status: "active", rating: 86, currentClub: "Victory Sports Club" }
-];
+const playersData: any[] = [];
 
-
-
-const statsData = {
-  totalPlayers: 45,
-  activeTransfers: 3,
-  monthlyRevenue: 25000,
-  complianceScore: 95
-};
+const statsData = {};
 
 // Add comprehensive financial data for the academy
-const financialData = {
-  overview: {
-    totalRevenue: 125000,
-    totalExpenses: 89000,
-    netProfit: 36000,
-    profitMargin: 28.8,
-    monthlyGrowth: 12.5
-  },
-  revenue: {
-    playerTransfers: 65000,
-    academyFees: 35000,
-    sponsorships: 15000,
-    merchandise: 8000,
-    other: 2000
-  },
-  expenses: {
-    salaries: 45000,
-    facilities: 18000,
-    equipment: 12000,
-    travel: 8000,
-    marketing: 4000,
-    other: 2000
-  },
-  monthlyData: [
-    { month: 'Jan', revenue: 18000, expenses: 12000, profit: 6000 },
-    { month: 'Feb', revenue: 22000, expenses: 14000, profit: 8000 },
-    { month: 'Mar', revenue: 19000, expenses: 13000, profit: 6000 },
-    { month: 'Apr', revenue: 25000, expenses: 15000, profit: 10000 },
-    { month: 'May', revenue: 21000, expenses: 14500, profit: 6500 },
-    { month: 'Jun', revenue: 20000, expenses: 20500, profit: -500 }
-  ],
-  recentTransactions: [
-    {
-      id: 1,
-      type: 'income',
-      description: 'Player Transfer - James Sakala',
-      amount: 15000,
-      date: '2024-01-15',
-      category: 'Transfer'
-    },
-    {
-      id: 2,
-      type: 'expense',
-      description: 'Equipment Purchase - Training Gear',
-      amount: 3500,
-      date: '2024-01-14',
-      category: 'Equipment'
-    },
-    {
-      id: 3,
-      type: 'income',
-      description: 'Monthly Academy Fees',
-      amount: 8500,
-      date: '2024-01-10',
-      category: 'Fees'
-    },
-    {
-      id: 4,
-      type: 'expense',
-      description: 'Staff Salaries - January',
-      amount: 12000,
-      date: '2024-01-05',
-      category: 'Salaries'
-    },
-    {
-      id: 5,
-      type: 'income',
-      description: 'Sponsorship - Local Bank',
-      amount: 5000,
-      date: '2024-01-03',
-      category: 'Sponsorship'
-    }
-  ],
-  budgetCategories: [
-    {
-      id: 1,
-      name: 'Staff Salaries',
-      budgeted: 50000,
-      spent: 45000,
-      remaining: 5000,
-      percentage: 90
-    },
-    {
-      id: 2,
-      name: 'Facilities & Maintenance',
-      budgeted: 20000,
-      spent: 18000,
-      remaining: 2000,
-      percentage: 90
-    },
-    {
-      id: 3,
-      name: 'Equipment & Supplies',
-      budgeted: 15000,
-      spent: 12000,
-      remaining: 3000,
-      percentage: 80
-    },
-    {
-      id: 4,
-      name: 'Travel & Transportation',
-      budgeted: 10000,
-      spent: 8000,
-      remaining: 2000,
-      percentage: 80
-    },
-    {
-      id: 5,
-      name: 'Marketing & Promotion',
-      budgeted: 6000,
-      spent: 4000,
-      remaining: 2000,
-      percentage: 67
-    }
-  ]
-};
+const financialData: any = {};
 
 
 
@@ -947,7 +799,7 @@ export default function AcademyDashboard() {
 
   // Initialize settings form data
   useEffect(() => {
-    const currentData = academyInfo || academyData;
+    const currentData = academyInfo || {};
     setSettingsFormData({
       name: currentData.name || "",
       location: currentData.location || "",
@@ -960,17 +812,17 @@ export default function AcademyDashboard() {
     });
   }, [academyInfo]);
 
-  const displayAcademyName = academyInfo?.name || academyData.name;
-  const displayName = academyInfo?.contactPerson || academyInfo?.name || academyData.director.name;
+  const displayAcademyName = academyInfo?.name || "";
+  const displayName = academyInfo?.contactPerson || academyInfo?.name || "";
   const getInitials = (name: string) => (name || '')
     .trim()
     .split(/\s+/)
     .slice(0, 2)
     .map(n => n[0]?.toUpperCase())
-    .join('') || academyData.name.substring(0, 2).toUpperCase();
+    .join('') || "";
 
   // Filter functions for different tabs
-  const filteredTransactions = financialData.recentTransactions.filter(transaction =>
+  const filteredTransactions = (financialData.recentTransactions || []).filter((transaction: any) =>
     searchQuery === "" ||
     transaction.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
     transaction.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1001,7 +853,7 @@ export default function AcademyDashboard() {
   const handleCancelEdit = () => {
     setIsEditingSettings(false);
     // Reset form data to original values
-    const currentData = academyInfo || academyData;
+    const currentData = academyInfo || {};
     setSettingsFormData({
       name: currentData.name || "",
       location: currentData.location || "",
@@ -1356,7 +1208,7 @@ export default function AcademyDashboard() {
               <ThemeToggle />
               <div className="flex items-center gap-3">
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src={academyInfo?.logo || academyData.logo} />
+                  <AvatarImage src={academyInfo?.logo} />
                   <AvatarFallback className="bg-blue-600 text-white font-bold">{getInitials(displayName)}</AvatarFallback>
                 </Avatar>
                 <div className="hidden sm:block">
@@ -1468,7 +1320,7 @@ export default function AcademyDashboard() {
                     </p>
                   </div>
                   <Badge variant="secondary" className="text-sm">
-                    {academyInfo?.id || academyData.id}
+                    {academyInfo?.id}
                   </Badge>
                 </div>
 
@@ -1966,7 +1818,7 @@ export default function AcademyDashboard() {
 
               {/* FIFA Compliance Tab */}
               <TabsContent value="fifa-compliance" className="space-y-6">
-                <AcademyComplianceTab academyId={academyInfo?.id || academyData.id} />
+                <AcademyComplianceTab academyId={academyInfo?.id} />
               </TabsContent>
 
               {/* Compliance Tab */}

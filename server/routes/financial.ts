@@ -150,19 +150,25 @@ const handleGetTransactions: RequestHandler = async (req, res) => {
 // GET /api/financial/categories
 const handleGetCategories: RequestHandler = async (req, res) => {
     try {
-        // Mock for now
-        const mockCategories = [
-            { id: 1, category_name: 'Academy Fees', category_type: 'revenue', budgeted_amount: 300000, is_active: true },
-            { id: 2, category_name: 'Sponsorship', category_type: 'revenue', budgeted_amount: 500000, is_active: true },
-            { id: 4, category_name: 'Staff Salaries', category_type: 'expense', budgeted_amount: 200000, is_active: true },
-            { id: 5, category_name: 'Facilities', category_type: 'expense', budgeted_amount: 100000, is_active: true },
-            { id: 6, category_name: 'Equipment', category_type: 'expense', budgeted_amount: 80000, is_active: true },
-            { id: 7, category_name: 'Travel', category_type: 'expense', budgeted_amount: 50000, is_active: true }
-        ];
+        const academyId = req.query.academyId as string;
+        
+        if (!academyId) {
+            return res.json({
+                success: true,
+                data: []
+            });
+        }
+
+        const result = await query(
+            `SELECT * FROM budget_categories 
+             WHERE academy_id = $1 AND is_active = true
+             ORDER BY category_type, category_name`,
+            [academyId]
+        );
 
         res.json({
             success: true,
-            data: mockCategories
+            data: result.rows
         });
     } catch (error) {
         console.error('Error fetching categories:', error);
