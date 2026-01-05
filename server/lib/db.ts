@@ -115,9 +115,10 @@ const pool: any = cleanConnectionString
   ? new Pool({
     connectionString: cleanConnectionString,
     ssl: computeSslOption(resolvedConnectionString),
-    max: parseInt(process.env.DB_POOL_MAX || '3'), // Reduced from 5 for serverless
-    connectionTimeoutMillis: parseInt(process.env.DB_CONNECT_TIMEOUT_MS || '3000'), // Reduced from 8000ms to prevent Vercel timeout
-    idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS || '0'),
+    max: parseInt(process.env.DB_POOL_MAX || '1'), // Reduced to 1 for serverless to avoid max_connections errors
+    connectionTimeoutMillis: parseInt(process.env.DB_CONNECT_TIMEOUT_MS || '5000'), // 5s timeout
+    idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS || '2000'), // Close idle clients after 2s
+    allowExitOnIdle: true, // Allow process to exit if pool is idle
     keepAlive: true,
     keepAliveInitialDelayMillis: 3000, // Reduced from 10000ms for faster serverless startup
   })

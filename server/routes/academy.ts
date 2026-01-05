@@ -158,18 +158,14 @@ const handleGetAcademies: RequestHandler = async (req, res) => {
     const academiesResult = await query(
       `SELECT *, 
         (SELECT COUNT(*) FROM players p WHERE p.academy_id = academies.id) as player_count,
-        CASE WHEN status = 'active' THEN true ELSE false END as "isActive"
+        CASE WHEN status = 'active' THEN true ELSE false END as "isActive",
+        COUNT(*) OVER() as total_count
       FROM academies ${whereClause} ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
       [...params, limit, skip]
     );
 
-    const countResult = await query(
-      `SELECT COUNT(*) as total FROM academies ${whereClause}`,
-      params
-    );
-
     const academies = academiesResult.rows;
-    const total = parseInt(countResult.rows[0].total);
+    const total = academies.length > 0 ? parseInt(academies[0].total_count) : 0;
 
     res.json({
       success: true,
@@ -244,11 +240,8 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
         last_name_cipher: undefined
     }));
 
-    // Get player count
-    const playerCountResult = await query(
-      'SELECT COUNT(*) as count FROM players WHERE academy_id = $1',
-      [id]
-    );
+    // Get player count - use array length since we fetch all players
+    const playerCount = decryptedPlayers.length;
 
     // Fetch Compliance Data
     let complianceData = null;
@@ -423,9 +416,9 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
       players: decryptedPlayers,
       compliance: complianceData,
       activities: activities, // Added activities
-      player_count: parseInt(playerCountResult.rows[0].count) || 0,
+      player_count: playerCount,
       _count: {
-        players: parseInt(playerCountResult.rows[0].count) || 0,
+        players: playerCount,
         documents: complianceData?.documents?.length || 0,
         payments: 0   // Can be implemented later
       }
@@ -841,44 +834,26 @@ router.patch('/:id/verify', handleVerifyAcademy);
 // GET /api/academies/stats/overview - Get academy statistics
 const handleGetAcademyStats: RequestHandler = async (req, res) => {
   try {
-    // Get total academies count
-    const totalAcademiesResult = await query('SELECT COUNT(*) as count FROM academies');
-    const totalAcademies = parseInt(totalAcademiesResult.rows[0].count);
-
-    // Get active academies count
-    const activeAcademiesResult = await query('SELECT COUNT(*) as count FROM academies WHERE status = \'active\'');
-    const activeAcademies = parseInt(activeAcademiesResult.rows[0].count);
-
-    // Get inactive academies count
-    const inactiveAcademiesResult = await query('SELECT COUNT(*) as count FROM academies WHERE status IN (\'inactive\', \'suspended\')');
-    const inactiveAcademies = parseInt(inactiveAcademiesResult.rows[0].count);
-
-    // Get verified academies count (assuming we don't have this column yet, set to 0)
-    const verifiedAcademies = 0;
-
-    // Get unverified academies count
-    const unverifiedAcademies = totalAcademies;
-
-    // Get total players count
-    const totalPlayersResult = await query('SELECT COUNT(*) as count FROM players');
-    const totalPlayers = parseInt(totalPlayersResult.rows[0].count);
-
-    // Get recent registrations (last 30 days)
-    const recentRegistrationsResult = await query(`
-      SELECT COUNT(*) as count 
-      FROM academies 
-      WHERE created_at >= NOW() - INTERVAL '30 days'
+    // Optimized single query to fetch all stats
+    const statsResult = await query(`
+      SELECT 
+        (SELECT COUNT(*) FROM academies) as total_academies,
+        (SELECT COUNT(*) FROM academies WHERE status = 'active') as active_academies,
+        (SELECT COUNT(*) FROM academies WHERE status IN ('inactive', 'suspended')) as inactive_academies,
+        (SELECT COUNT(*) FROM players) as total_players,
+        (SELECT COUNT(*) FROM academies WHERE created_at >= NOW() - INTERVAL '30 days') as recent_registrations
     `);
-    const recentRegistrations = parseInt(recentRegistrationsResult.rows[0].count);
-
+    
+    const row = statsResult.rows[0];
+    
     const stats = {
-      totalAcademies,
-      activeAcademies,
-      inactiveAcademies,
-      verifiedAcademies,
-      unverifiedAcademies,
-      totalPlayers,
-      recentRegistrations
+      totalAcademies: parseInt(row.total_academies),
+      activeAcademies: parseInt(row.active_academies),
+      inactiveAcademies: parseInt(row.inactive_academies),
+      verifiedAcademies: 0, // Placeholder
+      unverifiedAcademies: parseInt(row.total_academies), // Placeholder logic from original
+      totalPlayers: parseInt(row.total_players),
+      recentRegistrations: parseInt(row.recent_registrations)
     };
 
     res.json({
