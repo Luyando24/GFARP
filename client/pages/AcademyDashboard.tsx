@@ -804,13 +804,13 @@ export default function AcademyDashboard() {
     const currentData = academyInfo || {};
     setSettingsFormData({
       name: currentData.name || "",
-      location: currentData.location || "",
+      location: currentData.address || currentData.location || "",
       established: currentData.established || "",
       email: currentData.email || "",
       phone: currentData.phone || "",
-      directorName: currentData.director?.name || "",
-      directorEmail: currentData.director?.email || "",
-      directorPhone: currentData.director?.phone || ""
+      directorName: currentData.directorName || currentData.director?.name || "",
+      directorEmail: currentData.directorEmail || currentData.director?.email || "",
+      directorPhone: currentData.directorPhone || currentData.director?.phone || ""
     });
   }, [academyInfo]);
 
@@ -858,13 +858,13 @@ export default function AcademyDashboard() {
     const currentData = academyInfo || {};
     setSettingsFormData({
       name: currentData.name || "",
-      location: currentData.location || "",
+      location: currentData.address || currentData.location || "",
       established: currentData.established || "",
       email: currentData.email || "",
       phone: currentData.phone || "",
-      directorName: currentData.director?.name || "",
-      directorEmail: currentData.director?.email || "",
-      directorPhone: currentData.director?.phone || ""
+      directorName: currentData.directorName || currentData.director?.name || "",
+      directorEmail: currentData.directorEmail || currentData.director?.email || "",
+      directorPhone: currentData.directorPhone || currentData.director?.phone || ""
     });
   };
 
@@ -875,9 +875,13 @@ export default function AcademyDashboard() {
         ...academyInfo,
         name: settingsFormData.name,
         location: settingsFormData.location,
+        address: settingsFormData.location, // Ensure flat structure for banner check
         established: settingsFormData.established,
         email: settingsFormData.email,
         phone: settingsFormData.phone,
+        directorName: settingsFormData.directorName, // Ensure flat structure for banner check
+        directorEmail: settingsFormData.directorEmail,
+        directorPhone: settingsFormData.directorPhone,
         director: {
           name: settingsFormData.directorName,
           email: settingsFormData.directorEmail,
@@ -1285,7 +1289,15 @@ export default function AcademyDashboard() {
                     </p>
                   </div>
                 </div>
-                <div className="ml-4 flex-shrink-0">
+                <div className="ml-4 flex-shrink-0 flex gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="text-yellow-700 border-yellow-700 hover:bg-yellow-100"
+                    onClick={() => setActiveTab('settings')}
+                  >
+                    {t('dash.menu.settings')}
+                  </Button>
                   <Link to="/complete-profile">
                     <Button variant="outline" size="sm" className="text-yellow-700 border-yellow-700 hover:bg-yellow-100">
                       {t('dash.profile.complete')}
