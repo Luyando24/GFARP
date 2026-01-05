@@ -1273,11 +1273,11 @@ export default function AcademyDashboard() {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 p-6">
+        <main className="flex-1 flex flex-col">
           
           {/* Incomplete Profile Banner */}
           {academyInfo && (!academyInfo.address || !academyInfo.phone || !academyInfo.directorName) && (
-            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded shadow-sm">
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 w-full">
               <div className="flex justify-between items-center">
                 <div className="flex items-center">
                   <div className="flex-shrink-0">
@@ -1308,7 +1308,8 @@ export default function AcademyDashboard() {
             </div>
           )}
 
-          {activeView === 'compliance-documents' ? (
+          <div className="flex-1 p-6">
+            {activeView === 'compliance-documents' ? (
             <ComplianceDocuments onBack={() => setActiveView('main')} />
           ) : (
             <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -2758,6 +2759,7 @@ export default function AcademyDashboard() {
               </div>
             </div>
           </footer>
+          </div>
         </main>
       </div>
     </div >
