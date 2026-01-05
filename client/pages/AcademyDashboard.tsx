@@ -429,6 +429,13 @@ export default function AcademyDashboard() {
     if (raw) {
       try {
         const data = JSON.parse(raw);
+        
+        // Normalize data to ensure consistent banner behavior
+        // Even if fields are missing (undefined), we want them to be treated as empty strings
+        if (data.address === undefined) data.address = '';
+        if (data.phone === undefined) data.phone = '';
+        if (data.directorName === undefined) data.directorName = '';
+        
         setAcademyInfo(data);
 
         // Check for profile completion

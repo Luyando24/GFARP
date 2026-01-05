@@ -81,17 +81,14 @@ router.post('/setup', async (req, res) => {
 router.get('/', async (req, res) => {
   try {
     // Get agents with basic stats
-    // We count academies linked to them
+    // We use subqueries to avoid cartesian product issues when joining multiple tables
     const result = await query(`
       SELECT 
         sa.*,
-        COUNT(a.id) as total_academies,
-        COALESCE(SUM(c.amount) FILTER (WHERE c.status = 'paid'), 0) as total_paid,
-        COALESCE(SUM(c.amount) FILTER (WHERE c.status = 'pending'), 0) as total_pending
+        (SELECT COUNT(*) FROM academies a WHERE a.sales_agent_id = sa.id) as total_academies,
+        (SELECT COALESCE(SUM(amount), 0) FROM commissions c WHERE c.sales_agent_id = sa.id AND c.status = 'paid') as total_paid,
+        (SELECT COALESCE(SUM(amount), 0) FROM commissions c WHERE c.sales_agent_id = sa.id AND c.status = 'pending') as total_pending
       FROM sales_agents sa
-      LEFT JOIN academies a ON sa.id = a.sales_agent_id
-      LEFT JOIN commissions c ON sa.id = c.sales_agent_id
-      GROUP BY sa.id
       ORDER BY sa.created_at DESC
     `);
     res.json({ success: true, data: result.rows });

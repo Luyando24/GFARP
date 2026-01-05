@@ -263,6 +263,47 @@ async function handlePaymentSucceeded(invoice: any) {
       ]);
 
       console.log(`Payment recorded for subscription ${subscriptionId}, academy ${academyId}`);
+
+      // Check for sales agent and calculate commission
+      const academyInfoResult = await client.query(
+        'SELECT sales_agent_id FROM academies WHERE id = $1',
+        [academyId]
+      );
+
+      if (academyInfoResult.rows.length > 0 && academyInfoResult.rows[0].sales_agent_id) {
+        const agentId = academyInfoResult.rows[0].sales_agent_id;
+        
+        // Get agent's commission rate
+        const agentResult = await client.query(
+          'SELECT commission_rate FROM sales_agents WHERE id = $1',
+          [agentId]
+        );
+
+        if (agentResult.rows.length > 0) {
+          const rate = parseFloat(agentResult.rows[0].commission_rate) || 10.0; // Default 10%
+          const paymentAmount = invoice.amount_paid / 100;
+          const commissionAmount = (paymentAmount * rate) / 100;
+
+          if (commissionAmount > 0) {
+            await client.query(`
+              INSERT INTO commissions (
+                id, sales_agent_id, academy_id, amount, currency, 
+                status, notes, created_at, updated_at
+              )
+              VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+            `, [
+              uuidv4(),
+              agentId,
+              academyId,
+              commissionAmount.toFixed(2),
+              invoice.currency.toUpperCase(),
+              'pending', // Commission is pending until payout
+              `Commission from subscription payment (Invoice: ${invoice.id})`
+            ]);
+            console.log(`Commission of ${commissionAmount} recorded for agent ${agentId}`);
+          }
+        }
+      }
     });
   } catch (error: any) {
     console.error('Error handling payment succeeded:', error);
