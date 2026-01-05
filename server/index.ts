@@ -118,6 +118,10 @@ export function createServer() {
 
   // System settings routes
   api.use("/system-settings", systemSettingsRouter);
+
+  // Admin Sales routes
+  api.use("/admin/sales", adminSalesRouter);
+
   console.log("[SERVER] Admin routes registered");
 
   // Academy routes (commented until DB is connected)

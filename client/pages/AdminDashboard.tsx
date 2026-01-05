@@ -1118,6 +1118,7 @@ export default function AdminDashboard() {
     { id: "dashboard", label: "Dashboard", icon: Home },
     { id: "academies", label: "Academy Management", icon: Building },
     { id: "super-admins", label: "Super Admins", icon: Users },
+    { id: "sales", label: "Sales Agents", icon: UserCheck },
     { id: "compliance", label: "FIFA Compliance", icon: Shield },
     { id: "finances", label: "Financial Overview", icon: DollarSign },
     { id: "blog", label: "Blog Management", icon: BookOpen },
