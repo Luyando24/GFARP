@@ -793,32 +793,25 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
           </div>
 
           <div className="flex items-center space-x-2">
-            <div className="relative">
+            <div className="relative w-full sm:w-auto">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 placeholder={t('dash.search')}
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
               />
             </div>
-            
-            <button
-              onClick={clearFilters}
-              className="px-3 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-            >
-              {t('common.clear')}
-            </button>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value as 'all' | 'income' | 'expense')}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
           >
             <option value="all">All Types</option>
             <option value="income">Income</option>
@@ -828,7 +821,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
           <select
             value={filterCategory}
             onChange={(e) => setFilterCategory(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
           >
             <option value="">{t('dash.finance.filter.allCategories')}</option>
             {[...incomeCategories, ...expenseCategories].map(category => (
@@ -839,7 +832,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
           >
             <option value="">{t('dash.finance.filter.allStatus')}</option>
             {statusOptions.map(status => (
@@ -851,7 +844,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
             type="date"
             value={dateFrom}
             onChange={(e) => setDateFrom(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
             placeholder={t('dash.finance.filter.fromDate')}
           />
 
@@ -859,10 +852,23 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
             type="date"
             value={dateTo}
             onChange={(e) => setDateTo(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full"
             placeholder={t('dash.finance.filter.toDate')}
           />
         </div>
+
+        {/* Clear Filters Button */}
+        {(searchTerm || filterType !== 'all' || filterCategory || filterStatus || dateFrom || dateTo) && (
+          <div className="mt-4 flex justify-end">
+            <button
+              onClick={clearFilters}
+              className="px-4 py-2 text-sm text-red-600 hover:text-red-800 hover:bg-red-50 rounded-lg transition-colors flex items-center"
+            >
+              <X className="h-4 w-4 mr-2" />
+              {t('common.clear')}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Transactions Table */}

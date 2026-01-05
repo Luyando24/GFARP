@@ -432,14 +432,13 @@ export default function AcademyDashboard() {
         setAcademyInfo(data);
 
         // Check for profile completion
-         // If critical fields are missing, redirect to complete profile
-         if (!data.profileComplete && !data.profileSkipped && (!data.phone || !data.address || !data.directorName)) {
-          console.log("Profile incomplete, redirecting to completion page");
-          // Use a small timeout to ensure state is settled/toast can be seen if we add one
-          setTimeout(() => {
-            navigate('/complete-profile');
-          }, 100);
-        }
+        // Auto-redirect removed to allow persistent banner on dashboard
+        // if (!data.profileComplete && !data.profileSkipped && (!data.phone || !data.address || !data.directorName)) {
+        //  console.log("Profile incomplete, redirecting to completion page");
+        //  setTimeout(() => {
+        //    navigate('/complete-profile');
+        //  }, 100);
+        // }
       } catch {
         setAcademyInfo(null);
       }
