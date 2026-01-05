@@ -1,61 +1,74 @@
 import { Router, Request, Response } from 'express';
-
-// Mock data for development - replace with actual Prisma calls when database is connected
-const mockAcademyData = {
-  id: 'academy-1',
-  name: 'Elite Football Academy',
-  email: 'admin@elitefootball.com',
-  contactPerson: 'John Smith',
-  phone: '+1234567890',
-  address: '123 Football Street',
-  city: 'Sports City',
-  country: 'USA',
-  licenseNumber: 'LIC123456',
-  foundedYear: 2010,
-  website: 'https://elitefootball.com',
-  description: 'Premier football academy',
-  logo: 'logo.png',
-  isVerified: true,
-  storageUsed: 1048576,
-  createdAt: new Date('2023-01-01'),
-  subscription: {
-    plan: {
-      name: 'Pro',
-      playerLimit: 200,
-      storageLimit: 10737418240
-    },
-    status: 'ACTIVE',
-    endDate: new Date('2024-12-31'),
-    autoRenew: true
-  },
-  players: [
-    { id: '1', firstName: 'Player', lastName: 'One', position: 'Forward', dateOfBirth: new Date('2005-01-01'), isActive: true },
-    { id: '2', firstName: 'Player', lastName: 'Two', position: 'Midfielder', dateOfBirth: new Date('2004-06-15'), isActive: true }
-  ],
-  documents: [
-    { id: '1', name: 'Document 1', type: 'PDF', uploadedAt: new Date(), fileSize: 1024 }
-  ],
-  activities: [
-    { id: '1', action: 'profile_updated', description: 'Profile updated', createdAt: new Date() }
-  ]
-};
+import { query } from '../lib/db.js';
 
 // Get Academy Profile
 export async function handleGetAcademyProfile(req: Request, res: Response) {
   try {
     const academyId = (req as any).user.id;
     
-    // Mock response - replace with actual Prisma query
-    const academy = mockAcademyData;
+    // Fetch academy details
+    // We select columns that exist in the football-auth.ts schema
+    // and alias them to match the expected response structure
+    const academyResult = await query(
+      `SELECT id, name, email, director_name as contact_person, phone, address, 
+              district as city, province as country, 
+              founded_year, website, 
+              status, storage_used, created_at 
+       FROM academies WHERE id = $1`,
+      [academyId]
+    );
 
-    if (!academy) {
+    if (academyResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Academy not found'
       });
     }
 
-    const currentSubscription = academy.subscription;
+    const academy = academyResult.rows[0];
+
+    // Fetch active subscription
+    const subResult = await query(
+      `SELECT sp.name, sp.player_limit, sp.storage_limit, 
+              asub.status, asub.end_date, asub.auto_renew
+       FROM academy_subscriptions asub
+       JOIN subscription_plans sp ON asub.plan_id = sp.id
+       WHERE asub.academy_id = $1 AND asub.status = 'ACTIVE'
+       ORDER BY asub.created_at DESC LIMIT 1`,
+      [academyId]
+    );
+
+    const currentSubscription = subResult.rows[0] || null;
+
+    // Fetch stats
+    let playerStats = { total: 0, active: 0 };
+    try {
+      const pResult = await query(
+        `SELECT COUNT(*) as total, 
+                COUNT(CASE WHEN is_active = true THEN 1 END) as active 
+         FROM players WHERE academy_id = $1`, 
+        [academyId]
+      );
+      if (pResult.rows.length > 0) {
+        playerStats = { 
+          total: parseInt(pResult.rows[0].total), 
+          active: parseInt(pResult.rows[0].active) 
+        };
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    let docCount = 0;
+    try {
+      const dResult = await query(
+        `SELECT COUNT(*) as total FROM documents WHERE academy_id = $1`,
+        [academyId]
+      );
+      if (dResult.rows.length > 0) docCount = parseInt(dResult.rows[0].total);
+    } catch (e) {
+      // ignore
+    }
 
     res.json({
       success: true,
@@ -64,35 +77,35 @@ export async function handleGetAcademyProfile(req: Request, res: Response) {
           id: academy.id,
           name: academy.name,
           email: academy.email,
-          contactPerson: academy.contactPerson,
+          contactPerson: academy.contact_person, 
           phone: academy.phone,
           address: academy.address,
           city: academy.city,
           country: academy.country,
-          licenseNumber: academy.licenseNumber,
-          foundedYear: academy.foundedYear,
+          licenseNumber: null, // Not in schema
+          foundedYear: academy.founded_year,
           website: academy.website,
-          description: academy.description,
-          logo: academy.logo,
-          isVerified: academy.isVerified,
-          storageUsed: academy.storageUsed,
-          createdAt: academy.createdAt
+          description: null, // Not in schema
+          logo: null, // Not in schema
+          isVerified: academy.status === 'active', // Best guess mapping
+          storageUsed: parseInt(academy.storage_used || '0'),
+          createdAt: academy.created_at
         },
         subscription: currentSubscription ? {
-          plan: currentSubscription.plan.name,
+          plan: currentSubscription.name,
           status: currentSubscription.status,
-          playerLimit: currentSubscription.plan.playerLimit,
-          storageLimit: currentSubscription.plan.storageLimit,
-          endDate: currentSubscription.endDate,
-          autoRenew: currentSubscription.autoRenew
+          playerLimit: currentSubscription.player_limit,
+          storageLimit: parseInt(currentSubscription.storage_limit || '0'),
+          endDate: currentSubscription.end_date,
+          autoRenew: currentSubscription.auto_renew
         } : null,
         stats: {
-          totalPlayers: academy.players.length,
-          activePlayers: academy.players.filter(p => p.isActive).length,
-          totalDocuments: academy.documents.length,
-          storageUsedMB: Math.round(academy.storageUsed / (1024 * 1024))
+          totalPlayers: playerStats.total,
+          activePlayers: playerStats.active,
+          totalDocuments: docCount,
+          storageUsedMB: Math.round(parseInt(academy.storage_used || '0') / (1024 * 1024))
         },
-        recentActivities: academy.activities
+        recentActivities: [] // Placeholder for now
       }
     });
 
@@ -123,22 +136,45 @@ export async function handleUpdateAcademyProfile(req: Request, res: Response) {
       logo
     } = req.body;
 
-    // Mock update - replace with actual Prisma query
-    const updatedAcademy = {
-      ...mockAcademyData,
-      ...(name && { name }),
-      ...(contactPerson && { contactPerson }),
-      ...(phone && { phone }),
-      ...(address && { address }),
-      ...(city && { city }),
-      ...(country && { country }),
-      ...(licenseNumber && { licenseNumber }),
-      ...(foundedYear && { foundedYear: parseInt(foundedYear) }),
-      ...(website && { website }),
-      ...(description && { description }),
-      ...(logo && { logo }),
-      updatedAt: new Date()
-    };
+    // Build dynamic update query
+    const updates: string[] = [];
+    const values: any[] = [academyId];
+    let paramIndex = 2;
+
+    if (name) { updates.push(`name = $${paramIndex++}`); values.push(name); }
+    if (contactPerson) { updates.push(`contact_person = $${paramIndex++}`); values.push(contactPerson); }
+    if (phone) { updates.push(`phone = $${paramIndex++}`); values.push(phone); }
+    if (address) { updates.push(`address = $${paramIndex++}`); values.push(address); }
+    if (city) { updates.push(`city = $${paramIndex++}`); values.push(city); }
+    if (country) { updates.push(`country = $${paramIndex++}`); values.push(country); }
+    if (licenseNumber) { updates.push(`license_number = $${paramIndex++}`); values.push(licenseNumber); }
+    if (foundedYear) { updates.push(`founded_year = $${paramIndex++}`); values.push(parseInt(foundedYear)); }
+    if (website) { updates.push(`website = $${paramIndex++}`); values.push(website); }
+    if (description) { updates.push(`description = $${paramIndex++}`); values.push(description); }
+    if (logo) { updates.push(`logo = $${paramIndex++}`); values.push(logo); }
+    
+    updates.push(`updated_at = NOW()`);
+
+    if (updates.length === 1) { // Only updated_at
+      return res.status(400).json({
+        success: false,
+        message: 'No fields to update'
+      });
+    }
+
+    const result = await query(
+      `UPDATE academies SET ${updates.join(', ')} WHERE id = $1 RETURNING *`,
+      values
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Academy not found'
+      });
+    }
+
+    const updatedAcademy = result.rows[0];
 
     res.json({
       success: true,
@@ -146,17 +182,17 @@ export async function handleUpdateAcademyProfile(req: Request, res: Response) {
       data: {
         id: updatedAcademy.id,
         name: updatedAcademy.name,
-        contactPerson: updatedAcademy.contactPerson,
+        contactPerson: updatedAcademy.contact_person,
         phone: updatedAcademy.phone,
         address: updatedAcademy.address,
         city: updatedAcademy.city,
         country: updatedAcademy.country,
-        licenseNumber: updatedAcademy.licenseNumber,
-        foundedYear: updatedAcademy.foundedYear,
+        licenseNumber: updatedAcademy.license_number,
+        foundedYear: updatedAcademy.founded_year,
         website: updatedAcademy.website,
         description: updatedAcademy.description,
         logo: updatedAcademy.logo,
-        updatedAt: updatedAcademy.updatedAt
+        updatedAt: updatedAcademy.updated_at
       }
     });
 
@@ -173,52 +209,75 @@ export async function handleUpdateAcademyProfile(req: Request, res: Response) {
 export async function handleGetAllAcademies(req: Request, res: Response) {
   try {
     const { page = 1, limit = 10, search, status, country } = req.query;
+    
+    const offset = (Number(page) - 1) * Number(limit);
+    const limitVal = Number(limit);
 
-    // Mock data - replace with actual Prisma query
-    const mockAcademies = [
-      {
-        id: 'academy-1',
-        name: 'Elite Football Academy',
-        email: 'admin@elitefootball.com',
-        contactPerson: 'John Smith',
-        phone: '+1234567890',
-        city: 'Sports City',
-        country: 'USA',
-        isActive: true,
-        isVerified: true,
-        createdAt: new Date('2023-01-01'),
-        subscription: {
-          plan: { name: 'Pro' },
-          status: 'ACTIVE',
-          endDate: new Date('2024-12-31')
-        },
-        _count: {
-          players: 45,
-          documents: 12
+    // Base query
+    let baseQuery = `FROM academies a LEFT JOIN academy_subscriptions sub ON a.id = sub.academy_id AND sub.status = 'ACTIVE' LEFT JOIN subscription_plans sp ON sub.plan_id = sp.id WHERE 1=1`;
+    const params: any[] = [];
+    let pIdx = 1;
+
+    if (search) {
+      baseQuery += ` AND (a.name ILIKE $${pIdx} OR a.email ILIKE $${pIdx})`;
+      params.push(`%${search}%`);
+      pIdx++;
+    }
+    
+    if (status) {
+        if (status === 'active') {
+             baseQuery += ` AND a.status = 'active'`;
+        } else if (status === 'inactive') {
+             baseQuery += ` AND a.status != 'active'`;
         }
-      }
-    ];
+    }
+    
+    if (country) {
+       baseQuery += ` AND a.province ILIKE $${pIdx}`;
+       params.push(`%${country}%`);
+       pIdx++;
+    }
 
-    const total = mockAcademies.length;
-    const academiesWithStats = mockAcademies.map(academy => ({
-      id: academy.id,
-      name: academy.name,
-      email: academy.email,
-      contactPerson: academy.contactPerson,
-      phone: academy.phone,
-      city: academy.city,
-      country: academy.country,
-      isActive: academy.isActive,
-      isVerified: academy.isVerified,
-      createdAt: academy.createdAt,
-      subscription: academy.subscription ? {
-        plan: academy.subscription.plan.name,
-        status: academy.subscription.status,
-        endDate: academy.subscription.endDate
+    // Count query
+    const countRes = await query(`SELECT COUNT(a.id) as total ${baseQuery}`, params);
+    const total = parseInt(countRes.rows[0].total);
+
+    // Data query
+    const dataQuery = `
+      SELECT a.id, a.name, a.email, a.director_name as "contactPerson", a.phone, 
+             a.district as city, a.province as country, 
+             a.status, a.created_at,
+             sp.name as plan_name, sub.status as sub_status, sub.end_date as sub_end_date,
+             (SELECT COUNT(*) FROM players p WHERE p.academy_id = a.id) as player_count,
+             (SELECT COUNT(*) FROM documents d WHERE d.academy_id = a.id) as doc_count
+      ${baseQuery}
+      ORDER BY a.created_at DESC
+      LIMIT $${pIdx} OFFSET $${pIdx+1}
+    `;
+    
+    params.push(limitVal, offset);
+    
+    const result = await query(dataQuery, params);
+
+    const academiesWithStats = result.rows.map(row => ({
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      contactPerson: row.contactPerson,
+      phone: row.phone,
+      city: row.city,
+      country: row.country,
+      isActive: row.status === 'active',
+      isVerified: row.status === 'active', // mapping status to verified
+      createdAt: row.created_at,
+      subscription: row.plan_name ? {
+        plan: row.plan_name,
+        status: row.sub_status,
+        endDate: row.sub_end_date
       } : null,
       stats: {
-        totalPlayers: academy._count.players,
-        totalDocuments: academy._count.documents
+        totalPlayers: parseInt(row.player_count || '0'),
+        totalDocuments: parseInt(row.doc_count || '0')
       }
     }));
 
@@ -227,10 +286,10 @@ export async function handleGetAllAcademies(req: Request, res: Response) {
       data: {
         academies: academiesWithStats,
         pagination: {
-          page: parseInt(page as string),
-          limit: parseInt(limit as string),
+          page: Number(page),
+          limit: limitVal,
           total,
-          pages: Math.ceil(total / parseInt(limit as string))
+          pages: Math.ceil(total / limitVal)
         }
       }
     });
@@ -250,30 +309,29 @@ export async function handleToggleAcademyStatus(req: Request, res: Response) {
     const { academyId } = req.params;
     const { isActive } = req.body;
 
-    // Mock academy data - replace with actual Prisma query
-    const academy = mockAcademyData;
+    const newStatus = isActive ? 'active' : 'inactive';
 
-    if (!academy) {
+    const result = await query(
+      `UPDATE academies SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING id, name, status`,
+      [newStatus, academyId]
+    );
+
+    if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Academy not found'
       });
     }
 
-    // Mock update - replace with actual Prisma query
-    const updatedAcademy = {
-      ...academy,
-      isActive: isActive !== undefined ? isActive : !academy.isVerified,
-      updatedAt: new Date()
-    };
+    const updatedAcademy = result.rows[0];
 
     res.json({
       success: true,
-      message: `Academy ${updatedAcademy.isActive ? 'activated' : 'deactivated'} successfully`,
+      message: `Academy ${updatedAcademy.status === 'active' ? 'activated' : 'deactivated'} successfully`,
       data: {
         id: updatedAcademy.id,
         name: updatedAcademy.name,
-        isActive: updatedAcademy.isActive
+        isActive: updatedAcademy.status === 'active'
       }
     });
 
@@ -292,30 +350,30 @@ export async function handleVerifyAcademy(req: Request, res: Response) {
     const { academyId } = req.params;
     const { isVerified } = req.body;
 
-    // Mock academy data - replace with actual Prisma query
-    const academy = mockAcademyData;
+    // Mapping verified to active status for now as there is no specific verified column
+    const newStatus = isVerified ? 'active' : 'inactive';
 
-    if (!academy) {
+    const result = await query(
+      `UPDATE academies SET status = $1, updated_at = NOW() WHERE id = $2 RETURNING id, name, status`,
+      [newStatus, academyId]
+    );
+
+    if (result.rows.length === 0) {
       return res.status(404).json({
         success: false,
         message: 'Academy not found'
       });
     }
 
-    // Mock update - replace with actual Prisma query
-    const updatedAcademy = {
-      ...academy,
-      isVerified: isVerified !== undefined ? isVerified : !academy.isVerified,
-      updatedAt: new Date()
-    };
+    const updatedAcademy = result.rows[0];
 
     res.json({
       success: true,
-      message: `Academy ${updatedAcademy.isVerified ? 'verified' : 'unverified'} successfully`,
+      message: `Academy ${updatedAcademy.status === 'active' ? 'verified' : 'unverified'} successfully`,
       data: {
         id: updatedAcademy.id,
         name: updatedAcademy.name,
-        isVerified: updatedAcademy.isVerified
+        isVerified: updatedAcademy.status === 'active'
       }
     });
 
@@ -331,41 +389,60 @@ export async function handleVerifyAcademy(req: Request, res: Response) {
 // Get Academy Statistics (Admin only)
 export async function handleGetAcademyStatistics(req: Request, res: Response) {
   try {
-    // Mock statistics data - replace with actual Prisma queries
-    const mockStats = {
-      totalAcademies: 25,
-      activeAcademies: 22,
-      verifiedAcademies: 18,
-      totalPlayers: 1250,
-      totalSubscriptions: 20,
-      recentRegistrations: [
-        {
-          id: 'academy-1',
-          name: 'Elite Football Academy',
-          email: 'admin@elitefootball.com',
-          city: 'Sports City',
-          country: 'USA',
-          createdAt: new Date('2023-12-01')
-        }
-      ],
-      subscriptionDistribution: [
-        { plan: 'Pro', count: 12 },
-        { plan: 'Basic', count: 8 }
-      ]
-    };
+     // 1. Counts
+     const counts = await query(`
+       SELECT 
+         COUNT(*) as total,
+         COUNT(CASE WHEN status = 'active' THEN 1 END) as active
+       FROM academies
+     `);
+     const totalAcademies = parseInt(counts.rows[0].total);
+     const activeAcademies = parseInt(counts.rows[0].active);
+     
+     // 2. Players
+     const pCount = await query(`SELECT COUNT(*) as total FROM players`);
+     const totalPlayers = parseInt(pCount.rows[0].total || '0');
+
+     // 3. Subscriptions
+     const sCount = await query(`SELECT COUNT(*) as total FROM academy_subscriptions WHERE status = 'ACTIVE'`);
+     const totalSubscriptions = parseInt(sCount.rows[0].total || '0');
+
+     // 4. Recent registrations
+     const recent = await query(`
+       SELECT id, name, email, district as city, province as country, created_at
+       FROM academies
+       ORDER BY created_at DESC
+       LIMIT 5
+     `);
+     
+     // 5. Subscription distribution
+     const dist = await query(`
+       SELECT sp.name, COUNT(asub.id) as count
+       FROM academy_subscriptions asub
+       JOIN subscription_plans sp ON asub.plan_id = sp.id
+       WHERE asub.status = 'ACTIVE'
+       GROUP BY sp.name
+     `);
 
     res.json({
       success: true,
       data: {
         overview: {
-          totalAcademies: mockStats.totalAcademies,
-          activeAcademies: mockStats.activeAcademies,
-          verifiedAcademies: mockStats.verifiedAcademies,
-          totalPlayers: mockStats.totalPlayers,
-          totalSubscriptions: mockStats.totalSubscriptions
+          totalAcademies,
+          activeAcademies,
+          verifiedAcademies: activeAcademies,
+          totalPlayers,
+          totalSubscriptions
         },
-        subscriptionDistribution: mockStats.subscriptionDistribution,
-        recentRegistrations: mockStats.recentRegistrations
+        subscriptionDistribution: dist.rows.map(r => ({ plan: r.name, count: parseInt(r.count) })),
+        recentRegistrations: recent.rows.map(r => ({
+          id: r.id,
+          name: r.name,
+          email: r.email,
+          city: r.city,
+          country: r.country,
+          createdAt: r.created_at
+        }))
       }
     });
 

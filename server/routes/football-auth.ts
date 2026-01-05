@@ -401,90 +401,87 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
         'elite': 'Elite Plan'
       };
 
-      // Get the subscription plan (default to 'free' if not provided)
-      const selectedPlanInput = subscriptionPlan || 'free';
+      // Get the subscription plan (optional)
+      const selectedPlanInput = subscriptionPlan;
       let plan: any = null;
 
-      if (planIdToName[selectedPlanInput]) {
-        // Input is a known slug; look up by name
-        const selectedPlanName = planIdToName[selectedPlanInput];
-        const planByName = await client.query(
-          `SELECT * FROM subscription_plans WHERE name = $1 AND is_active = true`,
-          [selectedPlanName]
-        );
-        console.log('[academy/register] plan lookup by name', { selectedPlanInput, selectedPlanName, found: planByName.rows[0]?.id });
-        if (planByName.rows.length === 0) {
-          throw new Error(`Subscription plan '${selectedPlanName}' not found`);
-        }
-        plan = planByName.rows[0];
-      } else {
-        // Input may be a UUID; try by id first, then fallback to Free Plan
-        const planById = await client.query(
-          `SELECT * FROM subscription_plans WHERE id = $1 AND is_active = true`,
-          [selectedPlanInput]
-        );
-        console.log('[academy/register] plan lookup by id', { selectedPlanInput, found: planById.rows[0]?.id });
-        if (planById.rows.length > 0) {
-          plan = planById.rows[0];
-        } else {
-          const freePlan = await client.query(
+      if (selectedPlanInput) {
+        if (planIdToName[selectedPlanInput]) {
+          // Input is a known slug; look up by name
+          const selectedPlanName = planIdToName[selectedPlanInput];
+          const planByName = await client.query(
             `SELECT * FROM subscription_plans WHERE name = $1 AND is_active = true`,
-            ['Free Plan']
+            [selectedPlanName]
           );
-          console.log('[academy/register] plan fallback to Free Plan', { found: freePlan.rows[0]?.id });
-          if (freePlan.rows.length === 0) {
-            throw new Error(`Subscription plan lookup failed and no active Free Plan is configured`);
+          console.log('[academy/register] plan lookup by name', { selectedPlanInput, selectedPlanName, found: planByName.rows[0]?.id });
+          if (planByName.rows.length === 0) {
+            throw new Error(`Subscription plan '${selectedPlanName}' not found`);
           }
-          plan = freePlan.rows[0];
+          plan = planByName.rows[0];
+        } else {
+          // Input may be a UUID; try by id
+          const planById = await client.query(
+            `SELECT * FROM subscription_plans WHERE id = $1 AND is_active = true`,
+            [selectedPlanInput]
+          );
+          console.log('[academy/register] plan lookup by id', { selectedPlanInput, found: planById.rows[0]?.id });
+          if (planById.rows.length > 0) {
+            plan = planById.rows[0];
+          }
+          // No fallback to Free Plan automatically
         }
       }
 
-      // Create academy subscription
-      const subscriptionId = uuidv4();
-      const subscriptionQuery = `
-        INSERT INTO academy_subscriptions (
-          id, academy_id, plan_id, status, start_date, end_date, 
-          auto_renew, created_at, updated_at
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-        RETURNING id, status, start_date, end_date
-      `;
+      let subscription: any = null;
 
-      const startDate = new Date();
-      const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + 1); // 1 month subscription
+      if (plan) {
+        // Create academy subscription
+        const subscriptionId = uuidv4();
+        const subscriptionQuery = `
+          INSERT INTO academy_subscriptions (
+            id, academy_id, plan_id, status, start_date, end_date, 
+            auto_renew, created_at, updated_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+          RETURNING id, status, start_date, end_date
+        `;
 
-      const subscriptionValues = [
-        subscriptionId,
-        academy.id,
-        plan.id,
-        'ACTIVE',
-        startDate,
-        endDate,
-        true
-      ];
+        const startDate = new Date();
+        const endDate = new Date();
+        endDate.setMonth(endDate.getMonth() + 1); // 1 month subscription
 
-      const subscriptionResult = await client.query(subscriptionQuery, subscriptionValues);
-      const subscription = subscriptionResult.rows[0];
+        const subscriptionValues = [
+          subscriptionId,
+          academy.id,
+          plan.id,
+          'ACTIVE',
+          startDate,
+          endDate,
+          true
+        ];
 
-      // Log subscription history
-      const historyId = uuidv4();
-      const historyQuery = `
-        INSERT INTO subscription_history (
-          id, subscription_id, action, old_plan_id, new_plan_id, 
-          notes, created_at
-        )
-        VALUES ($1, $2, $3, $4, $5, $6, NOW())
-      `;
+        const subscriptionResult = await client.query(subscriptionQuery, subscriptionValues);
+        subscription = subscriptionResult.rows[0];
 
-      await client.query(historyQuery, [
-        historyId,
-        subscriptionId,
-        'ACTIVATED',
-        null,
-        plan.id,
-        'Initial subscription on academy registration'
-      ]);
+        // Log subscription history
+        const historyId = uuidv4();
+        const historyQuery = `
+          INSERT INTO subscription_history (
+            id, subscription_id, action, old_plan_id, new_plan_id, 
+            notes, created_at
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, NOW())
+        `;
+
+        await client.query(historyQuery, [
+          historyId,
+          subscriptionId,
+          'ACTIVATED',
+          null,
+          plan.id,
+          'Initial subscription on academy registration'
+        ]);
+      }
 
       return { academy, subscription, plan };
     });
@@ -505,7 +502,7 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
           name: result.academy.name,
           email: result.academy.email
         },
-        subscription: {
+        subscription: result.subscription ? {
           id: result.subscription.id,
           plan: result.plan.name,
           status: result.subscription.status,
@@ -514,7 +511,7 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
           startDate: result.subscription.start_date,
           endDate: result.subscription.end_date,
           autoRenew: result.subscription.auto_renew
-        },
+        } : null,
         token
       }
     });
