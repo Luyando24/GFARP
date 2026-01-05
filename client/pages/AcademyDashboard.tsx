@@ -436,6 +436,11 @@ export default function AcademyDashboard() {
         if (data.phone === undefined) data.phone = '';
         if (data.directorName === undefined) data.directorName = '';
         
+        // Ensure directorName is populated from contactPerson if missing
+        if (!data.directorName && data.contactPerson) {
+          data.directorName = data.contactPerson;
+        }
+
         setAcademyInfo(data);
 
         // Check for profile completion
@@ -1281,8 +1286,12 @@ export default function AcademyDashboard() {
         {/* Main Content */}
         <main className="flex-1 flex flex-col">
           
-          {/* Incomplete Profile Banner */}
-          {academyInfo && (!academyInfo.address || !academyInfo.phone || !academyInfo.directorName) && (
+          {/* Incomplete Profile Banner - Forced render check */}
+          {academyInfo && (
+             (!academyInfo.address || academyInfo.address.trim() === '') || 
+             (!academyInfo.phone || academyInfo.phone.trim() === '') || 
+             (!academyInfo.directorName || academyInfo.directorName.trim() === '')
+          ) && (
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 w-full">
               <div className="flex justify-between items-center">
                 <div className="flex items-center">
