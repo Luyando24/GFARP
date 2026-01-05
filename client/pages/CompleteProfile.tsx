@@ -75,6 +75,16 @@ export default function CompleteProfile() {
     const academyData = JSON.parse(localStorage.getItem('academy_data') || '{}');
 
     useEffect(() => {
+        if (!academyData?.id) {
+            toast({
+                title: 'Session Expired',
+                description: 'Please log in again.',
+                variant: 'destructive'
+            });
+            navigate('/login');
+            return;
+        }
+
         // Pre-fill data from academy data if available
         // But ONLY if the user is not brand new (i.e. has some existing data)
         // However, for a brand new registration flow, we usually want empty fields
@@ -167,6 +177,16 @@ export default function CompleteProfile() {
 
     const handleSubmit = async () => {
         if (!validateStep(step)) return;
+
+        if (!academyData?.id) {
+            toast({
+                title: 'Error',
+                description: 'Academy ID not found. Please log in again.',
+                variant: 'destructive'
+            });
+            navigate('/login');
+            return;
+        }
 
         setIsSubmitting(true);
         try {
