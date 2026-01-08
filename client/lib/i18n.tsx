@@ -34,6 +34,7 @@ export type TranslationKey =
   | 'dash.financial.title' | 'dash.financial.revenue' | 'dash.financial.expenses' | 'dash.financial.profit'
   | 'dash.plan.current' | 'dash.plan.manage' | 'dash.plan.nextBilling' | 'dash.plan.active' | 'dash.plan.inactive'
   | 'dash.academy.edit' | 'dash.academy.info' | 'dash.settings.title' | 'dash.settings.save' | 'dash.settings.cancel'
+  | 'dash.profile.completeRequired' | 'dash.profile.completeRequiredDesc' | 'dash.profile.completeRequiredMsg' | 'dash.settings.complete'
   // Landing
   | 'landing.steps.title' | 'landing.steps.subtitle' | 'landing.steps.desc' | 'landing.steps.process'
   | 'landing.step1.title' | 'landing.step1.desc'
