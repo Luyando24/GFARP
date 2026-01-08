@@ -152,7 +152,7 @@ const handleGetCategories: RequestHandler = async (req, res) => {
     try {
         const academyId = req.query.academyId as string;
         
-        if (!academyId) {
+        if (!academyId || academyId === 'undefined' || academyId === 'null') {
             return res.json({
                 success: true,
                 data: []
