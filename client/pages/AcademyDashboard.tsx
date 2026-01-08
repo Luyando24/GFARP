@@ -2108,10 +2108,40 @@ export default function AcademyDashboard() {
 
               {/* Finances Tab */}
               <TabsContent value="finances" className="space-y-6">
-                <FinancialTransactionsManager 
-                  academyId={academyInfo?.id} 
-                  academyDetails={academyInfo}
-                />
+                {academyInfo?.id && academyInfo?.address && academyInfo?.phone && academyInfo?.directorName ? (
+                  <FinancialTransactionsManager 
+                    academyId={academyInfo?.id} 
+                    academyDetails={academyInfo}
+                  />
+                ) : (
+                  <Card className="border-l-4 border-l-yellow-500 bg-yellow-50/50 dark:bg-yellow-900/10">
+                    <CardHeader>
+                      <CardTitle className="flex items-center text-yellow-700 dark:text-yellow-500">
+                        <AlertCircle className="h-5 w-5 mr-2" />
+                        {t('dash.profile.completeRequired') || "Profile Completion Required"}
+                      </CardTitle>
+                      <CardDescription className="text-yellow-700/80 dark:text-yellow-500/80">
+                        {t('dash.profile.completeRequiredDesc') || "You must complete your academy profile information before accessing financial features."}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="mb-6 text-slate-700 dark:text-slate-300">
+                        {t('dash.profile.completeRequiredMsg') || "To ensure accurate financial reporting and invoicing, we require your academy address, phone number, and director information."}
+                      </p>
+                      <Button onClick={() => {
+                        setActiveTab("settings");
+                        setIsEditingSettings(true);
+                        // Optional: Scroll to settings
+                        setTimeout(() => {
+                          const element = document.querySelector('[value="settings"]');
+                          if (element) element.scrollIntoView({ behavior: 'smooth' });
+                        }, 100);
+                      }}>
+                        {t('dash.settings.complete') || "Complete Profile"}
+                      </Button>
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
 
               {/* Subscription Tab */}
