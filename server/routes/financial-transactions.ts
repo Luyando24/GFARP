@@ -218,6 +218,11 @@ const handleCreateBudgetCategory: RequestHandler = async (req, res) => {
     const { academyId } = req.params;
     const category: BudgetCategory = req.body;
 
+    // Basic validation
+    if (!category.category_name || !category.budgeted_amount) {
+        return res.status(400).json({ success: false, error: 'Category name and budgeted amount are required' });
+    }
+
     const result = await query(`
       INSERT INTO budget_categories (
         academy_id, category_name, category_type, budgeted_amount,
@@ -227,19 +232,19 @@ const handleCreateBudgetCategory: RequestHandler = async (req, res) => {
     `, [
       academyId,
       category.category_name,
-      category.category_type,
+      category.category_type || 'expense', // Default to expense if missing
       category.budgeted_amount,
-      category.period_type,
-      category.fiscal_year
+      category.period_type || 'monthly', // Default to monthly if missing
+      category.fiscal_year || new Date().getFullYear() // Default to current year
     ]);
 
     res.status(201).json({
       success: true,
       data: result.rows[0]
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating budget category:', error);
-    res.status(500).json({ success: false, error: 'Failed to create budget category' });
+    res.status(500).json({ success: false, error: `Failed to create budget category: ${error.message}` });
   }
 };
 
