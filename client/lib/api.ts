@@ -1178,7 +1178,9 @@ export async function createBudgetCategory(academyId: string, category: Omit<Bud
     const result = await response.json();
 
     if (!response.ok) {
-      throw new Error(result.error || 'Failed to create budget category');
+      console.error('Create Budget Failed. Response:', result); // Debug log
+      const errorMsg = result.error || result.message || (typeof result === 'string' ? result : JSON.stringify(result)) || 'Failed to create budget category';
+      throw new Error(errorMsg);
     }
 
     return result;
