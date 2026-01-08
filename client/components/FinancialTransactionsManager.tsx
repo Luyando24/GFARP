@@ -41,6 +41,17 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  
+  // Clear success message after 3 seconds
+  useEffect(() => {
+    if (successMessage) {
+      const timer = setTimeout(() => {
+        setSuccessMessage(null);
+      }, 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [successMessage]);
   
   // Pagination and filtering
   const [currentPage, setCurrentPage] = useState(1);
@@ -190,6 +201,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         transaction_date: new Date().toISOString().split('T')[0]
       });
       fetchData();
+      setSuccessMessage('Transaction created successfully');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create transaction');
     }
@@ -208,6 +220,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         transaction_date: new Date().toISOString().split('T')[0]
       });
       fetchData();
+      setSuccessMessage('Transaction updated successfully');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update transaction');
     }
@@ -220,6 +233,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     try {
       await deleteFinancialTransaction(id);
       fetchData();
+      setSuccessMessage('Transaction deleted successfully');
     } catch (err) {
       console.error('Delete transaction error:', err);
       setError(err instanceof Error ? err.message : 'Failed to delete transaction');
@@ -299,6 +313,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       });
       fetchData();
       setError(''); // Clear any previous errors
+      setSuccessMessage('Budget category created successfully');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create budget category');
     }
@@ -350,6 +365,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       });
       fetchData();
       setError(''); // Clear any previous errors
+      setSuccessMessage('Budget category updated successfully');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update budget category');
     }
@@ -362,6 +378,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       await deleteBudgetCategory(id);
       fetchData();
       setError(''); // Clear any previous errors
+      setSuccessMessage('Budget category deleted successfully');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to delete budget category');
     }
@@ -1110,17 +1127,102 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       )}
 
       {activeTab === 'budgets' && (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <DollarSign className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Budget Management</h3>
-          <p className="text-gray-500 mb-6">Manage your academy budgets and track spending against targets.</p>
-          <button
-            onClick={() => setShowBudgetModal(true)}
-            className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Create Budget
-          </button>
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-medium text-gray-900">Budget Management</h3>
+            <button
+              onClick={() => openBudgetModal()}
+              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Create Budget
+            </button>
+          </div>
+
+          {budgetCategories.length === 0 ? (
+            <div className="bg-white rounded-lg shadow p-12 text-center">
+              <DollarSign className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Budget Categories</h3>
+              <p className="text-gray-500 mb-6">Create your first budget category to start tracking.</p>
+              <button
+                onClick={() => setShowBudgetModal(true)}
+                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Create Budget
+              </button>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Category Name
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Type
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Fiscal Year
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Budgeted Amount
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Period
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {budgetCategories.map((category) => (
+                      <tr key={category.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {category.category_name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            category.category_type === 'revenue' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                          }`}>
+                            {category.category_type === 'revenue' ? 'Revenue' : 'Expense'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          {category.fiscal_year}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {formatCurrency(category.budgeted_amount)}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
+                          {category.period_type}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => openBudgetModal(category)}
+                              className="text-indigo-600 hover:text-indigo-900"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => category.id && handleDeleteBudgetCategory(category.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
