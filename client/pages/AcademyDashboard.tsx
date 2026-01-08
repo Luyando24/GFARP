@@ -881,22 +881,58 @@ export default function AcademyDashboard() {
 
   const handleSaveSettings = async () => {
     try {
-      // Update local storage with new data
-      const updatedAcademyData = {
-        ...academyInfo,
+      // Get auth token
+      const session = JSON.parse(localStorage.getItem("ipims_auth_session") || "{}");
+      const token = session?.access_token || session?.token;
+
+      if (!academyInfo?.id) {
+        toast({
+          title: "Error",
+          description: "Academy ID not found. Please refresh the page.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Prepare API payload
+      const apiPayload = {
         name: settingsFormData.name,
-        location: settingsFormData.location,
-        address: settingsFormData.location, // Ensure flat structure for banner check
-        established: settingsFormData.established,
+        address: settingsFormData.location,
         email: settingsFormData.email,
         phone: settingsFormData.phone,
-        directorName: settingsFormData.directorName, // Ensure flat structure for banner check
+        directorName: settingsFormData.directorName,
         directorEmail: settingsFormData.directorEmail,
         directorPhone: settingsFormData.directorPhone,
+        foundedYear: settingsFormData.established ? parseInt(settingsFormData.established) : undefined
+      };
+
+      // Call API
+      const response = await fetch(`/api/academies/${academyInfo.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(apiPayload),
+      });
+
+      const result = await response.json();
+
+      if (!result.success) {
+        throw new Error(result.error || "Failed to update academy information");
+      }
+
+      // Update local storage with new data (merging with existing structure)
+      const updatedAcademyData = {
+        ...academyInfo,
+        ...result.data,
+        // Ensure frontend specific fields are maintained if needed
+        location: result.data.address,
+        established: result.data.foundedYear,
         director: {
-          name: settingsFormData.directorName,
-          email: settingsFormData.directorEmail,
-          phone: settingsFormData.directorPhone
+          name: result.data.directorName,
+          email: result.data.directorEmail,
+          phone: result.data.directorPhone
         }
       };
 
@@ -908,10 +944,11 @@ export default function AcademyDashboard() {
         title: "Settings Updated",
         description: "Academy information has been successfully updated.",
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('Error updating settings:', error);
       toast({
         title: "Error",
-        description: "Failed to update academy information. Please try again.",
+        description: error.message || "Failed to update academy information. Please try again.",
         variant: "destructive",
       });
     }

@@ -103,16 +103,13 @@ interface AcademyData {
   name: string;
   email: string;
   password?: string;
-  contactPerson: string;
+  directorName: string;
   phone: string;
   address: string;
-  city: string;
-  country: string;
-  licenseNumber?: string;
+  district: string;
+  province: string;
   foundedYear?: number;
   website?: string;
-  description?: string;
-  directorName?: string;
   directorEmail?: string;
   directorPhone?: string;
 }
@@ -409,6 +406,9 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
     const academyData = {
       ...academy,
       foundedYear: academy.founded_year,
+      directorName: academy.director_name,
+      directorEmail: academy.director_email,
+      directorPhone: academy.director_phone,
       createdAt: academy.created_at,
       updatedAt: academy.updated_at,
       isActive: academy.status === 'active',
@@ -445,8 +445,8 @@ const handleCreateAcademy: RequestHandler = async (req, res) => {
     const academyData: AcademyData = req.body;
 
     // Validate required fields
-    const requiredFields = ['name', 'email', 'contactPerson', 'phone', 'address', 'city', 'country'];
-    const missingFields = requiredFields.filter(field => !academyData[field]);
+    const requiredFields = ['name', 'email', 'directorName', 'phone', 'address'];
+    const missingFields = requiredFields.filter(field => !academyData[field as keyof AcademyData]);
 
     if (missingFields.length > 0) {
       return res.status(400).json({
@@ -468,21 +468,6 @@ const handleCreateAcademy: RequestHandler = async (req, res) => {
       });
     }
 
-    // Check if license number already exists (if provided)
-    if (academyData.licenseNumber) {
-      const existingLicenseResult = await query(
-        'SELECT id FROM academies WHERE license_number = $1',
-        [academyData.licenseNumber]
-      );
-
-      if (existingLicenseResult.rows.length > 0) {
-        return res.status(409).json({
-          success: false,
-          error: 'Academy with this license number already exists'
-        });
-      }
-    }
-
     // Hash password if provided
     let hashedPassword = '';
     if (academyData.password) {
@@ -492,26 +477,23 @@ const handleCreateAcademy: RequestHandler = async (req, res) => {
     // Insert new academy
     const insertResult = await query(
       `INSERT INTO academies (
-        name, email, password, contact_person, phone, address, city, country,
-        license_number, founded_year, website, description, is_active, is_verified, created_at, updated_at
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, NOW(), NOW())
-      RETURNING id, name, email, contact_person, phone, address, city, country,
-                license_number, founded_year, website, description, is_active, is_verified, created_at`,
+        name, email, password_hash, director_name, phone, address, district, province,
+        founded_year, website, status, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+      RETURNING id, name, email, director_name, phone, address, district, province,
+                founded_year, website, status, created_at`,
       [
         academyData.name,
         academyData.email,
         hashedPassword,
-        academyData.contactPerson,
+        academyData.directorName,
         academyData.phone,
         academyData.address,
-        academyData.city,
-        academyData.country,
-        academyData.licenseNumber || null,
+        academyData.district || null,
+        academyData.province || null,
         academyData.foundedYear || null,
         academyData.website || null,
-        academyData.description || null,
-        true, // is_active
-        false // is_verified
+        'active' // status
       ]
     );
 
@@ -589,6 +571,14 @@ const handleUpdateAcademy: RequestHandler = async (req, res) => {
     if (academyData.phone) {
       updateFields.push(`phone = $${paramCount++}`);
       updateValues.push(academyData.phone);
+    }
+    if (academyData.district) {
+      updateFields.push(`district = $${paramCount++}`);
+      updateValues.push(academyData.district);
+    }
+    if (academyData.province) {
+      updateFields.push(`province = $${paramCount++}`);
+      updateValues.push(academyData.province);
     }
     if (academyData.website) {
       updateFields.push(`website = $${paramCount++}`);
