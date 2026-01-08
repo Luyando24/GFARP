@@ -65,8 +65,19 @@ export default async function handler(
         try {
             const category = req.body;
             
-            if (!category.academy_id || !category.category_name || !category.budgeted_amount) {
-                return res.status(400).json({ success: false, message: 'Missing required fields' });
+            // Populate academy_id from query if missing
+            if (!category.academy_id && req.query.academyId) {
+                category.academy_id = req.query.academyId;
+            }
+
+            if (!category.academy_id) {
+                return res.status(400).json({ success: false, message: 'Academy ID is required' });
+            }
+            if (!category.category_name) {
+                return res.status(400).json({ success: false, message: 'Category name is required' });
+            }
+            if (category.budgeted_amount === undefined || category.budgeted_amount === null) {
+                return res.status(400).json({ success: false, message: 'Budgeted amount is required' });
             }
 
             const { data, error } = await supabase

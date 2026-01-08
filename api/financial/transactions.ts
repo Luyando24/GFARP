@@ -96,9 +96,20 @@ export default async function handler(
         try {
             const transaction = req.body;
             
+            // Populate academy_id from query if missing
+            if (!transaction.academy_id && req.query.academyId) {
+                transaction.academy_id = req.query.academyId;
+            }
+
             // Basic validation
-            if (!transaction.academy_id || !transaction.amount || !transaction.category) {
-                return res.status(400).json({ success: false, message: 'Missing required fields' });
+            if (!transaction.academy_id) {
+                return res.status(400).json({ success: false, message: 'Academy ID is required' });
+            }
+            if (!transaction.amount) {
+                return res.status(400).json({ success: false, message: 'Amount is required' });
+            }
+            if (!transaction.category) {
+                return res.status(400).json({ success: false, message: 'Category is required' });
             }
 
             const { data, error } = await supabase

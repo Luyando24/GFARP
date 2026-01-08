@@ -1167,12 +1167,13 @@ export async function getBudgetCategories(academyId: string, year?: number): Pro
 
 export async function createBudgetCategory(academyId: string, category: Omit<BudgetCategory, 'id' | 'academy_id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; data: BudgetCategory }> {
   try {
+    const payload = { ...category, academy_id: academyId };
     const response = await fetch(`${BASE_URL}/financial-transactions/${academyId}/budget-categories`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify(category),
+      body: JSON.stringify(payload),
     });
 
     const result = await response.json();
