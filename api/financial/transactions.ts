@@ -33,20 +33,15 @@ export default async function handler(
     if (req.method === 'GET') {
         try {
             const { page = 1, limit = 50, type, category, status, dateFrom, dateTo, search } = req.query;
-            const academyId = req.query.academyId as string;
+            let academyId = req.query.academyId as string;
 
-            if (!academyId) {
-                // Try to get from path parameter if routed differently or return error
-                // In Vercel functions, query params include path params if configured
-                // But for strictness:
-                const pathId = req.query.id as string; // if routed as /transactions/[id]
-                if (!pathId) {
-                     // In Vercel functions query usually holds all query params
-                     // We'll assume academyId is passed as query param
-                     // If not found, error
-                     if (!req.query.academyId) {
-                         return res.status(400).json({ success: false, message: 'Academy ID is required' });
-                     }
+            if (!academyId || academyId === 'undefined' || academyId === 'null') {
+                // Try fallback to id param
+                const pathId = req.query.id as string;
+                if (pathId && pathId !== 'undefined' && pathId !== 'null') {
+                    academyId = pathId;
+                } else {
+                    return res.status(400).json({ success: false, message: 'Academy ID is required' });
                 }
             }
 

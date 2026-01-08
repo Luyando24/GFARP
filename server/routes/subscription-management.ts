@@ -505,7 +505,7 @@ export const handleGetSubscriptionHistory: RequestHandler = async (req, res) => 
   try {
     const academyId = req.query.academyId as string;
 
-    if (!academyId) {
+    if (!academyId || academyId === 'undefined' || academyId === 'null') {
       return res.status(400).json({
         success: false,
         message: 'Academy ID is required'
