@@ -34,8 +34,11 @@ export default async function handler(
         try {
             const academyId = req.query.academyId as string;
 
-            if (!academyId) {
-                return res.status(400).json({ success: false, message: 'Academy ID is required' });
+            if (!academyId || academyId === 'undefined' || academyId === 'null') {
+                return res.json({
+                    success: true,
+                    data: []
+                });
             }
 
             const { data: categories, error } = await supabase
