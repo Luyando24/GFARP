@@ -254,6 +254,11 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   // Budget Management Handlers
   const handleCreateBudgetCategory = async () => {
     try {
+      if (!academyId) {
+        setError('Academy ID is missing. Please refresh the page.');
+        return;
+      }
+
       // Enhanced validation
       if (!budgetForm.category_name?.trim()) {
         setError('Category name is required');

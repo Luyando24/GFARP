@@ -218,9 +218,21 @@ const handleCreateBudgetCategory: RequestHandler = async (req, res) => {
     const { academyId } = req.params;
     const category: BudgetCategory = req.body;
 
+    console.log(`[CreateBudget] Academy: ${academyId}, Body:`, JSON.stringify(category));
+
+    if (!academyId || academyId === 'undefined' || academyId === 'null') {
+         return res.status(400).json({ success: false, error: 'Invalid Academy ID provided in URL' });
+    }
+
     // Basic validation
-    if (!category.category_name || !category.budgeted_amount) {
-        return res.status(400).json({ success: false, error: 'Category name and budgeted amount are required' });
+    if (!category) {
+        return res.status(400).json({ success: false, error: 'Request body is empty' });
+    }
+    if (!category.category_name) {
+        return res.status(400).json({ success: false, error: 'Category name is required' });
+    }
+    if (category.budgeted_amount === undefined || category.budgeted_amount === null) {
+        return res.status(400).json({ success: false, error: 'Budgeted amount is required' });
     }
 
     const result = await query(`
