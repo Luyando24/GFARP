@@ -425,13 +425,49 @@ export default function AcademyDashboard() {
   };
 
   useEffect(() => {
-    const raw = localStorage.getItem('academy_data');
-    if (raw) {
-      try {
-        const data = JSON.parse(raw);
-        
+    const loadAcademyData = async () => {
+      let data: any = null;
+      const raw = localStorage.getItem('academy_data');
+      
+      if (raw) {
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          console.error("Failed to parse academy_data from localStorage");
+        }
+      }
+
+      // If data is missing or missing ID, try to recover from session/API
+      if (!data || !data.id) {
+        try {
+          const sessionRaw = localStorage.getItem("ipims_auth_session");
+          if (sessionRaw) {
+            const session = JSON.parse(sessionRaw);
+            const academyId = session.schoolId || session.academyId;
+            const token = session.access_token || session.token;
+
+            if (academyId && token) {
+              try {
+                const response = await fetch(`/api/academies/${academyId}`, {
+                  headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const result = await response.json();
+                if (result.success && result.data) {
+                  data = result.data;
+                  localStorage.setItem('academy_data', JSON.stringify(data));
+                }
+              } catch (err) {
+                console.error("Failed to fetch academy profile", err);
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Error recovering session", e);
+        }
+      }
+
+      if (data) {
         // Normalize data to ensure consistent banner behavior
-        // Even if fields are missing (undefined), we want them to be treated as empty strings
         if (data.address === undefined) data.address = '';
         if (data.phone === undefined) data.phone = '';
         if (data.directorName === undefined) data.directorName = '';
@@ -442,19 +478,10 @@ export default function AcademyDashboard() {
         }
 
         setAcademyInfo(data);
-
-        // Check for profile completion
-        // Auto-redirect removed to allow persistent banner on dashboard
-        // if (!data.profileComplete && !data.profileSkipped && (!data.phone || !data.address || !data.directorName)) {
-        //  console.log("Profile incomplete, redirecting to completion page");
-        //  setTimeout(() => {
-        //    navigate('/complete-profile');
-        //  }, 100);
-        // }
-      } catch {
-        setAcademyInfo(null);
       }
-    }
+    };
+
+    loadAcademyData();
   }, []);
 
   // Load transfers from database
@@ -885,10 +912,13 @@ export default function AcademyDashboard() {
       const session = JSON.parse(localStorage.getItem("ipims_auth_session") || "{}");
       const token = session?.access_token || session?.token;
 
-      if (!academyInfo?.id) {
+      // Fallback ID from session
+      const academyId = academyInfo?.id || session?.schoolId || session?.academyId;
+
+      if (!academyId) {
         toast({
           title: "Error",
-          description: "Academy ID not found. Please refresh the page.",
+          description: "Academy ID not found. Please log in again.",
           variant: "destructive",
         });
         return;
@@ -907,7 +937,7 @@ export default function AcademyDashboard() {
       };
 
       // Call API
-      const response = await fetch(`/api/academies/${academyInfo.id}`, {
+      const response = await fetch(`/api/academies/${academyId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
