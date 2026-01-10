@@ -102,13 +102,13 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
       totalPlayers = totalAcademies * 25; // Fallback: average 25 players per academy
     }
 
-    // Get active transfers count (using football_transfers table if it exists)
+    // Get active transfers count (using transfers table)
     let activeTransfers = 0;
     try {
-      const transfersResult = await query('SELECT COUNT(*) as count FROM football_transfers WHERE status IN ($1, $2)', ['pending', 'in_progress']);
+      const transfersResult = await query('SELECT COUNT(*) as count FROM transfers WHERE status IN ($1, $2)', ['pending', 'in_progress']);
       activeTransfers = parseInt(transfersResult.rows[0].count) || 0;
     } catch (err) {
-      console.log('Football transfers table may not exist, using calculated value');
+      console.log('Transfers table may not exist, using calculated value');
       activeTransfers = Math.floor(totalAcademies * 0.3); // Fallback calculation
     }
 

@@ -188,9 +188,9 @@ export async function query(text: string, params?: (string | number | boolean | 
       return { rows: [{ count: 0 }] };
     }
 
-    // Handle football_transfers table access
-    if (text.includes('football_transfers') && error.message.includes('does not exist')) {
-      console.log('Football transfers table may not exist, using calculated value');
+    // Handle transfers table access
+    if ((text.includes('football_transfers') || text.includes('transfers')) && error.message.includes('does not exist')) {
+      console.log('Transfers table may not exist, using calculated value');
       return { rows: [{ count: 0 }] };
     }
 

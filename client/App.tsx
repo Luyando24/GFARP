@@ -48,6 +48,10 @@ import BlogList from "./pages/BlogList";
 import BlogDetails from "./pages/BlogDetails";
 import BlogEditor from "./pages/BlogEditor";
 import { LanguageProvider } from "@/lib/i18n";
+import PublicPlayerProfile from "./pages/individual/PublicPlayerProfile";
+import PlayerRegister from "./pages/individual/PlayerRegister";
+import PlayerLogin from "./pages/individual/PlayerLogin";
+import PlayerDashboard from "./pages/individual/PlayerDashboard";
 
 const queryClient = new QueryClient();
 
