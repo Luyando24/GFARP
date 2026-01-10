@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Download, Link as LinkIcon, Edit, Save, Check, User, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
-import DashboardHeader from "@/components/navigation/DashboardHeader";
+import PlayerHeader from "@/components/navigation/PlayerHeader";
 
 export default function PlayerDashboard() {
   const { session, logout } = useAuth();
@@ -173,7 +173,7 @@ export default function PlayerDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <DashboardHeader />
+      <PlayerHeader />
       
       <main className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
@@ -181,7 +181,7 @@ export default function PlayerDashboard() {
             <h1 className="text-3xl font-bold text-gray-900">Player Dashboard</h1>
             <p className="text-gray-500">Manage your profile and subscription</p>
           </div>
-          <Button variant="outline" onClick={logout}>Sign Out</Button>
+          {/* Sign Out button is now in the header */}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
