@@ -1233,6 +1233,60 @@ export async function deleteBudgetCategory(id: number): Promise<{ success: boole
   }
 }
 
+// ===== INDIVIDUAL PLAYERS API =====
+
+export interface IndividualPlayer {
+  id: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: string;
+}
+
+export interface PlayerProfile {
+  id: string;
+  player_id: string;
+  display_name?: string;
+  age?: number;
+  nationality?: string;
+  position?: string;
+  current_club?: string;
+  video_links?: string[];
+  transfermarket_link?: string;
+  bio?: string;
+  profile_image_url?: string;
+  email?: string; // joined fields
+  first_name?: string; // joined fields
+  last_name?: string; // joined fields
+  active_plan?: string;
+}
+
+export const PlayerApi = {
+  async register(data: any) {
+    return Api.post<{ success: boolean; token: string; user: IndividualPlayer }>('/individual-players/register', data);
+  },
+
+  async login(data: any) {
+    return Api.post<{ success: boolean; token: string; user: IndividualPlayer }>('/individual-players/login', data);
+  },
+
+  async getProfile() {
+    return Api.get<PlayerProfile>('/individual-players/profile');
+  },
+
+  async updateProfile(data: Partial<PlayerProfile>) {
+    return Api.put<{ success: boolean; message: string }>('/individual-players/profile', data);
+  },
+
+  async getPublicProfile(id: string) {
+    return Api.get<PlayerProfile>(`/individual-players/public/${id}`);
+  },
+  
+  async purchasePlan(data: { planType: string; amount: number }) {
+    return Api.post<{ success: boolean; message: string }>('/individual-players/purchase', data);
+  }
+};
+
 // ===== SUBSCRIPTION MANAGEMENT API =====
 
 // Subscription types

@@ -92,6 +92,14 @@ const App = () => {
               <Route path="/blog" element={<BlogList />} />
               <Route path="/blog/:slug" element={<BlogDetails />} />
 
+              {/* Individual Player Routes */}
+              <Route path="/player/public/:id" element={<PublicPlayerProfile />} />
+              <Route path="/player/register" element={<PlayerRegister />} />
+              <Route path="/player/login" element={<PlayerLogin />} />
+              <Route element={<ProtectedRoute allowedRoles={["individual_player"]} />}>
+                <Route path="/player/dashboard" element={<PlayerDashboard />} />
+              </Route>
+
               {/* Academy Dashboard - Protected route requiring authentication */}
               <Route element={<ProtectedRoute allowedRoles={["academy"]} />}>
                 <Route path="/academy-dashboard" element={<AcademyDashboard />} />

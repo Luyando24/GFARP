@@ -1,0 +1,429 @@
+import React, { useState, useEffect } from "react";
+import { PlayerApi, PlayerProfile } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, Download, Link as LinkIcon, Edit, Save, Check, User, Share2 } from "lucide-react";
+import { toast } from "sonner";
+import jsPDF from "jspdf";
+import DashboardHeader from "@/components/navigation/DashboardHeader";
+
+export default function PlayerDashboard() {
+  const { session, logout } = useAuth();
+  const [profile, setProfile] = useState<PlayerProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  
+  // Form State
+  const [formData, setFormData] = useState<Partial<PlayerProfile>>({});
+  
+  // Plan Selection State (Mocked for now, in real app would check purchase history)
+  const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const data = await PlayerApi.getProfile();
+      setProfile(data);
+      setFormData(data);
+      
+      // Check for purchase (This part would need backend support for purchase history)
+      // For now, we'll simulate no plan if it's a new user
+    } catch (error) {
+      console.error("Failed to fetch profile", error);
+      // If 404, it means profile hasn't been created/filled yet, which is fine
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    try {
+      await PlayerApi.updateProfile(formData);
+      setProfile(formData as PlayerProfile);
+      setIsEditing(false);
+      toast.success("Profile updated successfully");
+    } catch (error) {
+      console.error("Failed to update profile", error);
+      toast.error("Failed to update profile");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePurchase = async (planType: string, amount: number) => {
+    try {
+      // In a real app, this would integrate with Stripe
+      await PlayerApi.purchasePlan({ planType, amount });
+      setCurrentPlan(planType);
+      toast.success(`Successfully purchased ${planType} plan!`);
+    } catch (error) {
+      console.error("Purchase failed", error);
+      toast.error("Purchase failed");
+    }
+  };
+
+  const generatePDF = () => {
+    if (!profile) return;
+    
+    const doc = new jsPDF();
+    
+    // Header Background
+    doc.setFillColor(34, 197, 94); // Green-500
+    doc.rect(0, 0, 210, 40, 'F');
+    
+    // Name
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(24);
+    doc.text(profile.display_name || "Player Name", 20, 25);
+    
+    // Basic Info
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(12);
+    
+    let y = 60;
+    const addLine = (label: string, value: string | number | undefined) => {
+      if (value) {
+        doc.setFont("helvetica", "bold");
+        doc.text(`${label}:`, 20, y);
+        doc.setFont("helvetica", "normal");
+        doc.text(`${value}`, 60, y);
+        y += 10;
+      }
+    };
+
+    addLine("Age", profile.age);
+    addLine("Nationality", profile.nationality);
+    addLine("Position", profile.position);
+    addLine("Current Club", profile.current_club);
+    
+    // Bio
+    if (profile.bio) {
+      y += 10;
+      doc.setFont("helvetica", "bold");
+      doc.text("Bio:", 20, y);
+      y += 7;
+      doc.setFont("helvetica", "normal");
+      const splitBio = doc.splitTextToSize(profile.bio, 170);
+      doc.text(splitBio, 20, y);
+      y += (splitBio.length * 7) + 10;
+    }
+    
+    // Links
+    if (profile.transfermarket_link) {
+      y += 5;
+      doc.setTextColor(0, 0, 255);
+      doc.textWithLink("TransferMarket Profile", 20, y, { url: profile.transfermarket_link });
+      y += 10;
+    }
+    
+    if (profile.video_links && profile.video_links.length > 0) {
+      doc.setTextColor(0, 0, 0);
+      doc.setFont("helvetica", "bold");
+      doc.text("Video Highlights:", 20, y);
+      y += 7;
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 255);
+      
+      profile.video_links.forEach((link, index) => {
+        if (link) {
+           doc.textWithLink(`Video Link ${index + 1}`, 20, y, { url: link });
+           y += 7;
+        }
+      });
+    }
+
+    // Footer
+    doc.setTextColor(150, 150, 150);
+    doc.setFontSize(10);
+    doc.text("Generated by Soccer Circular", 105, 280, { align: "center" });
+    
+    doc.save(`${profile.display_name || 'player'}_profile.pdf`);
+    toast.success("PDF Downloaded!");
+  };
+
+  const copyPublicLink = () => {
+    if (!profile) return;
+    const url = `${window.location.origin}/player/public/${profile.player_id}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Profile link copied to clipboard!");
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <DashboardHeader />
+      
+      <main className="container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Player Dashboard</h1>
+            <p className="text-gray-500">Manage your profile and subscription</p>
+          </div>
+          <Button variant="outline" onClick={logout}>Sign Out</Button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left Column: Profile Form */}
+          <div className="lg:col-span-2">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle>Profile Details</CardTitle>
+                  <CardDescription>Update your information for the one-pager</CardDescription>
+                </div>
+                {!isEditing && (
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => setIsEditing(true)}
+                    disabled={currentPlan === 'basic' || currentPlan === 'pdf'}
+                    title={currentPlan === 'basic' || currentPlan === 'pdf' ? "Upgrade to Pro to edit your profile" : "Edit Profile"}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                )}
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="display_name">Display Name</Label>
+                      <Input 
+                        id="display_name" 
+                        name="display_name" 
+                        value={formData.display_name || ''} 
+                        onChange={handleInputChange} 
+                        disabled={!isEditing}
+                        placeholder="e.g. John Doe"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="age">Age</Label>
+                      <Input 
+                        id="age" 
+                        name="age" 
+                        type="number"
+                        value={formData.age || ''} 
+                        onChange={handleInputChange} 
+                        disabled={!isEditing}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="nationality">Nationality</Label>
+                      <Input 
+                        id="nationality" 
+                        name="nationality" 
+                        value={formData.nationality || ''} 
+                        onChange={handleInputChange} 
+                        disabled={!isEditing}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="position">Position</Label>
+                      <Input 
+                        id="position" 
+                        name="position" 
+                        value={formData.position || ''} 
+                        onChange={handleInputChange} 
+                        disabled={!isEditing}
+                        placeholder="e.g. Striker"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="current_club">Current Club</Label>
+                      <Input 
+                        id="current_club" 
+                        name="current_club" 
+                        value={formData.current_club || ''} 
+                        onChange={handleInputChange} 
+                        disabled={!isEditing}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="transfermarket_link">TransferMarket Link</Label>
+                      <Input 
+                        id="transfermarket_link" 
+                        name="transfermarket_link" 
+                        value={formData.transfermarket_link || ''} 
+                        onChange={handleInputChange} 
+                        disabled={!isEditing}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="bio">Bio</Label>
+                    <Textarea 
+                      id="bio" 
+                      name="bio" 
+                      value={formData.bio || ''} 
+                      onChange={handleInputChange} 
+                      disabled={!isEditing}
+                      placeholder="Tell us about yourself..."
+                      className="min-h-[100px]"
+                    />
+                  </div>
+
+                  {/* Video Links Section could be enhanced with dynamic add/remove */}
+                  <div className="space-y-2">
+                    <Label>Video Links</Label>
+                    <Input 
+                      placeholder="Video Link 1" 
+                      value={formData.video_links?.[0] || ''} 
+                      onChange={(e) => {
+                         const newLinks = [...(formData.video_links || [])];
+                         newLinks[0] = e.target.value;
+                         setFormData(prev => ({ ...prev, video_links: newLinks }));
+                      }}
+                      disabled={!isEditing}
+                      className="mb-2"
+                    />
+                     <Input 
+                      placeholder="Video Link 2" 
+                      value={formData.video_links?.[1] || ''} 
+                      onChange={(e) => {
+                         const newLinks = [...(formData.video_links || [])];
+                         newLinks[1] = e.target.value;
+                         setFormData(prev => ({ ...prev, video_links: newLinks }));
+                      }}
+                      disabled={!isEditing}
+                    />
+                  </div>
+                </div>
+              </CardContent>
+              {isEditing && (
+                <CardFooter className="flex justify-end space-x-2">
+                  <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
+                  <Button onClick={handleSaveProfile} disabled={saving}>
+                    {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                    Save Changes
+                  </Button>
+                </CardFooter>
+              )}
+            </Card>
+          </div>
+
+          {/* Right Column: Plans & Actions */}
+          <div className="space-y-6">
+            {/* Action Card */}
+            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100">
+              <CardHeader>
+                <CardTitle className="text-blue-900">Your One-Pager</CardTitle>
+                <CardDescription>Generate and share your profile</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button 
+                  className="w-full bg-blue-600 hover:bg-blue-700" 
+                  onClick={generatePDF}
+                  disabled={!currentPlan || (currentPlan !== 'pdf' && currentPlan !== 'pro')}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download PDF
+                </Button>
+                
+                <Button 
+                  variant="outline" 
+                  className="w-full border-blue-200 hover:bg-blue-50 text-blue-700"
+                  onClick={copyPublicLink}
+                  disabled={!currentPlan || (currentPlan !== 'basic' && currentPlan !== 'pro')}
+                >
+                  <Share2 className="mr-2 h-4 w-4" />
+                  Copy Profile Link
+                </Button>
+
+                {!currentPlan && (
+                  <p className="text-xs text-center text-blue-600 mt-2">
+                    Purchase a plan to unlock these features
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Plans Selection */}
+            {!currentPlan && (
+               <div className="space-y-4">
+                 <h3 className="font-semibold text-gray-900">Choose a Plan</h3>
+                 
+                 {/* Plan 1: Link Only */}
+                 <Card className={`cursor-pointer transition-all hover:border-green-500 ${currentPlan === 'basic' ? 'border-green-500 ring-1 ring-green-500' : ''}`}>
+                   <CardHeader className="pb-2">
+                     <div className="flex justify-between items-center">
+                       <CardTitle className="text-lg">Basic Link</CardTitle>
+                       <span className="text-xl font-bold text-green-600">$20</span>
+                     </div>
+                   </CardHeader>
+                   <CardContent>
+                     <p className="text-sm text-gray-500 mb-4">Get a sharable profile link (soccer circular domain).</p>
+                     <Button className="w-full" variant="outline" onClick={() => handlePurchase('basic', 20)}>Select Plan</Button>
+                   </CardContent>
+                 </Card>
+
+                 {/* Plan 2: PDF Only */}
+                 <Card className="cursor-pointer transition-all hover:border-green-500">
+                   <CardHeader className="pb-2">
+                     <div className="flex justify-between items-center">
+                       <CardTitle className="text-lg">PDF Version</CardTitle>
+                       <span className="text-xl font-bold text-green-600">$30</span>
+                     </div>
+                   </CardHeader>
+                   <CardContent>
+                     <p className="text-sm text-gray-500 mb-4">Get a downloadable PDF version of your profile (No edits).</p>
+                     <Button className="w-full" variant="outline" onClick={() => handlePurchase('pdf', 30)}>Select Plan</Button>
+                   </CardContent>
+                 </Card>
+
+                 {/* Plan 3: Pro */}
+                 <Card className="cursor-pointer transition-all hover:border-green-500 border-green-100 bg-green-50/50">
+                   <CardHeader className="pb-2">
+                     <div className="flex justify-between items-center">
+                       <CardTitle className="text-lg text-green-900">Pro Bundle</CardTitle>
+                       <span className="text-xl font-bold text-green-700">$50</span>
+                     </div>
+                   </CardHeader>
+                   <CardContent>
+                     <p className="text-sm text-gray-600 mb-4">PDF + Link + Editing capabilities.</p>
+                     <Button className="w-full bg-green-600 hover:bg-green-700 text-white" onClick={() => handlePurchase('pro', 50)}>Select Plan</Button>
+                   </CardContent>
+                 </Card>
+               </div>
+            )}
+            
+            {currentPlan && (
+              <Card className="bg-green-50 border-green-200">
+                <CardHeader>
+                  <CardTitle className="text-green-800 flex items-center">
+                    <Check className="h-5 w-5 mr-2" />
+                    Active Plan: {currentPlan.toUpperCase()}
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+            )}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}

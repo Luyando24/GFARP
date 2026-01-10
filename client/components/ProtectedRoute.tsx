@@ -28,6 +28,8 @@ export const ProtectedRoute = ({
         return <Navigate to="/dashboard" replace />;
       case "academy":
         return <Navigate to="/academy-dashboard" replace />;
+      case "individual_player":
+        return <Navigate to="/player/dashboard" replace />;
       case "headteacher":
         return <Navigate to="/dashboard" replace />;
       case "teacher":

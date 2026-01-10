@@ -24,6 +24,8 @@ import notificationsRouter from "./routes/notifications.js";
 import supportRouter from "./routes/support.js";
 import databaseRouter from "./routes/database.js";
 import setupRouter from "./routes/setup.js";
+import setupPlayerDbRouter from "./routes/setup-player-db.js";
+import individualPlayersRouter from "./routes/individual-players.js";
 import systemSettingsRouter from "./routes/system-settings.js";
 import academyRouter from "./routes/academy.js";
 import footballAuthRouter from "./routes/football-auth.js";
@@ -172,6 +174,9 @@ export function createServer() {
   api.post("/player-documents/upload", uploadMiddleware, handleUploadPlayerDocument);
   api.get("/player-documents/:playerId", handleGetPlayerDocuments);
   api.delete("/player-documents/:documentId", handleDeletePlayerDocument);
+
+  // Individual Players routes
+  api.use("/individual-players", individualPlayersRouter);
 
   // Demo player documents routes (for when database is unavailable)
   api.post("/demo-player-documents/upload", demoUploadMiddleware, handleDemoUploadPlayerDocument);
