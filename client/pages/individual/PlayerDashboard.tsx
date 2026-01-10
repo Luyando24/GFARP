@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { Link, useNavigate } from 'react-router-dom';
 import { PlayerApi, PlayerProfile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -6,11 +7,32 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Download, Link as LinkIcon, Edit, Save, Check, User, Share2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Loader2, 
+  Download, 
+  Link as LinkIcon, 
+  Edit, 
+  Save, 
+  Check, 
+  User, 
+  Share2,
+  Home,
+  CreditCard,
+  Menu,
+  X,
+  Search,
+  LogOut,
+  Settings,
+  Bell,
+  Trophy,
+  Star,
+  FileText
+} from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
-import PlayerHeader from "@/components/navigation/PlayerHeader";
+import ThemeToggle from "@/components/navigation/ThemeToggle";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function PlayerDashboard() {
   const { session, logout } = useAuth();
@@ -19,10 +41,15 @@ export default function PlayerDashboard() {
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
+  // Layout State
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [searchQuery, setSearchQuery] = useState("");
+
   // Form State
   const [formData, setFormData] = useState<Partial<PlayerProfile>>({});
   
-  // Plan Selection State (Mocked for now, in real app would check purchase history)
+  // Plan Selection State (Mocked for now)
   const [currentPlan, setCurrentPlan] = useState<string | null>(null);
 
   useEffect(() => {
@@ -34,12 +61,8 @@ export default function PlayerDashboard() {
       const data = await PlayerApi.getProfile();
       setProfile(data);
       setFormData(data);
-      
-      // Check for purchase (This part would need backend support for purchase history)
-      // For now, we'll simulate no plan if it's a new user
     } catch (error) {
       console.error("Failed to fetch profile", error);
-      // If 404, it means profile hasn't been created/filled yet, which is fine
     } finally {
       setLoading(false);
     }
@@ -67,10 +90,13 @@ export default function PlayerDashboard() {
 
   const handlePurchase = async (planType: string, amount: number) => {
     try {
-      // In a real app, this would integrate with Stripe
       await PlayerApi.purchasePlan({ planType, amount });
       setCurrentPlan(planType);
       toast.success(`Successfully purchased ${planType} plan!`);
+      // Automatically switch to share tab after purchase if applicable
+      if (planType !== 'basic') {
+        setActiveTab('share');
+      }
     } catch (error) {
       console.error("Purchase failed", error);
       toast.error("Purchase failed");
@@ -165,265 +191,495 @@ export default function PlayerDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-green-600" />
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
+        <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
       </div>
     );
   }
 
+  const sidebarItems = [
+    { id: "overview", label: "Overview", icon: Home },
+    { id: "profile", label: "Edit Profile", icon: User },
+    { id: "subscription", label: "Subscription", icon: CreditCard },
+    { id: "share", label: "Share & Export", icon: Share2 },
+  ];
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      <PlayerHeader />
-      
-      <main className="container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Player Dashboard</h1>
-            <p className="text-gray-500">Manage your profile and subscription</p>
-          </div>
-          {/* Sign Out button is now in the header */}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Profile Form */}
-          <div className="lg:col-span-2">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+      {/* Header */}
+      <header className="bg-white dark:bg-slate-900 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
+        <div className="px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Logo and Academy Name */}
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="lg:hidden"
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+              >
+                {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+              </Button>
+              <div className="flex items-center gap-3">
+                <div className="relative">
+                  <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center shadow-xl">
+                    <span className="text-white font-bold">SC</span>
+                  </div>
+                  <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center shadow-lg">
+                    <Star className="h-2 w-2 text-white" />
+                  </div>
+                </div>
                 <div>
-                  <CardTitle>Profile Details</CardTitle>
-                  <CardDescription>Update your information for the one-pager</CardDescription>
+                  <h1 className="text-lg font-bold text-slate-900 dark:text-white">
+                    Soccer Circular
+                  </h1>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">Player Portal</p>
                 </div>
-                {!isEditing && (
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    onClick={() => setIsEditing(true)}
-                    disabled={currentPlan === 'basic' || currentPlan === 'pdf'}
-                    title={currentPlan === 'basic' || currentPlan === 'pdf' ? "Upgrade to Pro to edit your profile" : "Edit Profile"}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                )}
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="display_name">Display Name</Label>
-                      <Input 
-                        id="display_name" 
-                        name="display_name" 
-                        value={formData.display_name || ''} 
-                        onChange={handleInputChange} 
-                        disabled={!isEditing}
-                        placeholder="e.g. John Doe"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="age">Age</Label>
-                      <Input 
-                        id="age" 
-                        name="age" 
-                        type="number"
-                        value={formData.age || ''} 
-                        onChange={handleInputChange} 
-                        disabled={!isEditing}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="nationality">Nationality</Label>
-                      <Input 
-                        id="nationality" 
-                        name="nationality" 
-                        value={formData.nationality || ''} 
-                        onChange={handleInputChange} 
-                        disabled={!isEditing}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="position">Position</Label>
-                      <Input 
-                        id="position" 
-                        name="position" 
-                        value={formData.position || ''} 
-                        onChange={handleInputChange} 
-                        disabled={!isEditing}
-                        placeholder="e.g. Striker"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="current_club">Current Club</Label>
-                      <Input 
-                        id="current_club" 
-                        name="current_club" 
-                        value={formData.current_club || ''} 
-                        onChange={handleInputChange} 
-                        disabled={!isEditing}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="transfermarket_link">TransferMarket Link</Label>
-                      <Input 
-                        id="transfermarket_link" 
-                        name="transfermarket_link" 
-                        value={formData.transfermarket_link || ''} 
-                        onChange={handleInputChange} 
-                        disabled={!isEditing}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="bio">Bio</Label>
-                    <Textarea 
-                      id="bio" 
-                      name="bio" 
-                      value={formData.bio || ''} 
-                      onChange={handleInputChange} 
-                      disabled={!isEditing}
-                      placeholder="Tell us about yourself..."
-                      className="min-h-[100px]"
-                    />
-                  </div>
+              </div>
+            </div>
 
-                  {/* Video Links Section could be enhanced with dynamic add/remove */}
-                  <div className="space-y-2">
-                    <Label>Video Links</Label>
-                    <Input 
-                      placeholder="Video Link 1" 
-                      value={formData.video_links?.[0] || ''} 
-                      onChange={(e) => {
-                         const newLinks = [...(formData.video_links || [])];
-                         newLinks[0] = e.target.value;
-                         setFormData(prev => ({ ...prev, video_links: newLinks }));
-                      }}
-                      disabled={!isEditing}
-                      className="mb-2"
-                    />
-                     <Input 
-                      placeholder="Video Link 2" 
-                      value={formData.video_links?.[1] || ''} 
-                      onChange={(e) => {
-                         const newLinks = [...(formData.video_links || [])];
-                         newLinks[1] = e.target.value;
-                         setFormData(prev => ({ ...prev, video_links: newLinks }));
-                      }}
-                      disabled={!isEditing}
-                    />
-                  </div>
-                </div>
-              </CardContent>
-              {isEditing && (
-                <CardFooter className="flex justify-end space-x-2">
-                  <Button variant="outline" onClick={() => setIsEditing(false)}>Cancel</Button>
-                  <Button onClick={handleSaveProfile} disabled={saving}>
-                    {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                    Save Changes
-                  </Button>
-                </CardFooter>
-              )}
-            </Card>
-          </div>
+            {/* Search Bar (Optional for Player, kept for consistency) */}
+            <div className="flex-1 max-w-md mx-8 hidden md:block">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
+                <input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
 
-          {/* Right Column: Plans & Actions */}
-          <div className="space-y-6">
-            {/* Action Card */}
-            <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-100">
-              <CardHeader>
-                <CardTitle className="text-blue-900">Your One-Pager</CardTitle>
-                <CardDescription>Generate and share your profile</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <Button 
-                  className="w-full bg-blue-600 hover:bg-blue-700" 
-                  onClick={generatePDF}
-                  disabled={!currentPlan || (currentPlan !== 'pdf' && currentPlan !== 'pro')}
-                >
-                  <Download className="mr-2 h-4 w-4" />
-                  Download PDF
-                </Button>
-                
-                <Button 
-                  variant="outline" 
-                  className="w-full border-blue-200 hover:bg-blue-50 text-blue-700"
-                  onClick={copyPublicLink}
-                  disabled={!currentPlan || (currentPlan !== 'basic' && currentPlan !== 'pro')}
-                >
-                  <Share2 className="mr-2 h-4 w-4" />
-                  Copy Profile Link
-                </Button>
-
-                {!currentPlan && (
-                  <p className="text-xs text-center text-blue-600 mt-2">
-                    Purchase a plan to unlock these features
+            {/* User Menu */}
+            <div className="flex items-center gap-4">
+              <ThemeToggle />
+              <div className="flex items-center gap-3">
+                <Avatar className="h-8 w-8">
+                  <AvatarFallback className="bg-blue-600 text-white font-bold">
+                    {getInitials(profile?.display_name || session?.email || 'Player')}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="hidden sm:block">
+                  <p className="text-sm font-medium text-slate-900 dark:text-white">
+                    {profile?.display_name || 'Player'}
                   </p>
-                )}
-              </CardContent>
-            </Card>
+                  <p className="text-xs text-slate-600 dark:text-slate-400">
+                    {session?.email}
+                  </p>
+                </div>
+              </div>
+              <Button variant="ghost" size="sm" onClick={logout}>
+                <LogOut className="h-5 w-5" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </header>
 
-            {/* Plans Selection */}
-            {!currentPlan && (
-               <div className="space-y-4">
-                 <h3 className="font-semibold text-gray-900">Choose a Plan</h3>
+      <div className="flex">
+        {/* Sidebar */}
+        <aside className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-gradient-to-b from-[#005391] to-[#0066b3] border-r-4 border-yellow-400 transition-transform duration-300 ease-in-out min-h-[calc(100vh-64px)]`}>
+          <div className="flex flex-col h-full pt-4 lg:pt-0">
+            <nav className="flex-1 px-4 py-6 space-y-2">
+              {sidebarItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Button
+                    key={item.id}
+                    variant="ghost"
+                    className={`w-full justify-start text-white hover:bg-white/20 transition-all duration-300 ${activeTab === item.id
+                      ? 'bg-white/20 border-l-4 border-yellow-400 shadow-lg'
+                      : 'border-l-4 border-transparent hover:border-yellow-400/50'
+                      }`}
+                    onClick={() => {
+                      setActiveTab(item.id);
+                      setIsSidebarOpen(false);
+                    }}
+                  >
+                    <Icon className="h-5 w-5 mr-3" />
+                    {item.label}
+                  </Button>
+                );
+              })}
+            </nav>
+          </div>
+        </aside>
+
+        {/* Overlay for mobile */}
+        {isSidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-50 z-30 lg:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )}
+
+        {/* Main Content */}
+        <main className="flex-1 p-6 overflow-auto min-h-[calc(100vh-64px)]">
+          <div className="max-w-6xl mx-auto">
+            {/* Overview Tab */}
+            {activeTab === 'overview' && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                      Welcome, {profile?.display_name || 'Player'}
+                    </h2>
+                    <p className="text-slate-600 dark:text-slate-400">
+                      Here is an overview of your profile and subscription.
+                    </p>
+                  </div>
+                  {currentPlan && (
+                     <Badge className="bg-green-100 text-green-800 hover:bg-green-200 border-green-200 text-sm px-3 py-1">
+                        {currentPlan.toUpperCase()} PLAN
+                     </Badge>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {/* Profile Summary Card */}
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Profile Status</CardTitle>
+                      <User className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{profile?.display_name ? "Active" : "Incomplete"}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {profile?.position || "No position set"}
+                      </p>
+                    </CardContent>
+                  </Card>
+
+                  {/* Subscription Status Card */}
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Subscription</CardTitle>
+                      <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{currentPlan ? currentPlan.toUpperCase() : "Free"}</div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {currentPlan ? "Active subscription" : "No active plan"}
+                      </p>
+                    </CardContent>
+                  </Card>
+                </div>
+                
+                {/* Read-only Profile View */}
+                <Card>
+                  <CardHeader>
+                     <CardTitle>Profile Preview</CardTitle>
+                     <CardDescription>This is how your profile information looks.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                           <Label className="text-muted-foreground">Name</Label>
+                           <p className="font-medium">{profile?.display_name || '-'}</p>
+                        </div>
+                        <div>
+                           <Label className="text-muted-foreground">Position</Label>
+                           <p className="font-medium">{profile?.position || '-'}</p>
+                        </div>
+                        <div>
+                           <Label className="text-muted-foreground">Club</Label>
+                           <p className="font-medium">{profile?.current_club || '-'}</p>
+                        </div>
+                        <div>
+                           <Label className="text-muted-foreground">Nationality</Label>
+                           <p className="font-medium">{profile?.nationality || '-'}</p>
+                        </div>
+                     </div>
+                     <div>
+                        <Label className="text-muted-foreground">Bio</Label>
+                        <p className="font-medium mt-1">{profile?.bio || '-'}</p>
+                     </div>
+                  </CardContent>
+                  <CardFooter>
+                     <Button onClick={() => setActiveTab('profile')}>Edit Profile</Button>
+                  </CardFooter>
+                </Card>
+              </div>
+            )}
+
+            {/* Edit Profile Tab */}
+            {activeTab === 'profile' && (
+              <div className="space-y-6">
+                 <div>
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Edit Profile</h2>
+                    <p className="text-slate-600 dark:text-slate-400">Update your information for the one-pager.</p>
+                 </div>
                  
-                 {/* Plan 1: Link Only */}
-                 <Card className={`cursor-pointer transition-all hover:border-green-500 ${currentPlan === 'basic' ? 'border-green-500 ring-1 ring-green-500' : ''}`}>
-                   <CardHeader className="pb-2">
-                     <div className="flex justify-between items-center">
-                       <CardTitle className="text-lg">Basic Link</CardTitle>
-                       <span className="text-xl font-bold text-green-600">$20</span>
-                     </div>
-                   </CardHeader>
-                   <CardContent>
-                     <p className="text-sm text-gray-500 mb-4">Get a sharable profile link (soccer circular domain).</p>
-                     <Button className="w-full" variant="outline" onClick={() => handlePurchase('basic', 20)}>Select Plan</Button>
-                   </CardContent>
-                 </Card>
+                 <Card>
+                  <CardContent className="pt-6">
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="display_name">Display Name</Label>
+                          <Input 
+                            id="display_name" 
+                            name="display_name" 
+                            value={formData.display_name || ''} 
+                            onChange={handleInputChange} 
+                            placeholder="e.g. John Doe"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="age">Age</Label>
+                          <Input 
+                            id="age" 
+                            name="age" 
+                            type="number"
+                            value={formData.age || ''} 
+                            onChange={handleInputChange} 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="nationality">Nationality</Label>
+                          <Input 
+                            id="nationality" 
+                            name="nationality" 
+                            value={formData.nationality || ''} 
+                            onChange={handleInputChange} 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="position">Position</Label>
+                          <Input 
+                            id="position" 
+                            name="position" 
+                            value={formData.position || ''} 
+                            onChange={handleInputChange} 
+                            placeholder="e.g. Striker"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="current_club">Current Club</Label>
+                          <Input 
+                            id="current_club" 
+                            name="current_club" 
+                            value={formData.current_club || ''} 
+                            onChange={handleInputChange} 
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="transfermarket_link">TransferMarket Link</Label>
+                          <Input 
+                            id="transfermarket_link" 
+                            name="transfermarket_link" 
+                            value={formData.transfermarket_link || ''} 
+                            onChange={handleInputChange} 
+                          />
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="bio">Bio</Label>
+                        <Textarea 
+                          id="bio" 
+                          name="bio" 
+                          value={formData.bio || ''} 
+                          onChange={handleInputChange} 
+                          placeholder="Tell us about yourself..."
+                          className="min-h-[100px]"
+                        />
+                      </div>
 
-                 {/* Plan 2: PDF Only */}
-                 <Card className="cursor-pointer transition-all hover:border-green-500">
-                   <CardHeader className="pb-2">
-                     <div className="flex justify-between items-center">
-                       <CardTitle className="text-lg">PDF Version</CardTitle>
-                       <span className="text-xl font-bold text-green-600">$30</span>
-                     </div>
-                   </CardHeader>
-                   <CardContent>
-                     <p className="text-sm text-gray-500 mb-4">Get a downloadable PDF version of your profile (No edits).</p>
-                     <Button className="w-full" variant="outline" onClick={() => handlePurchase('pdf', 30)}>Select Plan</Button>
-                   </CardContent>
-                 </Card>
+                      <div className="space-y-2">
+                        <Label>Video Links</Label>
+                        <Input 
+                          placeholder="Video Link 1" 
+                          value={formData.video_links?.[0] || ''} 
+                          onChange={(e) => {
+                             const newLinks = [...(formData.video_links || [])];
+                             newLinks[0] = e.target.value;
+                             setFormData(prev => ({ ...prev, video_links: newLinks }));
+                          }}
+                          className="mb-2"
+                        />
+                         <Input 
+                          placeholder="Video Link 2" 
+                          value={formData.video_links?.[1] || ''} 
+                          onChange={(e) => {
+                             const newLinks = [...(formData.video_links || [])];
+                             newLinks[1] = e.target.value;
+                             setFormData(prev => ({ ...prev, video_links: newLinks }));
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                  <CardFooter className="flex justify-end space-x-2 bg-slate-50 dark:bg-slate-800/50 p-4">
+                    <Button variant="outline" onClick={() => setActiveTab('overview')}>Cancel</Button>
+                    <Button onClick={handleSaveProfile} disabled={saving || (currentPlan !== 'pro' && currentPlan !== 'basic' && currentPlan !== 'pdf' && false) /* Allow edit for now or restrict based on plan */}>
+                      {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                      Save Changes
+                    </Button>
+                  </CardFooter>
+                </Card>
+              </div>
+            )}
 
-                 {/* Plan 3: Pro */}
-                 <Card className="cursor-pointer transition-all hover:border-green-500 border-green-100 bg-green-50/50">
-                   <CardHeader className="pb-2">
-                     <div className="flex justify-between items-center">
-                       <CardTitle className="text-lg text-green-900">Pro Bundle</CardTitle>
-                       <span className="text-xl font-bold text-green-700">$50</span>
-                     </div>
-                   </CardHeader>
-                   <CardContent>
-                     <p className="text-sm text-gray-600 mb-4">PDF + Link + Editing capabilities.</p>
-                     <Button className="w-full bg-green-600 hover:bg-green-700 text-white" onClick={() => handlePurchase('pro', 50)}>Select Plan</Button>
-                   </CardContent>
-                 </Card>
+            {/* Subscription Tab */}
+            {activeTab === 'subscription' && (
+               <div className="space-y-6">
+                 <div>
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Subscription Plans</h2>
+                    <p className="text-slate-600 dark:text-slate-400">Choose the best plan for your needs.</p>
+                 </div>
+
+                 {!currentPlan ? (
+                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                     {/* Plan 1: Link Only */}
+                     <Card className="cursor-pointer transition-all hover:border-blue-500 hover:shadow-md flex flex-col">
+                       <CardHeader>
+                         <CardTitle className="text-lg">Basic Link</CardTitle>
+                         <div className="text-3xl font-bold text-blue-600 mt-2">$20</div>
+                       </CardHeader>
+                       <CardContent className="flex-1">
+                         <p className="text-sm text-gray-500 mb-4">Get a sharable profile link hosted on Soccer Circular.</p>
+                         <ul className="text-sm space-y-2 mb-4">
+                            <li className="flex items-center"><Check className="h-4 w-4 mr-2 text-green-500"/> Public Profile Link</li>
+                            <li className="flex items-center"><Check className="h-4 w-4 mr-2 text-green-500"/> Mobile Optimized</li>
+                         </ul>
+                       </CardContent>
+                       <CardFooter>
+                         <Button className="w-full" variant="outline" onClick={() => handlePurchase('basic', 20)}>Select Plan</Button>
+                       </CardFooter>
+                     </Card>
+    
+                     {/* Plan 2: PDF Only */}
+                     <Card className="cursor-pointer transition-all hover:border-blue-500 hover:shadow-md flex flex-col">
+                       <CardHeader>
+                         <CardTitle className="text-lg">PDF Version</CardTitle>
+                         <div className="text-3xl font-bold text-blue-600 mt-2">$30</div>
+                       </CardHeader>
+                       <CardContent className="flex-1">
+                         <p className="text-sm text-gray-500 mb-4">Get a professional PDF version of your profile.</p>
+                         <ul className="text-sm space-y-2 mb-4">
+                            <li className="flex items-center"><Check className="h-4 w-4 mr-2 text-green-500"/> High Quality PDF</li>
+                            <li className="flex items-center"><Check className="h-4 w-4 mr-2 text-green-500"/> Printable Format</li>
+                         </ul>
+                       </CardContent>
+                       <CardFooter>
+                         <Button className="w-full" variant="outline" onClick={() => handlePurchase('pdf', 30)}>Select Plan</Button>
+                       </CardFooter>
+                     </Card>
+    
+                     {/* Plan 3: Pro */}
+                     <Card className="cursor-pointer transition-all hover:border-green-500 border-green-200 bg-green-50/30 flex flex-col relative overflow-hidden">
+                       <div className="absolute top-0 right-0 bg-green-500 text-white text-xs px-2 py-1">RECOMMENDED</div>
+                       <CardHeader>
+                         <CardTitle className="text-lg text-green-900">Pro Bundle</CardTitle>
+                         <div className="text-3xl font-bold text-green-700 mt-2">$50</div>
+                       </CardHeader>
+                       <CardContent className="flex-1">
+                         <p className="text-sm text-gray-600 mb-4">The ultimate package for professionals.</p>
+                         <ul className="text-sm space-y-2 mb-4">
+                            <li className="flex items-center"><Check className="h-4 w-4 mr-2 text-green-500"/> Everything in Basic & PDF</li>
+                            <li className="flex items-center"><Check className="h-4 w-4 mr-2 text-green-500"/> Priority Support</li>
+                            <li className="flex items-center"><Check className="h-4 w-4 mr-2 text-green-500"/> Editing Capabilities</li>
+                         </ul>
+                       </CardContent>
+                       <CardFooter>
+                         <Button className="w-full bg-green-600 hover:bg-green-700 text-white" onClick={() => handlePurchase('pro', 50)}>Select Plan</Button>
+                       </CardFooter>
+                     </Card>
+                   </div>
+                 ) : (
+                    <Card className="bg-green-50 border-green-200">
+                      <CardContent className="pt-6">
+                        <div className="flex items-center gap-4">
+                          <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+                            <Check className="h-6 w-6 text-green-600" />
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-medium text-green-900">Active Subscription: {currentPlan.toUpperCase()}</h3>
+                            <p className="text-green-700">You have full access to the features included in your plan.</p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                 )}
                </div>
             )}
-            
-            {currentPlan && (
-              <Card className="bg-green-50 border-green-200">
-                <CardHeader>
-                  <CardTitle className="text-green-800 flex items-center">
-                    <Check className="h-5 w-5 mr-2" />
-                    Active Plan: {currentPlan.toUpperCase()}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
+
+            {/* Share & Export Tab */}
+            {activeTab === 'share' && (
+               <div className="space-y-6">
+                 <div>
+                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Share & Export</h2>
+                    <p className="text-slate-600 dark:text-slate-400">Distribute your profile to scouts and clubs.</p>
+                 </div>
+
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Card>
+                       <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                             <FileText className="h-5 w-5 text-blue-600" />
+                             Download PDF
+                          </CardTitle>
+                          <CardDescription>Get a high-quality PDF version of your profile.</CardDescription>
+                       </CardHeader>
+                       <CardContent>
+                          <p className="text-sm text-slate-500 mb-4">Perfect for printing or attaching to emails.</p>
+                          <Button 
+                             className="w-full" 
+                             onClick={generatePDF}
+                             disabled={!currentPlan || (currentPlan !== 'pdf' && currentPlan !== 'pro')}
+                           >
+                             <Download className="mr-2 h-4 w-4" />
+                             Download PDF
+                           </Button>
+                           {(!currentPlan || (currentPlan !== 'pdf' && currentPlan !== 'pro')) && (
+                              <p className="text-xs text-center text-red-500 mt-2">Requires PDF or Pro Plan</p>
+                           )}
+                       </CardContent>
+                    </Card>
+
+                    <Card>
+                       <CardHeader>
+                          <CardTitle className="flex items-center gap-2">
+                             <LinkIcon className="h-5 w-5 text-blue-600" />
+                             Public Link
+                          </CardTitle>
+                          <CardDescription>Share your profile via a unique URL.</CardDescription>
+                       </CardHeader>
+                       <CardContent>
+                          <p className="text-sm text-slate-500 mb-4">
+                             {profile?.player_id ? `${window.location.origin}/player/public/${profile.player_id}` : 'Link available after saving profile'}
+                          </p>
+                          <Button 
+                             variant="outline" 
+                             className="w-full"
+                             onClick={copyPublicLink}
+                             disabled={!currentPlan || (currentPlan !== 'basic' && currentPlan !== 'pro')}
+                           >
+                             <Share2 className="mr-2 h-4 w-4" />
+                             Copy Profile Link
+                           </Button>
+                           {(!currentPlan || (currentPlan !== 'basic' && currentPlan !== 'pro')) && (
+                              <p className="text-xs text-center text-red-500 mt-2">Requires Basic or Pro Plan</p>
+                           )}
+                       </CardContent>
+                    </Card>
+                 </div>
+               </div>
             )}
           </div>
-        </div>
-      </main>
+        </main>
+      </div>
     </div>
   );
 }
