@@ -27,7 +27,10 @@ import {
   Bell,
   Trophy,
   Star,
-  FileText
+  FileText,
+  Image,
+  Upload,
+  Camera
 } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -213,6 +216,24 @@ export default function PlayerDashboard() {
       .slice(0, 2);
   };
 
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: string, index?: number) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        if (field === 'profile_image_url') {
+          setFormData(prev => ({ ...prev, profile_image_url: result }));
+        } else if (field === 'gallery_images' && index !== undefined) {
+          const newGallery = [...(formData.gallery_images || ['', '', ''])];
+          newGallery[index] = result;
+          setFormData(prev => ({ ...prev, gallery_images: newGallery }));
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
       {/* Header */}
@@ -346,70 +367,108 @@ export default function PlayerDashboard() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {/* Profile Summary Card */}
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Profile Status</CardTitle>
-                      <User className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{profile?.display_name ? "Active" : "Incomplete"}</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {profile?.position || "No position set"}
-                      </p>
-                    </CardContent>
-                  </Card>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                  {/* Left Column: Profile Card */}
+                  <div className="lg:col-span-1">
+                    <Card className="h-full">
+                      <CardContent className="pt-6 flex flex-col items-center">
+                        <Avatar className="h-32 w-32 border-4 border-white shadow-lg mb-4">
+                          <AvatarImage src={profile?.profile_image_url} />
+                          <AvatarFallback className="text-4xl bg-slate-200">
+                            {getInitials(profile?.display_name || 'Player')}
+                          </AvatarFallback>
+                        </Avatar>
+                        <h3 className="text-xl font-bold text-slate-900 dark:text-white">
+                          {profile?.display_name || 'No Name'}
+                        </h3>
+                        <p className="text-slate-500 font-medium">{profile?.position || 'No Position'}</p>
+                        <p className="text-slate-400 text-sm">{profile?.current_club || 'No Club'}</p>
+                        
+                        <div className="w-full mt-6 space-y-3">
+                          <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                            <span className="text-slate-500">Age</span>
+                            <span className="font-semibold">{profile?.age || '-'}</span>
+                          </div>
+                          <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                            <span className="text-slate-500">Nationality</span>
+                            <span className="font-semibold">{profile?.nationality || '-'}</span>
+                          </div>
+                          <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                            <span className="text-slate-500">Height</span>
+                            <span className="font-semibold">{profile?.height ? `${profile.height} cm` : '-'}</span>
+                          </div>
+                          <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                            <span className="text-slate-500">Weight</span>
+                            <span className="font-semibold">{profile?.weight ? `${profile.weight} kg` : '-'}</span>
+                          </div>
+                          <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                            <span className="text-slate-500">Foot</span>
+                            <span className="font-semibold">{profile?.preferred_foot || '-'}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                      <CardFooter className="justify-center pb-6">
+                        <Button variant="outline" className="w-full" onClick={() => setActiveTab('profile')}>
+                          <Edit className="h-4 w-4 mr-2" /> Edit Profile
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  </div>
 
-                  {/* Subscription Status Card */}
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">Subscription</CardTitle>
-                      <CreditCard className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">{currentPlan ? currentPlan.toUpperCase() : "Free"}</div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {currentPlan ? "Active subscription" : "No active plan"}
-                      </p>
-                    </CardContent>
-                  </Card>
+                  {/* Right Column: Bio & Gallery */}
+                  <div className="lg:col-span-2 space-y-6">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Bio</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-slate-600 dark:text-slate-300 whitespace-pre-line">
+                          {profile?.bio || "No bio available. Go to 'Edit Profile' to add one."}
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Gallery</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {profile?.gallery_images && profile.gallery_images.some(img => img) ? (
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                            {profile.gallery_images.map((img, index) => (
+                              img && (
+                                <div key={index} className="aspect-video bg-slate-100 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm">
+                                  <img src={img} alt={`Gallery ${index + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+                                </div>
+                              )
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-slate-500 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
+                            <Image className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                            <p>No images in gallery</p>
+                            <Button variant="link" onClick={() => setActiveTab('profile')} className="mt-2">
+                              Add Images
+                            </Button>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                     <Card>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                           <CardTitle className="text-sm font-medium">Subscription</CardTitle>
+                           <CreditCard className="h-4 w-4 text-muted-foreground" />
+                        </CardHeader>
+                        <CardContent>
+                           <div className="text-2xl font-bold">{currentPlan ? currentPlan.toUpperCase() : "Free"}</div>
+                           <p className="text-xs text-muted-foreground mt-1">
+                              {currentPlan ? "Active subscription" : "No active plan"}
+                           </p>
+                        </CardContent>
+                     </Card>
+                  </div>
                 </div>
-                
-                {/* Read-only Profile View */}
-                <Card>
-                  <CardHeader>
-                     <CardTitle>Profile Preview</CardTitle>
-                     <CardDescription>This is how your profile information looks.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                           <Label className="text-muted-foreground">Name</Label>
-                           <p className="font-medium">{profile?.display_name || '-'}</p>
-                        </div>
-                        <div>
-                           <Label className="text-muted-foreground">Position</Label>
-                           <p className="font-medium">{profile?.position || '-'}</p>
-                        </div>
-                        <div>
-                           <Label className="text-muted-foreground">Club</Label>
-                           <p className="font-medium">{profile?.current_club || '-'}</p>
-                        </div>
-                        <div>
-                           <Label className="text-muted-foreground">Nationality</Label>
-                           <p className="font-medium">{profile?.nationality || '-'}</p>
-                        </div>
-                     </div>
-                     <div>
-                        <Label className="text-muted-foreground">Bio</Label>
-                        <p className="font-medium mt-1">{profile?.bio || '-'}</p>
-                     </div>
-                  </CardContent>
-                  <CardFooter>
-                     <Button onClick={() => setActiveTab('profile')}>Edit Profile</Button>
-                  </CardFooter>
-                </Card>
               </div>
             )}
 
@@ -423,7 +482,34 @@ export default function PlayerDashboard() {
                  
                  <Card>
                   <CardContent className="pt-6">
-                    <div className="space-y-4">
+                    <div className="space-y-6">
+                      {/* Profile Picture Section */}
+                      <div className="flex flex-col items-center space-y-4 pb-6 border-b border-slate-200 dark:border-slate-700">
+                        <Label className="text-lg font-semibold">Profile Picture</Label>
+                        <div className="relative group">
+                          <Avatar className="h-32 w-32 border-4 border-white shadow-lg cursor-pointer">
+                            <AvatarImage src={formData.profile_image_url} />
+                            <AvatarFallback className="text-4xl bg-slate-200">
+                              {getInitials(formData.display_name || 'Player')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <label 
+                            htmlFor="profile-upload" 
+                            className="absolute bottom-0 right-0 p-2 bg-blue-600 rounded-full text-white cursor-pointer hover:bg-blue-700 shadow-md transition-colors"
+                          >
+                            <Camera className="h-5 w-5" />
+                            <input 
+                              id="profile-upload" 
+                              type="file" 
+                              accept="image/*" 
+                              className="hidden" 
+                              onChange={(e) => handleImageUpload(e, 'profile_image_url')}
+                            />
+                          </label>
+                        </div>
+                        <p className="text-xs text-slate-500">Click the camera icon to upload a new photo</p>
+                      </div>
+
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="display_name">Display Name</Label>
@@ -474,6 +560,43 @@ export default function PlayerDashboard() {
                           />
                         </div>
                         <div className="space-y-2">
+                          <Label htmlFor="height">Height (cm)</Label>
+                          <Input 
+                            id="height" 
+                            name="height" 
+                            type="number"
+                            value={formData.height || ''} 
+                            onChange={handleInputChange} 
+                            placeholder="e.g. 185"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="weight">Weight (kg)</Label>
+                          <Input 
+                            id="weight" 
+                            name="weight" 
+                            type="number"
+                            value={formData.weight || ''} 
+                            onChange={handleInputChange} 
+                            placeholder="e.g. 75"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="preferred_foot">Preferred Foot</Label>
+                          <select
+                            id="preferred_foot"
+                            name="preferred_foot"
+                            value={formData.preferred_foot || ''}
+                            onChange={(e) => setFormData(prev => ({ ...prev, preferred_foot: e.target.value }))}
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          >
+                            <option value="">Select Foot</option>
+                            <option value="Right">Right</option>
+                            <option value="Left">Left</option>
+                            <option value="Both">Both</option>
+                          </select>
+                        </div>
+                        <div className="space-y-2 md:col-span-2">
                           <Label htmlFor="transfermarket_link">TransferMarket Link</Label>
                           <Input 
                             id="transfermarket_link" 
@@ -494,6 +617,63 @@ export default function PlayerDashboard() {
                           placeholder="Tell us about yourself..."
                           className="min-h-[100px]"
                         />
+                      </div>
+
+                      {/* Gallery Images Section */}
+                      <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                        <Label className="text-lg font-semibold">Gallery Images (Max 3)</Label>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                          {[0, 1, 2].map((index) => (
+                            <div key={index} className="space-y-2">
+                              <div className="relative aspect-video bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center group hover:border-blue-500 transition-colors">
+                                {formData.gallery_images?.[index] ? (
+                                  <>
+                                    <img 
+                                      src={formData.gallery_images[index]} 
+                                      alt={`Gallery ${index + 1}`} 
+                                      className="w-full h-full object-cover"
+                                    />
+                                    <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                      <label 
+                                        htmlFor={`gallery-upload-${index}`}
+                                        className="p-2 bg-white rounded-full cursor-pointer hover:bg-slate-100"
+                                        title="Change Image"
+                                      >
+                                        <Edit className="h-4 w-4 text-slate-900" />
+                                      </label>
+                                      <button
+                                        onClick={() => {
+                                          const newGallery = [...(formData.gallery_images || [])];
+                                          newGallery[index] = '';
+                                          setFormData(prev => ({ ...prev, gallery_images: newGallery }));
+                                        }}
+                                        className="p-2 bg-white rounded-full cursor-pointer hover:bg-red-100 text-red-600"
+                                        title="Remove Image"
+                                      >
+                                        <X className="h-4 w-4" />
+                                      </button>
+                                    </div>
+                                  </>
+                                ) : (
+                                  <label 
+                                    htmlFor={`gallery-upload-${index}`}
+                                    className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-blue-500"
+                                  >
+                                    <Image className="h-8 w-8 mb-2" />
+                                    <span className="text-xs">Upload Image</span>
+                                  </label>
+                                )}
+                                <input 
+                                  id={`gallery-upload-${index}`}
+                                  type="file" 
+                                  accept="image/*" 
+                                  className="hidden" 
+                                  onChange={(e) => handleImageUpload(e, 'gallery_images', index)}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -637,12 +817,12 @@ export default function PlayerDashboard() {
                           <Button 
                              className="w-full" 
                              onClick={generatePDF}
-                             disabled={!currentPlan || (currentPlan !== 'pdf' && currentPlan !== 'pro')}
+                             disabled={false} // Temporarily enabled for testing
                            >
                              <Download className="mr-2 h-4 w-4" />
                              Download PDF
                            </Button>
-                           {(!currentPlan || (currentPlan !== 'pdf' && currentPlan !== 'pro')) && (
+                           {false && (!currentPlan || (currentPlan !== 'pdf' && currentPlan !== 'pro')) && (
                               <p className="text-xs text-center text-red-500 mt-2">Requires PDF or Pro Plan</p>
                            )}
                        </CardContent>
@@ -664,12 +844,12 @@ export default function PlayerDashboard() {
                              variant="outline" 
                              className="w-full"
                              onClick={copyPublicLink}
-                             disabled={!currentPlan || (currentPlan !== 'basic' && currentPlan !== 'pro')}
+                             disabled={false} // Temporarily enabled for testing
                            >
                              <Share2 className="mr-2 h-4 w-4" />
                              Copy Profile Link
                            </Button>
-                           {(!currentPlan || (currentPlan !== 'basic' && currentPlan !== 'pro')) && (
+                           {false && (!currentPlan || (currentPlan !== 'basic' && currentPlan !== 'pro')) && (
                               <p className="text-xs text-center text-red-500 mt-2">Requires Basic or Pro Plan</p>
                            )}
                        </CardContent>

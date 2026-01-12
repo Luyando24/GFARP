@@ -158,14 +158,20 @@ router.put('/profile', authenticateToken, async (req, res) => {
       video_links,
       transfermarket_link,
       bio,
-      profile_image_url
+      profile_image_url,
+      gallery_images,
+      height,
+      weight,
+      preferred_foot
     } = req.body;
 
     await query(
       `UPDATE player_profiles 
        SET display_name = $1, age = $2, nationality = $3, position = $4, 
            current_club = $5, video_links = $6, transfermarket_link = $7, 
-           bio = $8, profile_image_url = $9, updated_at = NOW()
+           bio = $8, profile_image_url = $9, 
+           gallery_images = $11, height = $12, weight = $13, preferred_foot = $14,
+           updated_at = NOW()
        WHERE player_id = $10`,
       [
         display_name,
@@ -177,7 +183,11 @@ router.put('/profile', authenticateToken, async (req, res) => {
         transfermarket_link,
         bio,
         profile_image_url,
-        userId
+        userId,
+        gallery_images, // $11
+        height, // $12
+        weight, // $13
+        preferred_foot // $14
       ]
     );
 

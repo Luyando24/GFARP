@@ -1255,6 +1255,10 @@ export interface PlayerProfile {
   transfermarket_link?: string;
   bio?: string;
   profile_image_url?: string;
+  gallery_images?: string[]; // Array of 3 images
+  height?: number;
+  weight?: number;
+  preferred_foot?: string;
   email?: string; // joined fields
   first_name?: string; // joined fields
   last_name?: string; // joined fields

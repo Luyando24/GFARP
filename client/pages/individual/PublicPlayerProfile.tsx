@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { PlayerProfile } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Globe, Video, User, MapPin, Activity, Share2 } from "lucide-react";
+import { Loader2, Globe, Video, User, MapPin, Activity, Share2, Image } from "lucide-react";
 import { toast } from "sonner";
 
 // We need to define the API call here or import it if we make it public in api.ts
@@ -71,9 +71,15 @@ export default function PublicPlayerProfile() {
         <div className="absolute inset-0 bg-black/10"></div>
         <div className="container mx-auto px-4 h-full flex items-end pb-8 relative z-10">
           <div className="flex flex-col md:flex-row md:items-end md:justify-between w-full gap-4">
-             <div className="text-white">
-               <h1 className="text-4xl md:text-5xl font-bold mb-2">{profile.display_name}</h1>
-               <div className="flex flex-wrap gap-4 text-green-50">
+             <div className="flex items-end gap-6">
+               {profile.profile_image_url && (
+                 <div className="h-32 w-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white -mb-4 shrink-0 hidden md:block">
+                   <img src={profile.profile_image_url} alt={profile.display_name} className="w-full h-full object-cover" />
+                 </div>
+               )}
+               <div className="text-white">
+                 <h1 className="text-4xl md:text-5xl font-bold mb-2">{profile.display_name}</h1>
+                 <div className="flex flex-wrap gap-4 text-green-50">
                  {profile.position && (
                    <div className="flex items-center">
                      <Activity className="h-4 w-4 mr-1" />
@@ -94,6 +100,7 @@ export default function PublicPlayerProfile() {
                  )}
                </div>
              </div>
+           </div>
              
              <Button 
                variant="secondary" 
@@ -126,10 +133,10 @@ export default function PublicPlayerProfile() {
               </Card>
             )}
 
-            {/* Career Details */}
+            {/* Player Stats */}
             <Card className="shadow-md border-none overflow-hidden">
               <CardHeader className="bg-white border-b border-gray-100 pb-3">
-                <CardTitle className="text-xl text-gray-800">Career Details</CardTitle>
+                <CardTitle className="text-xl text-gray-800">Player Stats</CardTitle>
               </CardHeader>
               <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                  {profile.current_club && (
@@ -156,10 +163,51 @@ export default function PublicPlayerProfile() {
                      <p className="text-lg font-medium text-gray-900 mt-1">{profile.age}</p>
                    </div>
                  )}
+                 {profile.height && (
+                   <div>
+                     <label className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Height</label>
+                     <p className="text-lg font-medium text-gray-900 mt-1">{profile.height} cm</p>
+                   </div>
+                 )}
+                 {profile.weight && (
+                   <div>
+                     <label className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Weight</label>
+                     <p className="text-lg font-medium text-gray-900 mt-1">{profile.weight} kg</p>
+                   </div>
+                 )}
+                 {profile.preferred_foot && (
+                   <div>
+                     <label className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Preferred Foot</label>
+                     <p className="text-lg font-medium text-gray-900 mt-1">{profile.preferred_foot}</p>
+                   </div>
+                 )}
               </CardContent>
             </Card>
 
-            {/* Video Highlights */}
+            {/* Gallery Section */}
+            {profile.gallery_images && profile.gallery_images.some(img => img) && (
+              <Card className="shadow-md border-none overflow-hidden">
+                <CardHeader className="bg-white border-b border-gray-100 pb-3">
+                  <CardTitle className="text-xl text-gray-800 flex items-center">
+                    <Image className="mr-2 h-5 w-5 text-green-600" />
+                    Gallery
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    {profile.gallery_images.map((img, index) => (
+                      img && (
+                        <div key={index} className="aspect-video bg-slate-100 rounded-lg overflow-hidden border border-gray-100 shadow-sm">
+                          <img src={img} alt={`Gallery ${index + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
+                        </div>
+                      )
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Video Links */}
             {profile.video_links && profile.video_links.length > 0 && profile.video_links.some(l => l) && (
               <Card className="shadow-md border-none overflow-hidden">
                 <CardHeader className="bg-white border-b border-gray-100 pb-3">

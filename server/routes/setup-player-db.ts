@@ -32,6 +32,10 @@ router.post('/setup-player-tables', async (req, res) => {
         transfermarket_link VARCHAR(255),
         bio TEXT,
         profile_image_url VARCHAR(255),
+        gallery_images TEXT[],
+        height NUMERIC,
+        weight NUMERIC,
+        preferred_foot VARCHAR(50),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         UNIQUE(player_id)
@@ -50,7 +54,16 @@ router.post('/setup-player-tables', async (req, res) => {
       )
     `, []);
 
-    res.json({ success: true, message: 'Player tables created successfully' });
+    // Add new columns if they don't exist (migration)
+    await query(`
+      ALTER TABLE player_profiles 
+      ADD COLUMN IF NOT EXISTS gallery_images TEXT[],
+      ADD COLUMN IF NOT EXISTS height NUMERIC,
+      ADD COLUMN IF NOT EXISTS weight NUMERIC,
+      ADD COLUMN IF NOT EXISTS preferred_foot VARCHAR(50)
+    `, []);
+
+    res.json({ success: true, message: 'Player tables created/updated successfully' });
   } catch (error) {
     console.error('Error creating player tables:', error);
     res.status(500).json({ error: 'Failed to create player tables' });
