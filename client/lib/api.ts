@@ -26,6 +26,7 @@ import {
   AuthError,
   validateStudentData,
 } from "./errors";
+import { getSession } from "./auth";
 
 // Player types
 export interface Player {
@@ -163,9 +164,23 @@ export interface PlayersListResponse {
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     const finalPath = path.startsWith('/') ? path.substring(1) : path;
+    
+    // Get token from session
+    const session = getSession();
+    const token = session?.tokens?.accessToken;
+    
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      ...(init?.headers as Record<string, string> || {})
+    };
+
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const res = await fetch(`${API_BASE}/${finalPath}`, {
       credentials: "include",
-      headers: { "Content-Type": "application/json", ...(init?.headers || {}) },
+      headers,
       ...init,
     });
 

@@ -208,7 +208,10 @@ export default function PlayerDashboard() {
   ];
 
   const getInitials = (name: string) => {
-    return name
+    if (!name && profile?.first_name && profile?.last_name) {
+      return `${profile.first_name[0]}${profile.last_name[0]}`.toUpperCase();
+    }
+    return (name || 'Player')
       .split(' ')
       .map(part => part[0])
       .join('')
@@ -288,12 +291,12 @@ export default function PlayerDashboard() {
               <div className="flex items-center gap-3">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-blue-600 text-white font-bold">
-                    {getInitials(profile?.display_name || session?.email || 'Player')}
+                    {getInitials(profile?.display_name || session?.email || '')}
                   </AvatarFallback>
                 </Avatar>
                 <div className="hidden sm:block">
                   <p className="text-sm font-medium text-slate-900 dark:text-white">
-                    {profile?.display_name || 'Player'}
+                    {profile?.first_name || profile?.display_name || 'Player'}
                   </p>
                   <p className="text-xs text-slate-600 dark:text-slate-400">
                     {session?.email}
