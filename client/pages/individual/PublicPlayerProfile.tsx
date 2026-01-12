@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { PlayerProfile } from "@/lib/api";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, Globe, Video, User, MapPin, Activity, Share2, Image } from "lucide-react";
 import { toast } from "sonner";
 
@@ -65,214 +66,232 @@ export default function PublicPlayerProfile() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 font-sans">
-      {/* Header / Banner */}
-      <div className="bg-green-600 h-48 w-full relative">
-        <div className="absolute inset-0 bg-black/10"></div>
-        <div className="container mx-auto px-4 h-full flex items-end pb-8 relative z-10">
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between w-full gap-4">
-             <div className="flex items-end gap-6">
-               {profile.profile_image_url && (
-                 <div className="h-32 w-32 rounded-full border-4 border-white shadow-lg overflow-hidden bg-white -mb-4 shrink-0 hidden md:block">
-                   <img src={profile.profile_image_url} alt={profile.display_name} className="w-full h-full object-cover" />
-                 </div>
-               )}
-               <div className="text-white">
-                 <h1 className="text-4xl md:text-5xl font-bold mb-2">{profile.display_name}</h1>
-                 <div className="flex flex-wrap gap-4 text-green-50">
-                 {profile.position && (
-                   <div className="flex items-center">
-                     <Activity className="h-4 w-4 mr-1" />
-                     {profile.position}
-                   </div>
-                 )}
-                 {profile.nationality && (
-                   <div className="flex items-center">
-                     <MapPin className="h-4 w-4 mr-1" />
-                     {profile.nationality}
-                   </div>
-                 )}
-                 {profile.age && (
-                   <div className="flex items-center">
-                     <User className="h-4 w-4 mr-1" />
-                     {profile.age} Years Old
-                   </div>
-                 )}
-               </div>
-             </div>
-           </div>
-             
-             <Button 
-               variant="secondary" 
-               size="sm" 
-               className="bg-white/90 hover:bg-white text-green-700 border-none shadow-lg"
-               onClick={copyPageLink}
-             >
-               <Share2 className="h-4 w-4 mr-2" />
-               Share Profile
-             </Button>
+    <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100">
+      {/* Premium Hero Section */}
+      <div className="relative h-[400px] w-full overflow-hidden bg-slate-900">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-900/40 to-slate-950 z-10" />
+        {profile.profile_image_url ? (
+          <img
+            src={profile.profile_image_url}
+            alt={profile.display_name}
+            className="w-full h-full object-cover blur-sm opacity-40 scale-110"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-green-600 to-blue-700 opacity-20" />
+        )}
+
+        <div className="absolute inset-0 z-20 flex items-end">
+          <div className="container mx-auto px-4 pb-12">
+            <div className="flex flex-col md:flex-row items-center md:items-end gap-8 text-center md:text-left">
+              <div className="relative group">
+                <Avatar className="h-40 w-40 border-4 border-white dark:border-slate-800 shadow-2xl ring-4 ring-green-500/20">
+                  <AvatarImage src={profile.profile_image_url} className="object-cover" />
+                  <AvatarFallback className="text-4xl bg-slate-100 text-slate-400">
+                    {profile.display_name?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute -bottom-2 -right-2 bg-green-500 text-white p-1.5 rounded-full shadow-lg border-2 border-white dark:border-slate-800">
+                  <Activity className="h-5 w-5" />
+                </div>
+              </div>
+
+              <div className="flex-1 space-y-3">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3">
+                  <Badge className="bg-green-500 hover:bg-green-600 text-white border-none px-3 py-1 uppercase tracking-wider text-[10px] font-bold">
+                    Professional Profile
+                  </Badge>
+                  {profile.position && (
+                    <Badge variant="outline" className="text-white border-white/20 bg-white/5 backdrop-blur-md px-3 py-1 italic">
+                      {profile.position}
+                    </Badge>
+                  )}
+                </div>
+                <h1 className="text-5xl md:text-7xl font-black text-white tracking-tight drop-shadow-sm uppercase italic">
+                  {profile.display_name}
+                </h1>
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-6 text-slate-300 font-medium tracking-wide">
+                  {profile.nationality && (
+                    <span className="flex items-center gap-1.5">
+                      <MapPin className="h-4 w-4 text-green-400" /> {profile.nationality}
+                    </span>
+                  )}
+                  {profile.age && (
+                    <span className="flex items-center gap-1.5">
+                      <User className="h-4 w-4 text-blue-400" /> {profile.age} Years
+                    </span>
+                  )}
+                  {profile.current_club && (
+                    <span className="flex items-center gap-1.5">
+                      <Globe className="h-4 w-4 text-purple-400" /> {profile.current_club}
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <Button
+                  onClick={copyPageLink}
+                  className="bg-white hover:bg-slate-100 text-slate-900 rounded-full px-6 font-bold shadow-xl transition-all hover:scale-105 active:scale-95"
+                >
+                  <Share2 className="h-4 w-4 mr-2" />
+                  Share Profile
+                </Button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <main className="container mx-auto px-4 py-8 -mt-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
-          {/* Main Info Column */}
-          <div className="lg:col-span-2 space-y-6">
-            
-            {/* Bio Section */}
+      <main className="container mx-auto px-4 py-12">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+
+          {/* Scouting Report Column (Left) */}
+          <div className="lg:col-span-8 space-y-12">
+
+            {/* About Section */}
             {profile.bio && (
-              <Card className="shadow-md border-none overflow-hidden">
-                <CardHeader className="bg-white border-b border-gray-100 pb-3">
-                  <CardTitle className="text-xl text-gray-800">About</CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <p className="text-gray-600 leading-relaxed whitespace-pre-wrap">{profile.bio}</p>
-                </CardContent>
-              </Card>
+              <section className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-1.5 bg-green-500 rounded-full" />
+                  <h2 className="text-2xl font-black uppercase tracking-tight italic">Player Bio</h2>
+                </div>
+                <div className="p-8 bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+                  <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
+                    {profile.bio}
+                  </p>
+                </div>
+              </section>
             )}
 
-            {/* Player Stats */}
-            <Card className="shadow-md border-none overflow-hidden">
-              <CardHeader className="bg-white border-b border-gray-100 pb-3">
-                <CardTitle className="text-xl text-gray-800">Player Stats</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                 {profile.current_club && (
-                   <div>
-                     <label className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Current Club</label>
-                     <p className="text-lg font-medium text-gray-900 mt-1">{profile.current_club}</p>
-                   </div>
-                 )}
-                 {profile.position && (
-                   <div>
-                     <label className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Position</label>
-                     <p className="text-lg font-medium text-gray-900 mt-1">{profile.position}</p>
-                   </div>
-                 )}
-                 {profile.nationality && (
-                   <div>
-                     <label className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Nationality</label>
-                     <p className="text-lg font-medium text-gray-900 mt-1">{profile.nationality}</p>
-                   </div>
-                 )}
-                 {profile.age && (
-                   <div>
-                     <label className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Age</label>
-                     <p className="text-lg font-medium text-gray-900 mt-1">{profile.age}</p>
-                   </div>
-                 )}
-                 {profile.height && (
-                   <div>
-                     <label className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Height</label>
-                     <p className="text-lg font-medium text-gray-900 mt-1">{profile.height} cm</p>
-                   </div>
-                 )}
-                 {profile.weight && (
-                   <div>
-                     <label className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Weight</label>
-                     <p className="text-lg font-medium text-gray-900 mt-1">{profile.weight} kg</p>
-                   </div>
-                 )}
-                 {profile.preferred_foot && (
-                   <div>
-                     <label className="text-sm font-semibold text-gray-400 uppercase tracking-wider">Preferred Foot</label>
-                     <p className="text-lg font-medium text-gray-900 mt-1">{profile.preferred_foot}</p>
-                   </div>
-                 )}
-              </CardContent>
-            </Card>
-
-            {/* Gallery Section */}
-            {profile.gallery_images && profile.gallery_images.some(img => img) && (
-              <Card className="shadow-md border-none overflow-hidden">
-                <CardHeader className="bg-white border-b border-gray-100 pb-3">
-                  <CardTitle className="text-xl text-gray-800 flex items-center">
-                    <Image className="mr-2 h-5 w-5 text-green-600" />
-                    Gallery
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    {profile.gallery_images.map((img, index) => (
-                      img && (
-                        <div key={index} className="aspect-video bg-slate-100 rounded-lg overflow-hidden border border-gray-100 shadow-sm">
-                          <img src={img} alt={`Gallery ${index + 1}`} className="w-full h-full object-cover hover:scale-105 transition-transform duration-300" />
-                        </div>
-                      )
-                    ))}
+            {/* Performance Stats Grid */}
+            <section className="space-y-6">
+              <div className="flex items-center gap-3">
+                <div className="h-8 w-1.5 bg-blue-500 rounded-full" />
+                <h2 className="text-2xl font-black uppercase tracking-tight italic">Technical Attributes</h2>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {[
+                  { label: "Position", value: profile.position, icon: Activity, color: "text-green-500" },
+                  { label: "Preferred Foot", value: profile.preferred_foot, icon: Globe, color: "text-blue-500" },
+                  { label: "Height", value: profile.height ? `${profile.height}cm` : null, icon: Activity, color: "text-purple-500" },
+                  { label: "Weight", value: profile.weight ? `${profile.weight}kg` : null, icon: Activity, color: "text-orange-500" }
+                ].map((stat, i) => stat.value && (
+                  <div key={i} className="p-6 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex flex-col items-center text-center group hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                    <stat.icon className={`h-6 w-6 ${stat.color} mb-3`} />
+                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{stat.label}</span>
+                    <span className="text-lg font-black mt-1 text-slate-900 dark:text-white uppercase italic">{stat.value}</span>
                   </div>
-                </CardContent>
-              </Card>
+                ))}
+              </div>
+            </section>
+
+            {/* Video Showcase */}
+            {profile.video_links && profile.video_links.some(l => l) && (
+              <section className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-1.5 bg-red-500 rounded-full" />
+                  <h2 className="text-2xl font-black uppercase tracking-tight italic">Video Highlights</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {profile.video_links.map((link, idx) => link && (
+                    <a
+                      key={idx}
+                      href={link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="group relative h-48 rounded-3xl overflow-hidden bg-slate-900 border border-slate-200 dark:border-slate-800 block"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/80 to-transparent z-10" />
+                      <div className="absolute inset-0 flex items-center justify-center z-20">
+                        <div className="h-14 w-14 bg-red-600 rounded-full flex items-center justify-center text-white shadow-2xl group-hover:scale-110 transition-transform">
+                          <Video className="h-6 w-6" />
+                        </div>
+                      </div>
+                      <div className="absolute bottom-6 left-6 z-20">
+                        <p className="text-white font-black uppercase italic tracking-wider">Highlight #{idx + 1}</p>
+                        <p className="text-slate-300 text-xs truncate max-w-[200px]">{link}</p>
+                      </div>
+                    </a>
+                  ))}
+                </div>
+              </section>
             )}
 
-            {/* Video Links */}
-            {profile.video_links && profile.video_links.length > 0 && profile.video_links.some(l => l) && (
-              <Card className="shadow-md border-none overflow-hidden">
-                <CardHeader className="bg-white border-b border-gray-100 pb-3">
-                  <CardTitle className="text-xl text-gray-800 flex items-center">
-                    <Video className="mr-2 h-5 w-5 text-green-600" />
-                    Video Highlights
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6 space-y-4">
-                  {profile.video_links.map((link, idx) => (
-                    link && (
-                      <div key={idx} className="flex items-center p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors border border-gray-100">
-                        <div className="h-10 w-10 bg-red-100 rounded-full flex items-center justify-center text-red-600 mr-4">
-                          <Video className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1 overflow-hidden">
-                          <p className="font-medium text-gray-900 truncate">Highlight Video {idx + 1}</p>
-                          <a href={link} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline truncate block">
-                            {link}
-                          </a>
-                        </div>
-                        <Button size="sm" variant="ghost" asChild>
-                           <a href={link} target="_blank" rel="noopener noreferrer">Watch</a>
-                        </Button>
-                      </div>
-                    )
+            {/* Photo Gallery */}
+            {profile.gallery_images && profile.gallery_images.some(img => img) && (
+              <section className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-1.5 bg-purple-500 rounded-full" />
+                  <h2 className="text-2xl font-black uppercase tracking-tight italic">Action Gallery</h2>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {profile.gallery_images.map((img, idx) => img && (
+                    <div key={idx} className="aspect-[4/3] rounded-3xl overflow-hidden shadow-lg border-2 border-white dark:border-slate-800">
+                      <img src={img} alt={`Gallery ${idx}`} className="w-full h-full object-cover hover:scale-110 transition-transform duration-500" />
+                    </div>
                   ))}
-                </CardContent>
-              </Card>
+                </div>
+              </section>
             )}
           </div>
 
-          {/* Sidebar */}
-          <div className="space-y-6">
-             {/* External Links */}
-             {profile.transfermarket_link && (
-               <Card className="shadow-md border-none overflow-hidden bg-blue-50/50 border-blue-100">
-                 <CardHeader className="pb-3 border-b border-blue-100">
-                   <CardTitle className="text-lg text-blue-900 flex items-center">
-                     <Globe className="mr-2 h-4 w-4" />
-                     External Profiles
-                   </CardTitle>
-                 </CardHeader>
-                 <CardContent className="pt-4">
-                   <a 
-                     href={profile.transfermarket_link} 
-                     target="_blank" 
-                     rel="noopener noreferrer"
-                     className="flex items-center justify-between w-full p-3 bg-white rounded-lg border border-blue-200 hover:shadow-sm transition-all group"
-                   >
-                     <span className="font-medium text-blue-800">TransferMarket</span>
-                     <Globe className="h-4 w-4 text-blue-400 group-hover:text-blue-600" />
-                   </a>
-                 </CardContent>
-               </Card>
-             )}
+          {/* Context Sidebar (Right) */}
+          <div className="lg:col-span-4 space-y-8">
+            <div className="sticky top-12 space-y-8">
+              {/* Transfermarket Card */}
+              {profile.transfermarket_link && (
+                <div className="p-8 bg-blue-600 rounded-[2.5rem] text-white shadow-2xl shadow-blue-500/20 relative overflow-hidden group">
+                  <Globe className="absolute -bottom-4 -right-4 h-32 w-32 text-white/10 group-hover:rotate-12 transition-transform" />
+                  <div className="relative z-10 space-y-6">
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-widest text-blue-100 mb-1">Official Data</h3>
+                      <p className="text-2xl font-black italic uppercase tracking-tight">Market Profile</p>
+                    </div>
+                    <Button
+                      asChild
+                      className="w-full bg-white text-blue-600 hover:bg-blue-50 font-bold rounded-2xl"
+                    >
+                      <a href={profile.transfermarket_link} target="_blank" rel="noopener noreferrer">
+                        View on TransferMarket
+                      </a>
+                    </Button>
+                  </div>
+                </div>
+              )}
 
-             {/* Footer Branding */}
-             <div className="text-center text-gray-400 text-sm py-4">
-               <p>Powered by Soccer Circular</p>
-             </div>
+              {/* Verified Badge Section */}
+              <div className="p-8 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm text-center">
+                <div className="h-16 w-16 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Activity className="h-8 w-8 text-green-500" />
+                </div>
+                <h4 className="text-xl font-black uppercase italic tracking-tight text-slate-800 dark:text-white">Soccer Circular</h4>
+                <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 font-medium">Verified Player Profile</p>
+                <div className="mt-6 pt-6 border-t border-slate-50 dark:border-slate-800">
+                  <p className="text-[10px] font-bold text-slate-300 dark:text-slate-700 uppercase tracking-[0.2em]">Generated Digital ID</p>
+                  <p className="text-xs font-mono text-slate-400 mt-1">{profile.player_id?.substring(0, 18).toUpperCase()}</p>
+                </div>
+              </div>
+
+              {/* Disclaimer */}
+              <p className="text-[10px] text-slate-400 text-center px-12 leading-relaxed uppercase font-bold tracking-tighter opacity-50">
+                This profile is managed by the player and their verified technical representatives. All data is subject to professional verification.
+              </p>
+            </div>
           </div>
 
         </div>
       </main>
+
+      {/* Dynamic Footer */}
+      <footer className="py-20 border-t border-slate-100 dark:border-slate-900/50">
+        <div className="container mx-auto px-4 text-center space-y-4">
+          <div className="flex items-center justify-center gap-2 opacity-30 grayscale">
+            <div className="h-8 w-8 bg-slate-400 rounded-full" />
+            <span className="font-black text-xl italic tracking-tighter uppercase whitespace-nowrap">Soccer Circular</span>
+          </div>
+          <p className="text-slate-400 text-xs font-bold tracking-widest uppercase">Empowering African Talent Globally</p>
+        </div>
+      </footer>
     </div>
   );
 }
