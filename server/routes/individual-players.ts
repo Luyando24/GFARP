@@ -89,11 +89,11 @@ router.post('/login', async (req, res) => {
     }
 
     const token = jwt.sign(
-      { 
-        id: player.id, 
-        email: player.email, 
-        name: `${player.first_name} ${player.last_name}`, 
-        role: 'individual_player' 
+      {
+        id: player.id,
+        email: player.email,
+        name: `${player.first_name} ${player.last_name}`,
+        role: 'individual_player'
       },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -165,6 +165,15 @@ router.put('/profile', authenticateToken, async (req, res) => {
       preferred_foot
     } = req.body;
 
+    // Sanitize numeric fields to prevent Postgres cast errors from empty strings
+    const sanitizedAge = (age === '' || age === null || age === undefined) ? null : parseInt(age as string);
+    const sanitizedHeight = (height === '' || height === null || height === undefined) ? null : parseFloat(height as string);
+    const sanitizedWeight = (weight === '' || weight === null || weight === undefined) ? null : parseFloat(weight as string);
+
+    // Ensure array fields are actually arrays (front-end might send null or empty)
+    const sanitizedGallery = Array.isArray(gallery_images) ? gallery_images : [];
+    const sanitizedVideos = Array.isArray(video_links) ? video_links : [];
+
     await query(
       `UPDATE player_profiles 
        SET display_name = $1, age = $2, nationality = $3, position = $4, 
@@ -175,17 +184,17 @@ router.put('/profile', authenticateToken, async (req, res) => {
        WHERE player_id = $14`,
       [
         display_name,
-        age,
+        sanitizedAge,
         nationality,
         position,
         current_club,
-        video_links,
+        sanitizedVideos,
         transfermarket_link,
         bio,
         profile_image_url,
-        gallery_images,
-        height,
-        weight,
+        sanitizedGallery,
+        sanitizedHeight,
+        sanitizedWeight,
         preferred_foot,
         userId
       ]

@@ -31,7 +31,7 @@ router.post('/setup-player-tables', async (req, res) => {
         video_links TEXT[],
         transfermarket_link VARCHAR(255),
         bio TEXT,
-        profile_image_url VARCHAR(255),
+        profile_image_url TEXT,
         gallery_images TEXT[],
         height NUMERIC,
         weight NUMERIC,
@@ -60,7 +60,11 @@ router.post('/setup-player-tables', async (req, res) => {
       ADD COLUMN IF NOT EXISTS gallery_images TEXT[],
       ADD COLUMN IF NOT EXISTS height NUMERIC,
       ADD COLUMN IF NOT EXISTS weight NUMERIC,
-      ADD COLUMN IF NOT EXISTS preferred_foot VARCHAR(50)
+      ADD COLUMN IF NOT EXISTS preferred_foot VARCHAR(50);
+
+      -- Migration: Ensure profile_image_url is TEXT to support Base64
+      ALTER TABLE player_profiles 
+      ALTER COLUMN profile_image_url TYPE TEXT;
     `, []);
 
     res.json({ success: true, message: 'Player tables created/updated successfully' });
