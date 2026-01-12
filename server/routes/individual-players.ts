@@ -174,37 +174,87 @@ router.put('/profile', authenticateToken, async (req, res) => {
     const sanitizedGallery = Array.isArray(gallery_images) ? gallery_images : [];
     const sanitizedVideos = Array.isArray(video_links) ? video_links : [];
 
-    await query(
-      `UPDATE player_profiles 
-       SET display_name = $1, age = $2, nationality = $3, position = $4, 
-           current_club = $5, video_links = $6, transfermarket_link = $7, 
-           bio = $8, profile_image_url = $9, gallery_images = $10, 
-           height = $11, weight = $12, preferred_foot = $13,
-           updated_at = NOW()
-       WHERE player_id = $14`,
-      [
-        display_name,
-        sanitizedAge,
-        nationality,
-        position,
-        current_club,
-        sanitizedVideos,
-        transfermarket_link,
-        bio,
-        profile_image_url,
-        sanitizedGallery,
-        sanitizedHeight,
-        sanitizedWeight,
-        preferred_foot,
-        userId
-      ]
-    );
+    const runMigration = async () => {
+      console.log('Running auto-migration for player_profiles...');
+      await query(`
+        ALTER TABLE player_profiles 
+        ADD COLUMN IF NOT EXISTS gallery_images TEXT[],
+        ADD COLUMN IF NOT EXISTS height NUMERIC,
+        ADD COLUMN IF NOT EXISTS weight NUMERIC,
+        ADD COLUMN IF NOT EXISTS preferred_foot VARCHAR(50);
+        
+        -- Also ensure profile_image_url is TEXT
+        ALTER TABLE player_profiles 
+        ALTER COLUMN profile_image_url TYPE TEXT;
+      `);
+    };
+
+    try {
+      await query(
+        `UPDATE player_profiles 
+         SET display_name = $1, age = $2, nationality = $3, position = $4, 
+             current_club = $5, video_links = $6, transfermarket_link = $7, 
+             bio = $8, profile_image_url = $9, gallery_images = $10, 
+             height = $11, weight = $12, preferred_foot = $13,
+             updated_at = NOW()
+         WHERE player_id = $14`,
+        [
+          display_name,
+          sanitizedAge,
+          nationality,
+          position,
+          current_club,
+          sanitizedVideos,
+          transfermarket_link,
+          bio,
+          profile_image_url,
+          sanitizedGallery,
+          sanitizedHeight,
+          sanitizedWeight,
+          preferred_foot,
+          userId
+        ]
+      );
+    } catch (queryError: any) {
+      // If column is missing (Postgres error 42703), run migration and retry
+      if (queryError.code === '42703') {
+        await runMigration();
+        // Retry once
+        await query(
+          `UPDATE player_profiles 
+           SET display_name = $1, age = $2, nationality = $3, position = $4, 
+               current_club = $5, video_links = $6, transfermarket_link = $7, 
+               bio = $8, profile_image_url = $9, gallery_images = $10, 
+               height = $11, weight = $12, preferred_foot = $13,
+               updated_at = NOW()
+           WHERE player_id = $14`,
+          [
+            display_name,
+            sanitizedAge,
+            nationality,
+            position,
+            current_club,
+            sanitizedVideos,
+            transfermarket_link,
+            bio,
+            profile_image_url,
+            sanitizedGallery,
+            sanitizedHeight,
+            sanitizedWeight,
+            preferred_foot,
+            userId
+          ]
+        );
+      } else {
+        throw queryError;
+      }
+    }
 
     res.json({ success: true, message: 'Profile updated successfully' });
 
   } catch (error) {
     console.error('Update profile error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ error: 'Internal server error', details: (error as any).message });
   }
 });
 
