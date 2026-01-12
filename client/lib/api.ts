@@ -164,11 +164,11 @@ export interface PlayersListResponse {
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     const finalPath = path.startsWith('/') ? path.substring(1) : path;
-    
+
     // Get token from session
     const session = getSession();
     const token = session?.tokens?.accessToken;
-    
+
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
       ...(init?.headers as Record<string, string> || {})
@@ -544,24 +544,24 @@ const mock = {
   async requestPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
     // In mock mode, we just return success to simulate the email being sent
     // We could check if user exists, but typically for security we return success anyway
-    return { 
-      success: true, 
-      message: "If an account exists with this email, a password reset link has been sent." 
+    return {
+      success: true,
+      message: "If an account exists with this email, a password reset link has been sent."
     };
   },
 
   async resetPassword(token: string, password: string): Promise<{ success: boolean; message: string }> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1500));
-    
+
     // In a real mock, we would validate the token and update the user's password
     // For now, we just simulate success
-    return { 
-      success: true, 
-      message: "Password successfully reset" 
+    return {
+      success: true,
+      message: "Password successfully reset"
     };
   },
   async registerSchool(payload: {
@@ -1274,6 +1274,10 @@ export interface PlayerProfile {
   height?: number;
   weight?: number;
   preferred_foot?: string;
+  cover_image_url?: string;
+  career_history?: string;
+  honours?: string;
+  education?: string;
   email?: string; // joined fields
   first_name?: string; // joined fields
   last_name?: string; // joined fields
@@ -1300,7 +1304,7 @@ export const PlayerApi = {
   async getPublicProfile(id: string) {
     return Api.get<PlayerProfile>(`/individual-players/public/${id}`);
   },
-  
+
   async purchasePlan(data: { planType: string; amount: number }) {
     return Api.post<{ success: boolean; message: string }>('/individual-players/purchase', data);
   }

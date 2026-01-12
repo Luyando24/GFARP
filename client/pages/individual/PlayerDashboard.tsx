@@ -438,6 +438,40 @@ export default function PlayerDashboard() {
 
                     <Card>
                       <CardHeader>
+                        <CardTitle>Career History</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <p className="text-slate-600 dark:text-slate-300 whitespace-pre-line">
+                          {profile?.career_history || "No career history added."}
+                        </p>
+                      </CardContent>
+                    </Card>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-sm font-medium">Honours & Awards</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-slate-600 dark:text-slate-300 whitespace-pre-line text-sm">
+                            {profile?.honours || "None added."}
+                          </p>
+                        </CardContent>
+                      </Card>
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-sm font-medium">Education</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <p className="text-slate-600 dark:text-slate-300 whitespace-pre-line text-sm">
+                            {profile?.education || "None added."}
+                          </p>
+                        </CardContent>
+                      </Card>
+                    </div>
+
+                    <Card>
+                      <CardHeader>
                         <CardTitle>Gallery</CardTitle>
                       </CardHeader>
                       <CardContent>
@@ -516,6 +550,37 @@ export default function PlayerDashboard() {
                           </label>
                         </div>
                         <p className="text-xs text-slate-500">Click the camera icon to upload a new photo</p>
+                      </div>
+
+                      {/* Cover Image Section */}
+                      <div className="flex flex-col items-center space-y-4 pb-6 border-b border-slate-200 dark:border-slate-700">
+                        <Label className="text-lg font-semibold">Cover Image (Hero Background)</Label>
+                        <div className="relative group w-full max-w-md">
+                          <div className="aspect-[3/1] rounded-xl overflow-hidden bg-slate-100 border-4 border-white shadow-lg relative">
+                            {formData.cover_image_url ? (
+                              <img src={formData.cover_image_url} alt="Cover" className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="flex items-center justify-center h-full text-slate-400">
+                                <Image className="h-10 w-10 mr-2" />
+                                <span>No cover image set</span>
+                              </div>
+                            )}
+                          </div>
+                          <label
+                            htmlFor="cover-upload"
+                            className="absolute bottom-2 right-2 p-2 bg-blue-600 rounded-full text-white cursor-pointer hover:bg-blue-700 shadow-md transition-colors"
+                          >
+                            <Camera className="h-5 w-5" />
+                            <input
+                              id="cover-upload"
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handleImageUpload(e, 'cover_image_url')}
+                            />
+                          </label>
+                        </div>
+                        <p className="text-xs text-slate-500">This will be the background of your profile header</p>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -622,8 +687,46 @@ export default function PlayerDashboard() {
                           name="bio"
                           value={formData.bio || ''}
                           onChange={handleInputChange}
-                          placeholder="Tell us about yourself..."
+                          placeholder="Tell us about your football journey and goals..."
                           className="min-h-[100px]"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="career_history">Career Journey (Clubs & Seasons)</Label>
+                        <Textarea
+                          id="career_history"
+                          name="career_history"
+                          value={formData.career_history || ''}
+                          onChange={handleInputChange}
+                          placeholder="e.g. 
+- ZUST FC (2023 - 2024): Key Striker
+- AFU FC (2022 - 2023): Forward"
+                          className="min-h-[120px]"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="honours">Honours & Awards</Label>
+                        <Textarea
+                          id="honours"
+                          name="honours"
+                          value={formData.honours || ''}
+                          onChange={handleInputChange}
+                          placeholder="e.g. Golden Boot (2023), League Champion (2022)"
+                          className="min-h-[80px]"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="education">Education</Label>
+                        <Textarea
+                          id="education"
+                          name="education"
+                          value={formData.education || ''}
+                          onChange={handleInputChange}
+                          placeholder="e.g. Bachelor's Degree, Sports Management (2021)"
+                          className="min-h-[80px]"
                         />
                       </div>
 

@@ -162,7 +162,11 @@ router.put('/profile', authenticateToken, async (req, res) => {
       gallery_images,
       height,
       weight,
-      preferred_foot
+      preferred_foot,
+      cover_image_url,
+      career_history,
+      honours,
+      education
     } = req.body;
 
     // Sanitize numeric fields to prevent Postgres cast errors from empty strings
@@ -181,7 +185,11 @@ router.put('/profile', authenticateToken, async (req, res) => {
         ADD COLUMN IF NOT EXISTS gallery_images TEXT[],
         ADD COLUMN IF NOT EXISTS height NUMERIC,
         ADD COLUMN IF NOT EXISTS weight NUMERIC,
-        ADD COLUMN IF NOT EXISTS preferred_foot VARCHAR(50);
+        ADD COLUMN IF NOT EXISTS preferred_foot VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS cover_image_url TEXT,
+        ADD COLUMN IF NOT EXISTS career_history TEXT,
+        ADD COLUMN IF NOT EXISTS honours TEXT,
+        ADD COLUMN IF NOT EXISTS education TEXT;
         
         -- Also ensure profile_image_url is TEXT
         ALTER TABLE player_profiles 
@@ -196,8 +204,10 @@ router.put('/profile', authenticateToken, async (req, res) => {
              current_club = $5, video_links = $6, transfermarket_link = $7, 
              bio = $8, profile_image_url = $9, gallery_images = $10, 
              height = $11, weight = $12, preferred_foot = $13,
+             cover_image_url = $14, career_history = $15, 
+             honours = $16, education = $17,
              updated_at = NOW()
-         WHERE player_id = $14`,
+         WHERE player_id = $18`,
         [
           display_name,
           sanitizedAge,
@@ -212,6 +222,10 @@ router.put('/profile', authenticateToken, async (req, res) => {
           sanitizedHeight,
           sanitizedWeight,
           preferred_foot,
+          cover_image_url,
+          career_history,
+          honours,
+          education,
           userId
         ]
       );
@@ -226,8 +240,10 @@ router.put('/profile', authenticateToken, async (req, res) => {
                current_club = $5, video_links = $6, transfermarket_link = $7, 
                bio = $8, profile_image_url = $9, gallery_images = $10, 
                height = $11, weight = $12, preferred_foot = $13,
+               cover_image_url = $14, career_history = $15, 
+               honours = $16, education = $17,
                updated_at = NOW()
-           WHERE player_id = $14`,
+           WHERE player_id = $18`,
           [
             display_name,
             sanitizedAge,
@@ -242,6 +258,10 @@ router.put('/profile', authenticateToken, async (req, res) => {
             sanitizedHeight,
             sanitizedWeight,
             preferred_foot,
+            cover_image_url,
+            career_history,
+            honours,
+            education,
             userId
           ]
         );

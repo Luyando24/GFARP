@@ -68,13 +68,19 @@ export default function PublicPlayerProfile() {
   return (
     <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100">
       {/* Premium Hero Section */}
-      <div className="relative h-[400px] w-full overflow-hidden bg-slate-900">
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-900/40 to-slate-950 z-10" />
-        {profile.profile_image_url ? (
+      <div className="relative h-[450px] w-full overflow-hidden bg-slate-900">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-900/60 to-slate-950 z-10" />
+        {profile.cover_image_url ? (
+          <img
+            src={profile.cover_image_url}
+            alt="Cover"
+            className="w-full h-full object-cover opacity-60 scale-105"
+          />
+        ) : profile.profile_image_url ? (
           <img
             src={profile.profile_image_url}
             alt={profile.display_name}
-            className="w-full h-full object-cover blur-sm opacity-40 scale-110"
+            className="w-full h-full object-cover blur-md opacity-40 scale-110"
           />
         ) : (
           <div className="w-full h-full bg-gradient-to-br from-green-600 to-blue-700 opacity-20" />
@@ -142,11 +148,34 @@ export default function PublicPlayerProfile() {
         </div>
       </div>
 
+      {/* Sticky Navigation Menu */}
+      <nav className="sticky top-0 z-40 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-center md:justify-start overflow-x-auto no-scrollbar py-1 gap-2 md:gap-8">
+            {[
+              { label: 'Profile', href: '#profile' },
+              { label: 'Attributes', href: '#attributes' },
+              { label: 'Highlights', href: '#highlights' },
+              { label: 'Gallery', href: '#gallery' },
+              { label: 'Career', href: '#career' }
+            ].map(item => (
+              <a
+                key={item.href}
+                href={item.href}
+                className="px-4 py-3 text-sm font-bold uppercase tracking-widest text-slate-500 hover:text-green-500 transition-colors whitespace-nowrap"
+              >
+                {item.label}
+              </a>
+            ))}
+          </div>
+        </div>
+      </nav>
+
       <main className="container mx-auto px-4 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
 
           {/* Scouting Report Column (Left) */}
-          <div className="lg:col-span-8 space-y-12">
+          <div id="profile" className="lg:col-span-8 space-y-12">
 
             {/* About Section */}
             {profile.bio && (
@@ -169,7 +198,7 @@ export default function PublicPlayerProfile() {
                 <div className="h-8 w-1.5 bg-blue-500 rounded-full" />
                 <h2 className="text-2xl font-black uppercase tracking-tight italic">Technical Attributes</h2>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div id="attributes" className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
                   { label: "Position", value: profile.position, icon: Activity, color: "text-green-500" },
                   { label: "Preferred Foot", value: profile.preferred_foot, icon: Globe, color: "text-blue-500" },
@@ -192,7 +221,7 @@ export default function PublicPlayerProfile() {
                   <div className="h-8 w-1.5 bg-red-500 rounded-full" />
                   <h2 className="text-2xl font-black uppercase tracking-tight italic">Video Highlights</h2>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div id="highlights" className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {profile.video_links.map((link, idx) => link && (
                     <a
                       key={idx}
@@ -224,12 +253,58 @@ export default function PublicPlayerProfile() {
                   <div className="h-8 w-1.5 bg-purple-500 rounded-full" />
                   <h2 className="text-2xl font-black uppercase tracking-tight italic">Action Gallery</h2>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <div id="gallery" className="grid grid-cols-2 md:grid-cols-3 gap-4">
                   {profile.gallery_images.map((img, idx) => img && (
                     <div key={idx} className="aspect-[4/3] rounded-3xl overflow-hidden shadow-lg border-2 border-white dark:border-slate-800">
                       <img src={img} alt={`Gallery ${idx}`} className="w-full h-full object-cover hover:scale-110 transition-transform duration-500" />
                     </div>
                   ))}
+                </div>
+              </section>
+            )}
+
+            {/* Career Journey Section */}
+            {(profile.career_history || profile.honours || profile.education) && (
+              <section id="career" className="space-y-8">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-1.5 bg-yellow-500 rounded-full" />
+                  <h2 className="text-2xl font-black uppercase tracking-tight italic">Career & Background</h2>
+                </div>
+
+                <div className="grid grid-cols-1 gap-6">
+                  {profile.career_history && (
+                    <div className="p-8 bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+                      <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+                        <Activity className="h-4 w-4" /> Career Journey
+                      </h3>
+                      <div className="text-slate-600 dark:text-slate-400 font-medium whitespace-pre-line leading-relaxed">
+                        {profile.career_history}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {profile.honours && (
+                      <div className="p-8 bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+                        <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+                          <Activity className="h-4 w-4 text-yellow-500" /> Honours & Awards
+                        </h3>
+                        <div className="text-slate-600 dark:text-slate-400 font-medium whitespace-pre-line italic">
+                          {profile.honours}
+                        </div>
+                      </div>
+                    )}
+                    {profile.education && (
+                      <div className="p-8 bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+                        <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4 flex items-center gap-2">
+                          <User className="h-4 w-4 text-blue-500" /> Education
+                        </h3>
+                        <div className="text-slate-600 dark:text-slate-400 font-medium whitespace-pre-line">
+                          {profile.education}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </section>
             )}
@@ -266,10 +341,6 @@ export default function PublicPlayerProfile() {
                 </div>
                 <h4 className="text-xl font-black uppercase italic tracking-tight text-slate-800 dark:text-white">Soccer Circular</h4>
                 <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 font-medium">Verified Player Profile</p>
-                <div className="mt-6 pt-6 border-t border-slate-50 dark:border-slate-800">
-                  <p className="text-[10px] font-bold text-slate-300 dark:text-slate-700 uppercase tracking-[0.2em]">Generated Digital ID</p>
-                  <p className="text-xs font-mono text-slate-400 mt-1">{profile.player_id?.substring(0, 18).toUpperCase()}</p>
-                </div>
               </div>
 
               {/* Disclaimer */}
@@ -289,7 +360,7 @@ export default function PublicPlayerProfile() {
             <div className="h-8 w-8 bg-slate-400 rounded-full" />
             <span className="font-black text-xl italic tracking-tighter uppercase whitespace-nowrap">Soccer Circular</span>
           </div>
-          <p className="text-slate-400 text-xs font-bold tracking-widest uppercase">Empowering African Talent Globally</p>
+          <p className="text-slate-400 text-xs font-bold tracking-widest uppercase">Connecting Talent With Opportunity Globally</p>
         </div>
       </footer>
     </div>
