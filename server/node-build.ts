@@ -1,12 +1,23 @@
 import path from "path";
+import { fileURLToPath } from "url";
 import { createServer } from "./index.js";
 import * as express from "express";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = createServer();
 const port = process.env.PORT || 8080;
 
-// In production, keep API-only server here; static is served elsewhere
-// If needed, hook up SPA static files later once client build outputs to a known path.
+// Serve static files from the React app
+const clientBuildPath = path.join(__dirname, "../spa");
+app.use(express.static(clientBuildPath));
+
+// The "catchall" handler: for any request that doesn't
+// match one above, send back React's index.html file.
+app.get("*", (req, res) => {
+  res.sendFile(path.join(clientBuildPath, "index.html"));
+});
 
 app.listen(port, () => {
   console.log(`🚀 Fusion Starter server running on port ${port}`);
