@@ -454,6 +454,13 @@ export default function Index() {
                 </Link>
               </Button>
 
+              <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#0066b3] hover:to-[#005391] text-white font-black shadow-2xl hover:shadow-blue-500/50 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/60 w-full sm:w-auto">
+                <Link to="/player/register" className="flex items-center gap-3 justify-center">
+                  <User className="h-5 w-5" />
+                  Register as Player
+                </Link>
+              </Button>
+
               <Button asChild size="lg" className="text-lg px-10 py-6 rounded-full bg-white/10 hover:bg-white/20 text-white font-black shadow-xl hover:shadow-white/25 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/50 backdrop-blur-sm w-full sm:w-auto">
                 <a href="https://calendly.com/amirehsofwan" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 justify-center">
                   <Trophy className="h-5 w-5" />
