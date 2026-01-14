@@ -14,7 +14,11 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 // I'll add a fetchPublicProfile method to the api service or just use fetch here.
 
 export default function PublicPlayerProfile({ slug }: { slug?: string }) {
-  const { id } = useParams<{ id: string }>();
+  const params = useParams<{ id: string; slug: string }>();
+  const id = params.id;
+  const routeSlug = params.slug;
+  const effectiveSlug = slug || routeSlug;
+
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -22,12 +26,12 @@ export default function PublicPlayerProfile({ slug }: { slug?: string }) {
   usePageTitle(profile ? `${profile.display_name} - Player Profile` : "Player Profile");
 
   useEffect(() => {
-    if (slug) {
-      fetchPublicProfileBySlug(slug);
+    if (effectiveSlug) {
+      fetchPublicProfileBySlug(effectiveSlug);
     } else if (id) {
       fetchPublicProfile(id);
     }
-  }, [id, slug]);
+  }, [id, effectiveSlug]);
 
   const fetchPublicProfileBySlug = async (playerSlug: string) => {
     try {
@@ -67,15 +71,8 @@ export default function PublicPlayerProfile({ slug }: { slug?: string }) {
     
     // Fallback if not on the correct URL (e.g. if rendered via ID but slug exists)
     if (profile?.slug && !url.includes(profile.slug)) {
-       // Construct URL with slug logic similar to Dashboard
-       const protocol = window.location.protocol;
-       const host = window.location.host;
-       let baseHost = host;
-       if (baseHost.startsWith('www.')) {
-         baseHost = baseHost.substring(4);
-       }
-       // Prefer subdirectory style for sharing consistency if subdomain isn't active
-       url = `${window.location.origin}/public/by-slug/${profile.slug}`;
+       // Construct clean URL
+       url = `${window.location.origin}/${profile.slug}`;
     }
 
     navigator.clipboard.writeText(url);

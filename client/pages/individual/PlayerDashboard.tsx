@@ -210,10 +210,9 @@ export default function PlayerDashboard() {
     if (!profile) return "";
     
     // Always use the main domain path for sharing/previewing
-    // Subdomains can be tricky with DNS propagation and local testing
-    // This ensures a reliable link is always generated
+    // Clean URL format: domain.com/messi
     if (profile.slug) {
-       return `${window.location.origin}/public/by-slug/${profile.slug}`;
+       return `${window.location.origin}/${profile.slug}`;
     }
     
     return `${window.location.origin}/player/public/${profile.player_id}`;

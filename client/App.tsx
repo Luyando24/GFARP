@@ -72,7 +72,7 @@ const App = () => {
               const parts = hostname.split('.');
               let subdomain = null;
               const isIp = hostname.match(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/);
-              if (!isIp && hostname !== 'localhost') {
+              if (!isIp && hostname !== 'localhost' && !hostname.endsWith('.vercel.app')) {
                  if (hostname.endsWith('localhost')) {
                      if (parts.length > 1) subdomain = parts[0];
                  } else if (parts.length > 2 && parts[0] !== 'www' && parts[0] !== 'api') {
@@ -112,7 +112,7 @@ const App = () => {
 
               {/* Individual Player Routes */}
               <Route path="/player/public/:id" element={<PublicPlayerProfile />} />
-              <Route path="/public/by-slug/:slug" element={<PublicPlayerProfile />} />
+              <Route path="/:slug" element={<PublicPlayerProfile />} />
               <Route path="/player/register" element={<PlayerRegister />} />
               <Route path="/player/login" element={<PlayerLogin />} />
               <Route element={<ProtectedRoute allowedRoles={["individual_player"]} />}>
