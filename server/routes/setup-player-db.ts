@@ -43,6 +43,7 @@ router.post('/setup-player-tables', async (req, res) => {
         contact_email VARCHAR(255),
         whatsapp_number VARCHAR(50),
         social_links JSONB,
+        slug VARCHAR(100) UNIQUE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         UNIQUE(player_id)
@@ -74,11 +75,23 @@ router.post('/setup-player-tables', async (req, res) => {
       ADD COLUMN IF NOT EXISTS education TEXT,
       ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255),
       ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(50),
-      ADD COLUMN IF NOT EXISTS social_links JSONB;
+      ADD COLUMN IF NOT EXISTS social_links JSONB,
+      ADD COLUMN IF NOT EXISTS slug VARCHAR(100);
 
       -- Migration: Ensure profile_image_url is TEXT to support Base64
       ALTER TABLE player_profiles 
       ALTER COLUMN profile_image_url TYPE TEXT;
+
+      -- Ensure unique constraint on slug
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'player_profiles_slug_key'
+        ) THEN
+          ALTER TABLE player_profiles ADD CONSTRAINT player_profiles_slug_key UNIQUE (slug);
+        END IF;
+      END
+      $$;
     `, []);
 
     res.json({ success: true, message: 'Player tables created/updated successfully' });
@@ -86,6 +99,9 @@ router.post('/setup-player-tables', async (req, res) => {
     console.error('Error creating player tables:', error);
     res.status(500).json({ error: 'Failed to create player tables' });
   }
-});
+};
+
+router.post('/setup-player-tables', setupTables);
+router.get('/setup-player-tables', setupTables);
 
 export default router;
