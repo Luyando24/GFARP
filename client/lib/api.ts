@@ -1322,6 +1322,10 @@ export const PlayerApi = {
     return Api.post<{ success: boolean; message: string }>('/individual-players/verify-payment', { sessionId });
   },
 
+  async createCheckoutSession(data: { planId: string; billingCycle: string; successUrl: string; cancelUrl: string }) {
+    return Api.post<{ success: boolean; url: string; sessionId: string }>('/individual-players/create-checkout-session', data);
+  },
+
   async purchasePlan(data: { planType: string; amount: number }) {
     return Api.post<{ success: boolean; message: string }>('/individual-players/purchase', data);
   }

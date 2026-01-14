@@ -6,6 +6,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CreditCard, Wallet, DollarSign, Loader2, CheckCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { PlayerApi } from '@/lib/api';
 
 interface PlayerPaymentMethodSelectorProps {
   isOpen: boolean;
@@ -50,26 +51,18 @@ export default function PlayerPaymentMethodSelector({
     try {
       if (paymentMethod === 'CARD') {
         // Create Stripe Checkout Session
-        const response = await fetch('/api/individual-players/create-checkout-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            planId: selectedPlan.id,
-            billingCycle: selectedPlan.billingCycle || 'one-time',
-            successUrl: `${window.location.origin}/player-dashboard?tab=subscription&payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
-            cancelUrl: `${window.location.origin}/player-dashboard?tab=subscription&payment_cancelled=true`,
-          }),
+        const result = await PlayerApi.createCheckoutSession({
+          planId: selectedPlan.id,
+          billingCycle: selectedPlan.billingCycle || 'one-time',
+          successUrl: `${window.location.origin}/player-dashboard?tab=subscription&payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
+          cancelUrl: `${window.location.origin}/player-dashboard?tab=subscription&payment_cancelled=true`,
         });
-
-        const result = await response.json();
 
         if (result.success && result.url) {
           // Redirect to Stripe Checkout
           window.location.href = result.url;
         } else {
-          throw new Error(result.message || 'Failed to create checkout session');
+          throw new Error('Failed to create checkout session');
         }
       } else {
         toast({
