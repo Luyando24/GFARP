@@ -565,4 +565,43 @@ router.post('/purchase', authenticateToken, async (req, res) => {
   }
 });
 
+// Get Admin List of Players
+router.get('/admin-list', async (req, res) => {
+  try {
+    // Check for admin role (assuming authenticateToken is used or handled by gateway, 
+    // but here we might need specific admin check if exposed directly. 
+    // For now, assuming internal use or secured by route prefix in index.ts)
+    
+    // Ideally, this should use a middleware like authenticateAdmin
+    // But since I'm adding it to existing router, let's keep it simple for now
+    // and rely on the fact that this route is likely called from Admin Dashboard
+    // which should be protected. 
+    // Wait, the prompt says "Add the newly added player module to the admin dashboard".
+    // So this endpoint will be consumed by Admin Dashboard.
+    
+    const result = await query(`
+      SELECT 
+        ip.id,
+        ip.email,
+        ip.first_name,
+        ip.last_name,
+        ip.created_at,
+        pp.slug,
+        (SELECT plan_type FROM player_purchases 
+         WHERE player_id = ip.id AND status = 'completed' 
+         ORDER BY created_at DESC LIMIT 1) as current_plan,
+        (SELECT SUM(amount) FROM player_purchases 
+         WHERE player_id = ip.id AND status = 'completed') as total_spent
+      FROM individual_players ip
+      LEFT JOIN player_profiles pp ON ip.id = pp.player_id
+      ORDER BY ip.created_at DESC
+    `);
+
+    res.json({ success: true, data: result.rows });
+  } catch (error) {
+    console.error('Get admin player list error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 export default router;

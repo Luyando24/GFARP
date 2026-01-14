@@ -219,6 +219,7 @@ export default function AdminDashboard() {
 
   // Users state for admin list
   const [users, setUsers] = useState<any[]>([]);
+  const [individualPlayers, setIndividualPlayers] = useState<any[]>([]);
   const [complianceRecords, setComplianceRecords] = useState<ComplianceRecord[]>([]);
   const [viewingCompliance, setViewingCompliance] = useState<ComplianceRecord | null>(null);
 
@@ -228,6 +229,7 @@ export default function AdminDashboard() {
   const [systemStats, setSystemStats] = useState({
     totalAcademies: 0,
     totalPlayers: 0,
+    totalIndividualPlayers: 0,
     monthlyRevenue: 0
   });
 
@@ -282,6 +284,29 @@ export default function AdminDashboard() {
       setIsComplianceLoading(false);
     }
   };
+
+  const fetchIndividualPlayers = async () => {
+    try {
+      const response = await fetch('/api/individual-players/admin-list');
+      const result = await response.json();
+      if (result.success) {
+        setIndividualPlayers(result.data);
+      }
+    } catch (error) {
+      console.error('Error fetching individual players:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch individual players",
+        variant: "destructive"
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'players') {
+      fetchIndividualPlayers();
+    }
+  }, [activeTab]);
 
   const handleUpdateDocumentStatus = async (documentId: string, newStatus: string) => {
     if (newStatus === 'rejected') {
@@ -1120,6 +1145,7 @@ export default function AdminDashboard() {
   const sidebarItems = [
     { id: "dashboard", label: "Dashboard", icon: Home },
     { id: "academies", label: "Academy Management", icon: Building },
+    { id: "players", label: "Individual Players", icon: User },
     { id: "super-admins", label: "Super Admins", icon: Users },
     { id: "sales", label: "Sales Agents", icon: UserCheck },
     { id: "discounts", label: "Discounts", icon: Percent },
@@ -1281,7 +1307,7 @@ export default function AdminDashboard() {
               </div>
 
               {/* System Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <Card className="hover:shadow-lg transition-shadow duration-200">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
@@ -1301,13 +1327,28 @@ export default function AdminDashboard() {
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-sm text-slate-600 dark:text-slate-400">Total Players</p>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Academy Players</p>
                         <p className="text-2xl font-bold text-slate-900 dark:text-white">{systemStats.totalPlayers.toLocaleString()}</p>
                         <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
                           Across all academies
                         </p>
                       </div>
                       <Users className="h-8 w-8 text-blue-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="hover:shadow-lg transition-shadow duration-200">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Indiv. Players</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{systemStats.totalIndividualPlayers?.toLocaleString() || 0}</p>
+                        <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1">
+                          Direct registrations
+                        </p>
+                      </div>
+                      <User className="h-8 w-8 text-indigo-600" />
                     </div>
                   </CardContent>
                 </Card>

@@ -87,7 +87,7 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
     const academiesResult = await query('SELECT COUNT(*) as count FROM academies');
     const totalAcademies = parseInt(academiesResult.rows[0].count);
 
-    // Get total players count from players table
+    // Get total players count from players table (Academy Players)
     let totalPlayers = 0;
     try {
       const playersResult = await query(`
@@ -100,6 +100,15 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
     } catch (err) {
       console.log('Players table may not exist or query failed, using fallback calculation');
       totalPlayers = totalAcademies * 25; // Fallback: average 25 players per academy
+    }
+
+    // Get total Individual Players
+    let totalIndividualPlayers = 0;
+    try {
+      const indPlayersResult = await query('SELECT COUNT(*) as count FROM individual_players');
+      totalIndividualPlayers = parseInt(indPlayersResult.rows[0].count) || 0;
+    } catch (err) {
+      console.log('Individual players table query failed');
     }
 
     // Get active transfers count (using transfers table)
@@ -131,7 +140,16 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
         AND status = 'COMPLETED'
       `);
       subscriptionRevenue = parseFloat(subscriptionResult.rows[0].total) || 0;
-      monthlyRevenue += subscriptionRevenue;
+
+      // Add revenue from individual player purchases
+      const playerPurchaseResult = await query(`
+        SELECT SUM(amount) as total FROM player_purchases
+        WHERE created_at >= date_trunc('month', CURRENT_DATE)
+        AND status = 'completed'
+      `);
+      const playerRevenue = parseFloat(playerPurchaseResult.rows[0].total) || 0;
+
+      monthlyRevenue += subscriptionRevenue + playerRevenue;
     } catch (err) {
       console.log('Error calculating revenue:', err);
       // Fallback calculation if tables don't exist yet
@@ -199,8 +217,16 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
       const subRevenue = parseFloat(totalSubRevenueResult.rows[0].total) || 0;
       const subCount = parseInt(totalSubRevenueResult.rows[0].count) || 0;
 
-      totalRevenue = txRevenue + subRevenue;
-      totalTransactions = txCount + subCount;
+      // Total revenue from individual player purchases
+      const totalPlayerRevenueResult = await query(`
+        SELECT SUM(amount) as total, COUNT(*) as count FROM player_purchases
+        WHERE status = 'completed'
+      `);
+      const playerRevenue = parseFloat(totalPlayerRevenueResult.rows[0].total) || 0;
+      const playerCount = parseInt(totalPlayerRevenueResult.rows[0].count) || 0;
+
+      totalRevenue = txRevenue + subRevenue + playerRevenue;
+      totalTransactions = txCount + subCount + playerCount;
       averageTransactionValue = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
 
       // Pending payments
@@ -244,6 +270,7 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
     const stats = {
       totalAcademies,
       totalPlayers,
+      totalIndividualPlayers,
       activeTransfers,
       monthlyRevenue,
       totalRevenue,
