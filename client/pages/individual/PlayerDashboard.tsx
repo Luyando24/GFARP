@@ -38,7 +38,8 @@ import {
   Linkedin,
   Instagram,
   Facebook,
-  Globe
+  Globe,
+  Lock
 } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -111,6 +112,11 @@ export default function PlayerDashboard() {
 
   // Form State
   const [formData, setFormData] = useState<Partial<PlayerProfile>>({});
+  
+  // Slug Verification State
+  const [isCheckingSlug, setIsCheckingSlug] = useState(false);
+  const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null); // null = not checked, true = available, false = taken
+  const [slugMessage, setSlugMessage] = useState("");
 
   // Subscription State
   const [currentPlan, setCurrentPlan] = useState<string | null>(null);
@@ -123,6 +129,35 @@ export default function PlayerDashboard() {
     fetchPlans();
     checkPaymentStatus();
   }, []);
+
+  // Slug check effect
+  useEffect(() => {
+    const checkSlug = async () => {
+      const slug = formData.slug;
+      
+      // Don't check if empty or same as original (if we had the original stored separately, but here we assume if it matches profile.slug it's fine)
+      if (!slug || (profile && slug === profile.slug)) {
+        setSlugAvailable(null);
+        setSlugMessage("");
+        return;
+      }
+
+      setIsCheckingSlug(true);
+      try {
+        const response = await PlayerApi.checkSlugAvailability(slug);
+        setSlugAvailable(response.available);
+        setSlugMessage(response.message);
+      } catch (error) {
+        console.error("Failed to check slug", error);
+        setSlugAvailable(null); // Treat as unchecked on error
+      } finally {
+        setIsCheckingSlug(false);
+      }
+    };
+
+    const timer = setTimeout(checkSlug, 500); // 500ms debounce
+    return () => clearTimeout(timer);
+  }, [formData.slug, profile]);
 
   const fetchPlans = async () => {
     try {
@@ -197,6 +232,12 @@ export default function PlayerDashboard() {
   };
 
   const handleSaveProfile = async () => {
+    // Prevent save if slug is invalid (and explicitly checked as false)
+    if (slugAvailable === false) {
+      toast.error("Please choose a different link name before saving.");
+      return;
+    }
+
     setSaving(true);
     try {
       await PlayerApi.updateProfile(formData);
@@ -204,9 +245,16 @@ export default function PlayerDashboard() {
       setProfile(prev => prev ? { ...prev, ...formData } as PlayerProfile : formData as PlayerProfile);
       setIsEditing(false);
       toast.success("Profile updated successfully");
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to update profile", error);
-      toast.error("Failed to update profile");
+      // If server still returns a slug error (e.g. race condition), handle it
+      if (error.message && error.message.includes("Link Name")) {
+        setSlugAvailable(false);
+        setSlugMessage(error.message);
+        toast.error(error.message);
+      } else {
+        toast.error("Failed to update profile");
+      }
     } finally {
       setSaving(false);
     }
@@ -890,17 +938,34 @@ export default function PlayerDashboard() {
                           <Label htmlFor="slug">Custom Link Name (Subdomain)</Label>
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-slate-500 font-mono">https://</span>
-                            <Input
-                              id="slug"
-                              name="slug"
-                              value={formData.slug || ''}
-                              onChange={handleInputChange}
-                              placeholder="your-name"
-                              className="max-w-[200px] font-mono"
-                            />
+                            <div className="relative max-w-[200px] w-full">
+                              <Input
+                                id="slug"
+                                name="slug"
+                                value={formData.slug || ''}
+                                onChange={handleInputChange}
+                                placeholder="your-name"
+                                className={`font-mono pr-8 ${slugAvailable === false ? 'border-red-500 focus-visible:ring-red-500' : slugAvailable === true ? 'border-green-500 focus-visible:ring-green-500' : ''}`}
+                              />
+                              <div className="absolute right-2 top-1/2 -translate-y-1/2">
+                                {isCheckingSlug ? (
+                                  <Loader2 className="h-4 w-4 animate-spin text-slate-400" />
+                                ) : slugAvailable === true ? (
+                                  <Check className="h-4 w-4 text-green-500" />
+                                ) : slugAvailable === false ? (
+                                  <X className="h-4 w-4 text-red-500" />
+                                ) : null}
+                              </div>
+                            </div>
                             <span className="text-sm text-slate-500 font-mono">.{window.location.host}</span>
                           </div>
-                          <p className="text-xs text-slate-500">Only lowercase letters, numbers, and hyphens.</p>
+                          {slugMessage ? (
+                            <p className={`text-xs ${slugAvailable === false ? 'text-red-500' : 'text-green-600'}`}>
+                              {slugMessage}
+                            </p>
+                          ) : (
+                            <p className="text-xs text-slate-500">Only lowercase letters, numbers, and hyphens.</p>
+                          )}
                         </div>
 
                         <div className="space-y-2">
@@ -1279,27 +1344,7 @@ export default function PlayerDashboard() {
                   <p className="text-slate-600 dark:text-slate-400">Distribute your profile to scouts and clubs.</p>
                 </div>
 
-                {currentPlan !== 'pro' ? (
-                  <Card className="border-2 border-blue-100 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-900/20">
-                    <CardContent className="flex flex-col items-center text-center py-12">
-                      <div className="h-16 w-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mb-6">
-                        <Star className="h-8 w-8 text-blue-600 dark:text-blue-400" />
-                      </div>
-                      <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Upgrade to Pro</h3>
-                      <p className="text-slate-600 dark:text-slate-400 max-w-md mb-8">
-                        Unlock your public profile link and professional PDF export features with our Pro Plan.
-                      </p>
-                      <Button 
-                        size="lg" 
-                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
-                        onClick={() => setActiveTab('subscription')}
-                      >
-                        View Subscription Options
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <Card className="flex flex-col h-full border-none shadow-xl bg-white dark:bg-slate-800 overflow-hidden">
                     <div className="h-2 bg-blue-600 w-full" />
                     <CardHeader>
@@ -1325,10 +1370,19 @@ export default function PlayerDashboard() {
                       </div>
                       <Button
                         className="w-full h-12 text-md font-semibold bg-blue-600 hover:bg-blue-700 transition-all shadow-md"
-                        onClick={generatePDF}
+                        onClick={currentPlan === 'pro' ? generatePDF : () => setActiveTab('subscription')}
                       >
-                        <Download className="mr-2 h-5 w-5" />
-                        Generate & Download
+                        {currentPlan === 'pro' ? (
+                          <>
+                            <Download className="mr-2 h-5 w-5" />
+                            Generate & Download
+                          </>
+                        ) : (
+                          <>
+                            <Lock className="mr-2 h-5 w-5" />
+                            Unlock PDF Download
+                          </>
+                        )}
                       </Button>
                     </CardContent>
                   </Card>
@@ -1370,19 +1424,35 @@ export default function PlayerDashboard() {
                         <div className="flex gap-2">
                           <Button
                             className="flex-1 h-12 text-md font-semibold bg-green-600 hover:bg-green-700 shadow-md"
-                            onClick={copyPublicLink}
+                            onClick={currentPlan === 'pro' ? copyPublicLink : () => setActiveTab('subscription')}
                           >
-                            <Share2 className="mr-2 h-5 w-5" />
-                            Copy Link
+                            {currentPlan === 'pro' ? (
+                              <>
+                                <Share2 className="mr-2 h-5 w-5" />
+                                Copy Link
+                              </>
+                            ) : (
+                              <>
+                                <Lock className="mr-2 h-5 w-5" />
+                                Unlock Link
+                              </>
+                            )}
                           </Button>
                           <Button
                             variant="outline"
                             className="h-12 w-12 p-0 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900"
-                            asChild
+                            asChild={currentPlan === 'pro'}
+                            onClick={currentPlan !== 'pro' ? () => setActiveTab('subscription') : undefined}
                           >
-                            <a href={getPublicUrl()} target="_blank" rel="noopener noreferrer">
-                              <Eye className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-                            </a>
+                            {currentPlan === 'pro' ? (
+                              <a href={getPublicUrl()} target="_blank" rel="noopener noreferrer">
+                                <Eye className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                              </a>
+                            ) : (
+                              <div className="cursor-pointer flex items-center justify-center w-full h-full">
+                                <Lock className="h-5 w-5 text-slate-400" />
+                              </div>
+                            )}
                           </Button>
                         </div>
 
@@ -1392,25 +1462,27 @@ export default function PlayerDashboard() {
                             <Button
                               variant="outline"
                               size="sm"
+                              disabled={currentPlan !== 'pro'}
                               className="flex-1 gap-2 border-slate-100 dark:border-slate-800 hover:bg-green-50 dark:hover:bg-green-900/10"
                               onClick={() => {
                                 const url = getPublicUrl();
                                 window.open(`https://wa.me/?text=Check out my professional football profile: ${url}`, '_blank');
                               }}
                             >
-                              <MessageCircle className="h-4 w-4 text-[#25D366]" />
+                              {currentPlan === 'pro' ? <MessageCircle className="h-4 w-4 text-[#25D366]" /> : <Lock className="h-3 w-3" />}
                               <span className="text-xs">WhatsApp</span>
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
+                              disabled={currentPlan !== 'pro'}
                               className="flex-1 gap-2 border-slate-100 dark:border-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/10"
                               onClick={() => {
                                 const url = getPublicUrl();
                                 window.open(`https://twitter.com/intent/tweet?text=Check out my football profile on Soccer Circular: ${url}`, '_blank');
                               }}
                             >
-                              <Twitter className="h-4 w-4 text-[#1DA1F2]" />
+                              {currentPlan === 'pro' ? <Twitter className="h-4 w-4 text-[#1DA1F2]" /> : <Lock className="h-3 w-3" />}
                               <span className="text-xs">Twitter</span>
                             </Button>
                           </div>
@@ -1419,7 +1491,6 @@ export default function PlayerDashboard() {
                     </CardContent>
                   </Card>
                 </div>
-                )}
               </div>
             )}
           </div>

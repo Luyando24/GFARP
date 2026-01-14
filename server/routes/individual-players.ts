@@ -286,6 +286,39 @@ router.get('/profile', authenticateToken, async (req, res) => {
   }
 });
 
+// Check Slug Availability
+router.post('/check-slug-availability', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { slug } = req.body;
+
+    if (!slug) {
+      return res.status(400).json({ error: 'Slug is required' });
+    }
+
+    const slugRegex = /^[a-z0-9-]+$/;
+    if (!slugRegex.test(slug)) {
+      return res.json({ available: false, message: 'Link Name must contain only lowercase letters, numbers, and hyphens.' });
+    }
+
+    // Check if taken by another user
+    const result = await query(
+      'SELECT player_id FROM player_profiles WHERE slug = $1 AND player_id != $2',
+      [slug, userId]
+    );
+
+    if (result.rows.length > 0) {
+      return res.json({ available: false, message: 'Link Name is already taken.' });
+    }
+
+    res.json({ available: true, message: 'Link Name is available.' });
+
+  } catch (error) {
+    console.error('Check slug availability error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Update Profile
 router.put('/profile', authenticateToken, async (req, res) => {
   try {

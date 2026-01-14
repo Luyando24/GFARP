@@ -1310,6 +1310,10 @@ export const PlayerApi = {
     return Api.put<{ success: boolean; message: string }>('/individual-players/profile', data);
   },
 
+  async checkSlugAvailability(slug: string) {
+    return Api.post<{ available: boolean; message: string }>('/individual-players/check-slug-availability', { slug });
+  },
+
   async getPublicProfile(id: string) {
     return Api.get<PlayerProfile>(`/individual-players/public/${id}`);
   },
