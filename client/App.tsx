@@ -112,6 +112,7 @@ const App = () => {
 
               {/* Individual Player Routes */}
               <Route path="/player/public/:id" element={<PublicPlayerProfile />} />
+              <Route path="/public/by-slug/:slug" element={<PublicPlayerProfile />} />
               <Route path="/player/register" element={<PlayerRegister />} />
               <Route path="/player/login" element={<PlayerLogin />} />
               <Route element={<ProtectedRoute allowedRoles={["individual_player"]} />}>

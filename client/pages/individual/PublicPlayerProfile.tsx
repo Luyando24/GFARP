@@ -62,7 +62,23 @@ export default function PublicPlayerProfile({ slug }: { slug?: string }) {
   };
 
   const copyPageLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+    // If slug is present, ensure we copy the slug version if not already on it
+    let url = window.location.href;
+    
+    // Fallback if not on the correct URL (e.g. if rendered via ID but slug exists)
+    if (profile?.slug && !url.includes(profile.slug)) {
+       // Construct URL with slug logic similar to Dashboard
+       const protocol = window.location.protocol;
+       const host = window.location.host;
+       let baseHost = host;
+       if (baseHost.startsWith('www.')) {
+         baseHost = baseHost.substring(4);
+       }
+       // Prefer subdirectory style for sharing consistency if subdomain isn't active
+       url = `${window.location.origin}/public/by-slug/${profile.slug}`;
+    }
+
+    navigator.clipboard.writeText(url);
     toast.success("Profile link copied to clipboard!");
   };
 

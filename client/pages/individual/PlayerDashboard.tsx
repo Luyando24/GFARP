@@ -209,17 +209,11 @@ export default function PlayerDashboard() {
   const getPublicUrl = () => {
     if (!profile) return "";
     
+    // Always use the main domain path for sharing/previewing
+    // Subdomains can be tricky with DNS propagation and local testing
+    // This ensures a reliable link is always generated
     if (profile.slug) {
-      const protocol = window.location.protocol;
-      const host = window.location.host;
-      // Handle localhost vs production
-      // Ideally we should strip 'www' or other subdomains if we want to replace them
-      // For now, we prepend as per previous logic, but checking for www might be good
-      let baseHost = host;
-      if (baseHost.startsWith('www.')) {
-        baseHost = baseHost.substring(4);
-      }
-      return `${protocol}//${profile.slug}.${baseHost}`;
+       return `${window.location.origin}/public/by-slug/${profile.slug}`;
     }
     
     return `${window.location.origin}/player/public/${profile.player_id}`;
