@@ -1225,60 +1225,31 @@ export default function PlayerDashboard() {
                 </div>
 
                 {!currentPlan ? (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Plan 1: Link Only */}
-                    <Card className="cursor-pointer transition-all hover:border-blue-500 hover:shadow-md flex flex-col">
-                      <CardHeader>
-                        <CardTitle className="text-lg">Basic Link</CardTitle>
-                        <div className="text-3xl font-bold text-blue-600 mt-2">$20</div>
+                  <div className="max-w-md mx-auto">
+                    {/* Pro Plan */}
+                    <Card className="cursor-pointer transition-all hover:border-blue-500 hover:shadow-md flex flex-col relative overflow-hidden border-2 border-blue-100 dark:border-blue-900">
+                      <div className="absolute top-0 right-0 bg-blue-600 text-white text-xs px-2 py-1 font-bold">RECOMMENDED</div>
+                      <CardHeader className="text-center pb-2">
+                        <CardTitle className="text-2xl text-blue-900 dark:text-blue-100">Pro Plan</CardTitle>
+                        <div className="text-4xl font-bold text-blue-600 mt-2">$20</div>
+                        <p className="text-sm text-slate-500">One-time payment for lifetime access</p>
                       </CardHeader>
-                      <CardContent className="flex-1">
-                        <p className="text-sm text-gray-500 mb-4">Get a sharable profile link hosted on Soccer Circular.</p>
-                        <ul className="text-sm space-y-2 mb-4">
-                          <li className="flex items-center"><Check className="h-4 w-4 mr-2 text-green-500" /> Public Profile Link</li>
-                          <li className="flex items-center"><Check className="h-4 w-4 mr-2 text-green-500" /> Mobile Optimized</li>
+                      <CardContent className="flex-1 pt-4">
+                        <ul className="space-y-3 mb-6">
+                          <li className="flex items-center text-sm"><Check className="h-5 w-5 mr-3 text-green-500 flex-shrink-0" /> Unlimited profile updates</li>
+                          <li className="flex items-center text-sm"><Check className="h-5 w-5 mr-3 text-green-500 flex-shrink-0" /> Video highlights upload</li>
+                          <li className="flex items-center text-sm"><Check className="h-5 w-5 mr-3 text-green-500 flex-shrink-0" /> Direct messaging with scouts</li>
+                          <li className="flex items-center text-sm"><Check className="h-5 w-5 mr-3 text-green-500 flex-shrink-0" /> Priority support</li>
+                          <li className="flex items-center text-sm"><Check className="h-5 w-5 mr-3 text-green-500 flex-shrink-0" /> Verified player badge</li>
                         </ul>
                       </CardContent>
                       <CardFooter>
-                        <Button className="w-full" variant="outline" onClick={() => handlePurchase('basic', 20)}>Select Plan</Button>
-                      </CardFooter>
-                    </Card>
-
-                    {/* Plan 2: PDF Only */}
-                    <Card className="cursor-pointer transition-all hover:border-blue-500 hover:shadow-md flex flex-col">
-                      <CardHeader>
-                        <CardTitle className="text-lg">PDF Version</CardTitle>
-                        <div className="text-3xl font-bold text-blue-600 mt-2">$30</div>
-                      </CardHeader>
-                      <CardContent className="flex-1">
-                        <p className="text-sm text-gray-500 mb-4">Get a professional PDF version of your profile.</p>
-                        <ul className="text-sm space-y-2 mb-4">
-                          <li className="flex items-center"><Check className="h-4 w-4 mr-2 text-green-500" /> High Quality PDF</li>
-                          <li className="flex items-center"><Check className="h-4 w-4 mr-2 text-green-500" /> Printable Format</li>
-                        </ul>
-                      </CardContent>
-                      <CardFooter>
-                        <Button className="w-full" variant="outline" onClick={() => handlePurchase('pdf', 30)}>Select Plan</Button>
-                      </CardFooter>
-                    </Card>
-
-                    {/* Plan 3: Pro */}
-                    <Card className="cursor-pointer transition-all hover:border-green-500 border-green-200 bg-green-50/30 flex flex-col relative overflow-hidden">
-                      <div className="absolute top-0 right-0 bg-green-500 text-white text-xs px-2 py-1">RECOMMENDED</div>
-                      <CardHeader>
-                        <CardTitle className="text-lg text-green-900">Pro Bundle</CardTitle>
-                        <div className="text-3xl font-bold text-green-700 mt-2">$50</div>
-                      </CardHeader>
-                      <CardContent className="flex-1">
-                        <p className="text-sm text-gray-600 mb-4">The ultimate package for professionals.</p>
-                        <ul className="text-sm space-y-2 mb-4">
-                          <li className="flex items-center"><Check className="h-4 w-4 mr-2 text-green-500" /> Everything in Basic & PDF</li>
-                          <li className="flex items-center"><Check className="h-4 w-4 mr-2 text-green-500" /> Priority Support</li>
-                          <li className="flex items-center"><Check className="h-4 w-4 mr-2 text-green-500" /> Editing Capabilities</li>
-                        </ul>
-                      </CardContent>
-                      <CardFooter>
-                        <Button className="w-full bg-green-600 hover:bg-green-700 text-white" onClick={() => handlePurchase('pro', 50)}>Select Plan</Button>
+                        <Button 
+                          className="w-full h-12 text-lg bg-blue-600 hover:bg-blue-700 text-white shadow-lg" 
+                          onClick={() => openPaymentModal(plans[0] || { id: 'pro', name: 'Pro Plan', price: 20 })}
+                        >
+                          Get Pro Access
+                        </Button>
                       </CardFooter>
                     </Card>
                   </div>
@@ -1308,7 +1279,27 @@ export default function PlayerDashboard() {
                   <p className="text-slate-600 dark:text-slate-400">Distribute your profile to scouts and clubs.</p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {currentPlan !== 'pro' ? (
+                  <Card className="border-2 border-blue-100 dark:border-blue-900 bg-blue-50/50 dark:bg-blue-900/20">
+                    <CardContent className="flex flex-col items-center text-center py-12">
+                      <div className="h-16 w-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mb-6">
+                        <Star className="h-8 w-8 text-blue-600 dark:text-blue-400" />
+                      </div>
+                      <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">Upgrade to Pro</h3>
+                      <p className="text-slate-600 dark:text-slate-400 max-w-md mb-8">
+                        Unlock your public profile link and professional PDF export features with our Pro Plan.
+                      </p>
+                      <Button 
+                        size="lg" 
+                        className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
+                        onClick={() => setActiveTab('subscription')}
+                      >
+                        View Subscription Options
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <Card className="flex flex-col h-full border-none shadow-xl bg-white dark:bg-slate-800 overflow-hidden">
                     <div className="h-2 bg-blue-600 w-full" />
                     <CardHeader>
@@ -1428,6 +1419,7 @@ export default function PlayerDashboard() {
                     </CardContent>
                   </Card>
                 </div>
+                )}
               </div>
             )}
           </div>
