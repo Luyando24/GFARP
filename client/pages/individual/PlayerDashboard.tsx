@@ -100,7 +100,8 @@ export default function PlayerDashboard() {
     setSaving(true);
     try {
       await PlayerApi.updateProfile(formData);
-      setProfile(formData as PlayerProfile);
+      // Safely merge profile to ensure state updates
+      setProfile(prev => prev ? { ...prev, ...formData } as PlayerProfile : formData as PlayerProfile);
       setIsEditing(false);
       toast.success("Profile updated successfully");
     } catch (error) {
@@ -205,22 +206,28 @@ export default function PlayerDashboard() {
     toast.success("PDF Downloaded!");
   };
 
-  const copyPublicLink = () => {
-    if (!profile) return;
+  const getPublicUrl = () => {
+    if (!profile) return "";
     
-    let url;
     if (profile.slug) {
-      // Construct subdomain URL
       const protocol = window.location.protocol;
       const host = window.location.host;
-      // In development (localhost), subdomains might need specific setup, 
-      // but we format it as requested.
-      // If host is 'localhost:8080', result is 'slug.localhost:8080'
-      url = `${protocol}//${profile.slug}.${host}`;
-    } else {
-      url = `${window.location.origin}/player/public/${profile.player_id}`;
+      // Handle localhost vs production
+      // Ideally we should strip 'www' or other subdomains if we want to replace them
+      // For now, we prepend as per previous logic, but checking for www might be good
+      let baseHost = host;
+      if (baseHost.startsWith('www.')) {
+        baseHost = baseHost.substring(4);
+      }
+      return `${protocol}//${profile.slug}.${baseHost}`;
     }
     
+    return `${window.location.origin}/player/public/${profile.player_id}`;
+  };
+
+  const copyPublicLink = () => {
+    if (!profile) return;
+    const url = getPublicUrl();
     navigator.clipboard.writeText(url);
     toast.success("Profile link copied to clipboard!");
   };
@@ -1115,7 +1122,7 @@ export default function PlayerDashboard() {
                             className="h-12 w-12 p-0 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900"
                             asChild
                           >
-                            <a href={`/player/public/${profile?.player_id}`} target="_blank" rel="noopener noreferrer">
+                            <a href={getPublicUrl()} target="_blank" rel="noopener noreferrer">
                               <Eye className="h-5 w-5 text-slate-600 dark:text-slate-400" />
                             </a>
                           </Button>
@@ -1129,7 +1136,7 @@ export default function PlayerDashboard() {
                               size="sm"
                               className="flex-1 gap-2 border-slate-100 dark:border-slate-800 hover:bg-green-50 dark:hover:bg-green-900/10"
                               onClick={() => {
-                                const url = `${window.location.origin}/player/public/${profile?.player_id}`;
+                                const url = getPublicUrl();
                                 window.open(`https://wa.me/?text=Check out my professional football profile: ${url}`, '_blank');
                               }}
                             >
@@ -1141,7 +1148,7 @@ export default function PlayerDashboard() {
                               size="sm"
                               className="flex-1 gap-2 border-slate-100 dark:border-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/10"
                               onClick={() => {
-                                const url = `${window.location.origin}/player/public/${profile?.player_id}`;
+                                const url = getPublicUrl();
                                 window.open(`https://twitter.com/intent/tweet?text=Check out my football profile on Soccer Circular: ${url}`, '_blank');
                               }}
                             >
