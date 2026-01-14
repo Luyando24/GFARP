@@ -13,7 +13,7 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 // or ensure the backend route doesn't require auth (which it doesn't).
 // I'll add a fetchPublicProfile method to the api service or just use fetch here.
 
-export default function PublicPlayerProfile() {
+export default function PublicPlayerProfile({ slug }: { slug?: string }) {
   const { id } = useParams<{ id: string }>();
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,10 +22,28 @@ export default function PublicPlayerProfile() {
   usePageTitle(profile ? `${profile.display_name} - Player Profile` : "Player Profile");
 
   useEffect(() => {
-    if (id) {
+    if (slug) {
+      fetchPublicProfileBySlug(slug);
+    } else if (id) {
       fetchPublicProfile(id);
     }
-  }, [id]);
+  }, [id, slug]);
+
+  const fetchPublicProfileBySlug = async (playerSlug: string) => {
+    try {
+      const response = await fetch(`/api/individual-players/public/by-slug/${playerSlug}`);
+      if (!response.ok) {
+        throw new Error("Profile not found");
+      }
+      const data = await response.json();
+      setProfile(data);
+    } catch (err) {
+      console.error("Error fetching public profile:", err);
+      setError("Profile not found or unavailable");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchPublicProfile = async (playerId: string) => {
     try {

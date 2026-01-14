@@ -1290,6 +1290,7 @@ export interface PlayerProfile {
   first_name?: string; // joined fields
   last_name?: string; // joined fields
   active_plan?: string;
+  slug?: string;
 }
 
 export const PlayerApi = {

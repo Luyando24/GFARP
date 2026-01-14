@@ -169,13 +169,32 @@ router.put('/profile', authenticateToken, async (req, res) => {
       education,
       contact_email,
       whatsapp_number,
-      social_links
+      social_links,
+      slug
     } = req.body;
 
     // Sanitize numeric fields to prevent Postgres cast errors from empty strings
     const sanitizedAge = (age === '' || age === null || age === undefined) ? null : parseInt(age as string);
     const sanitizedHeight = (height === '' || height === null || height === undefined) ? null : parseFloat(height as string);
     const sanitizedWeight = (weight === '' || weight === null || weight === undefined) ? null : parseFloat(weight as string);
+
+    // Validate Slug
+    if (slug) {
+      const slugRegex = /^[a-z0-9-]+$/;
+      if (!slugRegex.test(slug)) {
+        return res.status(400).json({ error: 'Link Name must contain only lowercase letters, numbers, and hyphens.' });
+      }
+
+      // Check for uniqueness
+      const existingSlug = await query(
+        'SELECT player_id FROM player_profiles WHERE slug = $1 AND player_id != $2',
+        [slug, userId]
+      );
+
+      if (existingSlug.rows.length > 0) {
+        return res.status(400).json({ error: 'Link Name is already taken.' });
+      }
+    }
 
     // Ensure array fields are actually arrays (front-end might send null or empty)
     const sanitizedGallery = Array.isArray(gallery_images) ? gallery_images : [];
@@ -195,11 +214,23 @@ router.put('/profile', authenticateToken, async (req, res) => {
         ADD COLUMN IF NOT EXISTS education TEXT,
         ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255),
         ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS social_links JSONB;
+        ADD COLUMN IF NOT EXISTS social_links JSONB,
+        ADD COLUMN IF NOT EXISTS slug VARCHAR(100);
         
         -- Also ensure profile_image_url is TEXT
         ALTER TABLE player_profiles 
         ALTER COLUMN profile_image_url TYPE TEXT;
+
+        -- Ensure unique constraint on slug
+        DO $$
+        BEGIN
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_constraint WHERE conname = 'player_profiles_slug_key'
+          ) THEN
+            ALTER TABLE player_profiles ADD CONSTRAINT player_profiles_slug_key UNIQUE (slug);
+          END IF;
+        END
+        $$;
       `);
     };
 
@@ -213,8 +244,9 @@ router.put('/profile', authenticateToken, async (req, res) => {
               cover_image_url = $14, career_history = $15, 
              honours = $16, education = $17,
              contact_email = $18, whatsapp_number = $19, social_links = $20,
+             slug = $21,
              updated_at = NOW()
-         WHERE player_id = $21`,
+         WHERE player_id = $22`,
         [
           display_name,
           sanitizedAge,
@@ -236,6 +268,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
           contact_email,
           whatsapp_number,
           social_links,
+          slug,
           userId
         ]
       );
@@ -253,8 +286,9 @@ router.put('/profile', authenticateToken, async (req, res) => {
                 cover_image_url = $14, career_history = $15, 
                 honours = $16, education = $17,
                 contact_email = $18, whatsapp_number = $19, social_links = $20,
+                slug = $21,
                 updated_at = NOW()
-            WHERE player_id = $21`,
+            WHERE player_id = $22`,
           [
             display_name,
             sanitizedAge,
@@ -276,6 +310,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
             contact_email,
             whatsapp_number,
             social_links,
+            slug,
             userId
           ]
         );
@@ -315,6 +350,33 @@ router.get('/public/:id', async (req, res) => {
 
   } catch (error) {
     console.error('Get public profile error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get Public Profile by Slug
+router.get('/public/by-slug/:slug', async (req, res) => {
+  try {
+    const { slug } = req.params;
+
+    const result = await query(
+      `SELECT p.*, ip.first_name, ip.last_name 
+       FROM player_profiles p
+       JOIN individual_players ip ON p.player_id = ip.id
+       WHERE p.slug = $1`,
+      [slug]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Profile not found' });
+    }
+
+    // Filter out sensitive data if any
+    const profile = result.rows[0];
+    res.json(profile);
+
+  } catch (error) {
+    console.error('Get public profile by slug error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

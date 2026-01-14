@@ -207,7 +207,20 @@ export default function PlayerDashboard() {
 
   const copyPublicLink = () => {
     if (!profile) return;
-    const url = `${window.location.origin}/player/public/${profile.player_id}`;
+    
+    let url;
+    if (profile.slug) {
+      // Construct subdomain URL
+      const protocol = window.location.protocol;
+      const host = window.location.host;
+      // In development (localhost), subdomains might need specific setup, 
+      // but we format it as requested.
+      // If host is 'localhost:8080', result is 'slug.localhost:8080'
+      url = `${protocol}//${profile.slug}.${host}`;
+    } else {
+      url = `${window.location.origin}/player/public/${profile.player_id}`;
+    }
+    
     navigator.clipboard.writeText(url);
     toast.success("Profile link copied to clipboard!");
   };
@@ -599,6 +612,23 @@ export default function PlayerDashboard() {
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="slug">Custom Link Name (Subdomain)</Label>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-slate-500 font-mono">https://</span>
+                            <Input
+                              id="slug"
+                              name="slug"
+                              value={formData.slug || ''}
+                              onChange={handleInputChange}
+                              placeholder="your-name"
+                              className="max-w-[200px] font-mono"
+                            />
+                            <span className="text-sm text-slate-500 font-mono">.{window.location.host}</span>
+                          </div>
+                          <p className="text-xs text-slate-500">Only lowercase letters, numbers, and hyphens.</p>
+                        </div>
+
                         <div className="space-y-2">
                           <Label htmlFor="display_name">Display Name</Label>
                           <Input

@@ -67,6 +67,20 @@ const App = () => {
           <Toaster />
           <Sonner />
           <ThemeProvider attribute="class" defaultTheme="light">
+            {(() => {
+              const hostname = window.location.hostname;
+              const parts = hostname.split('.');
+              let subdomain = null;
+              const isIp = hostname.match(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/);
+              if (!isIp && hostname !== 'localhost') {
+                 if (hostname.endsWith('localhost')) {
+                     if (parts.length > 1) subdomain = parts[0];
+                 } else if (parts.length > 2 && parts[0] !== 'www' && parts[0] !== 'api') {
+                     subdomain = parts[0];
+                 }
+              }
+              if (subdomain) return <PublicPlayerProfile slug={subdomain} />;
+              return (
             <BrowserRouter>
               <Routes>
                 <Route path="/" element={<Index />} />
@@ -135,6 +149,8 @@ const App = () => {
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
+              );
+            })()}
         </ThemeProvider>
       </TooltipProvider>
       </LanguageProvider>
