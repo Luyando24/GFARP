@@ -173,10 +173,10 @@ export default function PublicPlayerProfile({ slug }: { slug?: string }) {
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
                 <Button
                   onClick={copyPageLink}
-                  className="bg-white hover:bg-slate-100 text-slate-900 rounded-full px-6 font-bold shadow-xl transition-all hover:scale-105 active:scale-95"
+                  className="bg-white hover:bg-slate-100 text-slate-900 rounded-full px-6 py-6 sm:py-2 font-bold shadow-xl transition-all hover:scale-105 active:scale-95 w-full sm:w-auto"
                 >
                   <Share2 className="h-4 w-4 mr-2" />
                   Share Profile
@@ -184,7 +184,7 @@ export default function PublicPlayerProfile({ slug }: { slug?: string }) {
                 {(profile.contact_email || profile.whatsapp_number) && (
                   <Button
                     onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
-                    className="bg-green-600 hover:bg-green-700 text-white rounded-full px-6 font-bold shadow-xl transition-all hover:scale-105 active:scale-95"
+                    className="bg-green-600 hover:bg-green-700 text-white rounded-full px-6 py-6 sm:py-2 font-bold shadow-xl transition-all hover:scale-105 active:scale-95 w-full sm:w-auto"
                   >
                     <Mail className="h-4 w-4 mr-2" />
                     Contact Player
@@ -233,7 +233,7 @@ export default function PublicPlayerProfile({ slug }: { slug?: string }) {
                   <div className="h-8 w-1.5 bg-green-500 rounded-full" />
                   <h2 className="text-2xl font-black uppercase tracking-tight italic">Player Bio</h2>
                 </div>
-                <div className="p-8 bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
+                <div className="p-6 md:p-8 bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800">
                   <p className="text-lg text-slate-600 dark:text-slate-400 leading-relaxed font-medium">
                     {profile.bio}
                   </p>
@@ -367,19 +367,19 @@ export default function PublicPlayerProfile({ slug }: { slug?: string }) {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {profile.contact_email && (
-                    <div className="p-8 bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center text-center group hover:border-green-500/50 transition-colors">
+                    <div className="p-6 md:p-8 bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center text-center group hover:border-green-500/50 transition-colors">
                       <div className="h-14 w-14 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                         <Mail className="h-6 w-6 text-green-600" />
                       </div>
                       <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Email Address</h3>
-                      <p className="text-lg font-black text-slate-800 dark:text-white mb-6">{profile.contact_email}</p>
+                      <p className="text-lg font-black text-slate-800 dark:text-white mb-6 break-all">{profile.contact_email}</p>
                       <Button asChild className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-2xl">
                         <a href={`mailto:${profile.contact_email}`}>Send Email</a>
                       </Button>
                     </div>
                   )}
                   {profile.whatsapp_number && (
-                    <div className="p-8 bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center text-center group hover:border-[#25D366]/50 transition-colors">
+                    <div className="p-6 md:p-8 bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center text-center group hover:border-[#25D366]/50 transition-colors">
                       <div className="h-14 w-14 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                         <MessageCircle className="h-6 w-6 text-[#25D366]" />
                       </div>
