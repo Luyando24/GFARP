@@ -13,6 +13,7 @@ const setupTables = async (req: any, res: any) => {
         password_hash VARCHAR(255) NOT NULL,
         first_name VARCHAR(100),
         last_name VARCHAR(100),
+        stripe_customer_id VARCHAR(255),
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
@@ -58,6 +59,7 @@ const setupTables = async (req: any, res: any) => {
         plan_type VARCHAR(50) NOT NULL,
         amount DECIMAL(10, 2) NOT NULL,
         status VARCHAR(50) DEFAULT 'completed',
+        stripe_session_id VARCHAR(255) UNIQUE,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
       )
     `, []);
@@ -89,6 +91,25 @@ const setupTables = async (req: any, res: any) => {
           SELECT 1 FROM pg_constraint WHERE conname = 'player_profiles_slug_key'
         ) THEN
           ALTER TABLE player_profiles ADD CONSTRAINT player_profiles_slug_key UNIQUE (slug);
+        END IF;
+      END
+      $$;
+
+      -- Add stripe_customer_id to individual_players if not exists
+      ALTER TABLE individual_players 
+      ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255);
+
+      -- Add stripe_session_id to player_purchases if not exists
+      ALTER TABLE player_purchases 
+      ADD COLUMN IF NOT EXISTS stripe_session_id VARCHAR(255);
+      
+      -- Add unique constraint to stripe_session_id if not exists
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'player_purchases_stripe_session_id_key'
+        ) THEN
+          ALTER TABLE player_purchases ADD CONSTRAINT player_purchases_stripe_session_id_key UNIQUE (stripe_session_id);
         END IF;
       END
       $$;

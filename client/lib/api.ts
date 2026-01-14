@@ -1314,6 +1314,14 @@ export const PlayerApi = {
     return Api.get<PlayerProfile>(`/individual-players/public/${id}`);
   },
 
+  async getPlans() {
+    return Api.get<{ success: boolean; data: any[] }>('/individual-players/plans');
+  },
+
+  async verifyPayment(sessionId: string) {
+    return Api.post<{ success: boolean; message: string }>('/individual-players/verify-payment', { sessionId });
+  },
+
   async purchasePlan(data: { planType: string; amount: number }) {
     return Api.post<{ success: boolean; message: string }>('/individual-players/purchase', data);
   }

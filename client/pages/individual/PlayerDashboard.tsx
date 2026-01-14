@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PlayerApi, PlayerProfile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
+import PlayerPaymentMethodSelector from "@/components/PlayerPaymentMethodSelector";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,6 +98,7 @@ const getBase64ImageFromURL = (url: string): Promise<string> => {
 export default function PlayerDashboard() {
   const { session, logout } = useAuth();
   usePageTitle("Player Dashboard");
+  const [searchParams, setSearchParams] = useSearchParams();
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -110,18 +112,67 @@ export default function PlayerDashboard() {
   // Form State
   const [formData, setFormData] = useState<Partial<PlayerProfile>>({});
 
-  // Plan Selection State (Mocked for now)
+  // Subscription State
   const [currentPlan, setCurrentPlan] = useState<string | null>(null);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+  const [selectedPlanForPurchase, setSelectedPlanForPurchase] = useState<any | null>(null);
 
   useEffect(() => {
     fetchProfile();
+    fetchPlans();
+    checkPaymentStatus();
   }, []);
+
+  const fetchPlans = async () => {
+    try {
+      const response = await PlayerApi.getPlans();
+      if (response.success && response.data) {
+        setPlans(response.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch plans", error);
+    }
+  };
+
+  const checkPaymentStatus = async () => {
+    const paymentSuccess = searchParams.get('payment_success');
+    const sessionId = searchParams.get('session_id');
+    const paymentCancelled = searchParams.get('payment_cancelled');
+
+    if (paymentSuccess === 'true' && sessionId) {
+      try {
+        await PlayerApi.verifyPayment(sessionId);
+        toast.success("Subscription activated successfully!");
+        // Refresh profile to get updated plan status
+        fetchProfile();
+        // Clean up URL
+        setSearchParams(prev => {
+          prev.delete('payment_success');
+          prev.delete('session_id');
+          return prev;
+        });
+      } catch (error) {
+        console.error("Payment verification failed", error);
+        toast.error("Failed to verify payment. Please contact support.");
+      }
+    } else if (paymentCancelled === 'true') {
+      toast.info("Payment cancelled.");
+      setSearchParams(prev => {
+        prev.delete('payment_cancelled');
+        return prev;
+      });
+    }
+  };
 
   const fetchProfile = async () => {
     try {
       const data = await PlayerApi.getProfile();
       setProfile(data);
       setFormData(data);
+      if (data.active_plan) {
+        setCurrentPlan(data.active_plan);
+      }
     } catch (error) {
       console.error("Failed to fetch profile", error);
     } finally {
@@ -161,19 +212,9 @@ export default function PlayerDashboard() {
     }
   };
 
-  const handlePurchase = async (planType: string, amount: number) => {
-    try {
-      await PlayerApi.purchasePlan({ planType, amount });
-      setCurrentPlan(planType);
-      toast.success(`Successfully purchased ${planType} plan!`);
-      // Automatically switch to share tab after purchase if applicable
-      if (planType !== 'basic') {
-        setActiveTab('share');
-      }
-    } catch (error) {
-      console.error("Purchase failed", error);
-      toast.error("Purchase failed");
-    }
+  const openPaymentModal = (plan: any) => {
+    setSelectedPlanForPurchase(plan);
+    setIsPaymentModalOpen(true);
   };
 
   const generatePDF = async () => {
@@ -752,10 +793,22 @@ export default function PlayerDashboard() {
                         <CreditCard className="h-4 w-4 text-muted-foreground" />
                       </CardHeader>
                       <CardContent>
-                        <div className="text-2xl font-bold">{currentPlan ? currentPlan.toUpperCase() : "Free"}</div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {currentPlan ? "Active subscription" : "No active plan"}
+                        <div className="text-2xl font-bold">
+                          {currentPlan === 'pro' ? "Pro Plan Active" : "Free Plan"}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1 mb-4">
+                          {currentPlan === 'pro' 
+                            ? "You have full access to all features." 
+                            : "Upgrade to Pro for unlimited updates and more."}
                         </p>
+                        {currentPlan !== 'pro' && (
+                          <Button 
+                            onClick={() => openPaymentModal(plans[0] || { id: 'pro', name: 'Pro Plan', price: 20 })} 
+                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
+                          >
+                            Upgrade for ${plans[0]?.price || 20}
+                          </Button>
+                        )}
                       </CardContent>
                     </Card>
                   </div>
@@ -1380,6 +1433,15 @@ export default function PlayerDashboard() {
           </div>
         </main>
       </div >
+
+      <PlayerPaymentMethodSelector
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        selectedPlan={selectedPlanForPurchase}
+        onSuccess={() => {
+          setIsPaymentModalOpen(false);
+        }}
+      />
     </div >
   );
 }

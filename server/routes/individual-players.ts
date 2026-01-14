@@ -3,9 +3,150 @@ import { v4 as uuidv4 } from 'uuid';
 import jwt from 'jsonwebtoken';
 import { query, hashPassword, verifyPassword } from '../lib/db.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { getStripe, createStripeCustomer } from '../lib/stripe.js';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+const PRO_PLAN = {
+  id: 'pro',
+  name: 'Pro Plan',
+  description: 'One-time payment for full access',
+  price: 20,
+  currency: 'USD',
+  billingCycle: 'one-time',
+  features: [
+    'Unlimited profile updates',
+    'Video highlights upload',
+    'Direct messaging with scouts',
+    'Priority support',
+    'Verified player badge'
+  ],
+  isFree: false,
+  isActive: true
+};
+
+// Get Player Plans
+router.get('/plans', (req, res) => {
+  res.json({
+    success: true,
+    data: [PRO_PLAN]
+  });
+});
+
+// Create Checkout Session
+router.post('/create-checkout-session', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { planId, successUrl, cancelUrl } = req.body;
+
+    if (planId !== 'pro') {
+      return res.status(400).json({ error: 'Invalid plan ID' });
+    }
+
+    // Get player details
+    const playerResult = await query(
+      'SELECT email, first_name, last_name, stripe_customer_id FROM individual_players WHERE id = $1',
+      [userId]
+    );
+
+    if (playerResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Player not found' });
+    }
+
+    const player = playerResult.rows[0];
+    let customerId = player.stripe_customer_id;
+
+    // Create Stripe customer if needed
+    if (!customerId) {
+      const customer = await createStripeCustomer(
+        player.email,
+        `${player.first_name} ${player.last_name}`,
+        { playerId: userId }
+      );
+      customerId = customer.id;
+
+      await query(
+        'UPDATE individual_players SET stripe_customer_id = $1 WHERE id = $2',
+        [customerId, userId]
+      );
+    }
+
+    const stripe = getStripe();
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: PRO_PLAN.name,
+              description: PRO_PLAN.description,
+            },
+            unit_amount: PRO_PLAN.price * 100,
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      metadata: {
+        playerId: userId,
+        planId: planId,
+        type: 'player_subscription'
+      }
+    });
+
+    res.json({
+      success: true,
+      url: session.url,
+      sessionId: session.id
+    });
+
+  } catch (error: any) {
+    console.error('Create checkout session error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Verify Payment
+router.post('/verify-payment', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).user.id;
+    const { sessionId } = req.body;
+
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Session ID is required' });
+    }
+
+    const stripe = getStripe();
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status === 'paid') {
+      const planId = session.metadata?.planId || 'pro';
+      const amount = session.amount_total ? session.amount_total / 100 : 0;
+
+      // Record purchase
+      await query(
+        `INSERT INTO player_purchases (player_id, plan_type, amount, status, stripe_session_id, created_at)
+         VALUES ($1, $2, $3, 'completed', $4, NOW())
+         ON CONFLICT (stripe_session_id) DO NOTHING`,
+        [userId, planId, amount, sessionId]
+      );
+      
+      res.json({ success: true, message: 'Payment verified and subscription activated' });
+    } else {
+      res.status(400).json({ error: 'Payment not completed' });
+    }
+
+  } catch (error: any) {
+    console.error('Verify payment error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 
 // Register a new individual player
 router.post('/register', async (req, res) => {
