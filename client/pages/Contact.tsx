@@ -8,10 +8,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { useTranslation } from '@/lib/i18n';
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function Contact() {
     const { toast } = useToast();
     const { t, dir } = useTranslation();
+    usePageTitle("Contact Us");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
@@ -71,45 +73,45 @@ export default function Contact() {
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div className="space-y-2">
                                             <Label htmlFor="name">{t('contact.form.name')}</Label>
-                                            <Input 
-                                                id="name" 
-                                                placeholder={t('contact.form.namePlaceholder')} 
+                                            <Input
+                                                id="name"
+                                                placeholder={t('contact.form.namePlaceholder')}
                                                 value={formData.name}
-                                                onChange={(e) => setFormData({...formData, name: e.target.value})}
-                                                required 
+                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                required
                                             />
                                         </div>
                                         <div className="space-y-2">
                                             <Label htmlFor="email">{t('contact.form.email')}</Label>
-                                            <Input 
-                                                id="email" 
-                                                type="email" 
-                                                placeholder={t('contact.form.emailPlaceholder')} 
+                                            <Input
+                                                id="email"
+                                                type="email"
+                                                placeholder={t('contact.form.emailPlaceholder')}
                                                 value={formData.email}
-                                                onChange={(e) => setFormData({...formData, email: e.target.value})}
-                                                required 
+                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                required
                                             />
                                         </div>
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="subject">{t('contact.form.subject')}</Label>
-                                        <Input 
-                                            id="subject" 
-                                            placeholder={t('contact.form.subjectPlaceholder')} 
+                                        <Input
+                                            id="subject"
+                                            placeholder={t('contact.form.subjectPlaceholder')}
                                             value={formData.subject}
-                                            onChange={(e) => setFormData({...formData, subject: e.target.value})}
-                                            required 
+                                            onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                                            required
                                         />
                                     </div>
                                     <div className="space-y-2">
                                         <Label htmlFor="message">{t('contact.form.message')}</Label>
-                                        <Textarea 
-                                            id="message" 
-                                            placeholder={t('contact.form.messagePlaceholder')} 
+                                        <Textarea
+                                            id="message"
+                                            placeholder={t('contact.form.messagePlaceholder')}
                                             rows={5}
                                             value={formData.message}
-                                            onChange={(e) => setFormData({...formData, message: e.target.value})}
-                                            required 
+                                            onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                                            required
                                         />
                                     </div>
                                     <Button type="submit" className="w-full bg-[#005391] hover:bg-[#004275]" disabled={isSubmitting}>

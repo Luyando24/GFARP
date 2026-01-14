@@ -1278,6 +1278,14 @@ export interface PlayerProfile {
   career_history?: string;
   honours?: string;
   education?: string;
+  contact_email?: string;
+  whatsapp_number?: string;
+  social_links?: {
+    instagram?: string;
+    twitter?: string;
+    linkedin?: string;
+    facebook?: string;
+  };
   email?: string; // joined fields
   first_name?: string; // joined fields
   last_name?: string; // joined fields

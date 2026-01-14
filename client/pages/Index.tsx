@@ -11,6 +11,7 @@ import { useTranslation } from '@/lib/i18n';
 
 import Chatbot from '@/components/Landing/Chatbot';
 import DemoModal from '@/components/Landing/DemoModal';
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 
 const faqData = [];
@@ -20,16 +21,17 @@ export default function Index() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const { t, dir } = useTranslation();
+  usePageTitle("Home");
 
   const faqItems = [
     {
-        question: t('landing.faq.q1'),
-        answer: (
-            <div className="space-y-2">
-                <p><strong>{t('landing.faq.a1').split('|')[0]}</strong> {t('landing.faq.a1').split('|')[1]}</p>
-                <p><strong>{t('landing.faq.a1').split('|')[2]}</strong> {t('landing.faq.a1').split('|')[3]}</p>
-            </div>
-        )
+      question: t('landing.faq.q1'),
+      answer: (
+        <div className="space-y-2">
+          <p><strong>{t('landing.faq.a1').split('|')[0]}</strong> {t('landing.faq.a1').split('|')[1]}</p>
+          <p><strong>{t('landing.faq.a1').split('|')[2]}</strong> {t('landing.faq.a1').split('|')[3]}</p>
+        </div>
+      )
     },
     { question: t('landing.faq.q2'), answer: t('landing.faq.a2') },
     { question: t('landing.faq.q3'), answer: t('landing.faq.a3') },
@@ -162,7 +164,7 @@ export default function Index() {
   const renderPricingCard = (tier: any) => {
     const Icon = tier.icon;
     const CTAIcon = tier.ctaIcon;
-    
+
     return (
       <div className={`group relative bg-white/95 backdrop-blur-sm rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 border-2 h-full flex flex-col ${tier.styles.card}`}>
         {/* Highlight Badge */}
@@ -955,23 +957,23 @@ export default function Index() {
       {/* FAQ Section */}
       <section className="py-20 bg-slate-50 dark:bg-slate-800">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="text-center mb-12">
-                <h2 className="text-3xl font-black text-[#001a33] dark:text-white mb-4">{t('landing.faq.title')}</h2>
-                <p className="text-xl text-gray-600 dark:text-gray-300">{t('landing.faq.subtitle')}</p>
-            </div>
-            
-            <Accordion type="single" collapsible className="w-full bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6">
-                {faqItems.map((faq, index) => (
-                    <AccordionItem key={index} value={`item-${index}`} className="border-b border-slate-200 dark:border-slate-700 last:border-0">
-                        <AccordionTrigger className="text-left font-bold text-lg py-4 hover:no-underline hover:text-[#005391] dark:hover:text-blue-400 transition-colors">
-                            {faq.question}
-                        </AccordionTrigger>
-                        <AccordionContent className="text-slate-600 dark:text-slate-300 text-base leading-relaxed pb-4">
-                            {faq.answer}
-                        </AccordionContent>
-                    </AccordionItem>
-                ))}
-            </Accordion>
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-black text-[#001a33] dark:text-white mb-4">{t('landing.faq.title')}</h2>
+            <p className="text-xl text-gray-600 dark:text-gray-300">{t('landing.faq.subtitle')}</p>
+          </div>
+
+          <Accordion type="single" collapsible className="w-full bg-white dark:bg-slate-900 rounded-xl shadow-lg p-6">
+            {faqItems.map((faq, index) => (
+              <AccordionItem key={index} value={`item-${index}`} className="border-b border-slate-200 dark:border-slate-700 last:border-0">
+                <AccordionTrigger className="text-left font-bold text-lg py-4 hover:no-underline hover:text-[#005391] dark:hover:text-blue-400 transition-colors">
+                  {faq.question}
+                </AccordionTrigger>
+                <AccordionContent className="text-slate-600 dark:text-slate-300 text-base leading-relaxed pb-4">
+                  {faq.answer}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
         </div>
       </section>
 

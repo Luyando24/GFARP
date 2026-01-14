@@ -7,8 +7,10 @@ import { saveSession } from "@/lib/auth";
 import { useNavigate, Link } from "react-router-dom";
 import { User, ArrowLeft, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function PlayerRegister() {
+  usePageTitle("Player Registration");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -23,26 +25,26 @@ export default function PlayerRegister() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-    
+
     try {
       if (password !== confirmPassword) {
         throw new Error("Passwords do not match");
       }
-      
+
       const res = await PlayerApi.register({
         firstName,
         lastName,
         email,
         password,
       });
-      
+
       saveSession({
         userId: res.user.id,
         role: "individual_player",
         schoolId: null,
         tokens: { accessToken: res.token, expiresInSec: 86400 },
       });
-      
+
       navigate("/player/dashboard");
     } catch (e: any) {
       const errorMessage = String(e?.message || e);
@@ -61,8 +63,8 @@ export default function PlayerRegister() {
         <div className="absolute bottom-32 left-1/4 w-16 h-16 border-2 border-white rounded-full"></div>
       </div>
 
-      <Link 
-        to="/" 
+      <Link
+        to="/"
         className="absolute top-6 left-6 flex items-center gap-2 text-white hover:text-yellow-300 transition-colors duration-200 z-10"
       >
         <ArrowLeft className="h-5 w-5" />
@@ -101,7 +103,7 @@ export default function PlayerRegister() {
                 />
               </div>
             </div>
-            
+
             <div className="space-y-2">
               <Input
                 type="email"
@@ -111,7 +113,7 @@ export default function PlayerRegister() {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Input
                 type="password"
@@ -121,7 +123,7 @@ export default function PlayerRegister() {
                 required
               />
             </div>
-            
+
             <div className="space-y-2">
               <Input
                 type="password"
@@ -142,7 +144,7 @@ export default function PlayerRegister() {
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Create Account
             </Button>
-            
+
             <div className="text-center text-sm text-gray-500 mt-4">
               Already have an account?{" "}
               <Link to="/player/login" className="text-blue-600 hover:underline font-medium">

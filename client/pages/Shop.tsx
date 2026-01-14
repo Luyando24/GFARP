@@ -3,9 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { useState } from 'react';
 import { useTranslation } from '@/lib/i18n';
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function Shop() {
   const { t, dir } = useTranslation();
+  usePageTitle("Shop");
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -95,8 +97,8 @@ export default function Shop() {
     return badge;
   };
 
-  const filteredProducts = selectedCategory === 'all' 
-    ? products 
+  const filteredProducts = selectedCategory === 'all'
+    ? products
     : products.filter(product => product.category === selectedCategory);
 
   return (
@@ -122,7 +124,7 @@ export default function Shop() {
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-0 left-0 w-full h-full bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23ffffff%22%20fill-opacity%3D%220.1%22%3E%3Ccircle%20cx%3D%2230%22%20cy%3D%2230%22%20r%3D%222%22/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')]"></div>
           </div>
-          
+
           <div className="px-2 relative">
             <div className="flex items-center justify-between py-3">
               {/* Left side - Hamburger Menu */}
@@ -130,7 +132,7 @@ export default function Shop() {
                 <Button variant="ghost" onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-2 text-white hover:bg-white/20 rounded-lg">
                   <Menu className="h-6 w-6" />
                 </Button>
-                
+
                 {/* Soccer Circular Logo */}
                 <Link to="/" className="flex items-center gap-3 group">
                   <div className="relative">
@@ -148,7 +150,7 @@ export default function Shop() {
                   </div>
                 </Link>
               </div>
-              
+
               {/* Center - Desktop Navigation */}
               <nav className={`hidden lg:flex items-center gap-1 transition-all duration-300 ${isMenuOpen ? 'opacity-100' : 'opacity-100'}`}>
                 {[
@@ -158,9 +160,9 @@ export default function Shop() {
                   { href: "/#pricing", label: t('nav.pricing') },
                   { href: "/shop", label: "SHOP" }
                 ].map((item) => (
-                  <Link 
+                  <Link
                     key={item.href}
-                    to={item.href} 
+                    to={item.href}
                     className={`px-3 py-2 text-white font-bold text-xs tracking-wide hover:bg-white/20 rounded-lg transition-all duration-300 hover:scale-105 hover:text-yellow-300 relative group ${item.label === 'SHOP' ? 'text-yellow-300' : ''}`}
                   >
                     {item.label}
@@ -168,7 +170,7 @@ export default function Shop() {
                   </Link>
                 ))}
               </nav>
-            
+
               {/* Right side - Search, Language, User */}
               <div className="flex items-center gap-3">
                 <Link to="/shop">
@@ -185,45 +187,45 @@ export default function Shop() {
                 <Button variant="ghost" className="p-2 text-white hover:bg-white/20 rounded-lg">
                   <User className="h-5 w-5" />
                 </Button>
-                
+
                 {/* Mobile Sign In */}
                 <Button asChild className="bg-white text-[#005391] hover:bg-yellow-400 hover:text-black font-bold px-4 py-2 rounded-full text-sm lg:hidden">
                   <Link to="/academy-registration">{t('nav.getStarted')}</Link>
                 </Button>
               </div>
             </div>
-            
+
             {isMenuOpen && (
               <>
                 {/* Overlay */}
-                <div 
+                <div
                   className="fixed inset-0 bg-black bg-opacity-50 z-40"
                   onClick={() => setIsMenuOpen(false)}
                 />
                 {/* Menu */}
                 <div className="bg-gradient-to-b from-[#005391] to-[#0066b3] border-t-2 border-yellow-400 absolute top-full left-0 w-80 z-50 shadow-2xl">
                   <nav className="flex flex-col gap-2 p-6">
-                  {[
-                    { href: "/", label: "HOME" },
-                    { href: "/#features", label: t('nav.features') },
-                    { href: "/#benefits", label: t('nav.benefits') },
-                    { href: "/#pricing", label: t('nav.pricing') },
-                    { href: "/shop", label: "SHOP" }
-                  ].map((item) => (
-                    <Link 
-                      key={item.href}
-                      to={item.href} 
-                      className={`text-white font-bold py-3 px-4 hover:bg-white/20 rounded-lg transition-all duration-300 hover:text-yellow-300 border-l-4 border-transparent hover:border-yellow-400 ${item.label === 'SHOP' ? 'text-yellow-300 border-yellow-400' : ''}`}
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      {item.label}
-                    </Link>
-                  ))}
-                  <Button asChild className="mt-4 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 font-bold py-3 rounded-full shadow-xl">
-                    <Link to="/academy-registration">{t('nav.register')}</Link>
-                  </Button>
-                </nav>
-              </div>
+                    {[
+                      { href: "/", label: "HOME" },
+                      { href: "/#features", label: t('nav.features') },
+                      { href: "/#benefits", label: t('nav.benefits') },
+                      { href: "/#pricing", label: t('nav.pricing') },
+                      { href: "/shop", label: "SHOP" }
+                    ].map((item) => (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        className={`text-white font-bold py-3 px-4 hover:bg-white/20 rounded-lg transition-all duration-300 hover:text-yellow-300 border-l-4 border-transparent hover:border-yellow-400 ${item.label === 'SHOP' ? 'text-yellow-300 border-yellow-400' : ''}`}
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        {item.label}
+                      </Link>
+                    ))}
+                    <Button asChild className="mt-4 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 font-bold py-3 rounded-full shadow-xl">
+                      <Link to="/academy-registration">{t('nav.register')}</Link>
+                    </Button>
+                  </nav>
+                </div>
               </>
             )}
           </div>
@@ -255,9 +257,9 @@ export default function Shop() {
               />
             </div>
           </div>
-          
+
           <div className="flex gap-4">
-            <select 
+            <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -268,7 +270,7 @@ export default function Shop() {
                 </option>
               ))}
             </select>
-            
+
             <div className="flex border border-gray-300 rounded-lg overflow-hidden">
               <Button
                 variant={viewMode === 'grid' ? 'default' : 'ghost'}
@@ -299,11 +301,10 @@ export default function Shop() {
                   className="w-full h-48 object-cover"
                 />
                 {product.badge && (
-                  <span className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${
-                    product.badge === 'Sale' ? 'bg-red-500 text-white' :
-                    product.badge === 'New' ? 'bg-green-500 text-white' :
-                    'bg-blue-500 text-white'
-                  }`}>
+                  <span className={`absolute top-2 left-2 px-2 py-1 text-xs font-bold rounded ${product.badge === 'Sale' ? 'bg-red-500 text-white' :
+                      product.badge === 'New' ? 'bg-green-500 text-white' :
+                        'bg-blue-500 text-white'
+                    }`}>
                     {getBadgeTranslation(product.badge)}
                   </span>
                 )}
@@ -316,31 +317,30 @@ export default function Shop() {
                   </Button>
                 </div>
               </div>
-              
+
               <div className="p-4">
                 <h3 className="font-semibold text-lg mb-2">{product.name}</h3>
-                
+
                 <div className="flex items-center gap-2 mb-2">
                   <div className="flex items-center">
                     {[...Array(5)].map((_, i) => (
                       <Star
                         key={i}
-                        className={`h-4 w-4 ${
-                          i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'
-                        }`}
+                        className={`h-4 w-4 ${i < Math.floor(product.rating) ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                          }`}
                       />
                     ))}
                   </div>
                   <span className="text-sm text-gray-600">({product.reviews})</span>
                 </div>
-                
+
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-xl font-bold text-[#005391]">${product.price}</span>
                   {product.originalPrice && (
                     <span className="text-sm text-gray-500 line-through">${product.originalPrice}</span>
                   )}
                 </div>
-                
+
                 <Button className="w-full bg-[#005391] hover:bg-[#004080] text-white">
                   <ShoppingCart className="h-4 w-4 mr-2" />
                   Add to Cart
@@ -359,7 +359,7 @@ export default function Shop() {
             <h3 className="font-semibold mb-2">Free Shipping</h3>
             <p className="text-gray-600 text-sm">On orders over $50</p>
           </div>
-          
+
           <div className="text-center p-6">
             <div className="w-12 h-12 bg-[#005391] rounded-full flex items-center justify-center mx-auto mb-4">
               <Shield className="h-6 w-6 text-white" />
@@ -367,7 +367,7 @@ export default function Shop() {
             <h3 className="font-semibold mb-2">Quality Guarantee</h3>
             <p className="text-gray-600 text-sm">30-day return policy</p>
           </div>
-          
+
           <div className="text-center p-6">
             <div className="w-12 h-12 bg-[#005391] rounded-full flex items-center justify-center mx-auto mb-4">
               <CreditCard className="h-6 w-6 text-white" />
@@ -375,7 +375,7 @@ export default function Shop() {
             <h3 className="font-semibold mb-2">Secure Payment</h3>
             <p className="text-gray-600 text-sm">SSL encrypted checkout</p>
           </div>
-          
+
           <div className="text-center p-6">
             <div className="w-12 h-12 bg-[#005391] rounded-full flex items-center justify-center mx-auto mb-4">
               <Package className="h-6 w-6 text-white" />

@@ -126,6 +126,7 @@ import { NotificationsPopover } from '@/components/navigation/NotificationsPopov
 import BlogManagement from '@/components/admin/BlogManagement';
 import SalesAgentsManager from '@/components/admin/SalesAgentsManager';
 import DiscountManager from '@/components/admin/DiscountManager';
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 // Real admin data will be fetched from API
 
@@ -210,6 +211,7 @@ interface ComplianceRecord {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  usePageTitle("Admin Panel");
   const { session } = useAuth();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -219,9 +221,9 @@ export default function AdminDashboard() {
   const [users, setUsers] = useState<any[]>([]);
   const [complianceRecords, setComplianceRecords] = useState<ComplianceRecord[]>([]);
   const [viewingCompliance, setViewingCompliance] = useState<ComplianceRecord | null>(null);
-  
+
   // Duplicate declarations removed from here
-  
+
   // System stats state - will be fetched from API
   const [systemStats, setSystemStats] = useState({
     totalAcademies: 0,
@@ -246,11 +248,11 @@ export default function AdminDashboard() {
   const fetchComplianceDocuments = async () => {
     try {
       setIsComplianceLoading(true);
-      
+
       // Fetch documents
       const docsResponse = await fetch('/api/compliance-documents/admin-list');
       const docsResult = await docsResponse.json();
-      
+
       if (docsResult.success) {
         setComplianceDocuments(docsResult.data);
       } else {
@@ -268,7 +270,7 @@ export default function AdminDashboard() {
       if (statsResult.success) {
         setComplianceStats(statsResult.data);
       }
-      
+
     } catch (error) {
       console.error('Error fetching compliance data:', error);
       toast({
@@ -298,14 +300,14 @@ export default function AdminDashboard() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ 
-          documentId, 
+        body: JSON.stringify({
+          documentId,
           status: newStatus,
-          rejectionReason: reason 
+          rejectionReason: reason
         }),
       });
       const result = await response.json();
-      
+
       if (result.success) {
         toast({
           title: "Success",
@@ -1717,16 +1719,16 @@ export default function AdminDashboard() {
                                 <p className="text-xs mt-1">{doc.document_name}</p>
                               </TableCell>
                               <TableCell>
-                                <Badge 
+                                <Badge
                                   variant={
-                                    doc.status === 'verified' ? 'default' : 
-                                    doc.status === 'rejected' ? 'destructive' : 
-                                    'secondary'
+                                    doc.status === 'verified' ? 'default' :
+                                      doc.status === 'rejected' ? 'destructive' :
+                                        'secondary'
                                   }
                                 >
-                                  {doc.status === 'verified' ? 'Approved' : 
-                                   doc.status === 'rejected' ? 'Rejected' : 
-                                   'Pending'}
+                                  {doc.status === 'verified' ? 'Approved' :
+                                    doc.status === 'rejected' ? 'Rejected' :
+                                      'Pending'}
                                 </Badge>
                               </TableCell>
                               <TableCell>
@@ -1744,9 +1746,9 @@ export default function AdminDashboard() {
                                       </Button>
                                     </a>
                                   )}
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     className="text-green-600 hover:text-green-700 hover:bg-green-50"
                                     onClick={() => handleUpdateDocumentStatus(doc.id, 'verified')}
                                     disabled={doc.status === 'verified'}
@@ -1754,9 +1756,9 @@ export default function AdminDashboard() {
                                   >
                                     <CheckCircle className="h-4 w-4" />
                                   </Button>
-                                  <Button 
-                                    variant="ghost" 
-                                    size="sm" 
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
                                     className="text-red-600 hover:text-red-700 hover:bg-red-50"
                                     onClick={() => handleUpdateDocumentStatus(doc.id, 'rejected')}
                                     disabled={doc.status === 'rejected'}
@@ -2030,8 +2032,8 @@ export default function AdminDashboard() {
                                 </Badge>
                               </TableCell>
                               <TableCell>
-                                <Button 
-                                  variant="ghost" 
+                                <Button
+                                  variant="ghost"
                                   size="sm"
                                   onClick={() => setViewingTransaction(tx)}
                                 >
@@ -2146,7 +2148,7 @@ export default function AdminDashboard() {
                         </Select>
                       </div>
                     </div>
-                    
+
                     <div className="pt-4 border-t mt-4">
                       <div className="flex items-center justify-between">
                         <div className="space-y-0.5">
@@ -2155,9 +2157,9 @@ export default function AdminDashboard() {
                             Enable to restrict access during maintenance
                           </p>
                         </div>
-                        <Button 
-                          variant="outline" 
-                          size="sm" 
+                        <Button
+                          variant="outline"
+                          size="sm"
                           onClick={() => handleSystemSettingsChange('general', 'maintenanceMode', !systemSettings.general.maintenanceMode)}
                           className={systemSettings.general.maintenanceMode ? "border-green-500 text-green-600" : ""}
                         >
@@ -3523,7 +3525,7 @@ export default function AdminDashboard() {
                   </Badge>
                 </div>
               </div>
-              
+
               <div className="pt-4 border-t">
                 <Label className="text-sm font-medium text-muted-foreground">Transaction ID</Label>
                 <p className="font-mono text-xs bg-muted p-2 rounded mt-1 break-all">{viewingTransaction.id}</p>

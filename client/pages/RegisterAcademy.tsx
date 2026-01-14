@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '../hooks/use-toast';
 import { saveSession } from '@/lib/auth';
 import { useTranslation } from '@/lib/i18n';
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface FormData {
   email: string;
@@ -23,6 +24,7 @@ const initialFormData: FormData = {
 
 export default function RegisterAcademy() {
   const { t, dir } = useTranslation();
+  usePageTitle("Academy Registration");
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -86,31 +88,31 @@ export default function RegisterAcademy() {
       if (data.success) {
         // If registration requires verification (it should now), redirect to login or a pending page
         // But we also want to clear any existing session to force new login after verification
-        
+
         if (data.data.requireVerification) {
-           toast({ 
-             title: t('auth.success.title'), 
-             description: t('auth.success.verifyEmail'),
-             duration: 6000 
-           });
-           // Clear any potential session data
-           localStorage.removeItem('academy_data');
-           localStorage.removeItem('isNewRegistration');
-           // Redirect to verification pending page
-           navigate('/verification-pending', { state: { email: formData.email } });
+          toast({
+            title: t('auth.success.title'),
+            description: t('auth.success.verifyEmail'),
+            duration: 6000
+          });
+          // Clear any potential session data
+          localStorage.removeItem('academy_data');
+          localStorage.removeItem('isNewRegistration');
+          // Redirect to verification pending page
+          navigate('/verification-pending', { state: { email: formData.email } });
         } else {
-           // Fallback for old flow (should not happen if API is updated correctly)
-           const session = {
-             userId: data.data.academy.id,
-             role: 'academy' as const,
-             schoolId: data.data.academy.id,
-             tokens: { accessToken: data.data.token, expiresInSec: 24 * 3600 }
-           };
-           localStorage.setItem('academy_data', JSON.stringify(data.data.academy));
-           localStorage.setItem('isNewRegistration', 'true');
-           saveSession(session);
-           toast({ title: t('auth.success.title'), description: t('auth.success.desc') });
-           navigate('/complete-profile');
+          // Fallback for old flow (should not happen if API is updated correctly)
+          const session = {
+            userId: data.data.academy.id,
+            role: 'academy' as const,
+            schoolId: data.data.academy.id,
+            tokens: { accessToken: data.data.token, expiresInSec: 24 * 3600 }
+          };
+          localStorage.setItem('academy_data', JSON.stringify(data.data.academy));
+          localStorage.setItem('isNewRegistration', 'true');
+          saveSession(session);
+          toast({ title: t('auth.success.title'), description: t('auth.success.desc') });
+          navigate('/complete-profile');
         }
       } else {
         throw new Error(data.message || t('common.error'));
@@ -221,14 +223,14 @@ export default function RegisterAcademy() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-700" htmlFor="referralCode">{t('auth.label.referralCode', 'Referral code')}</label>
+                  <label className="text-sm font-medium text-gray-700" htmlFor="referralCode">{t('auth.label.referralCode')}</label>
                   <input
                     id="referralCode"
                     type="text"
                     value={formData.referralCode || ''}
                     onChange={(e) => handleInputChange('referralCode', e.target.value)}
                     className={`w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-[#005391] focus:outline-none ${isReferralLocked ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''}`}
-                    placeholder={t('auth.placeholder.referralCode', 'Enter code if you have one')}
+                    placeholder={t('auth.placeholder.referralCode')}
                     disabled={isReferralLocked}
                   />
                 </div>

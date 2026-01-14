@@ -3,10 +3,10 @@ import { User, Search, GraduationCap, LogOut, Bell, Settings, Menu, X } from 'lu
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuLabel, 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuItem
@@ -82,15 +82,21 @@ export default function DashboardLayout({
                 <div>
                   <h1 className="text-xl font-bold text-gray-900">SOFWAN</h1>
                   <p className="text-xs text-gray-500 leading-tight">
-                    Football Academy Management
+                    Professional Academy Management
                   </p>
                 </div>
               </div>
             </div>
-            
-            {/* Breadcrumb Navigation */}
-            <div className="hidden md:block">
+
+            {/* Breadcrumb Navigation - Use title if provided */}
+            <div className="hidden md:flex items-center gap-4">
               <Breadcrumb />
+              {title && (
+                <>
+                  <div className="h-4 w-px bg-gray-200 mx-2" />
+                  <h2 className="text-sm font-semibold text-gray-600">{title}</h2>
+                </>
+              )}
             </div>
           </div>
 
@@ -120,8 +126,8 @@ export default function DashboardLayout({
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
                   <Bell className="h-5 w-5" />
-                  <Badge 
-                    variant="destructive" 
+                  <Badge
+                    variant="destructive"
                     className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
                   >
                     3
@@ -207,14 +213,14 @@ export default function DashboardLayout({
       <div className="flex h-[calc(100vh-73px)]">
         {/* Sidebar */}
         {isAdmin ? (
-          <AdminSidebar 
-            collapsed={sidebarCollapsed} 
-            onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
+          <AdminSidebar
+            collapsed={sidebarCollapsed}
+            onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
           />
         ) : (
           <SchoolSidebar activeTab={activeTab} onAddStudent={onAddStudent} studentCount={studentCount} teacherCount={teacherCount} classCount={classCount} />
         )}
-        
+
         {/* Main Content Area */}
         <div className="flex-1 overflow-auto">
           <div className="p-6">

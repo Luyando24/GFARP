@@ -14,13 +14,13 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from '../components/ui/label';
 import { useToast } from '../hooks/use-toast';
 import { Progress } from '../components/ui/progress';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow
 } from '../components/ui/table';
 import {
   DropdownMenu,
@@ -30,12 +30,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu';
-import { 
-  Database, 
-  Download, 
-  Upload, 
-  RefreshCw, 
-  Activity, 
+import {
+  Database,
+  Download,
+  Upload,
+  RefreshCw,
+  Activity,
   HardDrive,
   Clock,
   Users,
@@ -59,6 +59,7 @@ import {
   Gauge
 } from 'lucide-react';
 import { Api } from '@/lib/api';
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 // Interfaces
 interface DatabaseStats {
@@ -119,18 +120,19 @@ const DatabaseManagement = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  usePageTitle("Database Management");
 
   // State
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  
+
   // Database data
   const [databaseStats, setDatabaseStats] = useState<DatabaseStats | null>(null);
   const [tables, setTables] = useState<TableInfo[]>([]);
   const [backups, setBackups] = useState<BackupInfo[]>([]);
   const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetrics | null>(null);
-  
+
   // UI state
   const [selectedTable, setSelectedTable] = useState<string>('');
   const [backupDescription, setBackupDescription] = useState('');
@@ -150,7 +152,7 @@ const DatabaseManagement = () => {
   const loadDatabaseData = async () => {
     try {
       setLoading(true);
-      
+
       // Load all database information
       const [statsResponse, tablesResponse, backupsResponse, performanceResponse] = await Promise.allSettled([
         Api.get<DatabaseStats>('/database/stats'),
@@ -190,7 +192,7 @@ const DatabaseManagement = () => {
   const handleCreateBackup = async () => {
     try {
       setIsCreatingBackup(true);
-      
+
       const response = await Api.post('/database/backup', {
         type: 'manual',
         description: backupDescription || 'Manual backup'
@@ -219,7 +221,7 @@ const DatabaseManagement = () => {
   const handleOptimizeDatabase = async () => {
     try {
       setIsOptimizing(true);
-      
+
       const response = await Api.post('/database/optimize');
 
       if (response.success) {
@@ -278,11 +280,11 @@ const DatabaseManagement = () => {
 
   return (
     <div className="flex h-screen bg-background">
-      <AdminSidebar 
-        collapsed={sidebarCollapsed} 
-        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)} 
+      <AdminSidebar
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
       />
-      
+
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="bg-card border-b px-6 py-4 flex items-center justify-between">
@@ -300,7 +302,7 @@ const DatabaseManagement = () => {
               <p className="text-muted-foreground">Monitor and manage your database</p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-4">
             <ThemeToggle />
             <DropdownMenu>
@@ -490,7 +492,7 @@ const DatabaseManagement = () => {
                         onChange={(e) => setBackupDescription(e.target.value)}
                       />
                     </div>
-                    <Button 
+                    <Button
                       onClick={handleCreateBackup}
                       disabled={isCreatingBackup}
                     >
@@ -527,10 +529,10 @@ const DatabaseManagement = () => {
                           </TableCell>
                           <TableCell>{formatFileSize(backup.size_mb)}</TableCell>
                           <TableCell>
-                            <Badge 
+                            <Badge
                               variant={
                                 backup.status === 'completed' ? 'default' :
-                                backup.status === 'failed' ? 'destructive' : 'secondary'
+                                  backup.status === 'failed' ? 'destructive' : 'secondary'
                               }
                             >
                               {backup.status === 'completed' && <CheckCircle className="h-3 w-3 mr-1" />}
@@ -647,7 +649,7 @@ const DatabaseManagement = () => {
                     <p className="text-sm text-muted-foreground">
                       Run VACUUM and ANALYZE on all tables to optimize performance and update statistics.
                     </p>
-                    <Button 
+                    <Button
                       onClick={handleOptimizeDatabase}
                       disabled={isOptimizing}
                       className="w-full"

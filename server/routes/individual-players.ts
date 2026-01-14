@@ -166,7 +166,10 @@ router.put('/profile', authenticateToken, async (req, res) => {
       cover_image_url,
       career_history,
       honours,
-      education
+      education,
+      contact_email,
+      whatsapp_number,
+      social_links
     } = req.body;
 
     // Sanitize numeric fields to prevent Postgres cast errors from empty strings
@@ -187,9 +190,12 @@ router.put('/profile', authenticateToken, async (req, res) => {
         ADD COLUMN IF NOT EXISTS weight NUMERIC,
         ADD COLUMN IF NOT EXISTS preferred_foot VARCHAR(50),
         ADD COLUMN IF NOT EXISTS cover_image_url TEXT,
-        ADD COLUMN IF NOT EXISTS career_history TEXT,
+         ADD COLUMN IF NOT EXISTS career_history TEXT,
         ADD COLUMN IF NOT EXISTS honours TEXT,
-        ADD COLUMN IF NOT EXISTS education TEXT;
+        ADD COLUMN IF NOT EXISTS education TEXT,
+        ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255),
+        ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(50),
+        ADD COLUMN IF NOT EXISTS social_links JSONB;
         
         -- Also ensure profile_image_url is TEXT
         ALTER TABLE player_profiles 
@@ -204,10 +210,11 @@ router.put('/profile', authenticateToken, async (req, res) => {
              current_club = $5, video_links = $6, transfermarket_link = $7, 
              bio = $8, profile_image_url = $9, gallery_images = $10, 
              height = $11, weight = $12, preferred_foot = $13,
-             cover_image_url = $14, career_history = $15, 
+              cover_image_url = $14, career_history = $15, 
              honours = $16, education = $17,
+             contact_email = $18, whatsapp_number = $19, social_links = $20,
              updated_at = NOW()
-         WHERE player_id = $18`,
+         WHERE player_id = $21`,
         [
           display_name,
           sanitizedAge,
@@ -226,6 +233,9 @@ router.put('/profile', authenticateToken, async (req, res) => {
           career_history,
           honours,
           education,
+          contact_email,
+          whatsapp_number,
+          social_links,
           userId
         ]
       );
@@ -240,10 +250,11 @@ router.put('/profile', authenticateToken, async (req, res) => {
                current_club = $5, video_links = $6, transfermarket_link = $7, 
                bio = $8, profile_image_url = $9, gallery_images = $10, 
                height = $11, weight = $12, preferred_foot = $13,
-               cover_image_url = $14, career_history = $15, 
-               honours = $16, education = $17,
-               updated_at = NOW()
-           WHERE player_id = $18`,
+                cover_image_url = $14, career_history = $15, 
+                honours = $16, education = $17,
+                contact_email = $18, whatsapp_number = $19, social_links = $20,
+                updated_at = NOW()
+            WHERE player_id = $21`,
           [
             display_name,
             sanitizedAge,
@@ -262,6 +273,9 @@ router.put('/profile', authenticateToken, async (req, res) => {
             career_history,
             honours,
             education,
+            contact_email,
+            whatsapp_number,
+            social_links,
             userId
           ]
         );

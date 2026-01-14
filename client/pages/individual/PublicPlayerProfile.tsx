@@ -4,8 +4,9 @@ import { PlayerProfile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Globe, Video, User, MapPin, Activity, Share2, Image } from "lucide-react";
+import { Loader2, Globe, Video, User, MapPin, Activity, Share2, Image, Mail, MessageCircle, Phone } from "lucide-react";
 import { toast } from "sonner";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 // We need to define the API call here or import it if we make it public in api.ts
 // Since PlayerApi is likely using an axios instance with auth interceptors, we might need a separate call
@@ -17,6 +18,8 @@ export default function PublicPlayerProfile() {
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  usePageTitle(profile ? `${profile.display_name} - Player Profile` : "Player Profile");
 
   useEffect(() => {
     if (id) {
@@ -142,6 +145,15 @@ export default function PublicPlayerProfile() {
                   <Share2 className="h-4 w-4 mr-2" />
                   Share Profile
                 </Button>
+                {(profile.contact_email || profile.whatsapp_number) && (
+                  <Button
+                    onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
+                    className="bg-green-600 hover:bg-green-700 text-white rounded-full px-6 font-bold shadow-xl transition-all hover:scale-105 active:scale-95"
+                  >
+                    <Mail className="h-4 w-4 mr-2" />
+                    Contact Player
+                  </Button>
+                )}
               </div>
             </div>
           </div>
@@ -157,7 +169,8 @@ export default function PublicPlayerProfile() {
               { label: 'Attributes', href: '#attributes' },
               { label: 'Highlights', href: '#highlights' },
               { label: 'Gallery', href: '#gallery' },
-              { label: 'Career', href: '#career' }
+              { label: 'Career', href: '#career' },
+              { label: 'Contact', href: '#contact' }
             ].map(item => (
               <a
                 key={item.href}
@@ -308,6 +321,44 @@ export default function PublicPlayerProfile() {
                 </div>
               </section>
             )}
+
+            {/* Contact Section */}
+            {(profile.contact_email || profile.whatsapp_number) && (
+              <section id="contact" className="space-y-6 pt-12">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-1.5 bg-green-500 rounded-full" />
+                  <h2 className="text-2xl font-black uppercase tracking-tight italic">Scouting Contact</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {profile.contact_email && (
+                    <div className="p-8 bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center text-center group hover:border-green-500/50 transition-colors">
+                      <div className="h-14 w-14 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <Mail className="h-6 w-6 text-green-600" />
+                      </div>
+                      <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Email Address</h3>
+                      <p className="text-lg font-black text-slate-800 dark:text-white mb-6">{profile.contact_email}</p>
+                      <Button asChild className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-2xl">
+                        <a href={`mailto:${profile.contact_email}`}>Send Email</a>
+                      </Button>
+                    </div>
+                  )}
+                  {profile.whatsapp_number && (
+                    <div className="p-8 bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-100 dark:border-slate-800 flex flex-col items-center text-center group hover:border-[#25D366]/50 transition-colors">
+                      <div className="h-14 w-14 bg-green-50 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                        <MessageCircle className="h-6 w-6 text-[#25D366]" />
+                      </div>
+                      <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">WhatsApp</h3>
+                      <p className="text-lg font-black text-slate-800 dark:text-white mb-6">{profile.whatsapp_number}</p>
+                      <Button asChild className="w-full bg-[#25D366] hover:bg-[#128C7E] text-white rounded-2xl">
+                        <a href={`https://wa.me/${profile.whatsapp_number.replace(/\s+/g, '')}`} target="_blank" rel="noopener noreferrer">
+                          Chat on WhatsApp
+                        </a>
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </section>
+            )}
           </div>
 
           {/* Context Sidebar (Right) */}
@@ -363,6 +414,6 @@ export default function PublicPlayerProfile() {
           <p className="text-slate-400 text-xs font-bold tracking-widest uppercase">Connecting Talent With Opportunity Globally</p>
         </div>
       </footer>
-    </div>
+    </div >
   );
 }

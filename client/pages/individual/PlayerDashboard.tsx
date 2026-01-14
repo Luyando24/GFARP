@@ -41,9 +41,11 @@ import { toast } from "sonner";
 import jsPDF from "jspdf";
 import ThemeToggle from "@/components/navigation/ThemeToggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function PlayerDashboard() {
   const { session, logout } = useAuth();
+  usePageTitle("Player Dashboard");
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -678,6 +680,27 @@ export default function PlayerDashboard() {
                             onChange={handleInputChange}
                           />
                         </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="contact_email">Scouting Contact Email</Label>
+                          <Input
+                            id="contact_email"
+                            name="contact_email"
+                            type="email"
+                            value={formData.contact_email || ''}
+                            onChange={handleInputChange}
+                            placeholder="Email for scouts/clubs"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="whatsapp_number">WhatsApp Number</Label>
+                          <Input
+                            id="whatsapp_number"
+                            name="whatsapp_number"
+                            value={formData.whatsapp_number || ''}
+                            onChange={handleInputChange}
+                            placeholder="e.g. +260..."
+                          />
+                        </div>
                       </div>
 
                       <div className="space-y-2">
@@ -1038,7 +1061,7 @@ export default function PlayerDashboard() {
             )}
           </div>
         </main>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 }
