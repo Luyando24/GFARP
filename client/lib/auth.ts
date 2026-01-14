@@ -35,7 +35,7 @@ export function useAuth() {
       window.removeEventListener("auth:changed", onCustom as EventListener);
     };
   }, []);
-  return { session, setSession } as const;
+  return { session, setSession, logout: clearSession } as const;
 }
 
 // Role-based helper functions for Football Academy Management System

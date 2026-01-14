@@ -107,26 +107,26 @@ export default function PublicPlayerProfile({ slug }: { slug?: string }) {
   return (
     <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-950 font-sans text-slate-900 dark:text-slate-100">
       {/* Premium Hero Section */}
-      <div className="relative h-[450px] w-full overflow-hidden bg-slate-900">
+      <div className="relative min-h-[450px] w-full overflow-hidden bg-slate-900 flex items-end">
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-900/60 to-slate-950 z-10" />
         {profile.cover_image_url ? (
           <img
             src={profile.cover_image_url}
             alt="Cover"
-            className="w-full h-full object-cover opacity-60 scale-105"
+            className="absolute inset-0 w-full h-full object-cover opacity-60 scale-105"
           />
         ) : profile.profile_image_url ? (
           <img
             src={profile.profile_image_url}
             alt={profile.display_name}
-            className="w-full h-full object-cover blur-md opacity-40 scale-110"
+            className="absolute inset-0 w-full h-full object-cover blur-md opacity-40 scale-110"
           />
         ) : (
-          <div className="w-full h-full bg-gradient-to-br from-green-600 to-blue-700 opacity-20" />
+          <div className="absolute inset-0 w-full h-full bg-gradient-to-br from-green-600 to-blue-700 opacity-20" />
         )}
 
-        <div className="absolute inset-0 z-20 flex items-end">
-          <div className="container mx-auto px-4 pb-12">
+        <div className="relative z-20 w-full">
+          <div className="container mx-auto px-4 pb-12 pt-32">
             <div className="flex flex-col md:flex-row items-center md:items-end gap-8 text-center md:text-left">
               <div className="relative group">
                 <Avatar className="h-40 w-40 border-4 border-white dark:border-slate-800 shadow-2xl ring-4 ring-green-500/20">
