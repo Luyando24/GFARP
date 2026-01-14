@@ -174,9 +174,14 @@ router.put('/profile', authenticateToken, async (req, res) => {
     } = req.body;
 
     // Sanitize numeric fields to prevent Postgres cast errors from empty strings
-    const sanitizedAge = (age === '' || age === null || age === undefined) ? null : parseInt(age as string);
-    const sanitizedHeight = (height === '' || height === null || height === undefined) ? null : parseFloat(height as string);
-    const sanitizedWeight = (weight === '' || weight === null || weight === undefined) ? null : parseFloat(weight as string);
+    let sanitizedAge = (age === '' || age === null || age === undefined) ? null : parseInt(age as string);
+    if (Number.isNaN(sanitizedAge)) sanitizedAge = null;
+
+    let sanitizedHeight = (height === '' || height === null || height === undefined) ? null : parseFloat(height as string);
+    if (Number.isNaN(sanitizedHeight)) sanitizedHeight = null;
+
+    let sanitizedWeight = (weight === '' || weight === null || weight === undefined) ? null : parseFloat(weight as string);
+    if (Number.isNaN(sanitizedWeight)) sanitizedWeight = null;
 
     // Validate Slug
     if (slug) {
@@ -195,6 +200,8 @@ router.put('/profile', authenticateToken, async (req, res) => {
         return res.status(400).json({ error: 'Link Name is already taken.' });
       }
     }
+
+    const finalSlug = slug && slug.trim() !== '' ? slug : null;
 
     // Ensure array fields are actually arrays (front-end might send null or empty)
     const sanitizedGallery = Array.isArray(gallery_images) ? gallery_images : [];
@@ -234,6 +241,31 @@ router.put('/profile', authenticateToken, async (req, res) => {
       `);
     };
 
+    const queryParams = [
+      display_name,
+      sanitizedAge,
+      nationality,
+      position,
+      current_club,
+      sanitizedVideos,
+      transfermarket_link,
+      bio,
+      profile_image_url,
+      sanitizedGallery,
+      sanitizedHeight,
+      sanitizedWeight,
+      preferred_foot,
+      cover_image_url,
+      career_history,
+      honours,
+      education,
+      contact_email,
+      whatsapp_number,
+      social_links,
+      finalSlug,
+      userId
+    ].map(p => p === undefined ? null : p);
+
     try {
       await query(
         `UPDATE player_profiles 
@@ -247,30 +279,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
              slug = $21,
              updated_at = NOW()
          WHERE player_id = $22`,
-        [
-          display_name,
-          sanitizedAge,
-          nationality,
-          position,
-          current_club,
-          sanitizedVideos,
-          transfermarket_link,
-          bio,
-          profile_image_url,
-          sanitizedGallery,
-          sanitizedHeight,
-          sanitizedWeight,
-          preferred_foot,
-          cover_image_url,
-          career_history,
-          honours,
-          education,
-          contact_email,
-          whatsapp_number,
-          social_links,
-          slug,
-          userId
-        ]
+        queryParams
       );
     } catch (queryError: any) {
       // If column is missing (Postgres error 42703), run migration and retry
@@ -289,30 +298,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
                 slug = $21,
                 updated_at = NOW()
             WHERE player_id = $22`,
-          [
-            display_name,
-            sanitizedAge,
-            nationality,
-            position,
-            current_club,
-            sanitizedVideos,
-            transfermarket_link,
-            bio,
-            profile_image_url,
-            sanitizedGallery,
-            sanitizedHeight,
-            sanitizedWeight,
-            preferred_foot,
-            cover_image_url,
-            career_history,
-            honours,
-            education,
-            contact_email,
-            whatsapp_number,
-            social_links,
-            slug,
-            userId
-          ]
+          queryParams
         );
       } else {
         throw queryError;
