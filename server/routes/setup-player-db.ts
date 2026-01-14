@@ -3,7 +3,7 @@ import { query } from '../lib/db.js';
 
 const router = Router();
 
-router.post('/setup-player-tables', async (req, res) => {
+const setupTables = async (req: any, res: any) => {
   try {
     // Create individual_players table
     await query(`
