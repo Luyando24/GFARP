@@ -79,7 +79,13 @@ const App = () => {
                      subdomain = parts[0];
                  }
               }
-              if (subdomain) return <PublicPlayerProfile slug={subdomain} />;
+              if (subdomain) {
+                return (
+                  <BrowserRouter>
+                    <PublicPlayerProfile slug={subdomain} />
+                  </BrowserRouter>
+                );
+              }
               return (
             <BrowserRouter>
               <Routes>

@@ -209,9 +209,13 @@ export default function PlayerDashboard() {
   const getPublicUrl = () => {
     if (!profile) return "";
     
-    // Always use the main domain path for sharing/previewing
-    // Clean URL format: domain.com/messi
+    // Clean URL format: domain.com/messi or messi.domain.com
     if (profile.slug) {
+       const hostname = window.location.hostname;
+       // Prefer subdomain format for the main production domain
+       if (hostname.includes('soccercircular.com')) {
+           return `${window.location.protocol}//${profile.slug}.soccercircular.com`;
+       }
        return `${window.location.origin}/${profile.slug}`;
     }
     

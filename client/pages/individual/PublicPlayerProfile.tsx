@@ -68,11 +68,16 @@ export default function PublicPlayerProfile({ slug }: { slug?: string }) {
   const copyPageLink = () => {
     // If slug is present, ensure we copy the slug version if not already on it
     let url = window.location.href;
-    
+    const hostname = window.location.hostname;
+
     // Fallback if not on the correct URL (e.g. if rendered via ID but slug exists)
-    if (profile?.slug && !url.includes(profile.slug)) {
-       // Construct clean URL
-       url = `${window.location.origin}/${profile.slug}`;
+    if (profile?.slug) {
+       if (hostname.includes('soccercircular.com')) {
+          url = `${window.location.protocol}//${profile.slug}.soccercircular.com`;
+       } else if (!url.includes(profile.slug)) {
+          // Construct clean URL for other environments
+          url = `${window.location.origin}/${profile.slug}`;
+       }
     }
 
     navigator.clipboard.writeText(url);
@@ -93,7 +98,7 @@ export default function PublicPlayerProfile({ slug }: { slug?: string }) {
         <div className="text-center">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">404</h1>
           <p className="text-xl text-gray-600 mb-8">{error || "Profile not found"}</p>
-          <Button onClick={() => window.location.href = '/'}>Go Home</Button>
+          <Button onClick={handleGoHome}>Go Home</Button>
         </div>
       </div>
     );
