@@ -48,10 +48,16 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 // Helper to convert image URL to Base64 for PDF embedding
 const getBase64ImageFromURL = (url: string): Promise<string> => {
   return new Promise((resolve, reject) => {
+    // If it's already a data URL, return it directly
+    if (url.startsWith('data:')) {
+        resolve(url);
+        return;
+    }
+
     const img = new Image();
     // Cache buster to bypass browser cache which might lack CORS headers
     const cacheBuster = url.includes('?') ? `&t=${new Date().getTime()}` : `?t=${new Date().getTime()}`;
-    img.crossOrigin = 'anonymous'; // Set property directly
+    img.crossOrigin = 'anonymous'; 
     
     img.onload = () => {
       const canvas = document.createElement('canvas');
@@ -67,17 +73,24 @@ const getBase64ImageFromURL = (url: string): Promise<string> => {
             const dataURL = canvas.toDataURL('image/jpeg', 0.8);
             resolve(dataURL);
         } catch (e) {
-            reject(new Error("Canvas toDataURL failed (tainted?)"));
+            console.error("Canvas export failed (likely CORS)", e);
+            reject(new Error("Canvas export failed"));
         }
       } else {
         reject(new Error("Canvas context failed"));
       }
     };
-    img.onerror = error => {
-      console.error("Image loading failed:", url, error);
+    img.onerror = (e) => {
+      console.error("Image loading failed:", url, e);
       reject(new Error("Image failed to load"));
     };
-    img.src = url + cacheBuster;
+    
+    // Only append cache buster for http(s) URLs to avoid breaking other schemes
+    if (url.startsWith('http')) {
+        img.src = url + cacheBuster;
+    } else {
+        img.src = url;
+    }
   });
 };
 
