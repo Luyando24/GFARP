@@ -49,7 +49,10 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 const getBase64ImageFromURL = (url: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.setAttribute('crossOrigin', 'anonymous');
+    // Cache buster to bypass browser cache which might lack CORS headers
+    const cacheBuster = url.includes('?') ? `&t=${new Date().getTime()}` : `?t=${new Date().getTime()}`;
+    img.crossOrigin = 'anonymous'; // Set property directly
+    
     img.onload = () => {
       const canvas = document.createElement('canvas');
       canvas.width = img.width;
@@ -60,16 +63,21 @@ const getBase64ImageFromURL = (url: string): Promise<string> => {
         ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(img, 0, 0);
-        const dataURL = canvas.toDataURL('image/jpeg', 0.8); // Use JPEG with 0.8 quality
-        resolve(dataURL);
+        try {
+            const dataURL = canvas.toDataURL('image/jpeg', 0.8);
+            resolve(dataURL);
+        } catch (e) {
+            reject(new Error("Canvas toDataURL failed (tainted?)"));
+        }
       } else {
         reject(new Error("Canvas context failed"));
       }
     };
     img.onerror = error => {
-      reject(error);
+      console.error("Image loading failed:", url, error);
+      reject(new Error("Image failed to load"));
     };
-    img.src = url;
+    img.src = url + cacheBuster;
   });
 };
 
