@@ -40,6 +40,9 @@ router.post('/setup-player-tables', async (req, res) => {
         career_history TEXT,
         honours TEXT,
         education TEXT,
+        contact_email VARCHAR(255),
+        whatsapp_number VARCHAR(50),
+        social_links JSONB,
         created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
         UNIQUE(player_id)
@@ -68,7 +71,10 @@ router.post('/setup-player-tables', async (req, res) => {
       ADD COLUMN IF NOT EXISTS cover_image_url TEXT,
       ADD COLUMN IF NOT EXISTS career_history TEXT,
       ADD COLUMN IF NOT EXISTS honours TEXT,
-      ADD COLUMN IF NOT EXISTS education TEXT;
+      ADD COLUMN IF NOT EXISTS education TEXT,
+      ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS social_links JSONB;
 
       -- Migration: Ensure profile_image_url is TEXT to support Base64
       ALTER TABLE player_profiles 

@@ -35,6 +35,8 @@ import {
   MessageCircle,
   Twitter,
   Linkedin,
+  Instagram,
+  Facebook,
   Globe
 } from "lucide-react";
 import { toast } from "sonner";
@@ -81,6 +83,17 @@ export default function PlayerDashboard() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleSocialLinkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      social_links: {
+        ...prev.social_links,
+        [name]: value
+      }
+    }));
   };
 
   const handleSaveProfile = async () => {
@@ -700,6 +713,60 @@ export default function PlayerDashboard() {
                             onChange={handleInputChange}
                             placeholder="e.g. +260..."
                           />
+                        </div>
+
+                        <div className="space-y-2 md:col-span-2 pt-4 border-t border-slate-200 dark:border-slate-700">
+                          <Label className="text-lg font-semibold">Social Media Links</Label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                            <div className="relative">
+                              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                <Instagram className="h-4 w-4" />
+                              </div>
+                              <Input
+                                name="instagram"
+                                value={formData.social_links?.instagram || ''}
+                                onChange={handleSocialLinkChange}
+                                placeholder="Instagram Profile URL"
+                                className="pl-10"
+                              />
+                            </div>
+                            <div className="relative">
+                              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                <Twitter className="h-4 w-4" />
+                              </div>
+                              <Input
+                                name="twitter"
+                                value={formData.social_links?.twitter || ''}
+                                onChange={handleSocialLinkChange}
+                                placeholder="Twitter/X Profile URL"
+                                className="pl-10"
+                              />
+                            </div>
+                            <div className="relative">
+                              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                <Linkedin className="h-4 w-4" />
+                              </div>
+                              <Input
+                                name="linkedin"
+                                value={formData.social_links?.linkedin || ''}
+                                onChange={handleSocialLinkChange}
+                                placeholder="LinkedIn Profile URL"
+                                className="pl-10"
+                              />
+                            </div>
+                            <div className="relative">
+                              <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+                                <Facebook className="h-4 w-4" />
+                              </div>
+                              <Input
+                                name="facebook"
+                                value={formData.social_links?.facebook || ''}
+                                onChange={handleSocialLinkChange}
+                                placeholder="Facebook Profile URL"
+                                className="pl-10"
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
 

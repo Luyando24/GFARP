@@ -4,7 +4,7 @@ import { PlayerProfile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Globe, Video, User, MapPin, Activity, Share2, Image, Mail, MessageCircle, Phone } from "lucide-react";
+import { Loader2, Globe, Video, User, MapPin, Activity, Share2, Image, Mail, MessageCircle, Phone, Instagram, Twitter, Linkedin, Facebook } from "lucide-react";
 import { toast } from "sonner";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -393,6 +393,35 @@ export default function PublicPlayerProfile() {
                 <h4 className="text-xl font-black uppercase italic tracking-tight text-slate-800 dark:text-white">Soccer Circular</h4>
                 <p className="text-slate-500 dark:text-slate-400 text-sm mt-2 font-medium">Verified Player Profile</p>
               </div>
+
+              {/* Social Media Links */}
+              {profile.social_links && (Object.values(profile.social_links).some(link => link)) && (
+                <div className="p-8 bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm">
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-6 text-center">Social Presence</h3>
+                  <div className="flex flex-wrap justify-center gap-4">
+                    {profile.social_links.instagram && (
+                      <a href={profile.social_links.instagram} target="_blank" rel="noopener noreferrer" className="p-3 bg-slate-50 dark:bg-slate-800 rounded-full hover:bg-pink-50 hover:text-pink-600 transition-colors">
+                        <Instagram className="h-5 w-5" />
+                      </a>
+                    )}
+                    {profile.social_links.twitter && (
+                      <a href={profile.social_links.twitter} target="_blank" rel="noopener noreferrer" className="p-3 bg-slate-50 dark:bg-slate-800 rounded-full hover:bg-blue-50 hover:text-blue-400 transition-colors">
+                        <Twitter className="h-5 w-5" />
+                      </a>
+                    )}
+                    {profile.social_links.linkedin && (
+                      <a href={profile.social_links.linkedin} target="_blank" rel="noopener noreferrer" className="p-3 bg-slate-50 dark:bg-slate-800 rounded-full hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                        <Linkedin className="h-5 w-5" />
+                      </a>
+                    )}
+                    {profile.social_links.facebook && (
+                      <a href={profile.social_links.facebook} target="_blank" rel="noopener noreferrer" className="p-3 bg-slate-50 dark:bg-slate-800 rounded-full hover:bg-blue-50 hover:text-blue-700 transition-colors">
+                        <Facebook className="h-5 w-5" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Disclaimer */}
               <p className="text-[10px] text-slate-400 text-center px-12 leading-relaxed uppercase font-bold tracking-tighter opacity-50">
