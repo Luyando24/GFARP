@@ -135,7 +135,7 @@ router.post('/verify-payment', authenticateToken, async (req, res) => {
          ON CONFLICT (stripe_session_id) DO NOTHING`,
         [userId, planId, amount, sessionId]
       );
-      
+
       res.json({ success: true, message: 'Payment verified and subscription activated' });
     } else {
       res.status(400).json({ error: 'Payment not completed' });
@@ -571,14 +571,14 @@ router.get('/admin-list', async (req, res) => {
     // Check for admin role (assuming authenticateToken is used or handled by gateway, 
     // but here we might need specific admin check if exposed directly. 
     // For now, assuming internal use or secured by route prefix in index.ts)
-    
+
     // Ideally, this should use a middleware like authenticateAdmin
     // But since I'm adding it to existing router, let's keep it simple for now
     // and rely on the fact that this route is likely called from Admin Dashboard
     // which should be protected. 
     // Wait, the prompt says "Add the newly added player module to the admin dashboard".
     // So this endpoint will be consumed by Admin Dashboard.
-    
+
     const result = await query(`
       SELECT 
         ip.id,
@@ -601,6 +601,70 @@ router.get('/admin-list', async (req, res) => {
   } catch (error) {
     console.error('Get admin player list error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Update a player's plan (Admin only)
+router.post('/:id/plan', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { planType } = req.body;
+
+    if (!['free', 'pro'].includes(planType)) {
+      return res.status(400).json({ error: 'Invalid plan type' });
+    }
+
+    if (planType === 'pro') {
+      await query(
+        `INSERT INTO player_purchases (player_id, plan_type, amount, status, created_at)
+         VALUES ($1, $2, 0, 'completed', NOW())`,
+        [id, planType]
+      );
+    } else {
+      // Deactivate Pro plan by marking existing completed ones as deactivated or just inserting a free one?
+      // The current logic gets the latest completed purchase. 
+      // To "deactivate", we can insert a 'free' record or update previous pro records to 'cancelled'.
+      await query(
+        `INSERT INTO player_purchases (player_id, plan_type, amount, status, created_at)
+         VALUES ($1, $2, 0, 'completed', NOW())`,
+        [id, 'free']
+      );
+    }
+
+    res.json({ success: true, message: `Plan updated to ${planType}` });
+  } catch (error) {
+    console.error('Admin update plan error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Delete an individual player (Admin only)
+router.delete('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    await transaction(async (client) => {
+      // Delete documents first (if any)
+      await client.query('DELETE FROM player_documents WHERE player_id = $1', [id]);
+
+      // Delete profile
+      await client.query('DELETE FROM player_profiles WHERE player_id = $1', [id]);
+
+      // Delete purchases
+      await client.query('DELETE FROM player_purchases WHERE player_id = $1', [id]);
+
+      // Delete player account
+      const result = await client.query('DELETE FROM individual_players WHERE id = $1', [id]);
+
+      if (result.rowCount === 0) {
+        throw new Error('Player not found');
+      }
+    });
+
+    res.json({ success: true, message: 'Player account deleted successfully' });
+  } catch (error: any) {
+    console.error('Delete individual player error:', error);
+    res.status(error.message === 'Player not found' ? 404 : 500).json({ error: error.message });
   }
 });
 

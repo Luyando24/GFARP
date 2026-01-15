@@ -19,7 +19,11 @@ import {
   Upload,
   Check,
   Eye,
-  Loader2
+  Loader2,
+  Trash2,
+  Lock,
+  Unlock,
+  CreditCard
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -117,6 +121,8 @@ const PlayerDetails = () => {
     title: '',
     url: null as string | null
   });
+
+  const [deleting, setDeleting] = useState(false);
 
   // Helper function to map guardian fields to parent fields for form compatibility
   const mapGuardianToParentFields = (playerData: any) => {
@@ -407,6 +413,72 @@ const PlayerDetails = () => {
       toast({
         title: "Error",
         description: "Failed to delete document",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!player) return;
+
+    if (!window.confirm(`Are you sure you want to delete ${player.firstName} ${player.lastName}'s account? This action is permanent and will delete all associated data.`)) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const response = await fetch(`/api/individual-players/${player.id}`, {
+        method: 'DELETE'
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Player Deleted",
+          description: "The player account has been removed successfully."
+        });
+        navigate('/admin-dashboard');
+      } else {
+        throw new Error(data.error || 'Failed to delete player');
+      }
+    } catch (error: any) {
+      console.error("Error deleting player:", error);
+      toast({
+        title: "Deletion Failed",
+        description: error.message,
+        variant: "destructive"
+      });
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleUpdatePlan = async (planType: 'free' | 'pro') => {
+    if (!player) return;
+
+    try {
+      const response = await fetch(`/api/individual-players/${player.id}/plan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planType })
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        toast({
+          title: "Plan Updated",
+          description: `Player plan has been updated to ${planType === 'pro' ? 'Pro' : 'Free'}`
+        });
+        // Refresh player data to show updated plan (if current_plan is in state)
+        fetchPlayerDetails();
+      } else {
+        throw new Error(data.error || 'Failed to update plan');
+      }
+    } catch (error: any) {
+      console.error("Error updating plan:", error);
+      toast({
+        title: "Update Failed",
+        description: error.message,
         variant: "destructive"
       });
     }
@@ -1478,6 +1550,65 @@ const PlayerDetails = () => {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Admin Management Actions */}
+            {isAdmin && (
+              <Card className="border-red-100 bg-red-50/10">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-red-700">
+                    <Shield className="h-5 w-5" />
+                    Player Management (Admin)
+                  </CardTitle>
+                  <CardDescription>
+                    Administrative actions for this player account
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-wrap gap-3">
+                    {/* Plan Management */}
+                    <div className="w-full space-y-2 mb-2">
+                      <Label className="text-xs font-semibold uppercase text-gray-500">Subscription & Access</Label>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-white"
+                          onClick={() => handleUpdatePlan('pro')}
+                        >
+                          <CreditCard className="h-4 w-4 mr-2 text-blue-600" />
+                          Activate Pro Plan
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="bg-white"
+                          onClick={() => handleUpdatePlan('free')}
+                        >
+                          <Lock className="h-4 w-4 mr-2 text-gray-500" />
+                          Revert to Free
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Danger Zone */}
+                    <div className="w-full pt-4 border-t border-red-100">
+                      <Label className="text-xs font-semibold uppercase text-red-500">Danger Zone</Label>
+                      <div className="mt-2">
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={handleDeleteAccount}
+                          disabled={deleting}
+                        >
+                          {deleting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Trash2 className="h-4 w-4 mr-2" />}
+                          Delete Player Account
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>

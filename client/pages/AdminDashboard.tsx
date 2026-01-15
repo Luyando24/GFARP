@@ -1606,7 +1606,7 @@ export default function AdminDashboard() {
                       <div>
                         <p className="text-sm text-slate-600 dark:text-slate-400">Pro Subscriptions</p>
                         <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                            {individualPlayers.filter(p => p.current_plan?.toLowerCase() === 'pro').length}
+                          {individualPlayers.filter(p => p.current_plan?.toLowerCase() === 'pro').length}
                         </p>
                       </div>
                       <Award className="h-8 w-8 text-yellow-500" />
@@ -1675,15 +1675,14 @@ export default function AdminDashboard() {
                               <TableCell>${player.total_spent ? parseFloat(player.total_spent).toFixed(2) : '0.00'}</TableCell>
                               <TableCell>{new Date(player.created_at).toLocaleDateString()}</TableCell>
                               <TableCell className="text-center">
-                                {player.slug ? (
-                                  <a href={`/${player.slug}`} target="_blank" rel="noopener noreferrer">
-                                    <Button variant="ghost" size="sm" title="View Public Profile">
-                                      <Eye className="h-4 w-4" />
-                                    </Button>
-                                  </a>
-                                ) : (
-                                  <span className="text-xs text-muted-foreground">No Profile</span>
-                                )}
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  title="Manage Player"
+                                  onClick={() => navigate(`/admin/player-details/${player.id}`)}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
                               </TableCell>
                             </TableRow>
                           ))}
