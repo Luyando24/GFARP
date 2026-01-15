@@ -5,6 +5,7 @@ export interface DashboardStats {
   totalAcademies: number;
   activeSubscriptions: number;
   totalUsers: number;
+  totalIndividualPlayers: number;
   monthlyGrowth: {
     academies: number;
     subscriptions: number;
@@ -105,10 +106,12 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
     // Get total Individual Players
     let totalIndividualPlayers = 0;
     try {
+      console.log('Fetching total individual players count...');
       const indPlayersResult = await query('SELECT COUNT(*) as count FROM individual_players');
       totalIndividualPlayers = parseInt(indPlayersResult.rows[0].count) || 0;
-    } catch (err) {
-      console.log('Individual players table query failed');
+      console.log(`Found ${totalIndividualPlayers} individual players`);
+    } catch (err: any) {
+      console.error('Individual players table query failed:', err.message);
     }
 
     // Get active transfers count (using transfers table)
