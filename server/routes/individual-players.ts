@@ -638,6 +638,69 @@ router.post('/:id/plan', async (req, res) => {
   }
 });
 
+// Get individual player details (Admin only)
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const result = await query(
+      `SELECT 
+        ip.id,
+        ip.email,
+        ip.first_name,
+        ip.last_name,
+        ip.created_at,
+        ip.stripe_customer_id,
+        pp.display_name,
+        pp.age,
+        pp.nationality,
+        pp.position,
+        pp.current_club,
+        pp.video_links,
+        pp.transfermarket_link,
+        pp.bio,
+        pp.profile_image_url,
+        pp.gallery_images,
+        pp.height,
+        pp.weight,
+        pp.preferred_foot,
+        pp.cover_image_url,
+        pp.career_history,
+        pp.honours,
+        pp.education,
+        pp.contact_email,
+        pp.whatsapp_number,
+        pp.social_links,
+        pp.slug,
+        (SELECT plan_type FROM player_purchases 
+         WHERE player_id = ip.id AND status = 'completed' 
+         ORDER BY created_at DESC LIMIT 1) as current_plan,
+        (SELECT json_agg(json_build_object(
+           'id', pur.id,
+           'plan_type', pur.plan_type,
+           'amount', pur.amount,
+           'status', pur.status,
+           'created_at', pur.created_at
+         ))
+         FROM player_purchases pur
+         WHERE pur.player_id = ip.id) as purchase_history
+       FROM individual_players ip
+       LEFT JOIN player_profiles pp ON ip.id = pp.player_id
+       WHERE ip.id = $1`,
+      [id]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Player not found' });
+    }
+
+    res.json({ success: true, data: result.rows[0] });
+  } catch (error) {
+    console.error('Get individual player details error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
 // Delete an individual player (Admin only)
 router.delete('/:id', async (req, res) => {
   try {

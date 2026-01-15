@@ -1318,6 +1318,10 @@ export const PlayerApi = {
     return Api.get<PlayerProfile>(`/individual-players/public/${id}`);
   },
 
+  async getAdminPlayerDetails(id: string) {
+    return Api.get<{ success: boolean; data: any }>(`/individual-players/${id}`);
+  },
+
   async getPlans() {
     return Api.get<{ success: boolean; data: any[] }>('/individual-players/plans');
   },

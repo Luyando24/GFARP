@@ -52,6 +52,7 @@ import PublicPlayerProfile from "./pages/individual/PublicPlayerProfile";
 import PlayerRegister from "./pages/individual/PlayerRegister";
 import PlayerLogin from "./pages/individual/PlayerLogin";
 import PlayerDashboard from "./pages/individual/PlayerDashboard";
+import IndividualPlayerDetails from "./pages/admin/IndividualPlayerDetails";
 
 const queryClient = new QueryClient();
 
@@ -143,6 +144,7 @@ const App = () => {
                 <Route path="/admin/super-admins" element={<SuperAdmins />} />
                 <Route path="/admin/academy/:id" element={<AcademyDetails />} />
                 <Route path="/admin/player-details/:id" element={<PlayerDetails />} />
+                <Route path="/admin/individual-player-details/:id" element={<IndividualPlayerDetails />} />
                 <Route path="/admin/blog/new" element={<BlogEditor />} />
                 <Route path="/admin/blog/edit/:id" element={<BlogEditor />} />
               </Route>

@@ -1679,7 +1679,7 @@ export default function AdminDashboard() {
                                   variant="ghost"
                                   size="sm"
                                   title="Manage Player"
-                                  onClick={() => navigate(`/admin/player-details/${player.id}`)}
+                                  onClick={() => navigate(`/admin/individual-player-details/${player.id}`)}
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
