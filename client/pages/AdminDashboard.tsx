@@ -104,7 +104,8 @@ import {
   Cpu,
   MemoryStick,
   HardDriveIcon,
-  BookOpen
+  BookOpen,
+  Loader2
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -220,6 +221,7 @@ export default function AdminDashboard() {
   // Users state for admin list
   const [users, setUsers] = useState<any[]>([]);
   const [individualPlayers, setIndividualPlayers] = useState<any[]>([]);
+  const [isLoadingPlayers, setIsLoadingPlayers] = useState(false);
   const [complianceRecords, setComplianceRecords] = useState<ComplianceRecord[]>([]);
   const [viewingCompliance, setViewingCompliance] = useState<ComplianceRecord | null>(null);
 
@@ -287,6 +289,7 @@ export default function AdminDashboard() {
 
   const fetchIndividualPlayers = async () => {
     try {
+      setIsLoadingPlayers(true);
       const response = await fetch('/api/individual-players/admin-list');
       const result = await response.json();
       if (result.success) {
@@ -299,6 +302,8 @@ export default function AdminDashboard() {
         description: "Failed to fetch individual players",
         variant: "destructive"
       });
+    } finally {
+      setIsLoadingPlayers(false);
     }
   };
 
@@ -1560,6 +1565,133 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
               </div>
+            </TabsContent>
+
+            {/* Individual Players Tab */}
+            <TabsContent value="players" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                    Individual Players Management
+                  </h2>
+                  <p className="text-slate-600 dark:text-slate-400">
+                    View and manage all directly registered players
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="sm" onClick={fetchIndividualPlayers}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Refresh
+                  </Button>
+                </div>
+              </div>
+
+              {/* Stats Cards for Players */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                 <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Total Players</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">{individualPlayers.length}</p>
+                      </div>
+                      <User className="h-8 w-8 text-blue-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Pro Subscriptions</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                            {individualPlayers.filter(p => p.current_plan === 'pro').length}
+                        </p>
+                      </div>
+                      <Award className="h-8 w-8 text-yellow-500" />
+                    </div>
+                  </CardContent>
+                </Card>
+                 <Card>
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">Total Revenue</p>
+                        <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                            ${individualPlayers.reduce((sum, p) => sum + (parseFloat(p.total_spent) || 0), 0).toFixed(2)}
+                        </p>
+                      </div>
+                      <DollarSign className="h-8 w-8 text-green-600" />
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Card>
+                <CardHeader>
+                    <CardTitle>Registered Players</CardTitle>
+                    <CardDescription>List of all individual players and their subscription status</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingPlayers ? (
+                    <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                      <Loader2 className="h-8 w-8 mx-auto mb-3 animate-spin" />
+                      <p>Loading players...</p>
+                    </div>
+                  ) : individualPlayers.length === 0 ? (
+                    <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                      <User className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                      <p>No individual players registered yet</p>
+                      <p className="text-sm">New registrations will appear here</p>
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader>
+                          <TableRow className="bg-slate-50 dark:bg-slate-800">
+                            <TableHead className="font-semibold">Name</TableHead>
+                            <TableHead className="font-semibold">Email</TableHead>
+                            <TableHead className="font-semibold">Active Plan</TableHead>
+                            <TableHead className="font-semibold">Total Spent</TableHead>
+                            <TableHead className="font-semibold">Joined Date</TableHead>
+                            <TableHead className="font-semibold text-center">Profile</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {individualPlayers.map((player) => (
+                            <TableRow key={player.id}>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium">{player.first_name} {player.last_name}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell>{player.email}</TableCell>
+                              <TableCell>
+                                <Badge variant={player.current_plan === 'pro' ? 'default' : 'outline'}>
+                                  {player.current_plan === 'pro' ? 'Pro Plan' : 'Free Plan'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>${player.total_spent ? parseFloat(player.total_spent).toFixed(2) : '0.00'}</TableCell>
+                              <TableCell>{new Date(player.created_at).toLocaleDateString()}</TableCell>
+                              <TableCell className="text-center">
+                                {player.slug ? (
+                                    <a href={`/public-player-profile/${player.slug}`} target="_blank" rel="noopener noreferrer">
+                                    <Button variant="ghost" size="sm" title="View Public Profile">
+                                        <Eye className="h-4 w-4" />
+                                    </Button>
+                                    </a>
+                                ) : (
+                                    <span className="text-xs text-muted-foreground">No Profile</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* Academy Management Tab */}
