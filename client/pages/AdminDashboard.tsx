@@ -1605,7 +1605,7 @@ export default function AdminDashboard() {
                       <div>
                         <p className="text-sm text-slate-600 dark:text-slate-400">Pro Subscriptions</p>
                         <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                            {individualPlayers.filter(p => p.current_plan === 'pro').length}
+                            {individualPlayers.filter(p => p.current_plan?.toLowerCase() === 'pro').length}
                         </p>
                       </div>
                       <Award className="h-8 w-8 text-yellow-500" />
@@ -1667,8 +1667,8 @@ export default function AdminDashboard() {
                               </TableCell>
                               <TableCell>{player.email}</TableCell>
                               <TableCell>
-                                <Badge variant={player.current_plan === 'pro' ? 'default' : 'outline'}>
-                                  {player.current_plan === 'pro' ? 'Pro Plan' : 'Free Plan'}
+                                <Badge variant={player.current_plan?.toLowerCase() === 'pro' ? 'default' : 'outline'}>
+                                  {player.current_plan?.toLowerCase() === 'pro' ? 'Pro Plan' : (player.current_plan ? `${player.current_plan} Plan` : 'Free Plan')}
                                 </Badge>
                               </TableCell>
                               <TableCell>${player.total_spent ? parseFloat(player.total_spent).toFixed(2) : '0.00'}</TableCell>
