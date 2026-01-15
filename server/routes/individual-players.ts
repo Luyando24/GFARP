@@ -587,7 +587,7 @@ router.get('/admin-list', async (req, res) => {
         ip.last_name,
         ip.created_at,
         pp.slug,
-        (SELECT plan_type FROM player_purchases 
+        (SELECT CASE WHEN plan_type = 'basic' THEN 'pro' ELSE plan_type END FROM player_purchases 
          WHERE player_id = ip.id AND status = 'completed' 
          ORDER BY created_at DESC LIMIT 1) as current_plan,
         (SELECT SUM(amount) FROM player_purchases 

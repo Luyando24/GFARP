@@ -1588,7 +1588,7 @@ export default function AdminDashboard() {
 
               {/* Stats Cards for Players */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                 <Card>
+                <Card>
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
@@ -1612,13 +1612,13 @@ export default function AdminDashboard() {
                     </div>
                   </CardContent>
                 </Card>
-                 <Card>
+                <Card>
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-sm text-slate-600 dark:text-slate-400">Total Revenue</p>
                         <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                            ${individualPlayers.reduce((sum, p) => sum + (parseFloat(p.total_spent) || 0), 0).toFixed(2)}
+                          ${individualPlayers.reduce((sum, p) => sum + (parseFloat(p.total_spent) || 0), 0).toFixed(2)}
                         </p>
                       </div>
                       <DollarSign className="h-8 w-8 text-green-600" />
@@ -1629,8 +1629,8 @@ export default function AdminDashboard() {
 
               <Card>
                 <CardHeader>
-                    <CardTitle>Registered Players</CardTitle>
-                    <CardDescription>List of all individual players and their subscription status</CardDescription>
+                  <CardTitle>Registered Players</CardTitle>
+                  <CardDescription>List of all individual players and their subscription status</CardDescription>
                 </CardHeader>
                 <CardContent>
                   {isLoadingPlayers ? (
@@ -1675,13 +1675,13 @@ export default function AdminDashboard() {
                               <TableCell>{new Date(player.created_at).toLocaleDateString()}</TableCell>
                               <TableCell className="text-center">
                                 {player.slug ? (
-                                    <a href={`/public-player-profile/${player.slug}`} target="_blank" rel="noopener noreferrer">
+                                  <a href={`/${player.slug}`} target="_blank" rel="noopener noreferrer">
                                     <Button variant="ghost" size="sm" title="View Public Profile">
-                                        <Eye className="h-4 w-4" />
+                                      <Eye className="h-4 w-4" />
                                     </Button>
-                                    </a>
+                                  </a>
                                 ) : (
-                                    <span className="text-xs text-muted-foreground">No Profile</span>
+                                  <span className="text-xs text-muted-foreground">No Profile</span>
                                 )}
                               </TableCell>
                             </TableRow>
