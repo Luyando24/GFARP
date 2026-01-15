@@ -521,6 +521,7 @@ export default function AdminDashboard() {
           setSystemStats({
             totalAcademies: data.totalAcademies || 0,
             totalPlayers: data.totalPlayers || 0,
+            totalIndividualPlayers: data.totalIndividualPlayers || 0,
             monthlyRevenue: data.monthlyRevenue || 0
           });
 
