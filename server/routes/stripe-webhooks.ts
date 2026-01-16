@@ -63,6 +63,10 @@ const handleWebhook: RequestHandler = async (req, res) => {
         await handleCustomerCreated(event.data.object);
         break;
 
+      case 'checkout.session.completed':
+        await handleCheckoutSessionCompleted(event.data.object);
+        break;
+
       case 'payment_intent.succeeded':
         await handlePaymentIntentSucceeded(event.data.object);
         break;
@@ -418,6 +422,41 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
     }
   } catch (error: any) {
     console.error('Error handling payment intent succeeded:', error);
+    throw error;
+  }
+}
+
+async function handleCheckoutSessionCompleted(session: any) {
+  console.log('Processing checkout session completed:', session.id);
+
+  try {
+    // Handle player subscription
+    if (session.metadata?.type === 'player_subscription') {
+      const { playerId, planId } = session.metadata;
+      
+      console.log(`Processing player subscription for player ${playerId}, plan ${planId}`);
+      
+      await transaction(async (client) => {
+        // Record purchase
+        await client.query(`
+          INSERT INTO player_purchases (
+            player_id, plan_type, amount, status, stripe_session_id, created_at
+          )
+          VALUES ($1, $2, $3, $4, $5, NOW())
+          ON CONFLICT (stripe_session_id) DO NOTHING
+        `, [
+          playerId,
+          planId,
+          session.amount_total / 100, // Convert from cents
+          'completed',
+          session.id
+        ]);
+        
+        console.log(`Player purchase recorded for player ${playerId}`);
+      });
+    }
+  } catch (error: any) {
+    console.error('Error handling checkout session completed:', error);
     throw error;
   }
 }
