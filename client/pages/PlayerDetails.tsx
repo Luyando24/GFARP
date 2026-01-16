@@ -34,6 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { Api, Player } from '@/lib/api';
+import { NetworkError } from "@/lib/errors";
 import { uploadPlayerDocument, getPlayerDocuments, deletePlayerDocument, type PlayerDocument } from '@/lib/document-upload';
 import { countryCodes, formatPhoneDisplay, parsePhoneNumber } from '@/lib/countryCodes';
 
@@ -271,8 +272,19 @@ const PlayerDetails = () => {
           variant: "destructive"
         });
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error updating player details:", error);
+
+      // Handle Network Errors specifically - Do NOT fallback to demo mode
+      if (error instanceof NetworkError || error.message === 'Unable to connect to server' || error.message?.includes('fetch')) {
+        toast({
+          title: "Network Error",
+          description: "Unable to save changes. Please check your internet connection.",
+          variant: "destructive"
+        });
+        setSaving(false);
+        return;
+      }
 
       // For demo purposes, update the local state and upload documents
       setPlayer({ ...player, ...formData });

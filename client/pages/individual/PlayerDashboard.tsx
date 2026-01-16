@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PlayerApi, PlayerProfile } from "@/lib/api";
+import { NetworkError } from "@/lib/errors";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import PlayerPaymentMethodSelector from "@/components/PlayerPaymentMethodSelector";
@@ -247,13 +248,20 @@ export default function PlayerDashboard() {
       toast.success("Profile updated successfully");
     } catch (error: any) {
       console.error("Failed to update profile", error);
+      
+      // Handle Network Errors specifically
+      if (error instanceof NetworkError || error.message === 'Unable to connect to server' || error.message?.includes('fetch')) {
+        toast.error("Network Error: Unable to save changes. Please check your internet connection and try again.");
+        return;
+      }
+
       // If server still returns a slug error (e.g. race condition), handle it
       if (error.message && error.message.includes("Link Name")) {
         setSlugAvailable(false);
         setSlugMessage(error.message);
         toast.error(error.message);
       } else {
-        toast.error("Failed to update profile");
+        toast.error("Failed to update profile. Please try again.");
       }
     } finally {
       setSaving(false);

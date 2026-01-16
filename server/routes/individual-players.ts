@@ -701,6 +701,88 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+// Update individual player details (Admin only)
+router.put('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const {
+      first_name,
+      last_name,
+      email,
+      display_name,
+      age,
+      nationality,
+      position,
+      current_club,
+      height,
+      weight,
+      preferred_foot,
+      bio,
+      contact_email,
+      whatsapp_number
+    } = req.body;
+
+    await transaction(async (client) => {
+      // Update basic info
+      await client.query(
+        `UPDATE individual_players 
+         SET first_name = COALESCE($1, first_name),
+             last_name = COALESCE($2, last_name),
+             email = COALESCE($3, email)
+         WHERE id = $4`,
+        [first_name, last_name, email, id]
+      );
+
+      // Update profile info
+      // Check if profile exists first
+      const profileCheck = await client.query('SELECT id FROM player_profiles WHERE player_id = $1', [id]);
+      
+      if (profileCheck.rows.length === 0) {
+        // Create profile if it doesn't exist
+        await client.query(
+          `INSERT INTO player_profiles (
+            player_id, display_name, age, nationality, position, current_club, 
+            height, weight, preferred_foot, bio, contact_email, whatsapp_number
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+          [
+            id, 
+            display_name || `${first_name} ${last_name}`, 
+            age, nationality, position, current_club,
+            height, weight, preferred_foot, bio, contact_email, whatsapp_number
+          ]
+        );
+      } else {
+        // Update existing profile
+        await client.query(
+          `UPDATE player_profiles 
+           SET display_name = COALESCE($1, display_name),
+               age = COALESCE($2, age),
+               nationality = COALESCE($3, nationality),
+               position = COALESCE($4, position),
+               current_club = COALESCE($5, current_club),
+               height = COALESCE($6, height),
+               weight = COALESCE($7, weight),
+               preferred_foot = COALESCE($8, preferred_foot),
+               bio = COALESCE($9, bio),
+               contact_email = COALESCE($10, contact_email),
+               whatsapp_number = COALESCE($11, whatsapp_number)
+           WHERE player_id = $12`,
+          [
+            display_name, age, nationality, position, current_club,
+            height, weight, preferred_foot, bio, contact_email, whatsapp_number,
+            id
+          ]
+        );
+      }
+    });
+
+    res.json({ success: true, message: 'Player updated successfully' });
+  } catch (error) {
+    console.error('Update individual player error:', error);
+    res.status(500).json({ success: false, message: 'Internal server error' });
+  }
+});
+
 // Delete an individual player (Admin only)
 router.delete('/:id', async (req, res) => {
   try {

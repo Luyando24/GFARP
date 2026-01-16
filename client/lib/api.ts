@@ -1322,6 +1322,14 @@ export const PlayerApi = {
     return Api.get<{ success: boolean; data: any }>(`/individual-players/${id}`);
   },
 
+  async updateAdminPlayer(id: string, data: any) {
+    return Api.put<{ success: boolean; message: string }>(`/individual-players/${id}`, data);
+  },
+
+  async deleteAdminPlayer(id: string) {
+    return Api.delete<{ success: boolean; message: string }>(`/individual-players/${id}`);
+  },
+
   async getPlans() {
     return Api.get<{ success: boolean; data: any[] }>('/individual-players/plans');
   },
