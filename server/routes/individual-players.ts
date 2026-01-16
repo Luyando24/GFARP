@@ -672,12 +672,12 @@ router.get('/:id', async (req, res) => {
         pp.whatsapp_number,
         pp.social_links,
         pp.slug,
-        (SELECT plan_type FROM player_purchases 
+        (SELECT CASE WHEN plan_type = 'basic' THEN 'pro' ELSE plan_type END FROM player_purchases 
          WHERE player_id = ip.id AND status = 'completed' 
          ORDER BY created_at DESC LIMIT 1) as current_plan,
         (SELECT json_agg(json_build_object(
            'id', pur.id,
-           'plan_type', pur.plan_type,
+           'plan_type', CASE WHEN pur.plan_type = 'basic' THEN 'pro' ELSE pur.plan_type END,
            'amount', pur.amount,
            'status', pur.status,
            'created_at', pur.created_at
