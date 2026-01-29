@@ -1149,19 +1149,34 @@ export default function AdminDashboard() {
     setSubscriptionFilter('all');
   };
 
-  const sidebarItems = [
-    { id: "dashboard", label: "Dashboard", icon: Home },
-    { id: "academies", label: "Academy Management", icon: Building },
-    { id: "players", label: "Individual Players", icon: User },
-    { id: "super-admins", label: "Super Admins", icon: Users },
-    { id: "sales", label: "Sales Agents", icon: UserCheck },
-    { id: "discounts", label: "Discounts", icon: Percent },
-    { id: "exemptions", label: "Exemptions", icon: ShieldCheck },
-    { id: "compliance", label: "FIFA Compliance", icon: Shield },
-    { id: "finances", label: "Financial Overview", icon: DollarSign },
-    { id: "blog", label: "Blog Management", icon: BookOpen },
-    { id: "system", label: "System Settings", icon: Settings },
-    { id: "analytics", label: "Analytics", icon: BarChart3 }
+  const sidebarGroups = [
+    {
+      title: "Core Management",
+      items: [
+        { id: "dashboard", label: "Dashboard", icon: Home },
+        { id: "academies", label: "Academy Management", icon: Building },
+        { id: "players", label: "Individual Players", icon: User },
+        { id: "super-admins", label: "Super Admins", icon: Users },
+      ]
+    },
+    {
+      title: "Operations",
+      items: [
+        { id: "sales", label: "Sales Agents", icon: UserCheck },
+        { id: "discounts", label: "Discounts", icon: Percent },
+        { id: "exemptions", label: "Exemptions", icon: ShieldCheck },
+        { id: "compliance", label: "FIFA Compliance", icon: Shield },
+      ]
+    },
+    {
+      title: "Reports & Settings",
+      items: [
+        { id: "finances", label: "Financial Overview", icon: DollarSign },
+        { id: "blog", label: "Blog Management", icon: BookOpen },
+        { id: "system", label: "System Settings", icon: Settings },
+        { id: "analytics", label: "Analytics", icon: BarChart3 }
+      ]
+    }
   ];
 
   const getStatusBadge = (status: string) => {
@@ -1253,31 +1268,40 @@ export default function AdminDashboard() {
         {/* Sidebar */}
         <aside className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-gradient-to-b from-[#005391] to-[#0066b3] border-r-4 border-yellow-400 transition-transform duration-300 ease-in-out min-h-screen`}>
           <div className="flex flex-col h-full pt-16 lg:pt-0">
-            <nav className="flex-1 px-4 py-6 space-y-2">
-              {sidebarItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Button
-                    key={item.id}
-                    variant="ghost"
-                    className={`w-full justify-start text-white hover:bg-white/20 transition-all duration-300 ${activeTab === item.id
-                      ? 'bg-white/20 border-l-4 border-yellow-400 shadow-lg'
-                      : 'border-l-4 border-transparent hover:border-yellow-400/50'
-                      }`}
-                    onClick={() => {
-                      if (item.id === 'super-admins') {
-                        navigate('/admin/super-admins');
-                      } else {
-                        setActiveTab(item.id);
-                      }
-                      setIsSidebarOpen(false);
-                    }}
-                  >
-                    <Icon className="h-5 w-5 mr-3" />
-                    {item.label}
-                  </Button>
-                );
-              })}
+            <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto">
+              {sidebarGroups.map((group) => (
+                <div key={group.title} className="space-y-2">
+                  <h3 className="px-3 text-xs font-semibold text-white/50 uppercase tracking-wider mb-2">
+                    {group.title}
+                  </h3>
+                  <div className="space-y-1">
+                    {group.items.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <Button
+                          key={item.id}
+                          variant="ghost"
+                          className={`w-full justify-start text-white hover:bg-white/20 transition-all duration-300 ${activeTab === item.id
+                            ? 'bg-white/20 border-l-4 border-yellow-400 shadow-lg'
+                            : 'border-l-4 border-transparent hover:border-yellow-400/50'
+                            }`}
+                          onClick={() => {
+                            if (item.id === 'super-admins') {
+                              navigate('/admin/super-admins');
+                            } else {
+                              setActiveTab(item.id);
+                            }
+                            setIsSidebarOpen(false);
+                          }}
+                        >
+                          <Icon className="h-5 w-5 mr-3" />
+                          {item.label}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </nav>
           </div>
         </aside>
