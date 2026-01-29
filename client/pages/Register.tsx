@@ -48,7 +48,7 @@ export default function Register() {
         userId: res.userId,
         role: "admin",
         schoolId: res.schoolId,
-        tokens: { accessToken: res.userId, expiresInSec: 3600 },
+        tokens: { accessToken: (res as any).token || res.userId, expiresInSec: 3600 },
       });
       
       navigate("/dashboard");

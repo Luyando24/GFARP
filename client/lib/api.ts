@@ -26,7 +26,7 @@ import {
   AuthError,
   validateStudentData,
 } from "./errors";
-import { getSession } from "./auth";
+import { getSession, clearSession } from "./auth";
 
 // Player types
 export interface Player {
@@ -207,6 +207,7 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
         || `HTTP ${res.status}`;
 
       if (res.status === 401) {
+        clearSession();
         throw new AuthError(message || "Authentication failed");
       }
 

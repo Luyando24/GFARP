@@ -319,9 +319,21 @@ export const handleRegisterSchool: RequestHandler = async (req, res) => {
       [userId, academyId, email, passwordHash, role, firstName, lastName, phoneNumber || "", true]
     );
 
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        id: userId, 
+        email, 
+        role: role.toLowerCase() 
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
     const response = {
       userId,
       schoolId: academyId, // Keep the same property name for backward compatibility
+      token
     };
 
     res.status(201).json(response);
@@ -364,9 +376,21 @@ export const handleRegisterSuperAdmin: RequestHandler = async (req, res) => {
       [userId, null, email, passwordHash, dbRole, firstName, lastName, req.body.phoneNumber || "", true]
     );
 
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        id: userId, 
+        email, 
+        role: dbRole.toLowerCase() 
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
     const response = {
       userId,
-      role: clientRole // Return the client-side role for consistency
+      role: clientRole, // Return the client-side role for consistency
+      token
     };
 
     res.status(201).json(response);
