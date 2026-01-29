@@ -465,7 +465,7 @@ const PlayerDetails = () => {
     }
   };
 
-  const handleUpdatePlan = async (planType: 'free' | 'pro') => {
+  const handleUpdatePlan = async (planType: 'pro') => {
     if (!player) return;
 
     try {
@@ -479,7 +479,7 @@ const PlayerDetails = () => {
       if (data.success) {
         toast({
           title: "Plan Updated",
-          description: `Player plan has been updated to ${planType === 'pro' ? 'Pro' : 'Free'}`
+          description: `Player plan has been updated to Pro`
         });
         // Refresh player data to show updated plan (if current_plan is in state)
         fetchPlayerDetails();
@@ -1589,15 +1589,6 @@ const PlayerDetails = () => {
                         >
                           <CreditCard className="h-4 w-4 mr-2 text-blue-600" />
                           Activate Pro Plan
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="bg-white"
-                          onClick={() => handleUpdatePlan('free')}
-                        >
-                          <Lock className="h-4 w-4 mr-2 text-gray-500" />
-                          Revert to Free
                         </Button>
                       </div>
                     </div>

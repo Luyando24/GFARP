@@ -94,31 +94,31 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
       let subscription;
       // Check if there's no subscription at all
       if (subscriptionResult.rows.length === 0) {
-        // Get the free plan from the database
-        const freePlanQuery = `
+        // Get the pro plan from the database as default
+        const proPlanQuery = `
           SELECT id, name, player_limit 
           FROM subscription_plans 
-          WHERE is_free = true 
+          WHERE name = 'Pro' OR name = 'Pro Plan'
           LIMIT 1
         `;
-        const freePlanResult = await query(freePlanQuery);
+        const proPlanResult = await query(proPlanQuery);
 
-        if (freePlanResult.rows.length > 0) {
-          const freePlan = freePlanResult.rows[0];
+        if (proPlanResult.rows.length > 0) {
+          const proPlan = proPlanResult.rows[0];
           subscription = {
-            plan_name: freePlan.name,
-            player_limit: freePlan.player_limit,
-            plan_id: freePlan.id
+            plan_name: proPlan.name,
+            player_limit: proPlan.player_limit,
+            plan_id: proPlan.id
           };
         } else {
-          // Fallback if no free plan is configured in the DB
+          // Fallback if no pro plan is configured in the DB
           return res.status(500).json({
             success: false,
-            message: 'No free plan configured. Please contact support.'
+            message: 'No subscription plan configured. Please contact support.'
           });
         }
 
-        // Check if they've already reached the free plan limit
+        // Check if they've already reached the pro plan limit
         // Handle case-sensitive table names (players vs Players)
         let currentPlayerCount = 0;
         try {
@@ -140,7 +140,7 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
           currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
         }
 
-        if (currentPlayerCount >= subscription.player_limit) {
+        if (subscription.player_limit !== -1 && currentPlayerCount >= subscription.player_limit) {
           return res.status(403).json({
             success: false,
             message: `Player limit reached. Your ${subscription.plan_name} allows up to ${subscription.player_limit} players. Please upgrade your subscription to add more players.`,

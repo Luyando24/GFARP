@@ -65,12 +65,6 @@ const StripeSubscriptionManager: React.FC<SubscriptionManagerProps> = ({
   };
 
   const handlePlanSelect = async (plan: SubscriptionPlan) => {
-    if (plan.price === 0) {
-      // Handle free plan directly
-      await createSubscription(plan.id);
-      return;
-    }
-
     setSelectedPlan(plan);
     setLoading(true);
 
@@ -90,11 +84,7 @@ const StripeSubscriptionManager: React.FC<SubscriptionManagerProps> = ({
       const data = await response.json();
 
       if (data.success) {
-        if (data.data.type === 'free') {
-          toast.success('Free plan activated successfully!');
-          onSubscriptionChange?.();
-          setSelectedPlan(null);
-        } else if (data.data.clientSecret) {
+        if (data.data.clientSecret) {
           setClientSecret(data.data.clientSecret);
           setShowPaymentForm(true);
         } else {
@@ -335,9 +325,7 @@ const StripeSubscriptionManager: React.FC<SubscriptionManagerProps> = ({
                   <span className="text-3xl font-bold text-gray-900">
                     {formatCurrency(plan.price, plan.currency)}
                   </span>
-                  {plan.price > 0 && (
-                    <span className="text-gray-600">/{plan.interval}</span>
-                  )}
+                  <span className="text-gray-600">/{plan.interval}</span>
                 </div>
               </div>
 
@@ -368,8 +356,7 @@ const StripeSubscriptionManager: React.FC<SubscriptionManagerProps> = ({
                 }`}
               >
                 {loading ? 'Processing...' : (
-                  subscriptionStatus?.hasSubscription ? 'Upgrade' : 
-                  plan.price === 0 ? 'Get Started Free' : 'Subscribe'
+                  subscriptionStatus?.hasSubscription ? 'Upgrade' : 'Subscribe'
                 )}
               </button>
             </div>

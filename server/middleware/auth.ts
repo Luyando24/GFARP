@@ -26,6 +26,7 @@ export const authenticateToken: RequestHandler = (req, res, next) => {
       id: string;
       email: string;
       name: string;
+      role: string;
     };
     next();
   } catch (err: any) {

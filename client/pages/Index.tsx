@@ -53,57 +53,6 @@ export default function Index() {
 
   const pricingTiers = [
     {
-      id: 'free',
-      name: t('landing.pricing.free.name'),
-      price: '$0',
-      desc: t('landing.pricing.free.ideal'),
-      badge: t('landing.pricing.free.badge'),
-      icon: User,
-      features: [
-        t('landing.pricing.free.maxPlayers'),
-        t('landing.pricing.feature.compliance'),
-        t('landing.pricing.feature.support')
-      ],
-      ctaLink: "/academy-registration?plan=free",
-      ctaText: t('landing.pricing.getStarted'),
-      ctaIcon: User,
-      highlight: false,
-      styles: {
-        card: "border-transparent hover:border-slate-400/30 hover:-translate-y-3",
-        badge: "from-slate-600 to-slate-700 text-white",
-        iconBg: "from-slate-600 to-slate-700",
-        iconColor: "text-white",
-        button: "from-slate-600 to-slate-700 hover:from-slate-700 hover:to-slate-800 text-white",
-        overlay: "from-slate-600/5 to-slate-700/5"
-      }
-    },
-    {
-      id: 'basic',
-      name: t('landing.pricing.tier1.name'),
-      price: billingCycle === 'monthly' ? t('landing.pricing.tier1.price') : t('landing.pricing.tier1.priceYearly'),
-      desc: t('landing.pricing.tier1.desc'),
-      badge: t('landing.pricing.tier1.badge'),
-      icon: Shield,
-      features: [
-        t('landing.pricing.feature.players').replace('{count}', '50'),
-        t('landing.pricing.feature.compliance'),
-        t('landing.pricing.feature.support'),
-        t('landing.pricing.feature.registration')
-      ],
-      ctaLink: "/academy-registration?plan=basic",
-      ctaText: t('landing.pricing.start.bronze'),
-      ctaIcon: Trophy,
-      highlight: false,
-      styles: {
-        card: "border-transparent hover:border-yellow-400/30 hover:-translate-y-3",
-        badge: "from-amber-600 to-amber-700 text-white",
-        iconBg: "from-amber-600 to-amber-700",
-        iconColor: "text-white",
-        button: "from-amber-600 to-amber-700 hover:from-amber-700 hover:to-amber-800 text-white",
-        overlay: "from-amber-600/5 to-amber-700/5"
-      }
-    },
-    {
       id: 'pro',
       name: t('landing.pricing.tier2.name'),
       price: billingCycle === 'monthly' ? t('landing.pricing.tier2.price') : t('landing.pricing.tier2.priceYearly'),
@@ -129,34 +78,6 @@ export default function Index() {
         iconColor: "text-black",
         button: "from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black",
         overlay: "from-yellow-400/10 to-yellow-500/10"
-      }
-    },
-    {
-      id: 'elite',
-      name: t('landing.pricing.tier3.name'),
-      price: billingCycle === 'monthly' ? t('landing.pricing.tier3.price') : t('landing.pricing.tier3.priceYearly'),
-      desc: t('landing.pricing.tier3.worldClass'),
-      badge: t('landing.pricing.tier3.badge'),
-      icon: Award,
-      features: [
-        t('landing.pricing.feature.unlimitedPlayers'),
-        t('landing.pricing.feature.fullCompliance'),
-        t('landing.pricing.feature.247Support'),
-        t('landing.pricing.feature.solidarity'),
-        t('landing.pricing.feature.advancedAnalytics'),
-        t('landing.pricing.feature.customIntegrations')
-      ],
-      ctaLink: "/academy-registration?plan=elite",
-      ctaText: t('landing.pricing.start.platinum'),
-      ctaIcon: Award,
-      highlight: false,
-      styles: {
-        card: "border-transparent hover:border-purple-400/30 hover:-translate-y-4",
-        badge: "from-purple-600 to-purple-700 text-white",
-        iconBg: "from-purple-600 to-purple-700",
-        iconColor: "text-white",
-        button: "from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white",
-        overlay: "from-purple-600/5 to-purple-700/5"
       }
     }
   ];

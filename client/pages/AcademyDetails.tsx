@@ -277,7 +277,7 @@ const AcademyDetails = () => {
                   <h3 className="text-sm font-medium text-muted-foreground">Subscription Plan</h3>
                   <div className="mt-1">
                     <Badge variant="outline" className="bg-blue-100 text-blue-800 border-blue-300">
-                      {academy.subscriptionPlan || "Free Plan"}
+                      {academy.subscriptionPlan || "Pro Plan"}
                     </Badge>
                   </div>
                 </div>
@@ -364,7 +364,7 @@ const AcademyDetails = () => {
               <div className="space-y-4">
                 <div>
                   <h3 className="text-sm font-medium text-muted-foreground">Current Plan</h3>
-                  <p className="font-medium">{academy.subscriptionPlan || "Free Plan"}</p>
+                  <p className="font-medium">{academy.subscriptionPlan || "Pro Plan"}</p>
                 </div>
 
                 <div>

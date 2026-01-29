@@ -1,6 +1,7 @@
 import { RequestHandler } from "express";
 import { v4 as uuidv4 } from "uuid";
 import { Router } from "express";
+import jwt from "jsonwebtoken";
 import {
   LoginRequest,
   StudentLoginRequest,
@@ -10,6 +11,8 @@ import {
   RegisterStaffResponse,
 } from "../../shared/api.js";
 import { query, hashPassword, verifyPassword } from "../lib/db.js";
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Create router
 const router = Router();
@@ -88,12 +91,24 @@ export const handleLogin: RequestHandler = async (req, res) => {
     // Convert database role (ADMIN/SUPERADMIN) to frontend role (admin/superadmin)
     const frontendRole = adminUser.role.toLowerCase();
 
+    // Generate real JWT token
+    const token = jwt.sign(
+      { 
+        id: adminUser.id, 
+        email: adminUser.email, 
+        name: `${adminUser.first_name} ${adminUser.last_name}`,
+        role: frontendRole 
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
     const session: AuthSession = {
       userId: adminUser.id,
       role: frontendRole,
       tokens: {
-        accessToken: `token_${adminUser.id}`,
-        expiresInSec: 3600,
+        accessToken: token,
+        expiresInSec: 86400, // 24 hours
       },
     };
 
@@ -121,13 +136,23 @@ export const handleStudentLogin: RequestHandler = async (req, res) => {
 
     const student = result.rows[0];
 
+    // Generate real JWT token
+    const token = jwt.sign(
+      { 
+        id: student.id, 
+        role: "student" 
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
     const session: AuthSession = {
       userId: student.id,
       role: "student",
       studentId: student.id,
       tokens: {
-        accessToken: `token_${student.id}`,
-        expiresInSec: 3600,
+        accessToken: token,
+        expiresInSec: 86400,
       },
     };
 
@@ -171,13 +196,23 @@ export const handleStudentAlternativeLogin: RequestHandler = async (req, res) =>
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
+    // Generate real JWT token
+    const token = jwt.sign(
+      { 
+        id: student.id, 
+        role: "student" 
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
     const session: AuthSession = {
       userId: student.id,
       role: "student",
       studentId: student.id,
       tokens: {
-        accessToken: `token_${student.id}`,
-        expiresInSec: 3600,
+        accessToken: token,
+        expiresInSec: 86400,
       },
     };
 

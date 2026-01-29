@@ -181,11 +181,18 @@ export default function IndividualPlayerDetails() {
               </div>
               <CardTitle>{player.first_name} {player.last_name}</CardTitle>
               <CardDescription>{player.email}</CardDescription>
-              {player.current_plan && (
-                 <Badge className="mt-2" variant={player.current_plan === 'pro' ? 'default' : 'secondary'}>
-                   {player.current_plan.toUpperCase()} PLAN
-                 </Badge>
-              )}
+              <div className="flex flex-wrap justify-center gap-2 mt-2">
+                {player.current_plan && (
+                  <Badge variant={player.current_plan === 'pro' ? 'default' : 'secondary'}>
+                    {player.current_plan.toUpperCase()} PLAN
+                  </Badge>
+                )}
+                {player.is_exempted && (
+                  <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                    EXEMPTED
+                  </Badge>
+                )}
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">

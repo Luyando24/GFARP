@@ -780,7 +780,7 @@ export default function AcademyManagement() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                          {academy.subscriptionPlan || "Free Plan"}
+                          {academy.subscriptionPlan || "Pro Plan"}
                         </Badge>
                       </TableCell>
                       <TableCell>

@@ -115,12 +115,8 @@ router.post('/create-checkout-session', authenticateToken, (async (req, res) => 
     
     // Apply billing cycle adjustment
     if (billingCycle === 'yearly') {
-      // Logic for yearly pricing (e.g., 20% off)
-      // This should ideally match the frontend calculation or be stored in DB
-      if (plan.name === 'Basic') price = 299; // Example fixed yearly price
-      else if (plan.name === 'Pro') price = 599;
-      else if (plan.name === 'Elite') price = 999;
-      else price = Math.round(price * 12 * 0.8);
+      // Logic for yearly pricing ($499 for Pro)
+      price = 499;
     }
 
     // Apply Promo Code
@@ -254,56 +250,6 @@ router.post('/create-checkout-session', authenticateToken, (async (req, res) => 
           'UPDATE academies SET stripe_customer_id = $1, updated_at = NOW() WHERE id = $2',
           [customerId, academyId]
         );
-      }
-
-      // Handle free plans
-      if (plan.price === 0 || plan.is_free) {
-        // Create local subscription for free plan
-        const subscriptionId = uuidv4();
-        const startDate = new Date();
-        const endDate = new Date();
-        endDate.setFullYear(endDate.getFullYear() + 10); // 10 years for free plan
-
-        await client.query(`
-          INSERT INTO academy_subscriptions (
-            id, academy_id, plan_id, status, start_date, end_date, 
-            auto_renew, created_at, updated_at
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-        `, [
-          subscriptionId,
-          academyId,
-          planId,
-          'ACTIVE',
-          startDate,
-          endDate,
-          false
-        ]);
-
-        // Create payment record
-        const paymentId = uuidv4();
-        await client.query(`
-          INSERT INTO subscription_payments (
-            id, subscription_id, amount, currency, payment_method, 
-            payment_reference, status, notes, created_at, updated_at
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-        `, [
-          paymentId,
-          subscriptionId,
-          0,
-          'USD',
-          'CARD',
-          'FREE_PLAN',
-          'COMPLETED',
-          'Free plan activation'
-        ]);
-
-        return {
-          type: 'free',
-          subscriptionId,
-          clientSecret: null
-        };
       }
 
       // For paid plans, create Stripe subscription

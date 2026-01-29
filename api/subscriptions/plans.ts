@@ -40,30 +40,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!plans || plans.length === 0) {
             const defaultPlans = [
                 {
-                    id: 'free',
-                    name: 'Free Plan',
-                    price: 0,
-                    currency: 'USD',
-                    billingCycle: 'MONTHLY',
-                    playerLimit: 3,
-                    features: ['Basic player profiles', 'Limited storage'],
-                    isActive: true,
-                    isFree: true,
-                    sortOrder: 1
-                },
-                {
-                    id: 'basic',
-                    name: 'Basic Plan',
-                    price: 19.99,
-                    currency: 'USD',
-                    billingCycle: 'MONTHLY',
-                    playerLimit: 50,
-                    features: ['Unlimited player profiles', 'Basic analytics'],
-                    isActive: true,
-                    isFree: false,
-                    sortOrder: 2
-                },
-                {
                     id: 'pro',
                     name: 'Pro Plan',
                     price: 49.99,
@@ -73,7 +49,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     features: ['Advanced analytics', 'Video analysis', 'Priority support'],
                     isActive: true,
                     isFree: false,
-                    sortOrder: 3
+                    sortOrder: 1
                 }
             ];
 

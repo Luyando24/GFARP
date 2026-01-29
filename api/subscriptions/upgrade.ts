@@ -48,14 +48,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .single();
 
         // 2. Get new plan details
-        // Check for fallback/mock plans first (free, basic, pro, elite)
+        // Check for fallback/mock plans first (pro)
         let newPlan;
-        if (['free', 'basic', 'pro', 'elite'].includes(newPlanId)) {
+        if (newPlanId === 'pro') {
             const fallbackPlans = [
-                { id: 'free', name: 'Free Plan', price: 0 },
-                { id: 'basic', name: 'Basic Plan', price: 19.99 },
-                { id: 'pro', name: 'Pro Plan', price: 49.99 },
-                { id: 'elite', name: 'Elite Plan', price: 99.99 }
+                { id: 'pro', name: 'Pro Plan', price: 49.99 }
             ];
             newPlan = fallbackPlans.find(p => p.id === newPlanId);
         } else {
@@ -90,7 +87,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const endDate = new Date();
         endDate.setMonth(endDate.getMonth() + 1); // 1 month subscription
 
-        // If we are using a fallback plan (e.g. 'free') that doesn't exist in the DB,
+        // If we are using a fallback plan (e.g. 'pro') that doesn't exist in the DB,
         // we can't insert it as a foreign key if the column type is UUID and references subscription_plans.
         // We need to check if the plan exists in DB first.
         // If it's a fallback plan and not in DB, we should try to find a real plan ID or create a placeholder plan.
@@ -98,23 +95,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let dbPlanId = newPlanId;
         
         // If it's a fallback plan, ensure it exists in the DB to satisfy foreign key constraints
-        if (['free', 'basic', 'pro', 'elite'].includes(newPlanId)) {
+        if (newPlanId === 'pro') {
              // Try to find it again just to be sure
              const { data: existingPlan } = await supabase
                 .from('subscription_plans')
                 .select('id')
-                .eq('name', newPlan.name) // Search by name since ID 'free' might not be valid UUID
+                .eq('name', newPlan.name) // Search by name since ID might not be valid UUID
                 .single();
                 
              if (existingPlan) {
                  dbPlanId = existingPlan.id;
              } else {
                  // If it doesn't exist, we might need to create it if possible, or fail gracefully.
-                 // However, usually 'free' is not a valid UUID.
+                 // However, usually fallback IDs are not valid UUIDs.
                  // Let's check if the input 'newPlanId' is a valid UUID.
                  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
                  if (!uuidRegex.test(newPlanId)) {
-                     // It's not a UUID (e.g. "free"), so we can't use it if the column is UUID.
+                     // It's not a UUID, so we can't use it if the column is UUID.
                      // We must create a temporary plan in the DB or find one.
                      // For now, let's try to insert the plan into subscription_plans if it doesn't exist
                      // with a new valid UUID.
@@ -135,7 +132,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                          dbPlanId = newDbPlanId;
                      } else {
                          // If we can't create it, we are stuck.
-                         // But maybe the column allows text? The error says "invalid input syntax for type uuid: "free"".
+                         // But maybe the column allows text?
                          // So it IS a UUID column.
                          console.warn('Could not create plan in DB, using fallback ID which might fail:', newPlanId);
                      }
@@ -158,8 +155,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .single();
 
         if (createSubError) {
-            // If it's a UUID error, it means the DB expects a UUID but we sent "free"
-            // This implies the fallback plan ID "free" is not in the DB and the DB enforces UUID foreign key
+            // If it's a UUID error, it means the DB expects a UUID but we sent a non-UUID string
+            // This implies the fallback plan ID is not in the DB and the DB enforces UUID foreign key
             // In this case, we can't really create a relationship if the plan doesn't exist in DB
             // BUT, for the sake of this fix, if we are using a fallback plan, we probably shouldn't be inserting into
             // academy_subscriptions with a plan_id that doesn't exist in subscription_plans table if FK exists.
@@ -185,7 +182,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         // 6. Create payment record
         const paymentId = uuidv4();
-        const isFree = newPlan.price === 0;
 
         await supabase
             .from('subscription_payments')
@@ -194,10 +190,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 subscription_id: newSubscriptionId,
                 amount: newPlan.price,
                 currency: 'USD',
-                payment_method: isFree ? 'CARD' : (paymentMethod || 'CARD'), // Default to CARD for free plans if null
-                payment_reference: isFree ? 'FREE_PLAN' : (paymentReference || null),
-                status: isFree || paymentMethod !== 'CASH' ? 'COMPLETED' : 'PENDING',
-                notes: isFree ? ('Free plan activation' + (notes ? ': ' + notes : '')) : notes
+                payment_method: (paymentMethod || 'CARD'), // Default to CARD if null
+                payment_reference: (paymentReference || null),
+                status: paymentMethod !== 'CASH' ? 'COMPLETED' : 'PENDING',
+                notes: notes
             });
 
         return res.status(200).json({
@@ -212,7 +208,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     endDate: newSubscription.end_date
                 },
                 paymentId: paymentId,
-                paymentStatus: isFree || paymentMethod !== 'CASH' ? 'COMPLETED' : 'PENDING'
+                paymentStatus: paymentMethod !== 'CASH' ? 'COMPLETED' : 'PENDING'
             }
         });
 

@@ -850,7 +850,7 @@ export default function PlayerDashboard() {
                       </CardHeader>
                       <CardContent>
                         <div className="text-2xl font-bold">
-                          {currentPlan === 'pro' ? "Pro Plan Active" : "Free Plan"}
+                          {"Pro Plan Active"}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1 mb-4">
                           {currentPlan === 'pro' 
@@ -1280,7 +1280,7 @@ export default function PlayerDashboard() {
                   </CardContent>
                   <CardFooter className="flex justify-end space-x-2 bg-slate-50 dark:bg-slate-800/50 p-4">
                     <Button variant="outline" onClick={() => setActiveTab('overview')}>Cancel</Button>
-                    <Button onClick={handleSaveProfile} disabled={saving || (currentPlan !== 'pro' && currentPlan !== 'basic' && currentPlan !== 'pdf' && false) /* Allow edit for now or restrict based on plan */}>
+                    <Button onClick={handleSaveProfile} disabled={saving || (currentPlan !== 'pro' && currentPlan !== 'pdf' && false) /* Allow edit for now or restrict based on plan */}>
                       {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                       Save Changes
                     </Button>

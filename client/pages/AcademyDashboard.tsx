@@ -605,19 +605,19 @@ export default function AcademyDashboard() {
         });
       } else {
         // Handle case when no subscription is found
-        console.log("No active subscription found - using default free plan");
-        // Set default free plan data
+        console.log("No active subscription found - using default pro plan");
+        // Set default pro plan data
         setSubscriptionData({
-          id: "free-default",
+          id: "pro-default",
           status: "active",
-          planName: "Free Plan",
-          price: 0,
+          planName: "Pro Plan",
+          price: 49.99,
           billingCycle: 'month',
           startDate: new Date().toISOString(),
           endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
           autoRenew: true,
           daysRemaining: 365,
-          playerLimit: 3,
+          playerLimit: 500,
           playerCount: 0,
           playerUsagePercentage: 0
         });
@@ -688,15 +688,11 @@ export default function AcademyDashboard() {
       id: selectedPlan.id,
       name: selectedPlan.name,
       price: billingCycle === 'yearly'
-        ? (selectedPlan.name === 'Basic' || selectedPlan.name === t('landing.pricing.tier1.name')
-          ? parseInt(t('landing.pricing.tier1.priceYearly').replace(/[^0-9]/g, ''))
-          : selectedPlan.name === 'Pro' || selectedPlan.name === t('landing.pricing.tier2.name')
-            ? parseInt(t('landing.pricing.tier2.priceYearly').replace(/[^0-9]/g, ''))
-            : selectedPlan.name === 'Elite' || selectedPlan.name === t('landing.pricing.tier3.name')
-              ? parseInt(t('landing.pricing.tier3.priceYearly').replace(/[^0-9]/g, ''))
-              : Math.round(selectedPlan.price * 12 * 0.8))
+        ? (selectedPlan.name === 'Pro' || selectedPlan.name === 'Pro Plan' || selectedPlan.name === t('landing.pricing.tier2.name')
+          ? parseInt(t('landing.pricing.tier2.priceYearly').replace(/[^0-9]/g, ''))
+          : Math.round(selectedPlan.price * 12 * 0.8))
         : selectedPlan.price,
-      isFree: selectedPlan.price === 0,
+      isFree: false,
       billingCycle: billingCycle
     });
     setShowPaymentModal(true);
@@ -1485,7 +1481,7 @@ export default function AcademyDashboard() {
                               {isLoadingSubscription ? (
                                 <Loader2 className="h-5 w-5 animate-spin" />
                               ) : (
-                                subscriptionData?.planName || "Free Plan"
+                                subscriptionData?.planName || "Pro Plan"
                               )}
                             </p>
                             <Button
@@ -2454,12 +2450,8 @@ export default function AcademyDashboard() {
                                     {availablePlans.map((plan: any) => {
                                       let displayPrice = `$${plan.price}`;
                                       if (billingCycle === 'yearly') {
-                                        if (plan.name === 'Basic' || plan.name === t('landing.pricing.tier1.name')) {
-                                          displayPrice = t('landing.pricing.tier1.priceYearly');
-                                        } else if (plan.name === 'Pro' || plan.name === t('landing.pricing.tier2.name')) {
+                                        if (plan.name === 'Pro' || plan.name === 'Pro Plan' || plan.name === t('landing.pricing.tier2.name')) {
                                           displayPrice = t('landing.pricing.tier2.priceYearly');
-                                        } else if (plan.name === 'Elite' || plan.name === t('landing.pricing.tier3.name')) {
-                                          displayPrice = t('landing.pricing.tier3.priceYearly');
                                         } else {
                                           displayPrice = `$${Math.round(plan.price * 12 * 0.8)}`;
                                         }

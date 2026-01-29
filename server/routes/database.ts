@@ -91,6 +91,29 @@ export const handleGetDatabaseStats: RequestHandler = async (req, res) => {
   }
 };
 
+// GET /api/database/ping - Simple connection test
+export const handlePingDatabase: RequestHandler = async (req, res) => {
+  try {
+    const result = await query('SELECT 1 as ping');
+    if (result.rows && result.rows[0].ping === 1) {
+      res.json({ 
+        success: true, 
+        message: 'Successfully connected to Supabase database',
+        timestamp: new Date().toISOString()
+      });
+    } else {
+      throw new Error('Database ping returned unexpected result');
+    }
+  } catch (error: any) {
+    console.error('Database ping failed:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to connect to Supabase database',
+      details: error.message
+    });
+  }
+};
+
 // GET /api/database/tables - Get table information
 export const handleGetTables: RequestHandler = async (req, res) => {
   try {
@@ -360,6 +383,7 @@ export const handleGetPerformanceMetrics: RequestHandler = async (req, res) => {
 };
 
 // Routes
+router.get('/ping', handlePingDatabase);
 router.get('/stats', handleGetDatabaseStats);
 router.get('/tables', handleGetTables);
 router.get('/schema/:tableName', handleGetTableSchema);

@@ -107,18 +107,9 @@ async function ensureSubscriptionSchema(client: any, academyIdType: 'uuid' | 'in
       id: uuidv4(), name, description: desc, price, currency: 'USD', billing_cycle: cycle, player_limit: players, storage_limit: storage, features: JSON.stringify(features), is_active: true, is_free: isFree, sort_order: order,
     });
     const plans = [
-      makePlan('Free Plan', 'Perfect for small academies getting started', 0.00, 'LIFETIME', 3, 1073741824, [
-        'Up to 3 players', 'Basic player management', 'Email support', 'Basic reporting'
-      ], true, 1),
-      makePlan('Basic Plan', 'Great for growing academies', 29.99, 'MONTHLY', 50, 5368709120, [
-        'Advanced player management', 'Document storage (5GB)', 'Email support', 'Advanced reporting', 'Player analytics'
-      ], false, 2),
-      makePlan('Pro Plan', 'For established academies', 59.99, 'MONTHLY', 200, 10737418240, [
+      makePlan('Pro Plan', 'For established academies', 49.99, 'MONTHLY', 500, 10737418240, [
         'Unlimited player management', 'Document storage (10GB)', 'Priority support', 'Advanced analytics', 'Custom reports', 'API access'
-      ], false, 3),
-      makePlan('Elite Plan', 'For large academies and organizations', 99.99, 'MONTHLY', 1000, 53687091200, [
-        'Unlimited features', 'Document storage (50GB)', '24/7 support', 'White-label options', 'Multi-academy management', 'Advanced integrations'
-      ], false, 4),
+      ], false, 1),
     ];
     for (const p of plans) {
       await client.query(
@@ -428,10 +419,7 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
 
       // Map plan IDs to plan names
       const planIdToName = {
-        'free': 'Free Plan',
-        'basic': 'Basic Plan',
-        'pro': 'Pro Plan',
-        'elite': 'Elite Plan'
+        'pro': 'Pro Plan'
       };
 
       // Get the subscription plan (optional)
@@ -461,7 +449,25 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
           if (planById.rows.length > 0) {
             plan = planById.rows[0];
           }
-          // No fallback to Free Plan automatically
+          // If still no plan found, default to Pro Plan
+          if (!plan) {
+            const defaultPlanByName = await client.query(
+              `SELECT * FROM subscription_plans WHERE name = $1 AND is_active = true`,
+              ['Pro Plan']
+            );
+            if (defaultPlanByName.rows.length > 0) {
+              plan = defaultPlanByName.rows[0];
+            }
+          }
+        }
+      } else {
+        // No plan provided, default to Pro Plan
+        const defaultPlanByName = await client.query(
+          `SELECT * FROM subscription_plans WHERE name = $1 AND is_active = true`,
+          ['Pro Plan']
+        );
+        if (defaultPlanByName.rows.length > 0) {
+          plan = defaultPlanByName.rows[0];
         }
       }
 

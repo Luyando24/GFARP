@@ -265,9 +265,13 @@ router.get('/profile', authenticateToken, async (req, res) => {
 
     const result = await query(
       `SELECT p.*, ip.email, ip.first_name, ip.last_name,
-       (SELECT plan_type FROM player_purchases 
-        WHERE player_id = $1 AND status = 'completed' 
-        ORDER BY created_at DESC LIMIT 1) as active_plan
+       COALESCE(
+         (SELECT 'pro' FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile'),
+         (SELECT plan_type FROM player_purchases 
+          WHERE player_id = $1 AND status = 'completed' AND plan_type = 'pro'
+          ORDER BY created_at DESC LIMIT 1),
+         'free'
+       ) as active_plan
        FROM player_profiles p
        JOIN individual_players ip ON p.player_id = ip.id
        WHERE p.player_id = $1`,
@@ -545,9 +549,9 @@ router.get('/public/by-slug/:slug', async (req, res) => {
 router.post('/purchase', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).user.id;
-    const { planType, amount } = req.body; // 'basic', 'pdf', 'pro'
+    let { planType, amount } = req.body; // 'pdf', 'pro'
 
-    if (!['basic', 'pdf', 'pro'].includes(planType)) {
+    if (!['pdf', 'pro'].includes(planType)) {
       return res.status(400).json({ error: 'Invalid plan type' });
     }
 
@@ -587,9 +591,14 @@ router.get('/admin-list', async (req, res) => {
         ip.last_name,
         ip.created_at,
         pp.slug,
-        (SELECT CASE WHEN plan_type = 'basic' THEN 'pro' ELSE plan_type END FROM player_purchases 
-         WHERE player_id = ip.id AND status = 'completed' 
-         ORDER BY created_at DESC LIMIT 1) as current_plan,
+        COALESCE(
+          (SELECT 'pro' FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile'),
+          (SELECT plan_type FROM player_purchases 
+           WHERE player_id = ip.id AND status = 'completed' AND plan_type = 'pro'
+           ORDER BY created_at DESC LIMIT 1),
+          'free'
+        ) as current_plan,
+        EXISTS (SELECT 1 FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile') as is_exempted,
         (SELECT SUM(amount) FROM player_purchases 
          WHERE player_id = ip.id AND status = 'completed') as total_spent
       FROM individual_players ip
@@ -610,26 +619,15 @@ router.post('/:id/plan', async (req, res) => {
     const { id } = req.params;
     const { planType } = req.body;
 
-    if (!['free', 'pro'].includes(planType)) {
-      return res.status(400).json({ error: 'Invalid plan type' });
+    if (planType !== 'pro') {
+      return res.status(400).json({ error: 'Invalid plan type. Only Pro is supported.' });
     }
 
-    if (planType === 'pro') {
-      await query(
-        `INSERT INTO player_purchases (player_id, plan_type, amount, status, created_at)
-         VALUES ($1, $2, 0, 'completed', NOW())`,
-        [id, planType]
-      );
-    } else {
-      // Deactivate Pro plan by marking existing completed ones as deactivated or just inserting a free one?
-      // The current logic gets the latest completed purchase. 
-      // To "deactivate", we can insert a 'free' record or update previous pro records to 'cancelled'.
-      await query(
-        `INSERT INTO player_purchases (player_id, plan_type, amount, status, created_at)
-         VALUES ($1, $2, 0, 'completed', NOW())`,
-        [id, 'free']
-      );
-    }
+    await query(
+      `INSERT INTO player_purchases (player_id, plan_type, amount, status, created_at)
+       VALUES ($1, $2, 0, 'completed', NOW())`,
+      [id, 'pro']
+    );
 
     res.json({ success: true, message: `Plan updated to ${planType}` });
   } catch (error) {
@@ -672,12 +670,17 @@ router.get('/:id', async (req, res) => {
         pp.whatsapp_number,
         pp.social_links,
         pp.slug,
-        (SELECT CASE WHEN plan_type = 'basic' THEN 'pro' ELSE plan_type END FROM player_purchases 
-         WHERE player_id = ip.id AND status = 'completed' 
-         ORDER BY created_at DESC LIMIT 1) as current_plan,
+        COALESCE(
+          (SELECT 'pro' FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile'),
+          (SELECT plan_type FROM player_purchases 
+           WHERE player_id = ip.id AND status = 'completed' AND plan_type = 'pro'
+           ORDER BY created_at DESC LIMIT 1),
+          'free'
+        ) as current_plan,
+        EXISTS (SELECT 1 FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile') as is_exempted,
         (SELECT json_agg(json_build_object(
            'id', pur.id,
-           'plan_type', CASE WHEN pur.plan_type = 'basic' THEN 'pro' ELSE pur.plan_type END,
+           'plan_type', pur.plan_type,
            'amount', pur.amount,
            'status', pur.status,
            'created_at', pur.created_at

@@ -127,6 +127,7 @@ import { NotificationsPopover } from '@/components/navigation/NotificationsPopov
 import BlogManagement from '@/components/admin/BlogManagement';
 import SalesAgentsManager from '@/components/admin/SalesAgentsManager';
 import DiscountManager from '@/components/admin/DiscountManager';
+import ExemptionManager from '@/components/admin/ExemptionManager';
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 // Real admin data will be fetched from API
@@ -870,7 +871,7 @@ export default function AdminDashboard() {
     phone: "",
     address: "",
     establishedDate: "",
-    subscription: "Basic",
+    subscription: "Pro Plan",
     description: "",
     website: "",
     capacity: ""
@@ -1032,7 +1033,7 @@ export default function AdminDashboard() {
         phone: "",
         address: "",
         establishedDate: "",
-        subscription: "Basic",
+        subscription: "Pro Plan",
         description: "",
         website: "",
         capacity: ""
@@ -1107,7 +1108,7 @@ export default function AdminDashboard() {
         phone: "",
         address: "",
         establishedDate: "",
-        subscription: "Basic",
+        subscription: "Pro Plan",
         description: "",
         website: "",
         capacity: ""
@@ -1155,6 +1156,7 @@ export default function AdminDashboard() {
     { id: "super-admins", label: "Super Admins", icon: Users },
     { id: "sales", label: "Sales Agents", icon: UserCheck },
     { id: "discounts", label: "Discounts", icon: Percent },
+    { id: "exemptions", label: "Exemptions", icon: ShieldCheck },
     { id: "compliance", label: "FIFA Compliance", icon: Shield },
     { id: "finances", label: "Financial Overview", icon: DollarSign },
     { id: "blog", label: "Blog Management", icon: BookOpen },
@@ -1668,9 +1670,16 @@ export default function AdminDashboard() {
                               </TableCell>
                               <TableCell>{player.email}</TableCell>
                               <TableCell>
-                                <Badge variant={player.current_plan?.toLowerCase() === 'pro' ? 'default' : 'outline'}>
-                                  {player.current_plan?.toLowerCase() === 'pro' ? 'Pro Plan' : (player.current_plan ? `${player.current_plan} Plan` : 'Free Plan')}
-                                </Badge>
+                                <div className="flex items-center gap-2">
+                                  <Badge variant={player.current_plan?.toLowerCase() === 'pro' ? 'default' : 'outline'}>
+                                    {'Pro Plan'}
+                                  </Badge>
+                                  {player.is_exempted && (
+                                    <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
+                                      Exempted
+                                    </Badge>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell>${player.total_spent ? parseFloat(player.total_spent).toFixed(2) : '0.00'}</TableCell>
                               <TableCell>{new Date(player.created_at).toLocaleDateString()}</TableCell>
@@ -1712,6 +1721,11 @@ export default function AdminDashboard() {
             {/* Discounts Tab */}
             <TabsContent value="discounts" className="space-y-6">
               <DiscountManager />
+            </TabsContent>
+
+            {/* Exemptions Tab */}
+            <TabsContent value="exemptions" className="space-y-6">
+              <ExemptionManager />
             </TabsContent>
 
             <TabsContent value="compliance" className="space-y-6">
@@ -3221,7 +3235,7 @@ export default function AdminDashboard() {
                   <SelectValue placeholder="Select subscription" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Basic">Basic</SelectItem>
+                  <SelectItem value="Pro Plan">Pro Plan</SelectItem>
                   <SelectItem value="Standard">Standard</SelectItem>
                   <SelectItem value="Professional">Professional</SelectItem>
                 </SelectContent>
@@ -3519,7 +3533,7 @@ export default function AdminDashboard() {
                   <SelectValue placeholder="Select subscription" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Basic">Basic</SelectItem>
+                  <SelectItem value="Pro Plan">Pro Plan</SelectItem>
                   <SelectItem value="Standard">Standard</SelectItem>
                   <SelectItem value="Professional">Professional</SelectItem>
                 </SelectContent>

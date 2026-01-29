@@ -182,40 +182,6 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
 function getFallbackPlans() {
   return [
     {
-      id: 'free',
-      name: 'Free Plan',
-      description: 'Get started with core features for small academies.',
-      price: 0,
-      currency: 'USD',
-      billingCycle: 'MONTHLY',
-      playerLimit: 3,
-      features: [
-        'Up to 3 players',
-        'Basic player management',
-        'Community support'
-      ],
-      isActive: true,
-      isFree: true,
-      sortOrder: 1
-    },
-    {
-      id: 'basic',
-      name: 'Basic Plan',
-      description: 'Essential tools for growing academies.',
-      price: 19.99,
-      currency: 'USD',
-      billingCycle: 'MONTHLY',
-      playerLimit: 100,
-      features: [
-        'Up to 100 players',
-        'Advanced player tracking',
-        'Priority support'
-      ],
-      isActive: true,
-      isFree: false,
-      sortOrder: 2
-    },
-    {
       id: 'pro',
       name: 'Pro Plan',
       description: 'Professional features for established academies.',
@@ -230,24 +196,7 @@ function getFallbackPlans() {
       ],
       isActive: true,
       isFree: false,
-      sortOrder: 3
-    },
-    {
-      id: 'elite',
-      name: 'Elite Plan',
-      description: 'All features unlocked for large academies.',
-      price: 99.99,
-      currency: 'USD',
-      billingCycle: 'MONTHLY',
-      playerLimit: 2000,
-      features: [
-        'Up to 2000 players',
-        'Full analytics suite',
-        'Dedicated support'
-      ],
-      isActive: true,
-      isFree: false,
-      sortOrder: 4
+      sortOrder: 1
     }
   ];
 }
@@ -281,7 +230,7 @@ export const handleUpgradePlan: RequestHandler = async (req, res) => {
       let newPlan;
       
       // Check if it's a predefined plan ID (fallback plans)
-      if (['free', 'basic', 'pro', 'elite'].includes(newPlanId)) {
+      if (['pro'].includes(newPlanId)) {
         const fallbackPlans = getFallbackPlans();
         newPlan = fallbackPlans.find(p => p.id === newPlanId);
       } else {
@@ -354,47 +303,26 @@ export const handleUpgradePlan: RequestHandler = async (req, res) => {
         notes
       ]);
 
-      // Create payment record for all plans (including free plans)
-      let paymentId = null;
-      paymentId = uuidv4();
+      // Create payment record
+      const paymentId = uuidv4();
+      const amount = newPlan.price;
 
-      if (newPlan.price > 0) {
-        // For paid plans, use the provided payment method
-        await client.query(`
-          INSERT INTO subscription_payments (
-            id, subscription_id, amount, currency, payment_method, 
-            payment_reference, status, notes, created_at, updated_at
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-        `, [
-          paymentId,
-          newSubscriptionId,
-          newPlan.price,
-          'USD',
-          paymentMethod,
-          paymentReference || null,
-          paymentMethod === 'CASH' ? 'PENDING' : 'COMPLETED',
-          notes || null
-        ]);
-      } else {
-        // For free plans, use a valid payment method from the constraint (CARD)
-        await client.query(`
-          INSERT INTO subscription_payments (
-            id, subscription_id, amount, currency, payment_method, 
-            payment_reference, status, notes, created_at, updated_at
-          )
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-        `, [
-          paymentId,
-          newSubscriptionId,
-          0,
-          'USD',
-          'CARD', // Using CARD as a valid payment method instead of 'FREE'
-          'FREE_PLAN',
-          'COMPLETED',
-          'Free plan activation' + (notes ? ': ' + notes : '')
-        ]);
-      }
+      await client.query(`
+        INSERT INTO subscription_payments (
+          id, subscription_id, amount, currency, payment_method, 
+          payment_reference, status, notes, created_at, updated_at
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+      `, [
+        paymentId,
+        newSubscriptionId,
+        amount,
+        'USD',
+        paymentMethod || 'CARD',
+        paymentReference || 'DASHBOARD_UPGRADE',
+        paymentMethod === 'CASH' ? 'PENDING' : 'COMPLETED',
+        notes
+      ]);
 
       return { newSubscription, newPlan, paymentId };
     });

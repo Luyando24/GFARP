@@ -46,7 +46,7 @@ async function main() {
       id, name, description, price, currency, billing_cycle, is_free,
       stripe_product_id, stripe_price_id
      FROM subscription_plans
-     WHERE is_active = TRUE
+     WHERE is_active = TRUE AND (name = 'Pro' OR name = 'Pro Plan')
      ORDER BY sort_order, created_at`
   );
 
@@ -59,9 +59,9 @@ async function main() {
   console.log(`Found ${plans.length} plans. Starting provisioning...`);
 
   for (const plan of plans) {
-    // Skip free plans (Stripe cannot create $0 recurring prices)
+    // Skip plans with 0 price (Stripe cannot create $0 recurring prices)
     if (plan.is_free || Number(plan.price) === 0) {
-      console.log(`[${plan.name}] Skipping free plan.`);
+      console.log(`[${plan.name}] Skipping plan with 0 price.`);
       continue;
     }
 

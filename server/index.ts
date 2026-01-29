@@ -42,6 +42,7 @@ import stripeWebhooksRouter from "./routes/stripe-webhooks.js";
 import stripeAdminRouter from "./routes/stripe-admin.js";
 import adminSalesRouter from "./routes/admin-sales.js";
 import adminDiscountsRouter from "./routes/admin-discounts.js";
+import exemptionsRouter from "./routes/exemptions.js";
 import uploadsRouter from "./routes/uploads.js";
 import {
   handleUploadPlayerDocument,
@@ -128,6 +129,7 @@ export function createServer() {
 
   // Admin Discounts routes
   api.use("/admin/discounts", adminDiscountsRouter);
+  api.use("/admin/exemptions", exemptionsRouter);
 
   console.log("[SERVER] Admin routes registered");
 

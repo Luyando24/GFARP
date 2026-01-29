@@ -161,7 +161,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 isVerified: data.is_verified,
                 storageUsed: data.storage_used || 0,
                 player_count: players.length, // Use actual player count
-                subscriptionPlan: data.subscription_plan || 'Free Plan',
+                subscriptionPlan: data.subscription_plan || 'Pro Plan',
                 createdAt: data.created_at,
                 updatedAt: data.updated_at,
                 players: players, // Include players in response

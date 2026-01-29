@@ -79,12 +79,10 @@ export default async function handler(
 
         // 2. Get plan details
         let plan;
-        // Check for fallback/mock plans first
-        if (['basic', 'pro', 'elite'].includes(planId)) {
+        // Check for fallback/mock plans first (pro)
+        if (planId === 'pro') {
             const fallbackPlans = [
-                { id: 'basic', name: 'Basic Plan', price: 19.99 },
-                { id: 'pro', name: 'Pro Plan', price: 49.99 },
-                { id: 'elite', name: 'Elite Plan', price: 99.99 }
+                { id: 'pro', name: 'Pro Plan', price: 49.99 }
             ];
             plan = fallbackPlans.find(p => p.id === planId);
         } else {
@@ -162,15 +160,10 @@ export default async function handler(
                 interval = 'year';
                 priceDescription = `Yearly Subscription to ${plan.name}`;
                 
-                // Check for specific plan names to apply fixed yearly pricing
-                // Matching frontend logic
+                // Check for Pro plan to apply fixed yearly pricing
                 const planNameLower = plan.name.toLowerCase();
-                if (planNameLower.includes('basic') || planNameLower.includes('tier 1')) {
-                    unitAmount = 27900; // $279.00
-                } else if (planNameLower.includes('pro') || planNameLower.includes('tier 2')) {
+                if (planNameLower.includes('pro') || planNameLower.includes('tier 2')) {
                     unitAmount = 56900; // $569.00
-                } else if (planNameLower.includes('elite') || planNameLower.includes('tier 3')) {
-                    unitAmount = 94900; // $949.00
                 } else {
                     // Default 20% discount calculation if no specific match
                     unitAmount = Math.round(plan.price * 12 * 0.8 * 100);

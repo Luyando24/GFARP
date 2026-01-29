@@ -14,7 +14,6 @@ interface PaymentMethodSelectorProps {
     id: string;
     name: string;
     price: number;
-    isFree: boolean;
     billingCycle?: 'monthly' | 'yearly';
   } | null;
   academyId: string;
@@ -90,80 +89,22 @@ export default function PaymentMethodSelector({
   const handleSubmit = async () => {
     if (!selectedPlan) return;
 
-    // For free plans, no payment method is required
-    if (selectedPlan.isFree) {
-      setIsProcessing(true);
-      try {
-        const response = await fetch('/api/subscriptions/upgrade', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            academyId,
-            newPlanId: selectedPlan.id,
-            paymentMethod: null, // No payment method for free plans
-            notes: `Upgraded to ${selectedPlan.name} (Free Plan)`
-          }),
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          toast({
-            title: "Success",
-            description: `Successfully upgraded to ${selectedPlan.name}`,
-          });
-          onSuccess();
-          onClose();
-        } else {
-          toast({
-            title: "Error",
-            description: result.error || "Failed to upgrade plan",
-            variant: "destructive",
-          });
-        }
-      } catch (error) {
-        console.error('Error upgrading to free plan:', error);
-        toast({
-          title: "Error",
-          description: "Failed to upgrade plan",
-          variant: "destructive",
-        });
-      } finally {
-        setIsProcessing(false);
-      }
-      return;
-    }
-
-    // For paid plans, validate payment method selection
-    if (!paymentMethod) {
-      toast({
-        title: "Payment Method Required",
-        description: "Please select a payment method",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setIsProcessing(true);
     try {
-      if (paymentMethod === 'CARD') {
-        // Create Stripe Checkout Session
-        const response = await fetch('/api/payments/create-checkout-session', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            academyId,
-            planId: selectedPlan.id,
-            billingCycle: selectedPlan.billingCycle || 'monthly',
-            successUrl: `${window.location.origin}/academy-dashboard?tab=subscription&payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
-            cancelUrl: `${window.location.origin}/academy-dashboard?tab=subscription&payment_cancelled=true`,
-            promoCodeId: appliedDiscount?.id
-          }),
-        });
+      const response = await fetch('/api/subscriptions/upgrade', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          academyId,
+          newPlanId: selectedPlan.id,
+          paymentMethod,
+          paymentReference: 'DASHBOARD_UPGRADE',
+          notes: `Upgraded to ${selectedPlan.name} plan`
+        }),
+      });
 
         const result = await response.json();
 
@@ -199,96 +140,72 @@ export default function PaymentMethodSelector({
         <DialogHeader>
           <DialogTitle>Complete Your Subscription</DialogTitle>
           <DialogDescription>
-            You're upgrading to <strong>{selectedPlan.name}</strong>
-            {selectedPlan.isFree ? ' (Free)' : ` for $${selectedPlan.price}/month`}
+            You're upgrading to <strong>{selectedPlan.name}</strong> for ${selectedPlan.price}/month
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          {selectedPlan.isFree ? (
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center space-x-2">
-                  <DollarSign className="h-5 w-5 text-green-600" />
-                  <span className="text-sm text-gray-600">
-                    No payment required for the free plan
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              {/* Promo Code Section */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">Promo Code</Label>
-                <div className="flex gap-2">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      value={promoCode}
-                      onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
-                      placeholder="Enter promo code"
-                      disabled={!!appliedDiscount}
-                      className="w-full px-3 py-2 border rounded-md uppercase text-sm"
-                    />
-                    {appliedDiscount && (
-                      <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 h-4 w-4" />
-                    )}
-                  </div>
-                  {appliedDiscount ? (
-                    <Button 
-                      variant="outline" 
-                      onClick={() => {
-                        setAppliedDiscount(null);
-                        setPromoCode('');
-                      }}
-                      className="text-red-600 border-red-200 hover:bg-red-50"
-                    >
-                      Remove
-                    </Button>
-                  ) : (
-                    <Button 
-                      variant="secondary" 
-                      onClick={handleValidatePromo}
-                      disabled={!promoCode || validatingPromo}
-                    >
-                      {validatingPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
-                    </Button>
-                  )}
-                </div>
+          {/* Promo Code Section */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium">Promo Code</Label>
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <input
+                  type="text"
+                  value={promoCode}
+                  onChange={(e) => setPromoCode(e.target.value.toUpperCase())}
+                  placeholder="Enter promo code"
+                  disabled={!!appliedDiscount}
+                  className="w-full px-3 py-2 border rounded-md uppercase text-sm"
+                />
                 {appliedDiscount && (
-                  <p className="text-xs text-green-600 font-medium">
-                    {appliedDiscount.percent}% discount applied! New price: ${getDiscountedPrice()?.toFixed(2)}
-                  </p>
+                  <CheckCircle className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 h-4 w-4" />
                 )}
               </div>
+              {appliedDiscount ? (
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setAppliedDiscount(null);
+                    setPromoCode('');
+                  }}
+                  className="text-red-600 border-red-200 hover:bg-red-50"
+                >
+                  Remove
+                </Button>
+              ) : (
+                <Button 
+                  variant="secondary" 
+                  onClick={handleValidatePromo}
+                  disabled={!promoCode || validatingPromo}
+                >
+                  {validatingPromo ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
+                </Button>
+              )}
+            </div>
+            {appliedDiscount && (
+              <p className="text-xs text-green-600 font-medium">
+                {appliedDiscount.percent}% discount applied! New price: ${getDiscountedPrice()?.toFixed(2)}
+              </p>
+            )}
+          </div>
 
-              <div>
-                <Label className="text-base font-medium">Select Payment Method</Label>
-                <RadioGroup value={paymentMethod} onValueChange={handlePaymentMethodChange} className="mt-2">
-                  <div className="flex items-center space-x-2">
-                    <RadioGroupItem value="CARD" id="card" />
-                    <Label htmlFor="card" className="flex items-center space-x-2 cursor-pointer">
-                      <CreditCard className="h-4 w-4" />
-                      <span>Credit/Debit Card (Stripe)</span>
-                    </Label>
-                  </div>
-                  {/* PayPal hidden for now as requested */}
-                  {/* <div className="flex items-center space-x-2 opacity-50 cursor-not-allowed">
-                    <RadioGroupItem value="PAYPAL" id="paypal" disabled />
-                    <Label htmlFor="paypal" className="flex items-center space-x-2 cursor-not-allowed">
-                      <Wallet className="h-4 w-4" />
-                      <span>PayPal (Coming Soon)</span>
-                    </Label>
-                  </div> */}
-                </RadioGroup>
+          <div>
+            <Label className="text-base font-medium">Select Payment Method</Label>
+            <RadioGroup value={paymentMethod} onValueChange={handlePaymentMethodChange} className="mt-2">
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="CARD" id="card" />
+                <Label htmlFor="card" className="flex items-center space-x-2 cursor-pointer">
+                  <CreditCard className="h-4 w-4" />
+                  <span>Credit/Debit Card (Stripe)</span>
+                </Label>
               </div>
+            </RadioGroup>
+          </div>
 
-              <div className="bg-slate-50 p-4 rounded-md text-sm text-slate-600">
-                You will be redirected to a secure payment page to complete your subscription.
-              </div>
-            </>
-          )}
+          <div className="bg-slate-50 p-4 rounded-md text-sm text-slate-600">
+            You will be redirected to a secure payment page to complete your subscription.
+          </div>
         </div>
 
         <DialogFooter>
@@ -299,7 +216,7 @@ export default function PaymentMethodSelector({
             {isProcessing && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             {isProcessing
               ? 'Redirecting...'
-              : (selectedPlan.isFree ? 'Activate Plan' : `Pay $${getDiscountedPrice()?.toFixed(2)}`)
+              : `Pay $${getDiscountedPrice()?.toFixed(2)}`
             }
           </Button>
         </DialogFooter>

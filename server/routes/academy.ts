@@ -412,7 +412,7 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
       createdAt: academy.created_at,
       updatedAt: academy.updated_at,
       isActive: academy.status === 'active',
-      subscriptionPlan: academy.subscription_plan || 'Free Plan',
+      subscriptionPlan: academy.subscription_plan || 'Pro Plan',
       players: decryptedPlayers,
       compliance: complianceData,
       activities: activities, // Added activities

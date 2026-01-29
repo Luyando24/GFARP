@@ -42,49 +42,6 @@ export default function StripePaymentMethodSelector({
   const handleSubmit = async () => {
     if (!selectedPlan) return;
 
-    // For free plans, no payment method is required
-    if (selectedPlan.isFree) {
-      setIsProcessing(true);
-      try {
-        const response = await fetch('/api/stripe/create-subscription', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          },
-          body: JSON.stringify({
-            planId: selectedPlan.id
-          }),
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          toast({
-            title: "Success",
-            description: `Successfully activated ${selectedPlan.name}`,
-          });
-          onSuccess();
-          onClose();
-        } else {
-          toast({
-            title: "Error",
-            description: result.message || "Failed to activate plan",
-            variant: "destructive"
-          });
-        }
-      } catch (error: any) {
-        toast({
-          title: "Error",
-          description: error.message || "An error occurred",
-          variant: "destructive"
-        });
-      } finally {
-        setIsProcessing(false);
-      }
-      return;
-    }
-
     // For paid plans, validate payment method selection
     if (!paymentMethod) {
       toast({
@@ -252,14 +209,11 @@ export default function StripePaymentMethodSelector({
         <DialogHeader>
           <DialogTitle>Select Payment Method</DialogTitle>
           <DialogDescription>
-            {selectedPlan?.isFree 
-              ? `Activate your ${selectedPlan.name} plan`
-              : `Choose how you'd like to pay for ${selectedPlan?.name}`
-            }
+            Choose how you'd like to pay for {selectedPlan?.name}
           </DialogDescription>
         </DialogHeader>
 
-        {selectedPlan && !selectedPlan.isFree && (
+        {selectedPlan && (
           <div className="bg-gray-50 p-4 rounded-lg mb-4">
             <div className="flex justify-between items-center">
               <span className="font-medium">Plan:</span>
@@ -274,8 +228,7 @@ export default function StripePaymentMethodSelector({
           </div>
         )}
 
-        {!selectedPlan?.isFree && (
-          <RadioGroup value={paymentMethod} onValueChange={handlePaymentMethodChange}>
+        <RadioGroup value={paymentMethod} onValueChange={handlePaymentMethodChange}>
             <div className="space-y-4">
               <div className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50">
                 <RadioGroupItem value="STRIPE_CARD" id="stripe-card" />
@@ -313,7 +266,7 @@ export default function StripePaymentMethodSelector({
                 Processing...
               </>
             ) : (
-              selectedPlan?.isFree ? 'Activate Plan' : 'Continue'
+              'Continue'
             )}
           </Button>
         </DialogFooter>

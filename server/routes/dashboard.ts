@@ -18,7 +18,7 @@ export interface AcademyWithSubscription {
   name: string;
   email: string;
   subscriptionStatus: 'active' | 'trial' | 'expired';
-  subscriptionType: 'basic' | 'standard' | 'premium';
+  subscriptionType: 'pro';
   userCount: number;
   createdAt: string;
   phone?: string;
@@ -30,7 +30,7 @@ export interface AcademyWithSubscription {
 export interface SubscriptionData {
   id: string;
   academyName: string;
-  plan: 'basic' | 'standard' | 'premium';
+  plan: 'pro';
   status: 'active' | 'trial' | 'expired';
   startDate: string;
   endDate: string;
@@ -366,7 +366,7 @@ export const handleGetAcademiesWithSubscriptions: RequestHandler = async (req, r
       name: row.name,
       email: '', // Email not stored in academies table, would need to get from admin user
       subscriptionStatus: 'active' as const,
-      subscriptionType: 'basic' as const,
+      subscriptionType: 'pro' as const,
       userCount: parseInt(row.user_count) || 0,
       createdAt: row.created_at,
       phone: row.phone || '',
@@ -401,12 +401,12 @@ export const handleGetSubscriptions: RequestHandler = async (req, res) => {
     const subscriptions: SubscriptionData[] = result.rows.map(row => ({
       id: row.id,
       academyName: row.name,
-      plan: 'basic' as const,
+      plan: 'pro' as const,
       status: 'active' as const,
       startDate: row.created_at,
       endDate: new Date(new Date(row.created_at).getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year from start
       userCount: parseInt(row.user_count) || 0,
-      monthlyRevenue: 99 // Fixed monthly revenue for basic plan
+      monthlyRevenue: 49.99 // Fixed monthly revenue for pro plan
     }));
 
     res.json(subscriptions);

@@ -250,8 +250,8 @@ export default async function handler(
                 });
             }
 
-            // Determine player limit (default to 3 for free/no subscription)
-            const playerLimit = subscription?.subscription_plans?.player_limit || 3;
+            // Determine player limit (default to 500 for Pro plan)
+            const playerLimit = subscription?.subscription_plans?.player_limit || 500;
 
             console.log('[VERCEL] Player limit check:', {
                 currentCount: currentPlayerCount,
@@ -269,7 +269,7 @@ export default async function handler(
                     details: {
                         currentCount: currentPlayerCount,
                         limit: playerLimit,
-                        planName: subscription?.subscription_plans?.name || 'Free Plan'
+                        planName: subscription?.subscription_plans?.name || 'Pro Plan'
                     }
                 });
             }
