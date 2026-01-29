@@ -91,7 +91,8 @@ export default function PaymentMethodSelector({
 
     setIsProcessing(true);
     try {
-      const response = await fetch('/api/subscriptions/upgrade', {
+      if (paymentMethod === 'CARD') {
+        const response = await fetch('/api/subscriptions/upgrade', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
