@@ -21,48 +21,63 @@ interface AdminSidebarProps {
   onToggle?: () => void;
 }
 
-const navigationItems = [
+const navigationGroups = [
   {
-    title: 'Dashboard',
-    href: '/admin',
-    icon: BarChart3,
-    description: 'Overview and analytics'
+    title: 'General',
+    items: [
+      {
+        title: 'Dashboard',
+        href: '/admin',
+        icon: BarChart3,
+        description: 'Overview and analytics'
+      },
+      {
+        title: 'Notifications',
+        href: '/admin/notifications',
+        icon: Bell,
+        description: 'System notifications'
+      },
+    ]
   },
   {
-    title: 'Subscriptions',
-    href: '/admin/subscriptions',
-    icon: CreditCard,
-    description: 'Billing and plans'
+    title: 'Management',
+    items: [
+      {
+        title: 'Subscriptions',
+        href: '/admin/subscriptions',
+        icon: CreditCard,
+        description: 'Billing and plans'
+      },
+      {
+        title: 'Super Admins',
+        href: '/admin/super-admins',
+        icon: Shield,
+        description: 'Admin user management'
+      },
+    ]
   },
   {
-    title: 'Super Admins',
-    href: '/admin/super-admins',
-    icon: Shield,
-    description: 'Admin user management'
-  },
-  {
-    title: 'System Settings',
-    href: '/admin/settings',
-    icon: Settings,
-    description: 'System configuration'
-  },
-  {
-    title: 'Database',
-    href: '/admin/database',
-    icon: Database,
-    description: 'Database management'
-  },
-  {
-    title: 'Notifications',
-    href: '/admin/notifications',
-    icon: Bell,
-    description: 'System notifications'
-  },
-  {
-    title: 'Support',
-    href: '/admin/support',
-    icon: HelpCircle,
-    description: 'Help and support'
+    title: 'System',
+    items: [
+      {
+        title: 'System Settings',
+        href: '/admin/settings',
+        icon: Settings,
+        description: 'System configuration'
+      },
+      {
+        title: 'Database',
+        href: '/admin/database',
+        icon: Database,
+        description: 'Database management'
+      },
+      {
+        title: 'Support',
+        href: '/admin/support',
+        icon: HelpCircle,
+        description: 'Help and support'
+      },
+    ]
   }
 ];
 
@@ -99,35 +114,45 @@ export default function AdminSidebar({ collapsed = false, onToggle }: AdminSideb
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-2 space-y-1">
-        {navigationItems.map((item) => {
-          const Icon = item.icon;
-          // Fix: Check if the current path starts with the item's href to handle nested routes
-          const isActive = location.pathname === item.href || 
-                          (item.href !== '/admin' && location.pathname.startsWith(item.href));
-          
-          return (
-            <Link
-              key={item.href}
-              to={item.href}
-              className={cn(
-                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
-                "hover:bg-accent hover:text-accent-foreground",
-                isActive && "bg-primary text-primary-foreground hover:bg-primary/90",
-                collapsed && "justify-center px-2"
-              )}
-              title={collapsed ? item.title : undefined}
-            >
-              <Icon className="h-4 w-4 flex-shrink-0" />
-              {!collapsed && (
-                <div className="flex flex-col">
-                  <span>{item.title}</span>
-                  <span className="text-xs opacity-70">{item.description}</span>
-                </div>
-              )}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 p-2 space-y-6 overflow-y-auto">
+        {navigationGroups.map((group) => (
+          <div key={group.title} className="space-y-1">
+            {!collapsed && (
+              <h3 className="px-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
+                {group.title}
+              </h3>
+            )}
+            <div className="space-y-1">
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                const isActive = location.pathname === item.href || 
+                                (item.href !== '/admin' && location.pathname.startsWith(item.href));
+                
+                return (
+                  <Link
+                    key={item.href}
+                    to={item.href}
+                    className={cn(
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                      "hover:bg-accent hover:text-accent-foreground",
+                      isActive && "bg-primary text-primary-foreground hover:bg-primary/90",
+                      collapsed && "justify-center px-2"
+                    )}
+                    title={collapsed ? item.title : undefined}
+                  >
+                    <Icon className="h-4 w-4 flex-shrink-0" />
+                    {!collapsed && (
+                      <div className="flex flex-col">
+                        <span>{item.title}</span>
+                        <span className="text-xs opacity-70 leading-tight">{item.description}</span>
+                      </div>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* Footer */}
