@@ -108,7 +108,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
         { name: 'Payment receipts', type: 'receipt' },
         { name: 'Social-media posts showing training', type: 'social' }
     ];
-    
+
     // Combine for total count calculation
     const allRequiredDocs = [...highlyValuableDocuments, ...supportingDocuments];
 
@@ -117,6 +117,13 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
     }, [academyId]);
 
     const loadDocuments = async () => {
+        // Guard: Don't fetch if academyId is not available
+        if (!academyId) {
+            console.warn('AcademyComplianceTab: academyId is undefined, skipping document fetch');
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
             const response = await fetch(`/api/compliance-documents?academyId=${academyId}`);

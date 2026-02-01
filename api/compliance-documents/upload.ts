@@ -74,7 +74,7 @@ export default async function handler(
                     fileSizeLimit: 10485760, // 10MB
                     allowedMimeTypes: ['application/pdf', 'image/png', 'image/jpeg', 'image/jpg']
                 });
-                
+
                 if (createBucketError) {
                     console.error('[VERCEL] Failed to create bucket:', createBucketError);
                     // Try to continue, maybe it was created by another process or listing failed
@@ -104,6 +104,23 @@ export default async function handler(
             return res.status(400).json({
                 success: false,
                 message: 'Missing required fields: academyId, document_name, document_type, file'
+            });
+        }
+
+        // Validate academyId is not the string "undefined" or "null"
+        if (academyId === 'undefined' || academyId === 'null') {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid Academy ID'
+            });
+        }
+
+        // Validate UUID format
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(academyId)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid Academy ID format'
             });
         }
 
@@ -139,7 +156,7 @@ export default async function handler(
         // First create a compliance record if one doesn't exist (or use a default one)
         // But based on the schema, documents link to a compliance_id, NOT user_id directly.
         // We need to find or create a compliance record for this academy first.
-        
+
         // Check for an existing general compliance record for this academy
         let complianceId;
         const { data: complianceRecord, error: complianceError } = await supabase
@@ -165,7 +182,7 @@ export default async function handler(
                 })
                 .select('id')
                 .single();
-                
+
             if (createError) {
                 console.error('[VERCEL] Failed to create compliance record:', createError);
                 return res.status(500).json({

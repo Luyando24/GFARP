@@ -25,10 +25,19 @@ export default async function handler(
     try {
         const { academyId } = req.query;
 
-        if (!academyId) {
+        if (!academyId || academyId === 'undefined' || academyId === 'null') {
             return res.status(400).json({
                 success: false,
-                message: 'Academy ID is required'
+                message: 'Valid Academy ID is required'
+            });
+        }
+
+        // Validate UUID format to prevent database errors
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuidRegex.test(academyId as string)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid Academy ID format'
             });
         }
 
