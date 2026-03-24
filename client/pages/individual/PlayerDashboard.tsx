@@ -850,7 +850,7 @@ export default function PlayerDashboard() {
                       </CardHeader>
                       <CardContent>
                         <div className="text-2xl font-bold">
-                          {"Pro Plan Active"}
+                          {currentPlan === 'pro' ? "Pro Plan Active" : "Free Plan"}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1 mb-4">
                           {currentPlan === 'pro' 
@@ -1297,8 +1297,8 @@ export default function PlayerDashboard() {
                   <p className="text-slate-600 dark:text-slate-400">Choose the best plan for your needs.</p>
                 </div>
 
-                {!currentPlan ? (
-                  <div className="max-w-md mx-auto">
+                {(!currentPlan || currentPlan === 'free') && (
+                  <div className="max-w-md mx-auto mb-8">
                     {/* Pro Plan */}
                     <Card className="cursor-pointer transition-all hover:border-blue-500 hover:shadow-md flex flex-col relative overflow-hidden border-2 border-blue-100 dark:border-blue-900">
                       <div className="absolute top-0 right-0 bg-blue-600 text-white text-xs px-2 py-1 font-bold">RECOMMENDED</div>
@@ -1326,16 +1326,28 @@ export default function PlayerDashboard() {
                       </CardFooter>
                     </Card>
                   </div>
-                ) : (
-                  <Card className="bg-green-50 border-green-200">
+                )}
+
+                {currentPlan && (
+                  <Card className={`${currentPlan === 'pro' ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'}`}>
                     <CardContent className="pt-6">
                       <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
-                          <Check className="h-6 w-6 text-green-600" />
+                        <div className={`h-12 w-12 rounded-full ${currentPlan === 'pro' ? 'bg-green-100' : 'bg-blue-100'} flex items-center justify-center`}>
+                          {currentPlan === 'pro' ? (
+                            <Check className="h-6 w-6 text-green-600" />
+                          ) : (
+                            <CreditCard className="h-6 w-6 text-blue-600" />
+                          )}
                         </div>
                         <div>
-                          <h3 className="text-lg font-medium text-green-900">Active Subscription: {currentPlan.toUpperCase()}</h3>
-                          <p className="text-green-700">You have full access to the features included in your plan.</p>
+                          <h3 className={`text-lg font-medium ${currentPlan === 'pro' ? 'text-green-900' : 'text-slate-900'}`}>
+                            Current Status: {currentPlan.toUpperCase()}
+                          </h3>
+                          <p className={currentPlan === 'pro' ? 'text-green-700' : 'text-slate-600'}>
+                            {currentPlan === 'pro' 
+                              ? "You have full access to all premium features." 
+                              : "You are currently on the Free plan. Upgrade below to unlock premium features."}
+                          </p>
                         </div>
                       </div>
                     </CardContent>
