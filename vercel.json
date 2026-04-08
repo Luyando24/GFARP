@@ -117,6 +117,14 @@
       "destination": "/api/subscriptions/cancel"
     },
     {
+      "source": "/sitemap.xml",
+      "destination": "/api/server/index"
+    },
+    {
+      "source": "/robots.txt",
+      "destination": "/api/server/index"
+    },
+    {
       "source": "/api/auth/(.*)",
       "destination": "/api/server/index"
     },

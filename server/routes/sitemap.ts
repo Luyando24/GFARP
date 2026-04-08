@@ -3,9 +3,23 @@ import { query } from '../lib/db.js';
 
 const router = Router();
 
+router.get('/robots.txt', (req, res) => {
+  const rawBaseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VITE_SITE_URL || (req.protocol + '://' + req.get('host'));
+  const baseUrl = rawBaseUrl.replace(/\/$/, '');
+  
+  const robotsTxt = `User-agent: *
+Allow: /
+
+Sitemap: ${baseUrl}/sitemap.xml
+`;
+  res.header('Content-Type', 'text/plain');
+  res.send(robotsTxt);
+});
+
 router.get('/sitemap.xml', async (req, res) => {
   try {
-    const baseUrl = req.protocol + '://' + req.get('host');
+    const rawBaseUrl = process.env.NEXT_PUBLIC_SITE_URL || process.env.VITE_SITE_URL || (req.protocol + '://' + req.get('host'));
+    const baseUrl = rawBaseUrl.replace(/\/$/, '');
     let sitemap = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
