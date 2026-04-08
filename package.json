@@ -44,6 +44,7 @@
     "nodemailer": "^7.0.10",
     "pg": "^8.16.3",
     "postgres": "^3.4.7",
+    "react-helmet-async": "^3.0.0",
     "serverless-http": "^3.2.0",
     "stripe": "^19.2.0",
     "uuid": "^11.1.0",
@@ -51,7 +52,6 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@vercel/node": "^3.2.0",
     "@hookform/resolvers": "^5.2.1",
     "@radix-ui/react-accordion": "^1.2.11",
     "@radix-ui/react-alert-dialog": "^1.1.14",
@@ -94,6 +94,7 @@
     "@types/react": "^18.3.23",
     "@types/react-dom": "^18.3.7",
     "@types/three": "^0.176.0",
+    "@vercel/node": "^3.2.0",
     "@vitejs/plugin-react-swc": "^4.0.0",
     "autoprefixer": "^10.4.21",
     "class-variance-authority": "^0.7.1",

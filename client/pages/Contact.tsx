@@ -9,6 +9,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { useTranslation } from '@/lib/i18n';
 import { usePageTitle } from "@/hooks/usePageTitle";
+import SEO from '@/components/SEO';
 
 export default function Contact() {
     const { toast } = useToast();
@@ -44,8 +45,12 @@ export default function Contact() {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8" dir={dir}>
-            <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8" dir={dir}>
+      <SEO 
+        title="Contact Us" 
+        description="Get in touch with the ZamPortal team for any inquiries or support." 
+      />
+      <div className="max-w-6xl mx-auto">
                 <div className="mb-8">
                     <Link to="/">
                         <Button variant="ghost" className="mb-4">

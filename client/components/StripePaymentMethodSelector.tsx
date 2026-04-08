@@ -253,7 +253,6 @@ export default function StripePaymentMethodSelector({
               </div>
             </div>
           </RadioGroup>
-        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={isProcessing}>

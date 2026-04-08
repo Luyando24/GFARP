@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { useTranslation } from '@/lib/i18n';
+import SEO from '@/components/SEO';
+import { usePageTitle } from "@/hooks/usePageTitle";
 
 interface BlogPost {
     id: string;
@@ -50,6 +52,10 @@ export default function BlogList() {
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8" dir={dir}>
+            <SEO 
+                title="Blog" 
+                description="Read the latest news, articles, and insights from the ZamPortal team about Zambian football." 
+            />
             <div className="max-w-7xl mx-auto">
                 <div className="mb-12 text-center">
                     <Link to="/">

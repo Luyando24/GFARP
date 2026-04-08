@@ -7,11 +7,13 @@ import { format } from 'date-fns';
 import { useTranslation } from '@/lib/i18n';
 import ReactMarkdown from 'react-markdown'; // Assuming installed or I'll use simple whitespace pre-wrap if not. 
 // Since I cannot install packages, I will use a simple renderer for now or dangerouslySetInnerHTML if safe content is assumed (Admin created).
+import SEO from '@/components/SEO';
 
 interface BlogPost {
     id: string;
     title: string;
     slug: string;
+    excerpt?: string;
     content: string;
     image_url: string;
     author_name: string;
@@ -78,6 +80,14 @@ export default function BlogDetails() {
 
     return (
         <div className="min-h-screen bg-white dark:bg-slate-900" dir={dir}>
+            <SEO 
+                title={blog.seo_title || blog.title}
+                description={blog.seo_description || blog.excerpt || blog.content.substring(0, 160)}
+                image={blog.image_url}
+                type="article"
+                keywords={blog.tags ? blog.tags.join(", ") : undefined}
+                url={`${window.location.origin}/blog/${blog.slug}`}
+            />
             {/* Hero Section */}
             <div className="relative h-[60vh] min-h-[400px] w-full bg-slate-900">
                 {blog.image_url && (

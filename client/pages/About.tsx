@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useTranslation } from '@/lib/i18n';
 import { usePageTitle } from "@/hooks/usePageTitle";
+import SEO from '@/components/SEO';
 
 export default function About() {
     const { t, dir } = useTranslation();
@@ -12,6 +13,10 @@ export default function About() {
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8" dir={dir}>
+            <SEO 
+                title="About Us" 
+                description="Learn more about ZamPortal and our mission to connect Zambian football talent with the world." 
+            />
             <div className="max-w-4xl mx-auto">
                 <div className="mb-8">
                     <Link to="/">

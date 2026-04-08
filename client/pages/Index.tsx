@@ -12,7 +12,7 @@ import { useTranslation } from '@/lib/i18n';
 import Chatbot from '@/components/Landing/Chatbot';
 import DemoModal from '@/components/Landing/DemoModal';
 import { usePageTitle } from "@/hooks/usePageTitle";
-
+import SEO from '@/components/SEO';
 
 const faqData = [];
 
@@ -148,6 +148,7 @@ export default function Index() {
 
   return (
     <div className="min-h-screen bg-background text-foreground" dir={dir}>
+      <SEO />
       <Chatbot />
       <DemoModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
       <header className="sticky top-0 z-50">
