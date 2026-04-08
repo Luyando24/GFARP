@@ -57,6 +57,7 @@ import {
   handleServeDemoFile,
   uploadMiddleware as demoUploadMiddleware
 } from "./routes/demo-documents.js";
+import sitemapRouter from "./routes/sitemap.js";
 
 export function createServer() {
   console.log("Creating Express server...");
@@ -193,6 +194,9 @@ export function createServer() {
 
   // Demo file serving route (outside /api prefix)
   app.get("/demo-files/:fileId", handleServeDemoFile);
+
+  // Dynamic Sitemap
+  app.use("/", sitemapRouter);
 
   console.log("[SERVER] ✅ Server creation completed successfully");
   return app;
