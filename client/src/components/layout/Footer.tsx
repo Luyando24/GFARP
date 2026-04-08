@@ -4,9 +4,9 @@ export default function Footer() {
       <div className="container mx-auto px-4 py-8">
         <div className="grid md:grid-cols-3 gap-8">
           <div>
-            <h3 className="text-lg font-semibold mb-4">About ZamPortal</h3>
+            <h3 className="text-lg font-semibold mb-4">About Soccer Circular</h3>
             <p className="text-muted-foreground">
-              Your one-stop platform for accessing government services online. We are committed to providing efficient and transparent services to all citizens.
+              Your one-stop platform for connecting football academies, players, and scouts. We are committed to fostering talent and creating professional opportunities.
             </p>
           </div>
           <div>

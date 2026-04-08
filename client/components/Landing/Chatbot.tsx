@@ -49,7 +49,7 @@ const Chatbot = () => {
               <MessageSquare className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-lg">ZamPortal Assistant</h3>
+              <h3 className="font-bold text-lg">Soccer Circular Assistant</h3>
               <p className="text-sm text-blue-100">How can I help you today?</p>
             </div>
           </div>
@@ -62,13 +62,13 @@ const Chatbot = () => {
         {messages.length === 0 && (
           <div className="p-6 border-b border-gray-100 dark:border-gray-700">
             <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 rounded-xl p-4">
-              <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">Welcome to ZamPortal!</h4>
-              <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">I'm here to help you navigate government services. You can ask me about:</p>
+              <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">Welcome to Soccer Circular!</h4>
+              <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">I'm here to help you navigate our platform. You can ask me about:</p>
               <div className="space-y-1 text-xs text-blue-600 dark:text-blue-400">
-                <div>• Service applications and requirements</div>
-                <div>• Document submissions</div>
-                <div>• Application status updates</div>
-                <div>• General government service inquiries</div>
+                <div>• Academy registration and features</div>
+                <div>• Player profiles and scouting</div>
+                <div>• Plans and pricing</div>
+                <div>• General inquiries</div>
               </div>
             </div>
           </div>

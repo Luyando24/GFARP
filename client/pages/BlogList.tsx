@@ -54,7 +54,7 @@ export default function BlogList() {
         <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8" dir={dir}>
             <SEO 
                 title="Blog" 
-                description="Read the latest news, articles, and insights from the ZamPortal team about Zambian football." 
+                description="Read the latest news, articles, and insights from the Soccer Circular team about football." 
             />
             <div className="max-w-7xl mx-auto">
                 <div className="mb-12 text-center">

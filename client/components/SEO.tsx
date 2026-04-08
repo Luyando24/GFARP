@@ -14,16 +14,16 @@ interface SEOProps {
 export default function SEO({
   title,
   description,
-  name = 'ZamPortal',
+  name = 'Soccer Circular',
   type = 'website',
   image,
   url,
   keywords
 }: SEOProps) {
-  const defaultTitle = 'ZamPortal - Empowering the Next Generation of Zambian Athletes';
-  const defaultDescription = 'ZamPortal is the premier platform connecting Zambian football academies, players, and scouts to foster talent and create professional opportunities.';
+  const defaultTitle = 'Soccer Circular - Empowering the Next Generation of Football Athletes';
+  const defaultDescription = 'Soccer Circular is the premier platform connecting football academies, players, and scouts to foster talent and create professional opportunities.';
   const defaultImage = `${window.location.origin}/images/hero-bg.jpg`; // A default image from public assets
-  const defaultKeywords = 'Zambian football, football academies Zambia, youth football, football scouts, ZamPortal, Zambian athletes';
+  const defaultKeywords = 'football, football academies, youth football, football scouts, Soccer Circular, athletes';
 
   const currentUrl = url || window.location.href;
   const seoTitle = title ? `${title} | ${name}` : defaultTitle;

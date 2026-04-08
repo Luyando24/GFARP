@@ -6,8 +6,8 @@ const DashboardNav = () => {
   return (
     <aside className="w-64 bg-background border-r p-4">
       <div className="flex items-center gap-2 mb-8">
-        <img src="/images/logo.png" alt="ZamPortal Logo" className="h-10 w-auto" />
-        <span className="text-2xl font-bold">ZamPortal</span>
+        <img src="/images/logo.png" alt="Soccer Circular Logo" className="h-10 w-auto" />
+        <span className="text-2xl font-bold">Soccer Circular</span>
       </div>
       <nav className="flex flex-col gap-2">
         <Link to="/school" className="flex items-center gap-2 p-2 rounded-md hover:bg-muted">

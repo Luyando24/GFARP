@@ -7,8 +7,8 @@ export default function Header() {
     <header className="sticky top-0 border-b bg-background/70 backdrop-blur supports-[backdrop-filter]:bg-background/50 z-50">
       <div className="container mx-auto flex items-center justify-between py-3 px-4">
         <Link to="/" className="flex items-center gap-2">
-          <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center text-xs">CoA</div>
-          <span className="font-bold text-lg">ZamPortal</span>
+          <div className="h-8 w-8 bg-muted rounded-full flex items-center justify-center text-xs">SC</div>
+          <span className="font-bold text-lg">Soccer Circular</span>
         </Link>
         
         {/* Desktop Navigation */}

@@ -11,10 +11,10 @@ export default function DashboardHeader() {
     <header className="sticky top-0 border-b bg-background/80 backdrop-blur-lg supports-[backdrop-filter]:bg-background/60 z-50 shadow-sm">
       <div className="container mx-auto flex items-center justify-between py-4 px-4">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/images/logo.png" alt="ZamPortal Logo" className="h-10 w-auto" />
+          <img src="/images/logo.png" alt="Soccer Circular Logo" className="h-10 w-auto" />
           <div>
-            <span className="text-2xl font-bold">ZamPortal</span>
-            <p className="text-xs text-muted-foreground">Government services at your fingertips</p>
+            <span className="text-2xl font-bold">Soccer Circular</span>
+            <p className="text-xs text-muted-foreground">Empowering Football Academies</p>
           </div>
         </Link>
         

@@ -48,7 +48,7 @@ export default function Contact() {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-900 py-12 px-4 sm:px-6 lg:px-8" dir={dir}>
       <SEO 
         title="Contact Us" 
-        description="Get in touch with the ZamPortal team for any inquiries or support." 
+        description="Get in touch with the Soccer Circular team for any inquiries or support." 
       />
       <div className="max-w-6xl mx-auto">
                 <div className="mb-8">
