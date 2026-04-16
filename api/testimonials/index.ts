@@ -47,8 +47,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             const body = req.body;
             
             // Basic validation
-            if (!body.customer_name || !body.content) {
-                return res.status(400).json({ success: false, message: 'Name and Content are required' });
+            if (!body.customer_name) {
+                return res.status(400).json({ success: false, message: 'Customer name is required' });
+            }
+
+            if (body.type === 'text' && !body.content) {
+                return res.status(400).json({ success: false, message: 'Content is required for text testimonials' });
+            }
+
+            if (body.type === 'screenshot' && !body.screenshot_url) {
+                return res.status(400).json({ success: false, message: 'Screenshot is required for screenshot testimonials' });
             }
 
             const { data, error } = await supabase
@@ -58,6 +66,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     customer_position: body.customer_position,
                     content: body.content,
                     image_url: body.image_url,
+                    type: body.type || 'text',
+                    screenshot_url: body.screenshot_url,
                     rating: body.rating || 5,
                     is_published: body.is_published !== undefined ? body.is_published : true
                 })

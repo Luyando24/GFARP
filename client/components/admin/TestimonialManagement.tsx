@@ -17,6 +17,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Layout, FileImage, Type } from 'lucide-react';
 
 interface Testimonial {
   id: string;
@@ -24,6 +26,8 @@ interface Testimonial {
   customer_position: string;
   content: string;
   image_url: string;
+  type: 'text' | 'screenshot';
+  screenshot_url: string;
   is_published: boolean;
   rating: number;
   created_at: string;
@@ -38,6 +42,7 @@ const TestimonialManagement: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const screenshotInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -45,9 +50,12 @@ const TestimonialManagement: React.FC = () => {
     customer_position: '',
     content: '',
     image_url: '',
+    type: 'text' as 'text' | 'screenshot',
+    screenshot_url: '',
     rating: 5,
     is_published: true
   });
+ Coles
 
   useEffect(() => {
     fetchTestimonials();
@@ -118,6 +126,54 @@ const TestimonialManagement: React.FC = () => {
       });
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        toast({
+            title: "Error",
+            description: "Please upload an image file",
+            variant: "destructive"
+        });
+        return;
+    }
+
+    setIsUploading(true);
+    try {
+        const uploadFormData = new FormData();
+        uploadFormData.append('file', file);
+        uploadFormData.append('folder', 'testimonials/screenshots');
+
+        const response = await fetch('/api/uploads', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('football-auth-token')}`
+            },
+            body: uploadFormData
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            setFormData(prev => ({ ...prev, screenshot_url: result.data.url }));
+            toast({
+                title: "Success",
+                description: "Screenshot uploaded successfully"
+            });
+        } else {
+            throw new Error(result.error || "Failed to upload screenshot");
+        }
+    } catch (error: any) {
+        toast({
+            title: "Error",
+            description: error.message || "Failed to upload screenshot",
+            variant: "destructive"
+        });
+    } finally {
+        setIsUploading(false);
     }
   };
 
@@ -196,8 +252,10 @@ const TestimonialManagement: React.FC = () => {
     setFormData({
       customer_name: testimonial.customer_name,
       customer_position: testimonial.customer_position || '',
-      content: testimonial.content,
+      content: testimonial.content || '',
       image_url: testimonial.image_url || '',
+      type: testimonial.type || 'text',
+      screenshot_url: testimonial.screenshot_url || '',
       rating: testimonial.rating || 5,
       is_published: testimonial.is_published
     });
@@ -210,6 +268,8 @@ const TestimonialManagement: React.FC = () => {
       customer_position: '',
       content: '',
       image_url: '',
+      type: 'text',
+      screenshot_url: '',
       rating: 5,
       is_published: true
     });
@@ -268,7 +328,8 @@ const TestimonialManagement: React.FC = () => {
                 <thead className="bg-slate-50 dark:bg-slate-800/50 text-left">
                   <tr>
                     <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Customer</th>
-                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Content</th>
+                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Type</th>
+                    <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Content / Screenshot</th>
                     <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Rating</th>
                     <th className="px-6 py-4 text-xs font-semibold text-slate-500 uppercase">Status</th>
                     <th className="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase">Actions</th>
@@ -294,8 +355,23 @@ const TestimonialManagement: React.FC = () => {
                           </div>
                         </div>
                       </td>
+                      <td className="px-6 py-4">
+                        <Badge variant="outline" className="flex items-center gap-1 w-fit">
+                          {testimonial.type === 'screenshot' ? (
+                            <><FileImage size={12} /> Image</>
+                          ) : (
+                            <><Type size={12} /> Text</>
+                          )}
+                        </Badge>
+                      </td>
                       <td className="px-6 py-4 max-w-xs">
-                        <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 italic">"{testimonial.content}"</p>
+                        {testimonial.type === 'screenshot' ? (
+                          <div className="h-12 w-20 rounded border bg-slate-100 overflow-hidden">
+                             <img src={testimonial.screenshot_url} alt="Screenshot" className="h-full w-full object-cover" />
+                          </div>
+                        ) : (
+                          <p className="text-sm text-slate-600 dark:text-slate-400 line-clamp-2 italic">"{testimonial.content}"</p>
+                        )}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-0.5 text-yellow-500">
@@ -366,15 +442,68 @@ const TestimonialManagement: React.FC = () => {
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Testimonial Content</label>
-                <textarea
-                  value={formData.content}
-                  onChange={(e) => setFormData({...formData, content: e.target.value})}
-                  className="w-full p-4 border rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none min-h-[120px]"
-                  placeholder="Share the customer's success story..."
-                  required
-                />
+              <div className="space-y-4 py-2">
+                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Testimonial Type</label>
+                <Tabs value={formData.type} onValueChange={(val) => setFormData({...formData, type: val as 'text' | 'screenshot'})} className="w-full">
+                  <TabsList className="grid w-full grid-cols-2 h-12">
+                    <TabsTrigger value="text" className="gap-2">
+                      <Type size={16} /> Text Testimonial
+                    </TabsTrigger>
+                    <TabsTrigger value="screenshot" className="gap-2">
+                      <FileImage size={16} /> Screenshot
+                    </TabsTrigger>
+                  </TabsList>
+
+                  <div className="mt-6">
+                    <TabsContent value="text">
+                      <div className="space-y-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Testimonial Content</label>
+                        <textarea
+                          value={formData.content}
+                          onChange={(e) => setFormData({...formData, content: e.target.value})}
+                          className="w-full p-4 border rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none min-h-[150px]"
+                          placeholder="Share the customer's success story..."
+                        />
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="screenshot">
+                       <div className="space-y-2">
+                        <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Screenshot Upload</label>
+                        <div 
+                          onClick={() => screenshotInputRef.current?.click()}
+                          className={`w-full aspect-video rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-slate-800/50 ${
+                            formData.screenshot_url ? 'border-blue-400 bg-blue-50/10' : 'border-slate-200 dark:border-slate-700'
+                          }`}
+                        >
+                          {formData.screenshot_url ? (
+                            <div className="relative w-full h-full p-2">
+                              <img src={formData.screenshot_url} alt="Screenshot" className="w-full h-full object-contain rounded-lg shadow-sm" />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity rounded-lg">
+                                <p className="text-white font-bold text-sm">Click to change screenshot</p>
+                              </div>
+                            </div>
+                          ) : (
+                            <>
+                              <div className="h-12 w-12 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-3">
+                                <FileImage className="text-blue-600 h-6 w-6" />
+                              </div>
+                              <p className="text-sm font-bold text-slate-900 dark:text-white">Click to upload screenshot</p>
+                              <p className="text-xs text-slate-500 mt-1">Upload WhatsApp/SMS screenshot</p>
+                            </>
+                          )}
+                          <input
+                            type="file"
+                            ref={screenshotInputRef}
+                            className="hidden"
+                            accept="image/*"
+                            onChange={handleScreenshotUpload}
+                          />
+                        </div>
+                      </div>
+                    </TabsContent>
+                  </div>
+                </Tabs>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

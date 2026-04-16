@@ -48,6 +48,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     customer_position: body.customer_position,
                     content: body.content,
                     image_url: body.image_url,
+                    type: body.type,
+                    screenshot_url: body.screenshot_url,
                     rating: body.rating,
                     is_published: body.is_published,
                     updated_at: new Date().toISOString()

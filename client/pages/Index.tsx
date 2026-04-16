@@ -959,9 +959,20 @@ export default function Index() {
                                 <Star key={i} size={16} className={i < (testimonial.rating || 5) ? "text-yellow-400 fill-current" : "text-slate-600"} />
                               ))}
                             </div>
-                            <p className="text-slate-300 text-lg italic leading-relaxed font-medium">
-                              "{testimonial.content}"
-                            </p>
+                            
+                            {testimonial.type === 'screenshot' ? (
+                                <div className="mt-2 rounded-xl border border-slate-700/50 overflow-hidden bg-slate-900/50 shadow-inner group-hover:border-yellow-400/30 transition-all">
+                                    <img 
+                                        src={testimonial.screenshot_url} 
+                                        alt="Customer Success Screenshot" 
+                                        className="w-full h-auto max-h-[300px] object-contain"
+                                    />
+                                </div>
+                            ) : (
+                                <p className="text-slate-300 text-lg italic leading-relaxed font-medium">
+                                  "{testimonial.content}"
+                                </p>
+                            )}
                           </div>
 
                           <div className="pt-6 border-t border-slate-700/50">
