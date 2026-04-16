@@ -409,7 +409,7 @@ const TestimonialManagement: React.FC = () => {
 
       {showModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-2xl p-8 w-full max-w-2xl shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-300">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-300">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-2xl font-bold text-slate-900 dark:text-white">
                 {editingTestimonial ? 'Edit Testimonial' : 'Create New Testimonial'}
@@ -419,8 +419,8 @@ const TestimonialManagement: React.FC = () => {
               </Button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Customer Name</label>
                   <Input
@@ -440,10 +440,10 @@ const TestimonialManagement: React.FC = () => {
                 </div>
               </div>
 
-              <div className="space-y-4 py-2">
+              <div className="space-y-3 py-1">
                 <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Testimonial Type</label>
                 <Tabs value={formData.type} onValueChange={(val) => setFormData({...formData, type: val as 'text' | 'screenshot'})} className="w-full">
-                  <TabsList className="grid w-full grid-cols-2 h-12">
+                  <TabsList className="grid w-full grid-cols-2 h-10">
                     <TabsTrigger value="text" className="gap-2">
                       <Type size={16} /> Text Testimonial
                     </TabsTrigger>
@@ -452,14 +452,14 @@ const TestimonialManagement: React.FC = () => {
                     </TabsTrigger>
                   </TabsList>
 
-                  <div className="mt-6">
+                  <div className="mt-4">
                     <TabsContent value="text">
                       <div className="space-y-2">
                         <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Testimonial Content</label>
                         <textarea
                           value={formData.content}
                           onChange={(e) => setFormData({...formData, content: e.target.value})}
-                          className="w-full p-4 border rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none min-h-[150px]"
+                          className="w-full p-4 border rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none min-h-[120px]"
                           placeholder="Share the customer's success story..."
                         />
                       </div>
@@ -504,7 +504,7 @@ const TestimonialManagement: React.FC = () => {
                 </Tabs>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Rating</label>
                   <div className="flex items-center gap-2 mt-2">
@@ -591,12 +591,12 @@ const TestimonialManagement: React.FC = () => {
                     >
                       {isUploading ? "Uploading..." : formData.image_url ? "Change Photo" : "Upload Photo"}
                     </Button>
-                    <p className="text-xs text-slate-500 mt-2">Recommended: Square format, min 400x400px</p>
+                    <p className="text-xs text-slate-500 mt-1">Recommended: Square format, min 400x400px</p>
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 mt-8 pt-6 border-t">
+              <div className="flex justify-end gap-3 mt-4 pt-4 border-t">
                 <Button
                   type="button"
                   variant="ghost"
