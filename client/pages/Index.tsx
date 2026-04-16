@@ -1,5 +1,5 @@
-import { Trophy, Users, FileText, ShoppingCart, BookOpen, Globe, Shield, UserCheck, Menu, Target, Calendar, BarChart3, DollarSign, Award, Star, CheckCircle, Building, Crown, User, AlertCircle, Clock, TrendingUp, X, Instagram, Linkedin, Facebook } from 'lucide-react';
-import { useState } from "react";
+import { Trophy, Users, FileText, ShoppingCart, BookOpen, Globe, Shield, UserCheck, Menu, Target, Calendar, BarChart3, DollarSign, Award, Star, CheckCircle, Building, Crown, User, AlertCircle, Clock, TrendingUp, X, Instagram, Linkedin, Facebook, MessageSquare, Loader2 } from 'lucide-react';
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -21,7 +21,26 @@ export default function Index() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const { t, dir } = useTranslation();
+  const [testimonials, setTestimonials] = useState<any[]>([]);
+  const [isLoadingTestimonials, setIsLoadingTestimonials] = useState(true);
   usePageTitle("Home");
+
+  useEffect(() => {
+    const fetchTestimonials = async () => {
+      try {
+        const res = await fetch('/api/testimonials?published=true');
+        const data = await res.json();
+        if (data.success) {
+          setTestimonials(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching testimonials:', error);
+      } finally {
+        setIsLoadingTestimonials(false);
+      }
+    };
+    fetchTestimonials();
+  }, []);
 
   const faqItems = [
     {
@@ -883,7 +902,122 @@ export default function Index() {
         </div>
       </section>
 
+      {/* Testimonials Section */}
+      <section className="py-24 bg-gradient-to-br from-slate-900 to-blue-900 relative overflow-hidden">
+        {/* Animated Background Elements */}
+        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+          <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-500/10 rounded-full blur-[120px] animate-pulse"></div>
+          <div className="absolute bottom-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-500/10 rounded-full blur-[120px] animate-pulse" style={{ animationDelay: '2s' }}></div>
+        </div>
+
+        <div className="container mx-auto px-4 relative z-10">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-yellow-400/10 text-yellow-400 rounded-full mb-4 border border-yellow-400/20">
+              <MessageSquare className="h-4 w-4" />
+              <span className="font-bold text-sm tracking-widest uppercase">{t('landing.testimonials.title.sub')}</span>
+            </div>
+            <h2 className="text-4xl md:text-6xl font-black text-white mb-6">
+              {t('landing.testimonials.title.main1')} <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
+                {t('landing.testimonials.title.main2')}
+              </span>
+            </h2>
+          </div>
+
+          {!isLoadingTestimonials && testimonials.length > 0 ? (
+            <div className="max-w-6xl mx-auto">
+              <Carousel 
+                opts={{ align: "start", loop: true }} 
+                className="w-full"
+              >
+                <CarouselContent className="-ml-4">
+                  {testimonials.map((testimonial, index) => (
+                    <CarouselItem key={index} className="pl-4 md:basis-1/2 lg:basis-1/3">
+                      <div className="h-full pt-12 pb-6">
+                        <div className="bg-slate-800/40 backdrop-blur-xl border border-slate-700/50 p-8 rounded-3xl relative h-full flex flex-col hover:border-yellow-400/50 transition-all duration-500 group shadow-2xl">
+                          {/* Image Overhang */}
+                          <div className="absolute -top-10 left-8">
+                            <div className="relative">
+                              <div className="w-20 h-20 rounded-2xl overflow-hidden border-4 border-slate-900 shadow-2xl group-hover:scale-110 transition-transform duration-500">
+                                {testimonial.image_url ? (
+                                  <img src={testimonial.image_url} alt={testimonial.customer_name} className="w-full h-full object-cover" />
+                                ) : (
+                                  <div className="w-full h-full bg-slate-700 flex items-center justify-center text-2xl font-bold text-white">
+                                    {testimonial.customer_name.charAt(0)}
+                                  </div>
+                                )}
+                              </div>
+                              <div className="absolute -bottom-2 -right-2 bg-yellow-400 text-black p-1.5 rounded-lg shadow-lg">
+                                <Star className="h-4 w-4 fill-current" />
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-8 mb-6 flex-1">
+                            <div className="flex gap-1 mb-4">
+                              {[...Array(5)].map((_, i) => (
+                                <Star key={i} size={16} className={i < (testimonial.rating || 5) ? "text-yellow-400 fill-current" : "text-slate-600"} />
+                              ))}
+                            </div>
+                            <p className="text-slate-300 text-lg italic leading-relaxed font-medium">
+                              "{testimonial.content}"
+                            </p>
+                          </div>
+
+                          <div className="pt-6 border-t border-slate-700/50">
+                            <h4 className="text-xl font-black text-white">{testimonial.customer_name}</h4>
+                            <p className="text-blue-400 font-bold text-sm tracking-wide uppercase">{testimonial.customer_position}</p>
+                          </div>
+                          
+                          <div className="absolute top-8 right-8 text-slate-700 group-hover:text-yellow-400/20 transition-colors">
+                            <MessageSquare size={48} className="fill-current opacity-20" />
+                          </div>
+                        </div>
+                      </div>
+                    </CarouselItem>
+                  ))}
+                </CarouselContent>
+                <div className="flex justify-center gap-4 mt-8">
+                  <CarouselPrevious className="static translate-y-0 bg-slate-800 border-slate-700 text-white hover:bg-yellow-400 hover:text-black hover:border-yellow-400 transition-all w-12 h-12" />
+                  <CarouselNext className="static translate-y-0 bg-slate-800 border-slate-700 text-white hover:bg-yellow-400 hover:text-black hover:border-yellow-400 transition-all w-12 h-12" />
+                </div>
+              </Carousel>
+            </div>
+          ) : !isLoadingTestimonials ? (
+            <div className="text-center py-20 bg-slate-800/20 rounded-3xl border border-dashed border-slate-700">
+              <MessageSquare className="h-16 w-16 text-slate-600 mx-auto mb-4" />
+              <p className="text-slate-400 text-xl font-medium">Stories of champions coming soon...</p>
+            </div>
+          ) : (
+             <div className="flex items-center justify-center py-20">
+               <Loader2 className="h-12 w-12 animate-spin text-yellow-400" />
+             </div>
+          )}
+
+          {/* Stats Bar */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-8 mt-20 max-w-5xl mx-auto py-10 border-t border-slate-800/50">
+             <div className="text-center">
+                <div className="text-3xl font-black text-white mb-1">4.9/5</div>
+                <div className="text-slate-500 text-sm font-bold tracking-widest">{t('landing.testimonials.stat.rating')}</div>
+             </div>
+             <div className="text-center">
+                <div className="text-3xl font-black text-white mb-1">50,000+</div>
+                <div className="text-slate-500 text-sm font-bold tracking-widest">{t('landing.testimonials.stat.players')}</div>
+             </div>
+             <div className="text-center">
+                <div className="text-3xl font-black text-white mb-1">800+</div>
+                <div className="text-slate-500 text-sm font-bold tracking-widest">ACADEMIES</div>
+             </div>
+             <div className="text-center">
+                <div className="text-3xl font-black text-white mb-1">100%</div>
+                <div className="text-slate-500 text-sm font-bold tracking-widest">{t('landing.testimonials.badge.compliant')}</div>
+             </div>
+          </div>
+        </div>
+      </section>
+
       {/* FAQ Section */}
+
       <section className="py-20 bg-slate-50 dark:bg-slate-800">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">

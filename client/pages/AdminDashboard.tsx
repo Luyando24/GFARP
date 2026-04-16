@@ -23,6 +23,7 @@ import {
   Home,
   Settings,
   LogOut,
+  MessageSquare,
   Menu,
   X,
   DollarSign,
@@ -126,6 +127,7 @@ import ThemeToggle from '@/components/navigation/ThemeToggle';
 import { NotificationsPopover } from '@/components/navigation/NotificationsPopover';
 import BlogManagement from '@/components/admin/BlogManagement';
 import SalesAgentsManager from '@/components/admin/SalesAgentsManager';
+import TestimonialManagement from '@/components/admin/TestimonialManagement';
 import DiscountManager from '@/components/admin/DiscountManager';
 import ExemptionManager from '@/components/admin/ExemptionManager';
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -1165,6 +1167,7 @@ export default function AdminDashboard() {
         { id: "sales", label: "Sales Agents", icon: UserCheck },
         { id: "discounts", label: "Discounts", icon: Percent },
         { id: "exemptions", label: "Exemptions", icon: ShieldCheck },
+        { id: "testimonials", label: "Testimonials", icon: MessageSquare },
         { id: "compliance", label: "FIFA Compliance", icon: Shield },
       ]
     },
@@ -1735,6 +1738,11 @@ export default function AdminDashboard() {
             {/* Blog Management Tab */}
             <TabsContent value="blog" className="space-y-6">
               <BlogManagement />
+            </TabsContent>
+
+            {/* Testimonial Management Tab */}
+            <TabsContent value="testimonials" className="space-y-6">
+              <TestimonialManagement />
             </TabsContent>
 
             {/* Sales Agents Tab */}
