@@ -55,8 +55,6 @@ const TestimonialManagement: React.FC = () => {
     rating: 5,
     is_published: true
   });
- Coles
-
   useEffect(() => {
     fetchTestimonials();
   }, []);
