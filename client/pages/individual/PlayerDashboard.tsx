@@ -875,10 +875,10 @@ export default function PlayerDashboard() {
                         </p>
                         {currentPlan !== 'pro' && (
                           <Button 
-                            onClick={() => openPaymentModal(plans[0] || { id: 'pro', name: 'Pro Plan', price: 20 })} 
+                            onClick={() => setActiveTab('subscription')} 
                             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
                           >
-                            Upgrade for ${plans[0]?.price || 20}
+                            View Subscription Plans
                           </Button>
                         )}
                       </CardContent>
