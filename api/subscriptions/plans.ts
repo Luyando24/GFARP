@@ -26,11 +26,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        const { data: plans, error } = await supabase
+        const targetType = (req.query.targetType as string || 'ACADEMY').toUpperCase();
+        const includeInactive = req.query.includeInactive === 'true';
+
+        let queryBuilder = supabase
             .from('subscription_plans')
             .select('*')
-            .eq('is_active', true)
-            .order('price', { ascending: true });
+            .eq('target_type', targetType);
+            
+        if (!includeInactive) {
+            queryBuilder = queryBuilder.eq('is_active', true);
+        }
+
+        const { data: plans, error } = await queryBuilder
+            .order('sort_order', { ascending: true });
 
         if (error) {
             throw error;
@@ -61,7 +70,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         return res.status(200).json({
             success: true,
-            data: plans
+            data: plans,
+            _debug: {
+                requestedTargetType: targetType,
+                dbRowsReturned: plans.length,
+                source: 'serverless-function'
+            }
         });
 
     } catch (error: any) {
