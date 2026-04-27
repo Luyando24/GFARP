@@ -148,8 +148,15 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
     }
 
     responded = true;
+    const dbRowCount = result.rows.length;
+    const dbFirstRowTargetType = result.rows.length > 0 ? result.rows[0].target_type : null;
 
-    let plans = result.rows.map(plan => {
+    let plans = result.rows
+      .filter(plan => {
+        // Double-check: Manual filter in case SQL WHERE failed on live
+        return plan.target_type === targetType;
+      })
+      .map(plan => {
       // Parse features if it's a JSON string
       let features = plan.features;
       if (typeof features === 'string') {
@@ -185,7 +192,16 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
     // Fallbacks should ONLY be used for genuine DB errors or timeouts.
     
     console.log(`[SUBSCRIPTION] Query successful, returning ${plans.length} plans to client`);
-    return res.json({ success: true, data: plans });
+    return res.json({ 
+      success: true, 
+      data: plans,
+      _debug: {
+        requestedTargetType: targetType,
+        dbRowsReturned: dbRowCount,
+        dbFirstRowTargetType: dbFirstRowTargetType,
+        filteredCount: plans.length
+      }
+    });
 
   } catch (dbError: any) {
     clearTimeout(timeoutId);

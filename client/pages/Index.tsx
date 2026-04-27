@@ -58,6 +58,10 @@ export default function Index() {
         const individualData = await individualRes.json();
         const agencyData = await agencyRes.json();
         
+        console.log('[DEBUG] Academy response:', academyData._debug);
+        console.log('[DEBUG] Individual response:', individualData._debug);
+        console.log('[DEBUG] Agency response:', agencyData._debug);
+        
         const allPlans = [
           ...(academyData.success ? academyData.data : []),
           ...(individualData.success ? individualData.data : []),
