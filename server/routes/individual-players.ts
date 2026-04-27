@@ -65,6 +65,21 @@ router.post('/create-checkout-session', authenticateToken, async (req, res) => {
     const player = playerResult.rows[0];
     let customerId = player.stripe_customer_id;
 
+    const stripe = getStripe();
+
+    // Verify customer exists in current environment
+    if (customerId) {
+      try {
+        await stripe.customers.retrieve(customerId);
+      } catch (e: any) {
+        if (e.message.includes('No such customer') || e.code === 'resource_missing') {
+          customerId = null;
+        } else {
+          throw e;
+        }
+      }
+    }
+
     // Create Stripe customer if needed
     if (!customerId) {
       const customer = await createStripeCustomer(
@@ -80,7 +95,8 @@ router.post('/create-checkout-session', authenticateToken, async (req, res) => {
       );
     }
 
-    const stripe = getStripe();
+    const isRecurring = plan.billingCycle && plan.billingCycle.toLowerCase() !== 'lifetime' && plan.billingCycle.toLowerCase() !== 'one-time';
+
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
@@ -93,11 +109,16 @@ router.post('/create-checkout-session', authenticateToken, async (req, res) => {
               description: plan.description,
             },
             unit_amount: Math.round(parseFloat(plan.price) * 100),
+            ...(isRecurring && {
+              recurring: {
+                interval: plan.billingCycle.toLowerCase() === 'yearly' ? 'year' : 'month',
+              },
+            }),
           },
           quantity: 1,
         },
       ],
-      mode: 'payment',
+      mode: isRecurring ? 'subscription' : 'payment',
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: {
