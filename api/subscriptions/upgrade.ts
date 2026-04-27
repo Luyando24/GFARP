@@ -120,11 +120,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                                     description: `Subscription upgrade to ${newPlan.name}`,
                                 },
                                 unit_amount: Math.round(Number(newPlan.price) * 100),
+                                recurring: {
+                                    interval: (newPlan.billing_cycle?.toLowerCase() === 'yearly' ? 'year' : 'month'),
+                                }
                             },
                             quantity: 1,
                         },
                     ],
-                    mode: 'payment',
+                    mode: 'subscription',
                     success_url: `${clientUrl}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
                     cancel_url: `${clientUrl}/subscription/cancel`,
                     metadata: {
@@ -160,11 +163,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                                         description: `Subscription upgrade to ${newPlan.name}`,
                                     },
                                     unit_amount: Math.round(Number(newPlan.price) * 100),
+                                    recurring: {
+                                        interval: (newPlan.billing_cycle?.toLowerCase() === 'yearly' ? 'year' : 'month'),
+                                    }
                                 },
                                 quantity: 1,
                             },
                         ],
-                        mode: 'payment',
+                        mode: 'subscription',
                         success_url: `${clientUrl}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
                         cancel_url: `${clientUrl}/subscription/cancel`,
                         metadata: {
