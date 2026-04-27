@@ -75,8 +75,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             
             if (!org) throw new Error('Organization not found');
 
-            // Ensure Stripe customer exists
+            // Ensure Stripe customer exists and is valid for the current environment
             let customerId = org.stripe_customer_id;
+            let session;
+
+            try {
+                if (customerId) {
+                    // Test if customer exists in the current Stripe environment
+                    await stripe.customers.retrieve(customerId);
+                }
+            } catch (retrieveError: any) {
+                if (retrieveError.code === 'resource_missing' || retrieveError.message.includes('No such customer')) {
+                    customerId = null; // Mark for recreation
+                } else {
+                    throw retrieveError;
+                }
+            }
+
             if (!customerId) {
                 const customer = await stripe.customers.create({
                     email: org.email,
@@ -89,34 +104,79 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             const clientUrl = process.env.CLIENT_URL || 'https://soccercircular.com';
             
-            const session = await stripe.checkout.sessions.create({
-                customer: customerId,
-                payment_method_types: ['card'],
-                line_items: [
-                    newPlan.stripe_price_id ? {
-                        price: newPlan.stripe_price_id,
-                        quantity: 1,
-                    } : {
-                        price_data: {
-                            currency: newPlan.currency?.toLowerCase() || 'usd',
-                            product_data: {
-                                name: `${newPlan.name} Plan`,
-                                description: `Subscription upgrade to ${newPlan.name}`,
+            try {
+                session = await stripe.checkout.sessions.create({
+                    customer: customerId,
+                    payment_method_types: ['card'],
+                    line_items: [
+                        newPlan.stripe_price_id ? {
+                            price: newPlan.stripe_price_id,
+                            quantity: 1,
+                        } : {
+                            price_data: {
+                                currency: newPlan.currency?.toLowerCase() || 'usd',
+                                product_data: {
+                                    name: `${newPlan.name} Plan`,
+                                    description: `Subscription upgrade to ${newPlan.name}`,
+                                },
+                                unit_amount: Math.round(Number(newPlan.price) * 100),
                             },
-                            unit_amount: Math.round(Number(newPlan.price) * 100),
+                            quantity: 1,
                         },
-                        quantity: 1,
-                    },
-                ],
-                mode: 'payment',
-                success_url: `${clientUrl}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
-                cancel_url: `${clientUrl}/subscription/cancel`,
-                metadata: {
-                    orgId: academyId,
-                    planId: newPlanId,
-                    type: newPlan.target_type
+                    ],
+                    mode: 'payment',
+                    success_url: `${clientUrl}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+                    cancel_url: `${clientUrl}/subscription/cancel`,
+                    metadata: {
+                        orgId: academyId,
+                        planId: newPlanId,
+                        type: newPlan.target_type
+                    }
+                });
+            } catch (sessionError: any) {
+                // Second safety check for 'No such customer'
+                if (sessionError.message.includes('No such customer')) {
+                    const customer = await stripe.customers.create({
+                        email: org.email,
+                        name: org.name,
+                        metadata: { orgId: academyId, type: newPlan.target_type }
+                    });
+                    customerId = customer.id;
+                    await supabase.from(orgTable).update({ stripe_customer_id: customerId }).eq('id', academyId);
+                    
+                    // Retry session creation with new customer
+                    session = await stripe.checkout.sessions.create({
+                        customer: customerId,
+                        payment_method_types: ['card'],
+                        line_items: [
+                            newPlan.stripe_price_id ? {
+                                price: newPlan.stripe_price_id,
+                                quantity: 1,
+                            } : {
+                                price_data: {
+                                    currency: newPlan.currency?.toLowerCase() || 'usd',
+                                    product_data: {
+                                        name: `${newPlan.name} Plan`,
+                                        description: `Subscription upgrade to ${newPlan.name}`,
+                                    },
+                                    unit_amount: Math.round(Number(newPlan.price) * 100),
+                                },
+                                quantity: 1,
+                            },
+                        ],
+                        mode: 'payment',
+                        success_url: `${clientUrl}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+                        cancel_url: `${clientUrl}/subscription/cancel`,
+                        metadata: {
+                            orgId: academyId,
+                            planId: newPlanId,
+                            type: newPlan.target_type
+                        }
+                    });
+                } else {
+                    throw sessionError;
                 }
-            });
+            }
 
             return res.status(200).json({
                 success: true,
