@@ -96,15 +96,29 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
   // If database doesn't respond in 2s, return fallback immediately
   // Aggressive timeout for serverless, but let's give it more room in dev/slow DBs
   const timeoutMs = 10000; // 10 seconds
-  console.log('[SUBSCRIPTION] Fetching plans with timeout:', timeoutMs, 'ms');
+  console.log('[SUBSCRIPTION] Fetching plans. req.query:', JSON.stringify(req.query));
+  
   let responded = false;
-  const targetType = req.query.targetType as string || 'ACADEMY';
+  
+  // Extract targetType robustly
+  let targetType = 'ACADEMY';
+  if (req.query.targetType) {
+    if (Array.isArray(req.query.targetType)) {
+      targetType = String(req.query.targetType[0]);
+    } else {
+      targetType = String(req.query.targetType);
+    }
+  }
+  
+  // Normalize to uppercase to match DB constraints
+  targetType = targetType.toUpperCase();
+  console.log('[SUBSCRIPTION] Normalized targetType:', targetType);
 
   // Start timeout timer that will send fallback plans
   const timeoutId = setTimeout(() => {
     if (!responded) {
       responded = true;
-      console.warn('[SUBSCRIPTION] Database timeout after 10s, returning fallback plans');
+      console.warn('[SUBSCRIPTION] Database timeout after 10s, returning fallback plans for:', targetType);
       res.json({ success: true, data: getFallbackPlans(targetType) });
     }
   }, timeoutMs);
@@ -126,7 +140,9 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
 
     plansQuery += ' ORDER BY sort_order ASC';
 
-    console.log('[SUBSCRIPTION] Querying database for plans with targetType:', targetType);
+    console.log('[SUBSCRIPTION] SQL Query:', plansQuery.replace(/\s+/g, ' ').trim());
+    console.log('[SUBSCRIPTION] SQL Params:', JSON.stringify([targetType]));
+    
     const result = await query(plansQuery, [targetType]);
 
     // Clear timeout if query succeeded
@@ -139,7 +155,10 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
     }
 
     responded = true;
-    console.log(`[SUBSCRIPTION] Query returned ${result.rows.length} plans`);
+    console.log(`[SUBSCRIPTION] Query returned ${result.rows.length} rows`);
+    if (result.rows.length > 0) {
+      console.log('[SUBSCRIPTION] First row sample target_type:', result.rows[0].target_type);
+    }
 
     let plans = result.rows.map(plan => {
       // Parse features if it's a JSON string

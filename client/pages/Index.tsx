@@ -58,12 +58,17 @@ export default function Index() {
         const individualData = await individualRes.json();
         const agencyData = await agencyRes.json();
         
+        console.log('[DEBUG] Academy plans response:', academyData);
+        console.log('[DEBUG] Individual plans response:', individualData);
+        console.log('[DEBUG] Agency plans response:', agencyData);
+        
         const allPlans = [
           ...(academyData.success ? academyData.data : []),
           ...(individualData.success ? individualData.data : []),
           ...(agencyData.success ? agencyData.data : [])
         ];
         
+        console.log('[DEBUG] Combined plans count:', allPlans.length);
         setPlans(allPlans);
       } catch (error) {
         console.error('Error fetching plans:', error);
