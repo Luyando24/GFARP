@@ -191,26 +191,26 @@ export async function query(text: string, params?: (string | number | boolean | 
     }
 
     // Handle players table access
-    if (text.includes('players') && error.message.includes('does not exist')) {
-      console.log('Players table may not exist, using fallback calculation');
+    if (text.toLowerCase().includes('count(*)') && text.includes('players') && error.message.includes('does not exist')) {
+      console.log('Players table may not exist, using fallback count 0');
       return { rows: [{ count: 0 }] };
     }
 
     // Handle transfers table access
-    if ((text.includes('football_transfers') || text.includes('transfers')) && error.message.includes('does not exist')) {
-      console.log('Transfers table may not exist, using calculated value');
+    if (text.toLowerCase().includes('count(*)') && (text.includes('football_transfers') || text.includes('transfers')) && error.message.includes('does not exist')) {
+      console.log('Transfers table may not exist, using fallback count 0');
       return { rows: [{ count: 0 }] };
     }
 
     // Handle subscriptions table access
-    if (text.includes('subscriptions') && error.message.includes('does not exist')) {
-      console.log('Subscriptions table may not exist, using calculated value');
+    if (text.toLowerCase().includes('count(*)') && text.includes('subscriptions') && error.message.includes('does not exist')) {
+      console.log('Subscriptions table may not exist, using fallback count 0');
       return { rows: [{ count: 0 }] };
     }
 
     // Handle users table access
-    if (text.includes('users') && error.message.includes('does not exist')) {
-      console.log('Users table may not exist, using calculated value');
+    if (text.toLowerCase().includes('count(*)') && text.includes('users') && error.message.includes('does not exist')) {
+      console.log('Users table may not exist, using fallback count 0');
       return { rows: [{ count: 0 }] };
     }
 

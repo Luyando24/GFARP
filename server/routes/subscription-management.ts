@@ -173,13 +173,11 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
       return mappedPlan;
     });
 
-    // Use fallback if no plans found
-    if (!plans || plans.length === 0) {
-      console.warn('No active subscription plans found in DB. Returning fallback plans.');
-      plans = getFallbackPlans(targetType);
-    }
-
-    console.log(`[SUBSCRIPTION] Returning ${plans.length} plans to client`);
+    // DO NOT use fallback just because length is 0. 
+    // If the user deactivated all plans, we should honor that and show 0 plans.
+    // Fallbacks should ONLY be used for genuine DB errors or timeouts.
+    
+    console.log(`[SUBSCRIPTION] Query successful, returning ${plans.length} plans to client`);
     return res.json({ success: true, data: plans });
 
   } catch (dbError: any) {
