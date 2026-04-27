@@ -54,8 +54,8 @@ export default function PlayerPaymentMethodSelector({
         const result = await PlayerApi.createCheckoutSession({
           planId: selectedPlan.id,
           billingCycle: selectedPlan.billingCycle || 'one-time',
-          successUrl: `${window.location.origin}/player-dashboard?tab=subscription&payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
-          cancelUrl: `${window.location.origin}/player-dashboard?tab=subscription&payment_cancelled=true`,
+          successUrl: `${window.location.origin}/player/dashboard?tab=subscription&payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
+          cancelUrl: `${window.location.origin}/player/dashboard?tab=subscription&payment_cancelled=true`,
         });
 
         if (result.success && result.url) {
