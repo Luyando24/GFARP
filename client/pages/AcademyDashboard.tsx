@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { clearSession } from '@/lib/auth';
+import { clearSession, useAuth } from '@/lib/auth';
 import { getCurrentSubscription, getSubscriptionHistory } from '@/lib/api';
 import {
   Trophy,
@@ -74,6 +74,7 @@ import PlayerManagement from '@/components/players/PlayerManagement';
 import FinancialTransactionsManager from '@/components/FinancialTransactionsManager';
 import PaymentMethodSelector from '@/components/PaymentMethodSelector';
 import AcademyComplianceTab from '@/components/academy/AcademyComplianceTab';
+import ComplianceDocuments from './ComplianceDocuments';
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { Player, Transfer, getTransfers, createTransfer, updateTransfer, deleteTransfer, getAcademyDashboardStats, Api } from '@/lib/api';
 
@@ -103,6 +104,8 @@ const financialData: any = {};
 
 export default function AcademyDashboard() {
   const { t } = useTranslation();
+  const { session } = useAuth();
+  const isAgency = session?.role === 'agency_admin';
   usePageTitle("Academy Dashboard");
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -292,9 +295,9 @@ export default function AcademyDashboard() {
     transfer_amount: 0,
     currency: "USD",
     transfer_date: "",
-    status: "pending" as const,
-    transfer_type: "permanent" as const,
-    priority: "medium" as const
+    status: "pending" as "pending" | "completed" | "cancelled" | "approved" | "rejected",
+    transfer_type: "permanent" as "permanent" | "loan" | "free_transfer",
+    priority: "medium" as "high" | "low" | "medium"
   });
 
   // Player search state for live search functionality
@@ -332,45 +335,20 @@ export default function AcademyDashboard() {
     setDeleteError("");
 
     try {
-      // Get user email from local storage or wherever it's stored
-      // Assuming 'football-auth-storage' matches what's used in auth.ts
-      let userEmail = "";
-      try {
-        const storage = JSON.parse(localStorage.getItem('football-auth-storage') || '{}');
-        userEmail = storage?.state?.user?.email;
-      } catch (e) {
-        console.error("Error parsing auth storage", e);
-      }
-
-      // Fallback if not found in storage, check if we have it in academyInfo or other state
-      if (!userEmail && academyInfo?.email) {
-        // Note: academyInfo.email might be the academy email, not necessarily the logged in user's email
-        // But for now let's try to find the user email.
-        // If the user object is not available, we might need to rely on the user re-entering it?
-        // The API requires email to verify the specific user.
-      }
+      // Get user email from session or academyInfo
+      const userEmail = session?.email || academyInfo?.email;
 
       if (!academyInfo?.id || !userEmail) {
         throw new Error("User information missing. Please refresh the page.");
       }
 
-      const apiUrl = import.meta.env.VITE_API_URL || '/api';
-      const response = await fetch(`${apiUrl}/football-auth/academy/delete-account`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('football-auth-token')}`
-        },
-        body: JSON.stringify({
-          academyId: academyInfo.id,
-          email: userEmail,
-          password: deletePassword
-        })
+      const data = await Api.post<any>('/football-auth/academy/delete-account', {
+        academyId: academyInfo.id,
+        email: userEmail,
+        password: deletePassword
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
+      if (!data.success) {
         throw new Error(data.message || 'Failed to delete account');
       }
 
@@ -429,7 +407,7 @@ export default function AcademyDashboard() {
   useEffect(() => {
     const loadAcademyData = async () => {
       let data: any = null;
-      const raw = localStorage.getItem('academy_data');
+      const raw = localStorage.getItem('academy_data') || localStorage.getItem('agency_data');
 
       if (raw) {
         try {
@@ -445,12 +423,13 @@ export default function AcademyDashboard() {
           const sessionRaw = localStorage.getItem("ipims_auth_session");
           if (sessionRaw) {
             const session = JSON.parse(sessionRaw);
-            const academyId = session.schoolId || session.academyId;
-            const token = session.access_token || session.token;
+            const academyId = session.schoolId || session.academyId || session.agencyId;
+            const token = session.tokens?.accessToken || session.access_token || session.token;
 
             if (academyId && token) {
               try {
-                const response = await fetch(`/api/academies/${academyId}`, {
+                const endpoint = (session.role === 'agency_admin' || session.agencyId) ? `/api/agencies/${academyId}` : `/api/academies/${academyId}`;
+                const response = await fetch(endpoint, {
                   headers: { 'Authorization': `Bearer ${token}` }
                 });
                 const result = await response.json();
@@ -523,14 +502,14 @@ export default function AcademyDashboard() {
       // Parallel fetch for all stats
       const [statsResult, playersResult, transfersResult, financialResult] = await Promise.all([
         getAcademyDashboardStats(academyInfo.id),
-        Api.getPlayers(academyInfo.id, 1, 1),
+        Api.getPlayers(academyInfo.id, undefined, 1, 1),
         Api.getTransfers(academyInfo.id),
         fetch(`/api/financial/summary?academyId=${academyInfo.id}&period=monthly`).then(res => res.json())
       ]);
 
       // Calculate active transfers
-      const activeTransfers = transfersResult.success
-        ? transfersResult.data.filter(t => t.status === 'pending' || t.status === 'approved').length
+      const activeTransfers = transfersResult.success && Array.isArray(transfersResult.data)
+        ? transfersResult.data.filter((t: any) => t.status === 'pending' || t.status === 'approved').length
         : 0;
 
       // Process financial data
@@ -543,14 +522,14 @@ export default function AcademyDashboard() {
         : [];
 
       // Get recent transfers from the transfers list (already fetched)
-      const recentTransfers = transfersResult.success
-        ? transfersResult.data.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5)
+      const recentTransfers = transfersResult.success && Array.isArray(transfersResult.data)
+        ? [...transfersResult.data].sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 5)
         : [];
 
       if (statsResult.success) {
         setDashboardStats(prev => ({
           ...statsResult.data,
-          totalPlayers: playersResult.success ? (playersResult.data.total || 0) : (statsResult.data.totalPlayers || 0),
+          totalPlayers: playersResult.success ? (playersResult.data?.total || 0) : (statsResult.data?.totalPlayers || 0),
           activeTransfers: activeTransfers,
           monthlyRevenue: financialSummary.totalRevenue || 0,
           recentTransfers: recentTransfers,
@@ -560,7 +539,7 @@ export default function AcademyDashboard() {
         // Fallback if stats endpoint fails
         setDashboardStats(prev => ({
           ...prev,
-          totalPlayers: playersResult.success ? (playersResult.data.total || 0) : 0,
+          totalPlayers: playersResult.success ? (playersResult.data?.total || 0) : 0,
           activeTransfers: activeTransfers,
           monthlyRevenue: financialSummary.totalRevenue || 0,
           recentTransfers: recentTransfers,
@@ -601,7 +580,8 @@ export default function AcademyDashboard() {
           daysRemaining: data.subscription?.daysRemaining,
           playerLimit: data.limits?.playerLimit,
           playerCount: data.usage?.playerCount,
-          playerUsagePercentage: data.usage?.playerUsagePercentage
+          playerUsagePercentage: data.usage?.playerUsagePercentage,
+          features: data.subscription?.features || []
         });
       } else {
         // Handle case when no subscription is found
@@ -619,7 +599,8 @@ export default function AcademyDashboard() {
           daysRemaining: 365,
           playerLimit: 500,
           playerCount: 0,
-          playerUsagePercentage: 0
+          playerUsagePercentage: 0,
+          features: ["Up to 500 players", "Advanced analytics", "Priority support"]
         });
       }
     } catch (error) {
@@ -650,7 +631,8 @@ export default function AcademyDashboard() {
   const loadAvailablePlans = async () => {
     try {
       console.log('Loading available plans...');
-      const response = await fetch('/api/subscriptions/plans');
+      const targetType = isAgency ? 'AGENCY' : 'ACADEMY';
+      const response = await fetch(`/api/subscriptions/plans?targetType=${targetType}`);
       const result = await response.json();
       console.log('Plans API response:', result);
 
@@ -658,8 +640,10 @@ export default function AcademyDashboard() {
         // The API returns { success: true, data: { plans: [...] } }
         // We need to extract the plans array correctly
         const plans = result.data?.plans || result.data || [];
-        setAvailablePlans(plans);
-        console.log('Available plans set:', plans);
+        // Sort plans by price ascending
+        const sortedPlans = [...plans].sort((a, b) => (a.price || 0) - (b.price || 0));
+        setAvailablePlans(sortedPlans);
+        console.log('Available plans set:', sortedPlans);
       } else {
         console.error('Failed to load plans:', result.error);
       }
@@ -688,11 +672,9 @@ export default function AcademyDashboard() {
       id: selectedPlan.id,
       name: selectedPlan.name,
       price: billingCycle === 'yearly'
-        ? (selectedPlan.name === 'Pro' || selectedPlan.name === 'Pro Plan' || selectedPlan.name === t('landing.pricing.tier2.name')
-          ? parseInt(t('landing.pricing.tier2.priceYearly').replace(/[^0-9]/g, ''))
-          : Math.round(selectedPlan.price * 12 * 0.8))
+        ? Math.round(selectedPlan.price * 12 * 0.8) // 20% discount for yearly
         : selectedPlan.price,
-      isFree: false,
+      isFree: selectedPlan.is_free || selectedPlan.price === 0,
       billingCycle: billingCycle
     });
     setShowPaymentModal(true);
@@ -713,7 +695,7 @@ export default function AcademyDashboard() {
     setIsCancelling(true);
     try {
       const session = JSON.parse(localStorage.getItem("ipims_auth_session") || "{}");
-      const token = session?.access_token || session?.token;
+      const token = session.tokens?.accessToken || session?.access_token || session?.token;
 
       const response = await fetch('/api/subscriptions/cancel', {
         method: 'POST',
@@ -841,10 +823,10 @@ export default function AcademyDashboard() {
     setSettingsFormData({
       name: currentData.name || "",
       location: currentData.address || currentData.location || "",
-      established: currentData.established || "",
+      established: currentData.foundedYear || currentData.established || "",
       email: currentData.email || "",
       phone: currentData.phone || "",
-      directorName: currentData.directorName || currentData.director?.name || "",
+      directorName: currentData.directorName || currentData.director?.name || currentData.contactPerson || "",
       directorEmail: currentData.directorEmail || currentData.director?.email || "",
       directorPhone: currentData.directorPhone || currentData.director?.phone || ""
     });
@@ -873,7 +855,7 @@ export default function AcademyDashboard() {
 
   const handleLogout = () => {
     clearSession();
-    navigate("/login");
+    navigate("/portal");
   };
 
   // Settings form handlers
@@ -895,10 +877,10 @@ export default function AcademyDashboard() {
     setSettingsFormData({
       name: currentData.name || "",
       location: currentData.address || currentData.location || "",
-      established: currentData.established || "",
+      established: currentData.foundedYear || currentData.established || "",
       email: currentData.email || "",
       phone: currentData.phone || "",
-      directorName: currentData.directorName || currentData.director?.name || "",
+      directorName: currentData.directorName || currentData.director?.name || currentData.contactPerson || "",
       directorEmail: currentData.directorEmail || currentData.director?.email || "",
       directorPhone: currentData.directorPhone || currentData.director?.phone || ""
     });
@@ -908,10 +890,10 @@ export default function AcademyDashboard() {
     try {
       // Get auth token
       const session = JSON.parse(localStorage.getItem("ipims_auth_session") || "{}");
-      const token = session?.access_token || session?.token;
+      const token = session.tokens?.accessToken || session?.access_token || session?.token;
 
       // Fallback ID from session
-      const academyId = academyInfo?.id || session?.schoolId || session?.academyId;
+      const academyId = academyInfo?.id || session?.schoolId || session?.academyId || session?.agencyId;
 
       if (!academyId) {
         toast({
@@ -935,7 +917,8 @@ export default function AcademyDashboard() {
       };
 
       // Call API
-      const response = await fetch(`/api/academies/${academyId}`, {
+      const endpoint = isAgency ? `/api/agencies/${academyId}` : `/api/academies/${academyId}`;
+      const response = await fetch(endpoint, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -1188,7 +1171,7 @@ export default function AcademyDashboard() {
     try {
       // Get academy ID from session
       const session = JSON.parse(localStorage.getItem("ipims_auth_session") || "{}");
-      const academyId = session?.schoolId || session?.academyId;
+      const academyId = session?.schoolId || session?.academyId || session?.agencyId;
 
       // Search players using the API
       const response = await Api.searchPlayers(query, academyId, 10);
@@ -1264,7 +1247,7 @@ export default function AcademyDashboard() {
                   <h1 className="text-lg font-bold text-slate-900 dark:text-white">
                     {displayAcademyName}
                   </h1>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Academy Dashboard</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">{isAgency ? 'Agency Dashboard' : 'Academy Dashboard'}</p>
                 </div>
               </div>
             </div>
@@ -1312,7 +1295,7 @@ export default function AcademyDashboard() {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-gradient-to-b from-[#005391] to-[#0066b3] border-r-4 border-yellow-400 transition-transform duration-300 ease-in-out min-h-screen`}>
+        <aside className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:sticky lg:top-16 z-40 w-64 bg-gradient-to-b from-[#005391] to-[#0066b3] border-r-4 border-yellow-400 transition-transform duration-300 ease-in-out h-[calc(100vh-64px)] overflow-y-auto`}>
           <div className="flex flex-col h-full pt-16 lg:pt-0">
             <nav className="flex-1 px-4 py-6 space-y-2">
               {sidebarItems.map((item) => {
@@ -1349,45 +1332,44 @@ export default function AcademyDashboard() {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 flex flex-col">
-
-          {/* Incomplete Profile Banner - Forced render check */}
-          {academyInfo && (
-            (!academyInfo.address || academyInfo.address.trim() === '') ||
-            (!academyInfo.phone || academyInfo.phone.trim() === '') ||
-            (!academyInfo.directorName || academyInfo.directorName.trim() === '')
-          ) && (
-              <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 w-full">
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <AlertCircle className="h-5 w-5 text-yellow-400" aria-hidden="true" />
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm text-yellow-700">
-                        {t('dash.profile.incomplete')}
-                      </p>
+        <main className="flex-1 flex flex-col relative overflow-visible">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
+            {/* Sticky Navigation Section */}
+            <div className="sticky top-16 z-40 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+              {/* Incomplete Profile Banner */}
+              {academyInfo && (
+                (!academyInfo.address || academyInfo.address.trim() === '') ||
+                (!academyInfo.phone || academyInfo.phone.trim() === '') ||
+                (!academyInfo.directorName || academyInfo.directorName.trim() === '')
+              ) && (
+                  <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 w-full">
+                    <div className="flex justify-between items-center max-w-7xl mx-auto">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <AlertCircle className="h-5 w-5 text-yellow-400" aria-hidden="true" />
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm text-yellow-700">
+                            {t('dash.profile.incomplete')}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="ml-4 flex-shrink-0 flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="text-yellow-700 border-yellow-700 hover:bg-yellow-100"
+                          onClick={() => setActiveTab('settings')}
+                        >
+                          {t('dash.menu.settings')}
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                  <div className="ml-4 flex-shrink-0 flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-yellow-700 border-yellow-700 hover:bg-yellow-100"
-                      onClick={() => setActiveTab('settings')}
-                    >
-                      {t('dash.menu.settings')}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
+                )}
 
-          <div className="flex-1 p-6">
-            {activeView === 'compliance-documents' ? (
-              <ComplianceDocuments onBack={() => setActiveView('main')} />
-            ) : (
-              <Tabs value={activeTab} onValueChange={setActiveTab}>
+              {/* Tabs Navigation */}
+              <div className="px-6 py-2 max-w-7xl mx-auto w-full">
                 <TabsList className="grid w-full grid-cols-7">
                   <TabsTrigger value="dashboard">{t('dash.menu.dashboard')}</TabsTrigger>
                   <TabsTrigger value="players">{t('dash.menu.players')}</TabsTrigger>
@@ -1397,6 +1379,45 @@ export default function AcademyDashboard() {
                   <TabsTrigger value="subscription">{t('dash.stats.subscription')}</TabsTrigger>
                   <TabsTrigger value="settings">{t('dash.menu.settings')}</TabsTrigger>
                 </TabsList>
+              </div>
+
+              {/* Contextual Toolbar (Sticky) */}
+              {activeTab === 'settings' && (
+                <div className="px-6 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 backdrop-blur-sm">
+                  <div className="max-w-7xl mx-auto flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Settings className="h-5 w-5 text-blue-600" />
+                      {t('dash.menu.settings')}
+                    </h2>
+                    <div className="flex gap-2">
+                      {isEditingSettings ? (
+                        <>
+                          <Button variant="outline" size="sm" onClick={handleCancelEdit}>
+                            <X className="h-4 w-4 mr-2" />
+                            {t('common.cancel')}
+                          </Button>
+                          <Button size="sm" onClick={handleSaveSettings} className="bg-blue-600 hover:bg-blue-700">
+                            <Save className="h-4 w-4 mr-2" />
+                            {t('common.save')}
+                          </Button>
+                        </>
+                      ) : (
+                        <Button size="sm" onClick={handleEditSettings}>
+                          <Edit className="h-4 w-4 mr-2" />
+                          {t('common.edit')}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 p-6">
+              {activeView === 'compliance-documents' ? (
+                <ComplianceDocuments onBack={() => setActiveView('main')} />
+              ) : (
+                <>
 
                 {/* Dashboard Tab */}
                 <TabsContent value="dashboard" className="space-y-6">
@@ -1958,7 +1979,7 @@ export default function AcademyDashboard() {
                           <div>
                             <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('dash.compliance.areas')}</p>
                             <p className="text-2xl font-bold text-[#005391]">
-                              {complianceData.areas.filter(area => area.status === 'compliant').length}/{complianceData.areas.length}
+                              {(complianceData.areas || []).filter(area => area.status === 'compliant').length}/{(complianceData.areas || []).length}
                             </p>
                           </div>
                           <CheckCircle className="h-8 w-8 text-[#005391]" />
@@ -2446,42 +2467,77 @@ export default function AcademyDashboard() {
                                     </div>
                                   </div>
 
-                                  <div className="space-y-4">
+                                  <div className="grid grid-cols-1 gap-4 max-h-[60vh] overflow-y-auto pr-2">
                                     {availablePlans.map((plan: any) => {
+                                      const isMostExpensive = availablePlans.length > 0 && 
+                                        plan.price === Math.max(...availablePlans.map(p => p.price || 0)) &&
+                                        plan.price > 0;
+                                      
                                       let displayPrice = `$${plan.price}`;
                                       if (billingCycle === 'yearly') {
-                                        if (plan.name === 'Pro' || plan.name === 'Pro Plan' || plan.name === t('landing.pricing.tier2.name')) {
-                                          displayPrice = t('landing.pricing.tier2.priceYearly');
-                                        } else {
-                                          displayPrice = `$${Math.round(plan.price * 12 * 0.8)}`;
-                                        }
+                                        displayPrice = `$${Math.round(plan.price * 12 * 0.8)}`;
                                       }
 
                                       return (
                                         <Card
                                           key={plan.id}
-                                          className={`cursor-pointer hover:bg-slate-50 ${subscriptionData?.planName === plan.name
-                                            ? 'border-2 border-blue-500'
-                                            : ''
-                                            }`}
+                                          className={`relative cursor-pointer transition-all duration-300 hover:shadow-lg border-2 ${
+                                            subscriptionData?.planName === plan.name
+                                              ? 'border-blue-500 bg-blue-50/30'
+                                              : isMostExpensive 
+                                                ? 'border-yellow-400 bg-yellow-50/10' 
+                                                : 'border-slate-200 hover:border-blue-300'
+                                          }`}
                                           onClick={() => handleUpgradePlan(plan.id)}
                                         >
-                                          <CardContent className="p-4">
-                                            <div className="flex justify-between items-center">
-                                              <div>
-                                                <h3 className="font-semibold">{plan.name}</h3>
-                                                <p className="text-sm text-slate-600">{plan.description}</p>
-                                                {subscriptionData?.planName === plan.name && (
-                                                  <Badge className="mt-1 bg-blue-100 text-blue-800 border-blue-200">
-                                                    {t('dash.plan.current')}
-                                                  </Badge>
-                                                )}
-                                              </div>
-                                              <div className="text-right">
-                                                <div className="font-bold">{displayPrice}{billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year')}</div>
-                                                <div className="text-sm text-slate-600">
-                                                  {plan.playerLimit || plan.player_limit} players
+                                          {isMostExpensive && (
+                                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                                              <Badge className="bg-yellow-400 text-black font-black px-4 py-1 shadow-md border-none">
+                                                RECOMMENDED
+                                              </Badge>
+                                            </div>
+                                          )}
+                                          
+                                          <CardContent className="p-6">
+                                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                              <div className="flex-1">
+                                                <div className="flex items-center gap-2">
+                                                  <h3 className="font-bold text-lg text-slate-900">{plan.name}</h3>
+                                                  {subscriptionData?.planName === plan.name && (
+                                                    <Badge className="bg-blue-600 text-white text-[10px]">
+                                                      {t('dash.plan.current')}
+                                                    </Badge>
+                                                  )}
                                                 </div>
+                                                <p className="text-sm text-slate-600 mt-1">{plan.description}</p>
+                                                
+                                                <div className="mt-3 flex flex-wrap gap-2">
+                                                  {plan.features && (Array.isArray(plan.features) ? plan.features : []).slice(0, 3).map((f: string, i: number) => (
+                                                    <div key={i} className="flex items-center gap-1 text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                                                      <CheckCircle className="h-3 w-3 text-green-500" />
+                                                      {f}
+                                                    </div>
+                                                  ))}
+                                                </div>
+                                              </div>
+                                              
+                                              <div className="text-right flex flex-col items-end">
+                                                <div className="text-2xl font-black text-[#005391]">
+                                                  {displayPrice}
+                                                  <span className="text-xs font-normal text-slate-500 ml-1">
+                                                    /{billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year')}
+                                                  </span>
+                                                </div>
+                                                <div className="text-xs font-medium text-slate-500 mt-1 bg-slate-100 px-2 py-1 rounded">
+                                                  {plan.playerLimit === -1 ? 'Unlimited' : (plan.playerLimit || plan.player_limit || 0)} Players
+                                                </div>
+                                                <Button 
+                                                  variant={subscriptionData?.planName === plan.name ? "outline" : "default"}
+                                                  size="sm"
+                                                  className="mt-3 w-full md:w-auto font-bold"
+                                                >
+                                                  {subscriptionData?.planName === plan.name ? 'Stay on Plan' : 'Choose Plan'}
+                                                </Button>
                                               </div>
                                             </div>
                                           </CardContent>
@@ -2564,28 +2620,7 @@ export default function AcademyDashboard() {
 
                 {/* Settings Tab */}
                 <TabsContent value="settings" className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('dash.menu.settings')}</h2>
-                    <div className="flex gap-2">
-                      {isEditingSettings ? (
-                        <>
-                          <Button variant="outline" onClick={handleCancelEdit}>
-                            <X className="h-4 w-4 mr-2" />
-                            {t('common.cancel')}
-                          </Button>
-                          <Button onClick={handleSaveSettings}>
-                            <Save className="h-4 w-4 mr-2" />
-                            {t('common.save')}
-                          </Button>
-                        </>
-                      ) : (
-                        <Button onClick={handleEditSettings}>
-                          <Edit className="h-4 w-4 mr-2" />
-                          {t('common.edit')}
-                        </Button>
-                      )}
-                    </div>
-                  </div>
+                  {/* Header moved to sticky section */}
 
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <Card>
@@ -2830,8 +2865,10 @@ export default function AcademyDashboard() {
                     </Card>
                   </div>
                 </TabsContent>
-              </Tabs>
+              </>
             )}
+            </div>
+          </Tabs>
 
             {/* Payment Method Selection Modal */}
             {showPaymentModal && selectedPlanForUpgrade && (
@@ -2859,8 +2896,7 @@ export default function AcademyDashboard() {
                 </div>
               </div>
             </footer>
-          </div>
-        </main>
+          </main>
       </div>
     </div >
   );

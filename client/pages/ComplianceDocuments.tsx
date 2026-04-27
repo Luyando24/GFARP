@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/lib/auth';
+import { useToast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, 
   Upload, 
@@ -52,6 +55,10 @@ interface ComplianceDocumentsProps {
 const ComplianceDocuments: React.FC<ComplianceDocumentsProps> = ({ onBack }) => {
   console.log('ComplianceDocuments component is rendering');
   
+  const navigate = useNavigate();
+  const { session: user } = useAuth();
+  const { toast } = useToast();
+  
   const [documents, setDocuments] = useState<ComplianceDocument[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -78,9 +85,10 @@ const ComplianceDocuments: React.FC<ComplianceDocumentsProps> = ({ onBack }) => 
       setLoading(true);
       setError(null);
       const response = await Api.getFifaComplianceDocuments();
-      if (response.success) {
+      if (response.success && Array.isArray(response.data)) {
         setDocuments(response.data);
       } else {
+        setDocuments([]);
         setError('Failed to load compliance documents');
       }
     } catch (err) {
@@ -167,7 +175,8 @@ const ComplianceDocuments: React.FC<ComplianceDocumentsProps> = ({ onBack }) => 
         file_size: 0,
         uploaded_by: '',
         uploaded_at: '',
-        status: 'review_needed' as const
+        status: 'review_needed' as const,
+        expiry_date: undefined
       }))
     ];
   }, [documents]);
@@ -479,7 +488,7 @@ const ComplianceDocuments: React.FC<ComplianceDocumentsProps> = ({ onBack }) => 
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Calendar className="h-4 w-4 text-slate-400" />
-                        {document.updated_at ? new Date(document.updated_at).toLocaleDateString() : 'Not uploaded'}
+                        {document.uploaded_at ? new Date(document.uploaded_at).toLocaleDateString() : 'Not uploaded'}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -594,7 +603,7 @@ const ComplianceDocuments: React.FC<ComplianceDocumentsProps> = ({ onBack }) => 
 
         {/* Status Alerts */}
         <div className="mt-6 space-y-4">
-          {documents.some(doc => doc.status === 'expired') && (
+          {Array.isArray(documents) && documents.some(doc => doc.status === 'expired') && (
             <Alert className="border-red-200 bg-red-50 dark:border-red-800 dark:bg-red-950">
               <AlertCircle className="h-4 w-4 text-red-600" />
               <AlertDescription className="text-red-800 dark:text-red-200">
@@ -603,7 +612,7 @@ const ComplianceDocuments: React.FC<ComplianceDocumentsProps> = ({ onBack }) => 
             </Alert>
           )}
           
-          {documents.some(doc => doc.status === 'review_needed') && (
+          {Array.isArray(documents) && documents.some(doc => doc.status === 'review_needed') && (
             <Alert className="border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950">
               <AlertCircle className="h-4 w-4 text-yellow-600" />
               <AlertDescription className="text-yellow-800 dark:text-yellow-200">

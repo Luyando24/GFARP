@@ -33,8 +33,15 @@ export type TranslationKey =
   | 'dash.stats.players' | 'dash.stats.transfers' | 'dash.stats.revenue' | 'dash.stats.subscription'
   | 'dash.financial.title' | 'dash.financial.revenue' | 'dash.financial.expenses' | 'dash.financial.profit'
   | 'dash.plan.current' | 'dash.plan.manage' | 'dash.plan.nextBilling' | 'dash.plan.active' | 'dash.plan.inactive'
+  | 'dash.plan.started' | 'dash.plan.status' | 'dash.plan.daysRemaining' | 'dash.plan.features' | 'dash.plan.usage'
+  | 'dash.plan.billingHistory' | 'dash.plan.management' | 'dash.plan.select' | 'dash.plan.changePayment'
+  | 'dash.plan.downloadInvoice' | 'dash.plan.cancel'
   | 'dash.academy.edit' | 'dash.academy.info' | 'dash.settings.title' | 'dash.settings.save' | 'dash.settings.cancel'
   | 'dash.profile.completeRequired' | 'dash.profile.completeRequiredDesc' | 'dash.profile.completeRequiredMsg' | 'dash.settings.complete'
+  | 'dash.finance.manager.invoice' | 'dash.finance.manager.add' | 'dash.financial.margin' | 'dash.finance.manager.budget' | 'dash.finance.manager.desc' | 'dash.finance.manager.recent'
+  | 'common.clear' | 'common.type' | 'common.status' | 'common.actions' | 'common.document' | 'common.uploaded' | 'common.size'
+  | 'dash.compliance.tasks.title' | 'dash.compliance.tasks.desc'
+  | 'tasks.title' | 'tasks.add' | 'tasks.empty' | 'tasks.complete' | 'tasks.delete'
   // Landing
   | 'landing.steps.title' | 'landing.steps.subtitle' | 'landing.steps.desc' | 'landing.steps.process'
   | 'landing.step1.title' | 'landing.step1.desc'
@@ -55,9 +62,16 @@ export type TranslationKey =
   // Pricing
   | 'landing.pricing.title.tiers' | 'landing.pricing.title.choose' | 'landing.pricing.month' | 'landing.pricing.year'
   | 'landing.pricing.toggle.monthly' | 'landing.pricing.toggle.yearly' | 'landing.pricing.save'
+  | 'landing.pricing.tier2.name' | 'landing.pricing.tier2.badge' | 'landing.pricing.tier2.desc' | 'landing.pricing.tier2.price' | 'landing.pricing.tier2.priceYearly'
   | 'landing.pricing.tier2.ideal' | 'landing.pricing.tier3.worldClass' | 'landing.pricing.footer' | 'landing.pricing.compare'
   | 'landing.pricing.free.name' | 'landing.pricing.free.badge' | 'landing.pricing.free.ideal' | 'landing.pricing.free.maxPlayers'
   | 'landing.pricing.getStarted' | 'landing.pricing.feature.advancedAnalytics' | 'landing.pricing.feature.customIntegrations'
+  | 'landing.pricing.feature.players' | 'landing.pricing.feature.storage' | 'landing.pricing.feature.compliance'
+  | 'landing.pricing.feature.support' | 'landing.pricing.feature.registration' | 'landing.pricing.feature.prioritySupport'
+  | 'landing.pricing.feature.trainingTracking' | 'landing.pricing.feature.analytics' | 'landing.pricing.feature.unlimitedPlayers'
+  | 'landing.pricing.feature.fullCompliance' | 'landing.pricing.feature.247Support' | 'landing.pricing.feature.solidarity'
+  | 'landing.pricing.tab.academies' | 'landing.pricing.tab.players' | 'landing.pricing.tab.agencies' | 'landing.pricing.lifetime'
+  | 'landing.pricing.start.free' | 'landing.pricing.start.gold' | 'landing.pricing.popular' | 'landing.pricing.title.sub' | 'landing.pricing.free'
   // Testimonials
   | 'landing.testimonials.title.sub' | 'landing.testimonials.title.main1' | 'landing.testimonials.title.main2'
   | 'landing.testimonials.stat.rating' | 'landing.testimonials.stat.players' | 'landing.testimonials.stat.using'
@@ -105,7 +119,7 @@ export type TranslationKey =
   | 'dash.finance.cat.staffSalaries' | 'dash.finance.cat.facilityMaintenance' | 'dash.finance.cat.equipment' | 'dash.finance.cat.utilities'
   | 'dash.finance.cat.marketing' | 'dash.finance.cat.travel' | 'dash.finance.cat.insurance' | 'dash.finance.cat.agentFees' | 'dash.finance.cat.otherExpenses'
   | 'dash.finance.method.bankTransfer' | 'dash.finance.method.creditCard' | 'dash.finance.method.cash' | 'dash.finance.method.check' | 'dash.finance.method.online' | 'dash.finance.method.other'
-  | 'dash.finance.status.pending' | 'dash.finance.status.completed' | 'dash.finance.status.cancelled' | 'dash.finance.status.refunded'
+  | 'dash.finance.manager.noTrans' | 'dash.finance.status.pending' | 'dash.finance.status.completed' | 'dash.finance.status.cancelled' | 'dash.finance.status.refunded'
   | 'dash.finance.type.income' | 'dash.finance.type.expense'
   | 'dash.finance.filter.allCategories' | 'dash.finance.filter.allStatus' | 'dash.finance.filter.fromDate' | 'dash.finance.filter.toDate'
   | 'dash.finance.modal.edit' | 'dash.finance.label.type' | 'dash.finance.label.amount' | 'dash.finance.label.date' | 'dash.finance.label.method' | 'dash.finance.label.reference'
@@ -165,6 +179,7 @@ export type TranslationKey =
   | 'auth.register.title' | 'auth.register.createAccount' | 'auth.register.subtitle'
   | 'auth.confirmPassword' | 'auth.error.passwordMismatch' | 'auth.error.passwordLength'
   | 'auth.error.emailRequired' | 'auth.error.confirmRequired'
+  | 'auth.register.agency' | 'auth.register.agencySubtitle'
   | 'auth.registering' | 'auth.createAccount' | 'auth.alreadyHaveAccount' | 'auth.loginLink'
   | 'auth.footer.approved' | 'auth.success.title' | 'auth.success.desc' | 'auth.success.verifyEmail'
   | 'auth.label.referralCode' | 'auth.placeholder.referralCode'
@@ -331,17 +346,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.plan.nextBilling': 'Next billing date',
     'dash.plan.active': 'Active Plan',
     'dash.plan.inactive': 'Inactive',
-    'dash.plan.started': 'Plan started:',
-    'dash.plan.status': 'Status:',
-    'dash.plan.daysRemaining': 'Days remaining:',
-    'dash.plan.features': 'Plan Features:',
-    'dash.plan.usage': 'Usage Statistics',
-    'dash.plan.billingHistory': 'Billing History',
-    'dash.plan.management': 'Plan Management',
-    'dash.plan.select': 'Select Plan',
-    'dash.plan.changePayment': 'Change Payment Method',
-    'dash.plan.downloadInvoice': 'Download Invoice',
-    'dash.plan.cancel': 'Cancel Subscription',
     'dash.academy.edit': 'Edit Academy',
     'dash.academy.info': 'Academy Information',
     'dash.settings.title': 'System Settings',
@@ -405,6 +409,8 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pricing.title.choose': 'CHOOSE YOUR',
     'landing.pricing.month': '/month',
     'landing.pricing.year': '/year',
+    'landing.pricing.free': 'FREE',
+    'landing.pricing.start.free': 'START FOR FREE',
     'landing.pricing.toggle.monthly': 'Monthly',
     'landing.pricing.toggle.yearly': 'Yearly',
     'landing.pricing.save': 'Save 20%',
@@ -421,6 +427,12 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.testimonials.badge.revenue': 'REVENUE OPTIMIZED',
     'landing.testimonials.badge.scale': 'ELITE SCALE',
     'landing.cta.join': 'JOIN THE CHAMPIONS',
+    'landing.pricing.tab.academies': 'For Academies',
+    'landing.pricing.tab.players': 'For Individual Players',
+    'landing.pricing.tab.agencies': 'For Agencies',
+    'landing.pricing.lifetime': '/lifetime',
+    'auth.register.agency': 'Agency Registration',
+    'auth.register.agencySubtitle': 'Sign up as a professional agency to manage your talent',
     
 
 
@@ -473,6 +485,8 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.compliance.viewHistory': 'View Full History',
     'dash.compliance.audit': 'Audit History',
     'dash.compliance.auditDesc': 'Recent compliance audits and inspections',
+    'dash.compliance.tasks.title': 'Compliance Tasks',
+    'dash.compliance.tasks.desc': 'View and manage your pending compliance action items',
     'dash.settings.academy': 'Academy Information',
     'dash.settings.academyDesc': 'Basic information about your football academy',
     'dash.settings.contact': 'Contact Information',
@@ -716,17 +730,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.plan.nextBilling': 'Próxima fecha de facturación',
     'dash.plan.active': 'Plan Activo',
     'dash.plan.inactive': 'Inactivo',
-    'dash.plan.started': 'Plan iniciado:',
-    'dash.plan.status': 'Estado:',
-    'dash.plan.daysRemaining': 'Días restantes:',
-    'dash.plan.features': 'Características del Plan:',
-    'dash.plan.usage': 'Estadísticas de Uso',
-    'dash.plan.billingHistory': 'Historial de Facturación',
-    'dash.plan.management': 'Gestión del Plan',
-    'dash.plan.select': 'Seleccionar Plan',
-    'dash.plan.changePayment': 'Cambiar Método de Pago',
-    'dash.plan.downloadInvoice': 'Descargar Factura',
-    'dash.plan.cancel': 'Cancelar Suscripción',
     'dash.academy.edit': 'Editar Academia',
     'dash.academy.info': 'Información de la Academia',
     'dash.settings.title': 'Configuración del Sistema',
@@ -786,9 +789,12 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pricing.title.choose': 'ELIJA SU',
     'landing.pricing.month': '/mes',
     'landing.pricing.year': '/año',
+    'landing.pricing.free': 'GRATIS',
+    'landing.pricing.lifetime': '/de por vida',
+    'landing.pricing.start.free': 'Comenzar Gratis',
+    'landing.pricing.save': 'Ahorra 20%',
     'landing.pricing.toggle.monthly': 'Mensual',
     'landing.pricing.toggle.yearly': 'Anual',
-    'landing.pricing.save': 'Ahorra 20%',
     'landing.pricing.tier2.ideal': 'Ideal para academias de campeonato',
     'landing.pricing.footer': 'Todos los planes incluyen seguridad compatible con FIFA, actualizaciones periódicas y acceso a nuestro equipo de soporte de campeonato.',
     'landing.pricing.compare': 'COMPARAR TODAS LAS CARACTERÍSTICAS',
@@ -802,6 +808,11 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.testimonials.badge.revenue': 'INGRESOS OPTIMIZADOS',
     'landing.testimonials.badge.scale': 'ESCALA DE ÉLITE',
     'landing.cta.join': 'ÚNASE A LOS CAMPEONES',
+    'landing.pricing.tab.academies': 'Para Academias',
+    'landing.pricing.tab.players': 'Para Jugadores Individuales',
+    'landing.pricing.tab.agencies': 'Para Agencias',
+    'auth.register.agency': 'Registro de Agencia',
+    'auth.register.agencySubtitle': 'Regístrese como una agencia profesional para gestionar su talento',
     'footer.tagline': 'Plataforma Global de Academias de Fútbol',
     'footer.description': 'Únase a la plataforma de registro FIFA más confiable del mundo utilizada por academias de élite en todo el mundo',
     'footer.about': 'SOBRE NOSOTROS',
@@ -1575,6 +1586,11 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
       'blog.tags': 'Tags :',
       'blog.share': 'Partager l\'article',
       'blog.linkCopied': 'Lien copié dans le presse-papier !',
+      'tasks.title': 'Tâches',
+      'tasks.add': 'Ajouter Tâche',
+      'tasks.empty': 'Aucune tâche trouvée',
+      'tasks.complete': 'Compléter',
+      'tasks.delete': 'Supprimer',
   },
   pt: {
     'nav.about': 'SOBRE NÓS',
@@ -1754,8 +1770,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.compliance.areas': 'Áreas em Conformidade',
     'dash.compliance.issues': 'Problemas Abertos',
     'dash.compliance.review': 'Próxima Revisão',
-    'dash.compliance.breakdown': 'Áreas de Conformidade',
-    'dash.compliance.breakdownDesc': 'Detalhamento dos requisitos de conformidade da FIFA',
+    'dash.compliance.breakdown': 'Detalhamento dos requisitos de conformidade da FIFA',
     'dash.compliance.actions': 'Itens de Ação',
     'dash.compliance.actionsDesc': 'Tarefas de conformidade pendentes',
     'dash.compliance.viewTasks': 'Ver Todas as Tarefas',
@@ -1789,15 +1804,14 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.compliance.required': 'Documentos Necessários',
     'dash.compliance.uploadedTitle': 'Documentos Enviados',
     'dash.compliance.noDocs': 'Nenhum documento enviado ainda',
-    'dash.compliance.uploadFirst': 'Envie Seu Primeiro Documento',
+    'dash.compliance.uploadFirst': 'Enviar Seu Primeiro Documento',
     'dash.compliance.dialog.title': 'Enviar Documento de Conformidade',
     'dash.compliance.dialog.desc': 'Enviar um novo documento de conformidade FIFA',
     'dash.compliance.dialog.name': 'Nome do Documento',
-    'dash.compliance.dialog.type': 'Tipo de Documento',
+    'dash.compliance.dialog.type': 'Tipo do Documento',
     'dash.compliance.dialog.descLabel': 'Descrição',
     'dash.compliance.dialog.expiry': 'Data de Validade (Opcional)',
     'dash.compliance.dialog.file': 'Arquivo',
-    // Compliance Mock Data
     'dash.compliance.area.playerReg.name': 'Registro de Jogadores',
     'dash.compliance.area.playerReg.desc': 'Todos os registros de jogadores estão atualizados e em conformidade com os regulamentos da FIFA',
     'dash.compliance.area.trainingComp.name': 'Compensação de Treinamento',
@@ -1833,7 +1847,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.financial.margin': 'Margem de Lucro',
     'dash.finance.manager.budget': 'Gerenciar Orçamento',
     'dash.finance.manager.invoice': 'Criar Fatura',
-    // Finance Detailed
     'dash.finance.category': 'Categoria',
     'dash.finance.description': 'Descrição',
     'dash.finance.cat.transferFees': 'Taxas de Transferência',
@@ -1881,7 +1894,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'common.of': 'de',
     'common.lastUpdated': 'Última atualização:',
     'common.contactUs': 'Contate-nos',
-    // Privacy & Terms
     'privacy.intro': 'Introdução',
     'privacy.collect': 'Informações que Coletamos',
     'privacy.use': 'Uso de suas Informações',
@@ -1897,8 +1909,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'common.uploaded': 'Enviado',
     'common.size': 'Tamanho',
     'common.actions': 'Ações',
-
-    // Pitfalls
     'landing.pitfalls.title': 'Armadilhas Comuns que Causam',
     'landing.pitfalls.title2': 'Clubes Perderem Seu Dinheiro',
     'landing.pitfalls.badge': 'AVISOS CRÍTICOS',
@@ -1915,8 +1925,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pitfalls.item5.desc': 'Mesmo pequenos clubes de bairro se qualificam.',
     'landing.pitfalls.item6.title': 'Não entender que transferências aos 27 anos ainda geram Solidariedade',
     'landing.pitfalls.item6.desc': 'Anos de treinamento (12–23) sempre contam, mesmo para transferências tardias na carreira.',
-
-    // FAQ
     'landing.faq.title': 'Perguntas Frequentes',
     'landing.faq.subtitle': 'Perguntas comuns sobre Compensação de Treinamento e Pagamentos de Solidariedade',
     'landing.faq.q1': '1. O que são "Compensação de Treinamento" (TC) e "Pagamentos de Solidariedade" (SP)?',
@@ -1976,7 +1984,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'contact.info.follow': 'Siga-nos',
     'support.liveChat': 'Chat ao Vivo',
     'support.liveChatDesc': 'Disponível Seg-Sex, 9h-17h EST',
-    // Services Page
     'services.title': 'Serviços da Academia',
     'services.subtitle': 'Ferramentas abrangentes para academias de futebol modernas.',
     'services.back': 'Voltar ao Início',
@@ -1997,7 +2004,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'services.analytics.list1': 'Relatórios de progresso do jogador',
     'services.analytics.list2': 'Previsão financeira',
     'services.analytics.list3': 'Painéis personalizáveis',
-    // Shop
     'shop.title': 'Loja Soccer Circular',
     'shop.subtitle': 'Equipamento de treinamento de futebol premium e mercadorias da academia',
     'shop.searchPlaceholder': 'Buscar produtos...',
@@ -2009,7 +2015,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'shop.badge.bestSeller': 'Mais Vendido',
     'shop.badge.new': 'Novo',
     'shop.badge.sale': 'Oferta',
-    // Auth
     'auth.portalTitle': 'Portal da Academia Profissional',
     'auth.welcome': 'Bem-vindo de volta',
     'auth.login.subtitle': 'Faça login para acessar o painel',
@@ -2041,7 +2046,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'auth.success.verifyEmail': 'Por favor, verifique seu e-mail antes de fazer login.',
      'common.backHome': 'Voltar ao Início',
      'common.404.subtitle': 'Ops! Página não encontrada',
-      // Blog
       'blog.back': 'Voltar para o Blog',
       'blog.notFound.title': 'Artigo não encontrado',
       'blog.notFound.desc': 'O artigo que você está procurando não existe ou foi removido.',
@@ -2049,6 +2053,11 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
       'blog.tags': 'Tags:',
       'blog.share': 'Compartilhar Artigo',
       'blog.linkCopied': 'Link copiado para a área de transferência!',
+      'tasks.title': 'Tarefas',
+      'tasks.add': 'Adicionar Tarefa',
+      'tasks.empty': 'Nenhuma tarefa encontrada',
+      'tasks.complete': 'Concluir',
+      'tasks.delete': 'Excluir',
   },
   de: {
     'nav.about': 'ÜBER UNS',
@@ -2257,7 +2266,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.compliance.dialog.descLabel': 'Beschreibung',
     'dash.compliance.dialog.expiry': 'Ablaufdatum (Optional)',
     'dash.compliance.dialog.file': 'Datei',
-    // Compliance Mock Data
     'dash.compliance.area.playerReg.name': 'Spielerregistrierung',
     'dash.compliance.area.playerReg.desc': 'Alle Spielerregistrierungen sind aktuell und entsprechen den FIFA-Regularien',
     'dash.compliance.area.trainingComp.name': 'Ausbildungsentschädigung',
@@ -2293,7 +2301,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.financial.margin': 'Gewinnmarge',
     'dash.finance.manager.budget': 'Budget verwalten',
     'dash.finance.manager.invoice': 'Rechnung erstellen',
-    // Finance Detailed
     'dash.finance.category': 'Kategorie',
     'dash.finance.description': 'Beschreibung',
     'dash.finance.cat.transferFees': 'Transfergebühren',
@@ -2346,8 +2353,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'common.uploaded': 'Hochgeladen',
     'common.size': 'Größe',
     'common.actions': 'Aktionen',
-
-    // Pitfalls
     'landing.pitfalls.title': 'Häufige Fallstricke, die dazu führen, dass',
     'landing.pitfalls.badge': 'KRITISCHE WARNUNGEN',
     'landing.pitfalls.subtitle': 'Vermeiden Sie diese kostspieligen Fehler, um sicherzustellen, dass Ihre Akademie die Entschädigung erhält, die sie verdient.',
@@ -2363,8 +2368,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pitfalls.item5.desc': 'Auch kleine Stadtteilvereine qualifizieren sich.',
     'landing.pitfalls.item6.title': 'Nicht verstehen, dass Transfers im Alter von 27 Jahren immer noch Solidarität generieren',
     'landing.pitfalls.item6.desc': 'Ausbildungsjahre (12–23) zählen immer, auch bei Transfers spät in der Karriere.',
-
-    // FAQ
     'landing.faq.title': 'Häufig gestellte Fragen',
     'landing.faq.subtitle': 'Häufige Fragen zu Ausbildungsentschädigung & Solidaritätszahlungen',
     'landing.faq.q1': '1. Was sind "Ausbildungsentschädigung" (TC) und "Solidaritätszahlungen" (SP)?',
@@ -2404,7 +2407,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
   },
   it: {
     'nav.about': 'CHI SIAMO',
-    'nav.support': 'SUPPORTO',
+    'nav.support': 'SUPORTO',
     'nav.blog': 'BLOG',
     'nav.help': 'AIUTO',
     'nav.features': 'FUNZIONALITÀ',
@@ -2417,7 +2420,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'hero.badge': 'PIATTAFORMA SOCCER CIRCULAR',
     'hero.title1': 'INVESTI NEL FUTURO',
     'hero.title2': 'DEI TUOI GIOCATORI CON SOCCER CIRCULAR',
-    'hero.subtitle': 'Registra i giocatori della tua accademia oggi • Assicura i futuri pagamenti di compensazione',
+    'hero.subtitle': 'Registra i giocatori della tua accademia oggi • Assicura i futuri pagamenti di compensação',
     'hero.cta.register': 'REGISTRA ACCADEMIA',
     'hero.cta.start': 'INIZIA',
     'dash.menu.dashboard': 'Dashboard',
@@ -2460,14 +2463,14 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.settings.cancel': 'Annulla',
     'landing.steps.title': 'COME',
     'landing.steps.subtitle': 'FUNZIONA',
-    'landing.steps.desc': "Quattro semplici passaggi per garantire il futuro finanziario della tua accademia con Soccer Circular",
+    'landing.steps.desc': "Quattro semplici passaggi per garantire il futuro finanziario della tua accademia com Soccer Circular",
     'landing.steps.process': 'PROCESSO SEMPLICE',
     'landing.step1.title': 'Registra Accademia',
-    'landing.step1.desc': 'Crea il profilo della tua accademia e verifica le tue credenziali con il nostro sistema approvato da Soccer Circular.',
+    'landing.step1.desc': 'Crea il profilo della tua accademia e verifica le tue credenziali com il nostro sistema approvato da Soccer Circular.',
     'landing.step2.title': 'Aggiungi Giocatori',
-    'landing.step2.desc': 'Registra tutti i tuoi giocatori con profili completi, documentazione e cronologia degli allenamenti.',
+    'landing.step2.desc': 'Registra tutti i tuoi giocatori com profili completi, documentazione e cronologia degli allenamenti.',
     'landing.step3.title': 'Gestisci Finanze',
-    'landing.step3.desc': 'Crea fatture professionali, traccia le spese e monitora le entrate con i nostri strumenti finanziari integrati.',
+    'landing.step3.desc': 'Crea fatture professionali, traccia le spese e monitora le entrate com i nostri strumenti finanziari integrati.',
     'landing.step4.title': 'Ricevi Compensazione',
     'landing.step4.desc': 'Ricevi notifiche automatiche e pagamenti sicuri quando i tuoi giocatori passano a club professionistici.',
     'landing.pricing.title.sub': 'LIVELLO CAMPIONATO',
@@ -2494,15 +2497,15 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.benefits.title.main': 'PERCHÉ SCEGLIERE',
     'landing.benefits.title.platform': 'PIATTAFORMA SOCCER CIRCULAR',
     'landing.benefits.item1.title': 'REGISTRAZIONE FIFA SEMPLIFICATA',
-    'landing.benefits.item1.desc': 'Semplifica la registrazione dei giocatori FIFA con controlli di conformità automatizzati e convalida dei documenti.',
+    'landing.benefits.item1.desc': 'Semplifica la registrazione dei giocatori FIFA com controlli di conformità automatizzati e convalida dei documenti.',
     'landing.benefits.item2.title': 'GESTIONE FINANZIARIA',
-    'landing.benefits.item2.desc': 'Suite finanziaria completa con generazione fatture, tracciamento spese e report completi sulle entrate.',
+    'landing.benefits.item2.desc': 'Suite finanziaria completa com generazione fatture, tracciamento spese e report completi sulle entrate.',
     'landing.benefits.item3.title': 'MECCANISMO DI SOLIDARIETÀ',
     'landing.benefits.item3.desc': 'Gestisci i pagamenti di solidarietà e traccia la cronologia di sviluppo dei giocatori attraverso più accademie.',
     'landing.benefits.item4.title': 'MONITORAGGIO CONFORMITÀ',
-    'landing.benefits.item4.desc': 'Monitoraggio in tempo reale dello stato di conformità FIFA con avvisi automatizzati e report completi.',
+    'landing.benefits.item4.desc': 'Monitoraggio in tempo reale dello stato di conformità FIFA com avvisi automatizzati e report completi.',
     'landing.benefits.item5.title': 'SICUREZZA DOCUMENTALE',
-    'landing.benefits.item5.desc': 'Archiviazione cloud sicura per contratti giocatori, certificati medici e documenti di registrazione con crittografia.',
+    'landing.benefits.item5.desc': 'Archiviazione cloud sicura per contratti giocatori, certificati medici e documenti di registrazione com crittografia.',
     'landing.benefits.item6.title': 'DASHBOARD ANALITICA',
     'landing.benefits.item6.desc': 'Analisi complete su registrazioni giocatori, tassi di conformità e metriche di performance dell\'accademia.',
     'landing.pricing.title.tiers': 'LIVELLI DI MEMBERSHIP FIFA',
@@ -2538,7 +2541,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'footer.legal.privacy': 'Privacy Policy',
     'footer.legal.terms': 'Termini di Servizio',
     'footer.legal.regulations': 'Regolamenti FIFA',
-    'footer.support': 'SUPPORTO & RISORSE',
+    'footer.support': 'SUPORTO & RISORSE',
     'footer.support.contact': 'Contatta Supporto',
     'footer.support.help': 'Centro Assistenza',
     'footer.support.api': 'Documentazione API',
@@ -2551,7 +2554,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.transfers.alert': 'Tutti i trasferimenti devono essere conformi ai regolamenti FIFA. Assicurati di inviare la documentazione appropriata.',
     'dash.transfers.history': 'Cronologia Trasferimenti',
     'dash.transfers.historyDesc': 'Gestisci tutti i trasferimenti dei giocatori e traccia il loro stato',
-    'dash.transfers.empty': 'Nessun trasferimento trovato. Clicca su "Nuovo Trasferimento" per aggiungerne uno.',
+    'dash.transfers.empty': 'Nessun trasferimento trovato. Clicca su "Nuovo Trasferimento" para aggiungerne uno.',
     'dash.transfers.loading': 'Caricamento trasferimenti...',
     'dash.transfers.from': 'Da',
     'dash.transfers.to': 'A',
@@ -2609,7 +2612,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.compliance.dialog.descLabel': 'Descrizione',
     'dash.compliance.dialog.expiry': 'Data Scadenza (Opzionale)',
     'dash.compliance.dialog.file': 'File',
-    // Compliance Mock Data
     'dash.compliance.area.playerReg.name': 'Registrazione Giocatori',
     'dash.compliance.area.playerReg.desc': 'Tutte le registrazioni dei giocatori sono aggiornate e conformi ai regolamenti FIFA',
     'dash.compliance.area.trainingComp.name': 'Compensazione Formazione',
@@ -2619,13 +2621,13 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.compliance.area.solidarity.name': 'Meccanismo Solidarietà',
     'dash.compliance.area.solidarity.desc': 'I pagamenti di solidarietà sono calcolati e distribuiti secondo le regole FIFA',
     'dash.compliance.area.transfers.name': 'Regolamenti Trasferimenti',
-    'dash.compliance.area.transfers.desc': 'I processi di trasferimento seguono i regolamenti FIFA con miglioramenti minori necessari',
+    'dash.compliance.area.transfers.desc': 'I processi di trasferimento seguono i regolamenti FIFA com miglioramenti minori necessari',
     'dash.compliance.area.youth.name': 'Protezione Giovani',
     'dash.compliance.area.youth.desc': 'Le misure di protezione dei giovani giocatori superano i requisiti minimi FIFA',
     'dash.compliance.action.medical.title': 'Aggiorna Cartelle Cliniche',
     'dash.compliance.action.medical.desc': 'Assicurati che tutte le cartelle cliniche dei giocatori siano attuali e documentate correttamente',
     'dash.compliance.action.review.title': 'Revisione Accordi Compensazione',
-    'dash.compliance.action.review.desc': 'Rivedi e aggiorna gli accordi di compensazione di formazione con i club partner',
+    'dash.compliance.action.review.desc': 'Rivedi e aggiorna gli accordi di compensazione di formazione com i club partner',
     'dash.compliance.action.audit.title': 'Condurre Audit Interno',
     'dash.compliance.action.audit.desc': 'Esegui un audit di conformità interno trimestrale prima della revisione FIFA',
     'dash.compliance.action.updateDocs.title': 'Aggiorna Documenti',
@@ -2636,7 +2638,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.compliance.audit.note3': 'Buoni progressi sulle raccomandazioni precedenti',
     'dash.compliance.alert.reviewTitle': 'Prossima Revisione FIFA:',
     'dash.compliance.alert.reviewMsg': 'La tua accademia è programmata per una revisione di conformità FIFA il',
-    'dash.compliance.alert.reviewDesc': 'Assicurati che tutta la documentazione sia aggiornata e le azioni completate prima della data di revisione.',
+    'dash.compliance.alert.reviewDesc': 'Assicurati que tutta la documentazione sia aggiornata e le azioni completate prima della data di revisione.',
     'dash.finance.manager.title': 'Transazioni Finanziarie',
     'dash.finance.manager.desc': 'Gestisci entrate e uscite dell\'accademia',
     'dash.finance.manager.add': 'Aggiungi Transazione',
@@ -2645,7 +2647,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.financial.margin': 'Margine di Profitto',
     'dash.finance.manager.budget': 'Gestisci Budget',
     'dash.finance.manager.invoice': 'Crea Fattura',
-    // Finance Detailed
     'dash.finance.category': 'Categoria',
     'dash.finance.description': 'Descrizione',
     'dash.finance.cat.transferFees': 'Commissioni Trasferimento',
@@ -2698,11 +2699,9 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'common.uploaded': 'Caricato',
     'common.size': 'Dimensione',
     'common.actions': 'Azioni',
-
-    // Pitfalls
     'landing.pitfalls.title': 'Insidie Comuni Che Causano',
     'landing.pitfalls.badge': 'AVVISI CRITICI',
-    'landing.pitfalls.subtitle': 'Evita questi errori costosi per assicurarti che la tua accademia riceva il compenso che merita.',
+    'landing.pitfalls.subtitle': 'Evita questi errori costosi para assicurarti que la tua accademia riceva il compenso que merita.',
     'landing.pitfalls.item1.title': 'Documentazione mancante',
     'landing.pitfalls.item1.desc': 'La ragione n. 1 per cui i reclami falliscono.',
     'landing.pitfalls.item2.title': 'Date di allenamento errate',
@@ -2715,8 +2714,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pitfalls.item5.desc': 'Anche i piccoli club di quartiere si qualificano.',
     'landing.pitfalls.item6.title': 'Non capire che i trasferimenti a 27 anni generano ancora Solidarietà',
     'landing.pitfalls.item6.desc': 'Gli anni di formazione (12–23) contano sempre, anche per i trasferimenti a fine carriera.',
-
-    // FAQ
     'landing.faq.title': 'Domande Frequenti',
     'landing.faq.subtitle': 'Domande comuni su Compensazione Formazione & Pagamenti di Solidarietà',
     'landing.faq.q1': '1. Cosa sono "Compensazione Formazione" (TC) e "Pagamenti di Solidarietà" (SP)?',
@@ -2728,7 +2725,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.faq.q4': '4. Che tipo di documentazione è necessaria per richiedere TC/SP?',
     'landing.faq.a4': 'I club hanno bisogno di prove solide, come: elenchi, cronologia registrazioni, registri allenamenti, registri presenze, partecipazione a tornei o campi di identificazione, valutazioni allenatori, moduli di accettazione e registrazione provini. Senza documentazione adeguata, i reclami saranno probabilmente respinti.',
     'landing.faq.q5': '5. I club informali, di base o ricreativi si qualificano?',
-    'landing.faq.a5': 'Sì. Anche i programmi ricreativi del fine settimana possono qualificarsi, a condizione che il loro allenamento sia stato strutturato e documentato.',
+    'landing.faq.a5': 'Sì. Anche i programmi ricreativi del fine settimana possono qualificarsi, a condizione che il loro allenamento sia stato strutturado e documentato.',
     'landing.faq.q6': '6. Il calcio liceale o universitario conta per l\'idoneità TC/SP?',
     'landing.faq.a6': 'No. I programmi liceali e universitari (es. NCAA) non sono considerati "club di formazione" secondo i regolamenti FIFA, quindi non sono idonei.',
     'landing.faq.q7': '7. Lo status dell\'accademia (es. MLS NEXT) è importante per l\'idoneità?',
@@ -2739,7 +2736,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.faq.a9': 'Solo se il prestito include una quota di trasferimento. Se non c\'è quota di trasferimento, allora non attiva un Pagamento di Solidarietà.',
     'landing.faq.q10': '10. Come vengono divisi i pagamenti se un giocatore si è allenato in più club?',
     'landing.faq.a10': 'Il pagamento è diviso proporzionalmente in base al numero di anni che il giocatore ha trascorso in ogni club durante le età di formazione idonee.',
-    'landing.faq.q11': '11. Cosa succede se un club si è fuso con un altro, o ha cambiato nome, la nuova entità può richiedere TC/SP?',
+    'landing.faq.q11': '11. Cosa succede se un club si è fuso com un altro, o ha cambiato nome, la nuova entità può richiedere TC/SP?',
     'landing.faq.a11': 'Sì, il club successore può ereditare i diritti di formazione, se c\'è documentazione che mostra la continuità della storia dell\'allenamento.',
     'landing.faq.q12': '12. Cosa succede se un club ha perso i registri originali (es. vecchi elenchi cartacei)? C\'è un ripiego?',
     'landing.faq.a12': 'I club possono tentare di ricostruire i registri (es. vecchie email, elenchi tornei archiviati, foto datate, dichiarazioni allenatori, archivi lega, ecc.). Ma la FIFA si aspetta prove, quindi la documentazione ricostruita o parziale sarà esaminata.',
@@ -2748,11 +2745,13 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.faq.q14': '14. Di che tipo di pagamenti stiamo parlando, gli importi sono significativi?',
     'landing.faq.a14': 'Potenzialmente, sì. La Compensazione Formazione potrebbe variare da circa $10.000 a oltre $200.000 a seconda del calibro e della categoria del club acquirente. Per i Pagamenti di Solidarietà, l\'importo dipende dalla quota di trasferimento — es. un trasferimento da 5 milioni di dollari potrebbe fruttare $250.000 da dividere tra i club di formazione idonei.',
     'landing.faq.q15': '15. Può un giocatore o il suo genitore/tutore impedire a un club di richiedere TC/SP?',
-    'landing.faq.a15': 'No. Questi pagamenti sono effettuati tra club; non sono legati al contratto del giocatore o al suo consenso personale.',
     'landing.faq.q16': '16. Un giocatore deve aver giocato partite ufficiali (partite/minuti) per il club per essere idoneo al compenso?',
-    'landing.faq.a16': 'No. Le presenze in partita non contano. Ciò che conta è l\'allenamento documentato anche se il giocatore non è mai apparso in una partita formale.',
     'landing.faq.q17': '17. Qual è la finestra temporale per presentare un reclamo?',
-    'landing.faq.a17': 'I club hanno generalmente fino a cinque anni dalla data in cui è scattato l\'obbligo di compensazione per presentare un reclamo. Aspettare troppo a lungo può far perdere l\'idoneità.',
+    'tasks.title': 'Attività',
+    'tasks.add': 'Aggiungi Attività',
+    'tasks.empty': 'Nessuna attività trovata',
+    'tasks.complete': 'Completa',
+    'tasks.delete': 'Elimina',
   },
   ar: {
     'nav.about': 'معلومات عنا',
@@ -2969,7 +2968,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.compliance.dialog.descLabel': 'الوصف',
     'dash.compliance.dialog.expiry': 'تاريخ الانتهاء (اختياري)',
     'dash.compliance.dialog.file': 'الملف',
-    // Compliance Mock Data
     'dash.compliance.area.playerReg.name': 'تسجيل اللاعبين',
     'dash.compliance.area.playerReg.desc': 'جميع تسجيلات اللاعبين محدثة ومتوافقة مع لوائح الفيفا',
     'dash.compliance.area.trainingComp.name': 'تعويض التدريب',
@@ -3005,7 +3003,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.financial.margin': 'هامش الربح',
     'dash.finance.manager.budget': 'إدارة الميزانية',
     'dash.finance.manager.invoice': 'إنشاء فاتورة',
-    // Finance Detailed
     'dash.finance.category': 'الفئة',
     'dash.finance.description': 'الوصف',
     'dash.finance.cat.transferFees': 'رسوم الانتقال',
@@ -3058,8 +3055,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'common.uploaded': 'تم الرفع',
     'common.size': 'الحجم',
     'common.actions': 'إجراءات',
-
-    // Pitfalls
     'landing.pitfalls.title': 'المخاطر الشائعة التي تسبب',
     'landing.pitfalls.badge': 'تحذيرات حرجة',
     'landing.pitfalls.subtitle': 'تجنب هذه الأخطاء المكلفة لضمان حصول أكاديميتك على التعويض الذي تستحقه.',
@@ -3075,8 +3070,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pitfalls.item5.desc': 'حتى الأندية الصغيرة في الأحياء مؤهلة.',
     'landing.pitfalls.item6.title': 'عدم فهم أن الانتقالات في سن 27 لا تزال تولد تضامنًا',
     'landing.pitfalls.item6.desc': 'سنوات التدريب (12-23) تحسب دائمًا، حتى للانتقالات في وقت متأخر من المسيرة المهنية.',
-
-    // FAQ
     'landing.faq.title': 'الأسئلة الشائعة',
     'landing.faq.subtitle': 'أسئلة شائعة حول تعويض التدريب ومدفوعات التضامن',
     'landing.faq.q1': '1. ما هما "تعويض التدريب" (TC) و "مدفوعات التضامن" (SP)؟',
@@ -3103,16 +3096,11 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.faq.a11': 'نعم، قد يرث النادي الخلف حقوق التدريب، إذا كانت هناك وثائق تظهر استمرارية تاريخ التدريب.',
     'landing.faq.q12': '12. ماذا لو فقد النادي السجلات الأصلية (مثل القوائم الورقية القديمة)؟ هل هناك بديل؟',
     'landing.faq.a12': 'يمكن للأندية محاولة إعادة بناء السجلات (مثل رسائل البريد الإلكتروني القديمة، وقوائم البطولات المؤرشفة، والصور المؤرخة، وبيانات المدربين، وأرشيف الدوري، وما إلى ذلك). لكن الفيفا يتوقع أدلة، لذلك سيتم التدقيق في الوثائق المعاد بناؤها أو الجزئية.',
-    'landing.faq.q13': '13. هل النادي ملزم بتعيين محام لتقديم مطالبة؟',
-    'landing.faq.a13': 'من الناحية الفنية، لا، لكن ينصح بشدة بذلك. يساعد وجود محام رياضي مؤهل على دراية بلوائح الولايات المتحدة والفيفا في تجنب الأخطاء التي قد تؤدي إلى الرفض أو النزاعات.',
-    'landing.faq.q14': '14. عن أي نوع من المدفوعات نتحدث، هل المبالغ كبيرة؟',
-    'landing.faq.a14': 'من المحتمل، نعم. يمكن أن يتراوح تعويض التدريب من حوالي 10,000 دولار إلى أكثر من 200,000 دولار اعتمادًا على عيار وفئة النادي المشتري. بالنسبة لمدفوعات التضامن، يعتمد المبلغ على رسوم النقل - على سبيل المثال، يمكن أن يدر انتقال بقيمة 5 ملايين دولار 250,000 دولار لتقسيمها بين أندية التدريب المؤهلة.',
-    'landing.faq.q15': '15. هل يمكن للاعب أو ولي أمره منع النادي من المطالبة بـ TC/SP؟',
-    'landing.faq.a15': 'لا. تتم هذه المدفوعات بين الأندية؛ وهي ليست مرتبطة بعقد اللاعب أو موافقته الشخصية.',
-    'landing.faq.q16': '16. هل يحتاج اللاعب إلى لعب مباريات رسمية (مباريات/دقائق) للنادي ليكون مؤهلاً للتعويض؟',
-    'landing.faq.a16': 'لا. ظهور المباريات لا يهم. ما يهم هو التدريب الموثق حتى لو لم يظهر اللاعب أبدًا في لعبة رسمية.',
-    'landing.faq.q17': '17. ما هي النافذة الزمنية لتقديم مطالبة؟',
-    'landing.faq.a17': 'لدى الأندية عمومًا ما يصل إلى خمس سنوات من التاريخ الذي تم فيه تفعيل التزام التعويض لتقديم مطالبة. الانتظار طويلاً قد يؤدي إلى فقدان الأهلية.',
+    'tasks.title': 'المهام',
+    'tasks.add': 'إضافة مهمة',
+    'tasks.empty': 'لا توجد مهام',
+    'tasks.complete': 'إكمال',
+    'tasks.delete': 'حذف',
   },
   zh: {
     'nav.about': '关于我们',
@@ -3131,8 +3119,16 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'hero.title2': '与 SOCCER CIRCULAR 一起',
     'hero.subtitle': '立即注册您的学院球员 • 确保未来的补偿金',
     'hero.cta.register': '注册学院',
-    'hero.cta.start': '立即开始',
-    'dash.menu.dashboard': '仪表板',
+    'features.title.main': '世界级',
+    'features.title.sub': '平台功能',
+    'features.playerReg.title': '球员注册系统',
+    'features.playerReg.desc': '注册锦标赛水平的球员，包含符合 FIFA 的文档、医疗记录和全面的合同管理系统。',
+    'features.docMgmt.title': '文件管理',
+    'features.docMgmt.desc': '为球员文件、合同、医疗证明和 FIFA 注册表格提供精英级的安全云存储，具备军事级加密。',
+    'features.finMgmt.title': '财务管理',
+    'features.finMgmt.desc': '完整的财务套件，包含发票生成、支出跟踪、收入监控和自动化补偿计算。',
+    'features.fifaComp.title': 'FIFA 合规',
+    'features.fifaComp.desc': '基于世界杯标准的自动化合规检查、训练补偿计算和实时 FIFA 集成的团结机制管理。',
     'dash.menu.players': '球员',
     'dash.menu.transfers': '转会',
     'dash.menu.finances': '财务',
@@ -3321,7 +3317,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.compliance.dialog.descLabel': '描述',
     'dash.compliance.dialog.expiry': '到期日期（可选）',
     'dash.compliance.dialog.file': '文件',
-    // Compliance Mock Data
     'dash.compliance.area.playerReg.name': '球员注册',
     'dash.compliance.area.playerReg.desc': '所有球员注册均已更新并符合 FIFA 条例',
     'dash.compliance.area.trainingComp.name': '训练补偿',
@@ -3357,7 +3352,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.financial.margin': '利润率',
     'dash.finance.manager.budget': '预算管理',
     'dash.finance.manager.invoice': '创建发票',
-    // Finance Detailed
     'dash.finance.category': '类别',
     'dash.finance.description': '描述',
     'dash.finance.cat.transferFees': '转会费',
@@ -3411,7 +3405,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'common.size': '大小',
     'common.actions': '操作',
 
-    // Pitfalls
     'landing.pitfalls.title': '导致俱乐部损失资金的',
     'landing.pitfalls.badge': '严重警告',
     'landing.pitfalls.subtitle': '避免这些代价高昂的错误，确保您的学院获得应得的补偿。',
@@ -3428,7 +3421,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pitfalls.item6.title': '不明白 27 岁时的转会仍然产生团结机制',
     'landing.pitfalls.item6.desc': '训练年份（12-23 岁）总是计算在内，即使对于职业生涯晚期的转会也是如此。',
 
-    // FAQ
     'landing.faq.title': '常见问题',
     'landing.faq.subtitle': '关于训练补偿和团结支付的常见问题',
     'landing.faq.q1': '1. 什么是“训练补偿”（TC）和“团结支付”（SP）？',
@@ -3444,7 +3436,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.faq.q6': '6. 高中或大学足球是否计入 TC/SP 资格？',
     'landing.faq.a6': '不计入。根据 FIFA 条例，高中和大学（例如 NCAA）项目不被视为“训练俱乐部”，因此没有资格。',
     'landing.faq.q7': '7. 学院地位（例如 MLS NEXT）对资格有影响吗？',
-    'landing.faq.a7': '没有。重要的是训练的文件记录，而不是俱乐部是否属于正式学院计划的一部分。',
     'landing.faq.q8': '8. 美国境内的国内转会是否会触发 TC 或 SP？',
     'landing.faq.a8': '不会。TC 和 SP 仅适用于国际转会（即属于不同国家协会的俱乐部之间的转会）。仅限美国境内的国内转会被排除在外。',
     'landing.faq.q9': '9. 租借交易呢，它们会产生任何付款吗？',
@@ -3465,6 +3456,11 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.faq.a16': '不需要。出场次数并不重要。重要的是有记录的训练，即使球员从未在正式比赛中出场。',
     'landing.faq.q17': '17. 提出索赔的时间窗口是多少？',
     'landing.faq.a17': '俱乐部通常有长达五年的时间（从触发补偿义务之日起）来提出索赔。等待太久可能会失去资格。',
+    'tasks.title': '任务',
+    'tasks.add': '添加任务',
+    'tasks.empty': '未找到任务',
+    'tasks.complete': '完成',
+    'tasks.delete': '删除',
   }
 };
 

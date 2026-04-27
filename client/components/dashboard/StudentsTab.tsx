@@ -61,7 +61,7 @@ interface FormErrors {
 export default function StudentsTab() {
   const { session } = useAuth();
   const [students, setStudents] = useState<Student[]>([]);
-  const [classes, setClasses] = useState<Class[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -116,7 +116,7 @@ export default function StudentsTab() {
         const studentsResponse = await Api.listStudents({
           schoolId: session.schoolId,
           limit: 100
-        });
+        } as any);
         setStudents(studentsResponse);
 
         // Load classes
@@ -145,7 +145,10 @@ export default function StudentsTab() {
             emisId: 'EMIS001',
             schoolId: 'demo-school',
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
+            studentNumber: 'STU001',
+            enrollmentDate: new Date().toISOString(),
+            isActive: true
           },
           {
             id: '2',
@@ -165,7 +168,10 @@ export default function StudentsTab() {
             emisId: 'EMIS002',
             schoolId: 'demo-school',
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
+            studentNumber: 'STU002',
+            enrollmentDate: new Date().toISOString(),
+            isActive: true
           }
         ]);
         
@@ -368,7 +374,7 @@ export default function StudentsTab() {
     
     try {
       setSubmitting(true);
-      await handleDeleteStudent(studentToDelete.id);
+      await handleDeleteStudent();
       setIsDeleteDialogOpen(false);
       setStudentToDelete(null);
     } catch (error) {

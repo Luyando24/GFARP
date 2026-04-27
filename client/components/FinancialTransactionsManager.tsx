@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Api } from '@/lib/api';
 import { useLanguage } from '@/lib/i18n';
 import { 
   Plus, 
@@ -611,12 +612,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
 
   const fetchInvoices = async () => {
     try {
-      const response = await fetch(`/api/invoices?academy_id=${academyId}`, {
-         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await response.json();
+      const data = await Api.get<any>(`/invoices?academy_id=${academyId}`);
       if (data.success) {
         setInvoices(data.data);
       }
@@ -638,24 +634,14 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
 
   const handleInvoiceSave = async (invoiceData: any) => {
     try {
-      const url = editingInvoice ? `/api/invoices/${editingInvoice.id}` : '/api/invoices';
+      const url = editingInvoice ? `/invoices/${editingInvoice.id}` : '/invoices';
       const method = editingInvoice ? 'PUT' : 'POST';
       console.log('Invoice Save Request:', { url, method, id: editingInvoice?.id });
       
-      const response = await fetch(url, {
-        method: method,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          ...invoiceData,
-          academy_id: academyId
-        })
-      });
+      const result = method === 'PUT' 
+        ? await Api.put<any>(url, { ...invoiceData, academy_id: academyId })
+        : await Api.post<any>(url, { ...invoiceData, academy_id: academyId });
 
-      const result = await response.json();
-      
       if (result.success) {
         setShowInvoiceModal(false);
         setEditingInvoice(null);

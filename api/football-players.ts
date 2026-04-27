@@ -97,7 +97,7 @@ export default async function handler(
 
                 // If it's a Uint8Array or ArrayBuffer
                 if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
-                    return Buffer.from(value).toString('utf8');
+                    return Buffer.from(value as any).toString('utf8');
                 }
 
                 // If it's already a string, return it

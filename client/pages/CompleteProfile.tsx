@@ -4,6 +4,7 @@ import { Trophy, ArrowRight, ArrowLeft, CheckCircle2, Building2, MapPin, User } 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '../hooks/use-toast';
+import { Api } from '@/lib/api';
 import {
   Select,
   SelectContent,
@@ -190,26 +191,17 @@ export default function CompleteProfile() {
 
         setIsSubmitting(true);
         try {
-            const response = await fetch(`/api/academies/${academyData.id}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                },
-                body: JSON.stringify({
-                    name: formData.name,
-                    phone: formData.phone,
-                    address: formData.address,
-                    directorName: formData.directorName,
-                    directorEmail: formData.directorEmail,
-                    directorPhone: formData.directorPhone || formData.phone,
-                    foundedYear: formData.foundedYear ? parseInt(formData.foundedYear) : undefined
-                })
+            const data = await Api.put<any>(`/academies/${academyData.id}`, {
+                name: formData.name,
+                phone: formData.phone,
+                address: formData.address,
+                directorName: formData.directorName,
+                directorEmail: formData.directorEmail,
+                directorPhone: formData.directorPhone || formData.phone,
+                foundedYear: formData.foundedYear ? parseInt(formData.foundedYear) : undefined
             });
 
-            const data = await response.json();
-
-            if (data.success || response.ok) {
+            if (data.success) {
                 // Update local storage
                 const updatedAcademyData = {
                     ...academyData,

@@ -24,27 +24,29 @@ export interface AcademyDashboardStats {
 
 export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) => {
   try {
-    const { academyId } = req.query;
+    const orgId = req.query.academyId || req.query.agencyId || req.query.orgId;
+    const isAgency = !!req.query.agencyId || (req as any).user?.role === 'AGENCY_ADMIN';
+    const idColumn = isAgency ? 'agency_id' : 'academy_id';
 
-    if (!academyId) {
+    if (!orgId) {
       return res.status(400).json({
         success: false,
-        error: 'Academy ID is required'
+        error: 'Organization ID is required'
       });
     }
 
-    // Get total players count for the academy
+    // Get total players count for the organization
     const totalPlayersResult = await query(
-      'SELECT COUNT(*) as count FROM players WHERE academy_id = $1',
-      [academyId]
+      `SELECT COUNT(*) as count FROM players WHERE ${idColumn} = $1`,
+      [orgId as any]
     );
     const totalPlayers = parseInt(totalPlayersResult.rows[0].count) || 0;
 
     // Get active transfers count (pending, approved, or in-progress transfers)
     const activeTransfersResult = await query(
       `SELECT COUNT(*) as count FROM transfers 
-       WHERE academy_id = $1 AND status IN ('pending', 'approved', 'in_progress')`,
-      [academyId]
+       WHERE ${idColumn} = $1 AND status IN ('pending', 'approved', 'in_progress')`,
+      [orgId as any]
     );
     const activeTransfers = parseInt(activeTransfersResult.rows[0].count) || 0;
 
@@ -57,11 +59,11 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
     const transferRevenueResult = await query(
       `SELECT COALESCE(SUM(transfer_amount), 0) as revenue 
        FROM transfers 
-       WHERE academy_id = $1 
+       WHERE ${idColumn} = $1 
        AND status = 'completed' 
        AND transfer_date >= $2 
        AND transfer_date <= $3`,
-      [academyId, firstDayOfMonth.toISOString(), lastDayOfMonth.toISOString()]
+      [orgId as any, firstDayOfMonth.toISOString(), lastDayOfMonth.toISOString()]
     );
     const transferRevenue = parseFloat(transferRevenueResult.rows[0].revenue) || 0;
 
@@ -69,12 +71,12 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
     const financialRevenueResult = await query(
       `SELECT COALESCE(SUM(amount), 0) as revenue 
        FROM financial_transactions 
-       WHERE academy_id = $1 
+       WHERE ${idColumn} = $1 
        AND status = 'completed' 
        AND transaction_type = 'income'
        AND transaction_date >= $2 
        AND transaction_date <= $3`,
-      [academyId, firstDayOfMonth.toISOString(), lastDayOfMonth.toISOString()]
+      [orgId as any, firstDayOfMonth.toISOString(), lastDayOfMonth.toISOString()]
     );
     const financialRevenue = parseFloat(financialRevenueResult.rows[0].revenue) || 0;
 
@@ -93,10 +95,10 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
         transfer_date,
         status
        FROM transfers 
-       WHERE academy_id = $1 
+       WHERE ${idColumn} = $1 
        ORDER BY created_at DESC 
        LIMIT 5`,
-      [academyId]
+      [orgId as any]
     );
 
     const recentTransfers = recentTransfersResult.rows.map(transfer => ({
@@ -120,12 +122,12 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
         COALESCE(SUM(CASE WHEN status = 'completed' THEN transfer_amount ELSE 0 END), 0) as revenue,
         COALESCE(SUM(CASE WHEN status = 'completed' THEN agent_fee ELSE 0 END), 0) as expenses
        FROM transfers 
-       WHERE academy_id = $1 
+       WHERE ${idColumn} = $1 
        AND transfer_date >= $2
        GROUP BY DATE_TRUNC('month', transfer_date)
        ORDER BY month DESC
        LIMIT 6`,
-      [academyId, new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000).toISOString()]
+      [orgId as any, new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000).toISOString()]
     );
 
     // Get financial transactions data for the same period
@@ -135,12 +137,12 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
         COALESCE(SUM(CASE WHEN status = 'completed' AND transaction_type = 'income' THEN amount ELSE 0 END), 0) as income,
         COALESCE(SUM(CASE WHEN status = 'completed' AND transaction_type = 'expense' THEN amount ELSE 0 END), 0) as expenses
        FROM financial_transactions 
-       WHERE academy_id = $1 
+       WHERE ${idColumn} = $1 
        AND transaction_date >= $2
        GROUP BY DATE_TRUNC('month', transaction_date)
        ORDER BY month DESC
        LIMIT 6`,
-      [academyId, new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000).toISOString()]
+      [orgId as any, new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000).toISOString()]
     );
 
     // Create monthly financial performance array with last 6 months

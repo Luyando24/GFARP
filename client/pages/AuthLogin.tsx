@@ -41,7 +41,7 @@ export default function AuthLogin() {
       }
       
       // Academy login only
-      const response = await Api.post('football-auth/academy/login', { email, password });
+      const response: any = await Api.post('football-auth/academy/login', { email, password });
       if (response.success) {
         // Transform academy response to match AuthSession format
         const session = {
@@ -57,7 +57,7 @@ export default function AuthLogin() {
         localStorage.setItem('academy_data', JSON.stringify(response.data.academy));
         localStorage.setItem('subscription_data', JSON.stringify(response.data.subscription));
         
-        saveSession(session);
+        saveSession(session as any);
         navigate("/academy-dashboard");
       } else {
         throw new Error(response.message || t('auth.error.loginFailed'));

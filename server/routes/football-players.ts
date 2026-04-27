@@ -21,7 +21,7 @@ const decrypt = (value: any) => {
     return value.toString('utf8');
   }
   if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
-    return Buffer.from(value).toString('utf8');
+    return Buffer.from(value as ArrayBuffer).toString('utf8');
   }
   if (typeof value === 'string') return value;
   return String(value);
@@ -51,6 +51,7 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
       jerseyNumber,
       preferredFoot,
       academyId,
+      agencyId,
       currentClub,
       city,
       country
@@ -72,24 +73,29 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
     }
 
     // Check subscription limits before creating player
-    if (academyId) {
-      // Get academy's current subscription and plan details
+    const orgId = academyId || agencyId;
+    if (orgId) {
+      const isAgency = !!agencyId;
+      const subTable = isAgency ? 'agency_subscriptions' : 'academy_subscriptions';
+      const orgIdColumn = isAgency ? 'agency_id' : 'academy_id';
+
+      // Get organization's current subscription and plan details
       const subscriptionQuery = `
         SELECT 
           sp.name as plan_name,
           sp.player_limit,
           sp.id as plan_id,
           asub.status as subscription_status
-        FROM academy_subscriptions asub
+        FROM ${subTable} asub
         JOIN subscription_plans sp ON asub.plan_id = sp.id
-        WHERE asub.academy_id = $1 
+        WHERE asub.${orgIdColumn} = $1 
           AND asub.status = 'ACTIVE'
           AND asub.end_date > NOW()
         ORDER BY asub.created_at DESC
         LIMIT 1
       `;
 
-      const subscriptionResult = await query(subscriptionQuery, [academyId]);
+      const subscriptionResult = await query(subscriptionQuery, [orgId]);
 
       let subscription;
       // Check if there's no subscription at all
@@ -119,26 +125,14 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
         }
 
         // Check if they've already reached the pro plan limit
-        // Handle case-sensitive table names (players vs Players)
         let currentPlayerCount = 0;
-        try {
-          const playerCountQuery = `
-            SELECT COUNT(*) as player_count 
-            FROM "Players" 
-            WHERE academy_id = $1
-          `;
-          const playerCountResult = await query(playerCountQuery, [academyId]);
-          currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
-        } catch (e) {
-          // Fallback to lowercase table name
-          const playerCountQuery = `
-            SELECT COUNT(*) as player_count 
-            FROM players 
-            WHERE academy_id = $1
-          `;
-          const playerCountResult = await query(playerCountQuery, [academyId]);
-          currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
-        }
+        const playerCountQuery = `
+          SELECT COUNT(*) as player_count 
+          FROM players 
+          WHERE ${orgIdColumn} = $1
+        `;
+        const playerCountResult = await query(playerCountQuery, [orgId]);
+        currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
 
         if (subscription.player_limit !== -1 && currentPlayerCount >= subscription.player_limit) {
           return res.status(403).json({
@@ -159,24 +153,13 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
 
         // If player limit is not unlimited (-1), check current player count
         if (subscription.player_limit !== -1) {
-          let currentPlayerCount = 0;
-          try {
-            const playerCountQuery = `
-              SELECT COUNT(*) as player_count 
-              FROM "Players" 
-              WHERE academy_id = $1
-            `;
-            const playerCountResult = await query(playerCountQuery, [academyId]);
-            currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
-          } catch (e) {
-            const playerCountQuery = `
-              SELECT COUNT(*) as player_count 
-              FROM players 
-              WHERE academy_id = $1
-            `;
-            const playerCountResult = await query(playerCountQuery, [academyId]);
-            currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
-          }
+          const playerCountQuery = `
+            SELECT COUNT(*) as player_count 
+            FROM players 
+            WHERE ${orgIdColumn} = $1
+          `;
+          const playerCountResult = await query(playerCountQuery, [orgId]);
+          const currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
 
           if (currentPlayerCount >= subscription.player_limit) {
             return res.status(403).json({
@@ -213,7 +196,7 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
         registration_date, guardian_info_cipher, medical_info_cipher,
         playing_history_cipher, emergency_contact_cipher,
         current_club_cipher, city_cipher, country_cipher,
-        card_id, card_qr_signature, academy_id, is_active, created_at, updated_at
+        card_id, card_qr_signature, academy_id, agency_id, is_active, created_at, updated_at
       ) VALUES (
         $1, $2, $3, $4,
         $5, $6, $7, $8,
@@ -223,7 +206,7 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
         $19, $20, $21,
         $22, $23,
         $24, $25, $26,
-        $27, $28, $29, true, NOW(), NOW()
+        $27, $28, $29, $30, true, NOW(), NOW()
       ) RETURNING id, player_card_id, position, height_cm, weight_kg, jersey_number, created_at, updated_at
     `;
 
@@ -256,7 +239,8 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
       country ? encrypt(country) : null,          // $26 - country_cipher
       cardId,                                     // $27 - card_id
       cardQrSignature,                            // $28 - card_qr_signature
-      academyId                                   // $29 - academy_id
+      academyId || null,                          // $29 - academy_id
+      agencyId || null                            // $30 - agency_id
     ];
 
     const result = await query(insertQuery, values);
@@ -300,6 +284,7 @@ export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
     const page = parseInt(req.query.page as string) || 1;
     const limit = parseInt(req.query.limit as string) || 10;
     const academyId = (req.query.academyId as string) || undefined;
+    const agencyId = (req.query.agencyId as string) || undefined;
 
     const offset = (page - 1) * limit;
 
@@ -317,6 +302,18 @@ export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
     if (academyId) {
       whereClause = ' WHERE academy_id = $1';
       params.push(academyId);
+    } else if (agencyId) {
+      whereClause = ' WHERE agency_id = $1';
+      params.push(agencyId);
+    } else {
+      // Security: If no ID provided, return empty list
+      return res.json({
+        success: true,
+        data: {
+          players: [],
+          pagination: { page, limit, total: 0, totalPages: 0 },
+        },
+      });
     }
 
     const orderLimitClause = ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
@@ -372,6 +369,7 @@ export const handleSearchPlayers: RequestHandler = async (req, res) => {
   try {
     const query_param = req.query.q as string;
     const academyId = (req.query.academyId as string) || undefined;
+    const agencyId = (req.query.agencyId as string) || undefined;
     const limit = parseInt(req.query.limit as string) || 10;
 
     if (!query_param || query_param.length < 2) {
@@ -387,12 +385,12 @@ export const handleSearchPlayers: RequestHandler = async (req, res) => {
       SELECT id, player_card_id, first_name_cipher, last_name_cipher, 
              position, current_club_cipher, created_at, updated_at
       FROM players
-      WHERE academy_id = $1
+      WHERE ${agencyId ? 'agency_id' : 'academy_id'} = $1
       ORDER BY created_at DESC
       LIMIT $2
     `;
 
-    const params = [academyId, limit];
+    const params = [agencyId || academyId, limit];
     const { rows } = await query(searchQuery, params);
 
     // Filter results by decrypted names (client-side filtering for encrypted data)
@@ -439,22 +437,22 @@ export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
 
     // Fetch player from database
     const playerQuery = `SELECT id, player_card_id, 
-                                first_name_cipher, last_name_cipher, first_name, last_name,
-                                dob_cipher, date_of_birth, position, 
-                                email_cipher, email, phone_cipher, phone,
-                                address_cipher, address, 
-                                guardian_contact_name_cipher, parent_name, 
-                                guardian_contact_phone_cipher, parent_phone,
-                                guardian_contact_email_cipher, parent_email, 
-                                medical_info_cipher, medical_info, 
-                                emergency_contact_cipher, emergency_contact,
-                                height_cm, height, weight_kg, weight, preferred_foot, jersey_number,
+                                first_name_cipher, last_name_cipher, 
+                                dob_cipher, position, 
+                                email_cipher, phone_cipher, 
+                                address_cipher, 
+                                guardian_contact_name_cipher, 
+                                guardian_contact_phone_cipher, 
+                                guardian_contact_email_cipher, 
+                                medical_info_cipher, 
+                                emergency_contact_cipher, 
+                                height_cm, weight_kg, preferred_foot, jersey_number,
                                 guardian_info_cipher, playing_history_cipher, gender,
                                 registration_date, card_id, card_qr_signature,
                                 nationality, training_start_date, training_end_date,
-                                emergency_phone_cipher, emergency_phone, 
-                                internal_notes_cipher, notes_cipher, notes,
-                                current_club_cipher, city_cipher, city, country_cipher, country,
+                                emergency_phone_cipher, 
+                                internal_notes_cipher, notes_cipher, 
+                                current_club_cipher, city_cipher, country_cipher,
                                 created_at, updated_at
                          FROM players WHERE id = $1`;
     const playerResult = await query(playerQuery, [playerId]);
@@ -475,23 +473,23 @@ export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
       data: {
         id: player.id,
         playerCardId: player.player_card_id,
-        firstName: decrypt(player.first_name_cipher) || player.first_name || '',
-        lastName: decrypt(player.last_name_cipher) || player.last_name || '',
-        dateOfBirth: decrypt(player.dob_cipher) || (player.date_of_birth ? new Date(player.date_of_birth).toISOString() : '') || '',
+        firstName: decrypt(player.first_name_cipher) || '',
+        lastName: decrypt(player.last_name_cipher) || '',
+        dateOfBirth: decrypt(player.dob_cipher) || '',
         position: player.position,
-        email: decrypt(player.email_cipher) || player.email || '',
-        phone: decrypt(player.phone_cipher) || player.phone || '',
-        address: decrypt(player.address_cipher) || player.address || '',
+        email: decrypt(player.email_cipher) || '',
+        phone: decrypt(player.phone_cipher) || '',
+        address: decrypt(player.address_cipher) || '',
         gender: player.gender || '',
-        guardianName: decrypt(player.guardian_contact_name_cipher) || player.parent_name || '',
-        guardianPhone: decrypt(player.guardian_contact_phone_cipher) || player.parent_phone || '',
-        guardianEmail: decrypt(player.guardian_contact_email_cipher) || player.parent_email || '',
+        guardianName: decrypt(player.guardian_contact_name_cipher) || '',
+        guardianPhone: decrypt(player.guardian_contact_phone_cipher) || '',
+        guardianEmail: decrypt(player.guardian_contact_email_cipher) || '',
         guardianInfo: decrypt(player.guardian_info_cipher) || '',
-        medicalInfo: decrypt(player.medical_info_cipher) || player.medical_info || '',
-        emergencyContact: decrypt(player.emergency_contact_cipher) || player.emergency_contact || '',
+        medicalInfo: decrypt(player.medical_info_cipher) || '',
+        emergencyContact: decrypt(player.emergency_contact_cipher) || '',
         playingHistory: decrypt(player.playing_history_cipher) || '',
-        height: player.height_cm || player.height || null,
-        weight: player.weight_kg || player.weight || null,
+        height: player.height_cm || null,
+        weight: player.weight_kg || null,
         preferredFoot: player.preferred_foot ? player.preferred_foot.charAt(0).toUpperCase() + player.preferred_foot.slice(1) : '',
         jerseyNumber: player.jersey_number || null,
         registrationDate: player.registration_date ? new Date(player.registration_date).toISOString().split('T')[0] : null,
@@ -499,13 +497,13 @@ export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
         nationality: player.nationality || '',
         trainingStartDate: player.training_start_date ? new Date(player.training_start_date).toISOString().split('T')[0] : null,
         trainingEndDate: player.training_end_date ? new Date(player.training_end_date).toISOString().split('T')[0] : null,
-        emergencyPhone: decrypt(player.emergency_phone_cipher) || player.emergency_phone || '',
+        emergencyPhone: decrypt(player.emergency_phone_cipher) || '',
         internalNotes: player.internal_notes_cipher ? decrypt(player.internal_notes_cipher) : '',
-        notes: decrypt(player.notes_cipher) || player.notes || '',
+        notes: decrypt(player.notes_cipher) || '',
         // Add the new contact info fields
         currentClub: player.current_club_cipher ? decrypt(player.current_club_cipher) : '',
-        city: decrypt(player.city_cipher) || player.city || '',
-        country: decrypt(player.country_cipher) || player.country || '',
+        city: decrypt(player.city_cipher) || '',
+        country: decrypt(player.country_cipher) || '',
         cardId: player.card_id || '',
         cardQrSignature: player.card_qr_signature || '',
         isActive: true,
@@ -736,17 +734,17 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
         message: 'No changes to update',
         data: {
           id: existing.id,
-          firstName: existing.first_name,
-          lastName: existing.last_name,
-          dateOfBirth: existing.date_of_birth ? new Date(existing.date_of_birth).toISOString().split('T')[0] : null,
+          firstName: decrypt(existing.first_name_cipher),
+          lastName: decrypt(existing.last_name_cipher),
+          dateOfBirth: decrypt(existing.dob_cipher),
           position: existing.position,
-          email: existing.email || '',
-          phone: existing.phone || '',
-          address: existing.address || '',
-          city: existing.city || '',
-          country: existing.nationality || '',
-          height: existing.height || null,
-          weight: existing.weight || null,
+          email: decrypt(existing.email_cipher) || '',
+          phone: decrypt(existing.phone_cipher) || '',
+          address: decrypt(existing.address_cipher) || '',
+          city: decrypt(existing.city_cipher) || '',
+          country: decrypt(existing.country_cipher) || '',
+          height: existing.height_cm || null,
+          weight: existing.weight_kg || null,
           isActive: existing.is_active,
           createdAt: existing.created_at.toISOString(),
           updatedAt: existing.updated_at.toISOString(),

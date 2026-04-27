@@ -57,6 +57,7 @@ import {
   handleServeDemoFile,
   uploadMiddleware as demoUploadMiddleware
 } from "./routes/demo-documents.js";
+import agenciesRouter from "./routes/agencies.js";
 import sitemapRouter from "./routes/sitemap.js";
 
 export function createServer() {
@@ -154,6 +155,9 @@ export function createServer() {
   
   // Generic uploads
   api.use("/uploads", uploadsRouter);
+
+  // Agencies routes
+  api.use("/agencies", agenciesRouter);
 
   console.log("[SERVER] Football & subscription routes registered");
 

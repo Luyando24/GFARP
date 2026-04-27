@@ -1,4 +1,4 @@
-import { Trophy, Users, FileText, ShoppingCart, BookOpen, Globe, Shield, UserCheck, Menu, Target, Calendar, BarChart3, DollarSign, Award, Star, CheckCircle, Building, Crown, User, AlertCircle, Clock, TrendingUp, X, Instagram, Linkedin, Facebook, MessageSquare, Loader2 } from 'lucide-react';
+import { Trophy, Users, FileText, ShoppingCart, BookOpen, Globe, Shield, UserCheck, Menu, Target, Calendar, BarChart3, DollarSign, Award, Star, CheckCircle, Building, Building2, Crown, User, AlertCircle, Clock, TrendingUp, X, Instagram, Linkedin, Facebook, MessageSquare, Loader2, ArrowRight } from 'lucide-react';
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -7,6 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import ThemeToggle from "@/components/navigation/ThemeToggle";
 import LanguageToggle from "@/components/navigation/LanguageToggle";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useTranslation } from '@/lib/i18n';
 
 import Chatbot from '@/components/Landing/Chatbot';
@@ -23,6 +24,9 @@ export default function Index() {
   const { t, dir } = useTranslation();
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [isLoadingTestimonials, setIsLoadingTestimonials] = useState(true);
+  const [plans, setPlans] = useState<any[]>([]);
+  const [isLoadingPlans, setIsLoadingPlans] = useState(true);
+  const [activeTab, setActiveTab] = useState<'ACADEMY' | 'INDIVIDUAL' | 'AGENCY'>('ACADEMY');
   usePageTitle("Home");
 
   useEffect(() => {
@@ -39,7 +43,35 @@ export default function Index() {
         setIsLoadingTestimonials(false);
       }
     };
+
+    const fetchPlans = async () => {
+      try {
+        const [academyRes, individualRes, agencyRes] = await Promise.all([
+          fetch('/api/subscriptions/plans?targetType=ACADEMY&includeInactive=false'),
+          fetch('/api/subscriptions/plans?targetType=INDIVIDUAL&includeInactive=false'),
+          fetch('/api/subscriptions/plans?targetType=AGENCY&includeInactive=false')
+        ]);
+        
+        const academyData = await academyRes.json();
+        const individualData = await individualRes.json();
+        const agencyData = await agencyRes.json();
+        
+        const allPlans = [
+          ...(academyData.success ? academyData.data : []),
+          ...(individualData.success ? individualData.data : []),
+          ...(agencyData.success ? agencyData.data : [])
+        ];
+        
+        setPlans(allPlans);
+      } catch (error) {
+        console.error('Error fetching plans:', error);
+      } finally {
+        setIsLoadingPlans(false);
+      }
+    };
+
     fetchTestimonials();
+    fetchPlans();
   }, []);
 
   const faqItems = [
@@ -70,36 +102,62 @@ export default function Index() {
     { question: t('landing.faq.q17'), answer: t('landing.faq.a17') }
   ];
 
-  const pricingTiers = [
-    {
-      id: 'pro',
-      name: t('landing.pricing.tier2.name'),
-      price: billingCycle === 'monthly' ? t('landing.pricing.tier2.price') : t('landing.pricing.tier2.priceYearly'),
-      desc: t('landing.pricing.tier2.ideal'),
-      badge: t('landing.pricing.tier2.badge'),
-      icon: Trophy,
-      features: [
-        t('landing.pricing.feature.players').replace('{count}', '200'),
-        t('landing.pricing.feature.fullCompliance'),
-        t('landing.pricing.feature.prioritySupport'),
-        t('landing.pricing.feature.trainingTracking'),
-        t('landing.pricing.feature.analytics')
-      ],
-      ctaLink: "/academy-registration?plan=pro",
-      ctaText: t('landing.pricing.start.gold'),
-      ctaIcon: Star,
-      highlight: true,
-      popularBadge: t('landing.pricing.popular'),
-      styles: {
-        card: "border-4 border-yellow-400 shadow-2xl hover:shadow-3xl hover:shadow-yellow-500/50 hover:-translate-y-4",
-        badge: "from-yellow-400 to-yellow-500 text-black",
-        iconBg: "from-yellow-400 to-yellow-500",
-        iconColor: "text-black",
-        button: "from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black",
-        overlay: "from-yellow-400/10 to-yellow-500/10"
-      }
+  const pricingTiers = plans
+    .filter(plan => plan.target_type === activeTab)
+    .map(plan => {
+    const isPro = plan.name.toLowerCase().includes('pro');
+    const isElite = plan.name.toLowerCase().includes('elite') || plan.name.toLowerCase().includes('agency');
+    const isFree = plan.is_free || plan.price === 0;
+
+    const styles = isPro ? {
+      card: "border-4 border-yellow-400 shadow-2xl hover:shadow-3xl hover:shadow-yellow-500/50 hover:-translate-y-4",
+      badge: "from-yellow-400 to-yellow-500 text-black",
+      iconBg: "from-yellow-400 to-yellow-500",
+      iconColor: "text-black",
+      button: "from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black",
+      overlay: "from-yellow-400/10 to-yellow-500/10"
+    } : isElite ? {
+      card: "border-4 border-indigo-500 shadow-2xl hover:shadow-3xl hover:shadow-indigo-500/50 hover:-translate-y-4",
+      badge: "from-indigo-500 to-purple-600 text-white",
+      iconBg: "from-indigo-500 to-purple-600",
+      iconColor: "text-white",
+      button: "from-indigo-500 to-purple-600 hover:from-purple-600 hover:to-indigo-500 text-white",
+      overlay: "from-indigo-500/10 to-purple-600/10"
+    } : {
+      card: "border-[#005391]/20 hover:border-[#005391]/50 shadow-lg hover:-translate-y-2",
+      badge: "from-[#005391] to-[#0066b3] text-white",
+      iconBg: "from-[#005391] to-[#0066b3]",
+      iconColor: "text-white",
+      button: "from-[#005391] to-[#0066b3] hover:from-[#0066b3] hover:to-[#005391] text-white",
+      overlay: "from-[#005391]/5 to-[#0066b3]/5"
+    };
+
+    // Calculate yearly price if needed (assuming 20% discount for yearly)
+    let displayPrice = plan.price;
+    if (billingCycle === 'yearly' && plan.billing_cycle === 'MONTHLY') {
+      displayPrice = (plan.price * 12 * 0.8).toFixed(2);
     }
-  ];
+
+    return {
+      id: plan.id,
+      name: plan.name,
+      price: isFree ? t('landing.pricing.free') : `${plan.currency} ${displayPrice}`,
+      period: isFree ? "" : plan.billing_cycle === 'LIFETIME' ? t('landing.pricing.lifetime') : billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year'),
+      desc: plan.description,
+      badge: isFree ? "Starter" : isPro ? "Recommended" : isElite ? "Premium" : "Standard",
+      icon: isElite ? Crown : isPro ? Trophy : Building,
+      features: plan.features || [],
+      ctaLink: 
+        plan.target_type === 'INDIVIDUAL' ? `/player/register?plan=${plan.id}` : 
+        plan.target_type === 'AGENCY' ? `/agency-registration?plan=${plan.id}` :
+        `/academy-registration?plan=${plan.id}`,
+      ctaText: isFree ? t('landing.pricing.start.free') : t('landing.pricing.start.gold'),
+      ctaIcon: isFree ? ArrowRight : Star,
+      highlight: isPro,
+      popularBadge: isPro ? t('landing.pricing.popular') : null,
+      styles
+    };
+  });
 
   const renderPricingCard = (tier: any) => {
     const Icon = tier.icon;
@@ -258,15 +316,17 @@ export default function Index() {
                   <LanguageToggle variant="ghost" className="text-white hover:bg-white/20" />
                 </div>
                 <Button asChild className="bg-white text-[#005391] hover:bg-yellow-400 hover:text-black font-bold px-4 py-2 rounded-full text-xs lg:flex hidden">
-                  <Link to="/academy-registration">{t('nav.getStarted')}</Link>
+                  <Link to="/portal">{t('nav.getStarted')}</Link>
                 </Button>
                 <Button variant="ghost" className="p-2 text-white hover:bg-white/20 rounded-lg">
-                  <User className="h-5 w-5" />
+                  <Link to="/portal">
+                    <User className="h-5 w-5" />
+                  </Link>
                 </Button>
 
                 {/* Mobile Sign In */}
                 <Button asChild className="bg-white text-[#005391] hover:bg-yellow-400 hover:text-black font-bold px-4 py-2 rounded-full text-sm lg:hidden">
-                  <Link to="/academy-registration">{t('nav.getStarted')}</Link>
+                  <Link to="/portal">{t('nav.getStarted')}</Link>
                 </Button>
               </div>
             </div>
@@ -312,7 +372,7 @@ export default function Index() {
                       <LanguageToggle variant="ghost" className="w-full justify-start text-white hover:bg-white/20" />
                     </div>
                     <Button asChild className="mt-4 bg-gradient-to-r from-yellow-400 to-yellow-500 text-black hover:from-yellow-500 hover:to-yellow-600 font-bold py-3 rounded-full shadow-xl">
-                      <Link to="/academy-registration">{t('nav.register')}</Link>
+                      <Link to="/portal">{t('nav.register')}</Link>
                     </Button>
                   </nav>
                 </div>
@@ -386,31 +446,16 @@ export default function Index() {
             <p className="text-lg sm:text-xl md:text-2xl text-blue-100 font-semibold max-w-4xl mx-auto leading-relaxed mb-10 px-4">
               {t('hero.subtitle')}
             </p>
-
+ 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row gap-6 justify-center mb-12 px-4">
-              <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-gradient-to-r from-yellow-500 to-yellow-600 hover:from-yellow-600 hover:to-yellow-700 text-black font-black shadow-2xl hover:shadow-yellow-500/50 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/60 w-full sm:w-auto">
-                <Link to="/academy-registration" className="flex items-center gap-3 justify-center">
-                  {t('hero.cta.register')}
+              <Button size="lg" className="text-xl px-12 py-8 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 hover:from-yellow-500 hover:to-yellow-700 text-black font-black shadow-2xl hover:shadow-yellow-500/50 transition-all duration-500 transform hover:scale-110 border-2 border-white/30 hover:border-white/60 w-full sm:w-auto">
+                <Link to="/portal" className="flex items-center gap-3 justify-center uppercase tracking-widest">
+                  {t('nav.getStarted')}
+                  <ArrowRight className="h-6 w-6" />
                 </Link>
-              </Button>
-
-              <Button size="lg" className="text-lg px-10 py-6 rounded-full bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#0066b3] hover:to-[#005391] text-white font-black shadow-2xl hover:shadow-blue-500/50 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/60 w-full sm:w-auto">
-                <Link to="/player/register" className="flex items-center gap-3 justify-center">
-                  <User className="h-5 w-5" />
-                  Register as Player
-                </Link>
-              </Button>
-
-              <Button asChild size="lg" className="text-lg px-10 py-6 rounded-full bg-white/10 hover:bg-white/20 text-white font-black shadow-xl hover:shadow-white/25 transition-all duration-500 transform hover:scale-105 border-2 border-white/30 hover:border-white/50 backdrop-blur-sm w-full sm:w-auto">
-                <a href="https://calendly.com/amirehsofwan" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 justify-center">
-                  <Trophy className="h-5 w-5" />
-                  {t('hero.cta.start')}
-                </a>
               </Button>
             </div>
-
-
           </div>
         </div>
 
@@ -766,6 +811,37 @@ export default function Index() {
               </span>
             </h2>
           </div>
+          
+          {/* User Type Tabs */}
+          <div className="flex justify-center mb-8">
+            <Tabs 
+              defaultValue="ACADEMY" 
+              value={activeTab} 
+              onValueChange={(val) => setActiveTab(val as 'ACADEMY' | 'INDIVIDUAL' | 'AGENCY')}
+              className="w-full max-w-xl"
+            >
+              <TabsList className="grid w-full grid-cols-3 bg-blue-900/50 border border-blue-400/30 p-1 rounded-full h-14">
+                <TabsTrigger 
+                  value="ACADEMY" 
+                  className="rounded-full font-black text-[10px] sm:text-xs tracking-widest data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-white transition-all duration-300 h-full"
+                >
+                  {t('landing.pricing.tab.academies')}
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="INDIVIDUAL" 
+                  className="rounded-full font-black text-[10px] sm:text-xs tracking-widest data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-white transition-all duration-300 h-full"
+                >
+                  {t('landing.pricing.tab.players')}
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="AGENCY" 
+                  className="rounded-full font-black text-[10px] sm:text-xs tracking-widest data-[state=active]:bg-yellow-400 data-[state=active]:text-black text-white transition-all duration-300 h-full"
+                >
+                  {t('landing.pricing.tab.agencies')}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
 
           {/* Billing Cycle Toggle */}
           <div className="flex justify-center items-center gap-4 mb-12">
@@ -790,31 +866,45 @@ export default function Index() {
           {/* Pricing Grid */}
           {/* Pricing Grid */}
           <div className="max-w-7xl mx-auto">
-            {/* Mobile Carousel */}
-            <div className="md:hidden px-4">
-              <Carousel className="w-full max-w-sm mx-auto" opts={{ loop: true }}>
-                <CarouselContent>
-                  {pricingTiers.map((tier) => (
-                    <CarouselItem key={tier.id}>
-                      <div className="p-1 h-full pt-6">
-                        {renderPricingCard(tier)}
-                      </div>
-                    </CarouselItem>
-                  ))}
-                </CarouselContent>
-                <CarouselPrevious className="-left-2" />
-                <CarouselNext className="-right-2" />
-              </Carousel>
-            </div>
-
-            {/* Desktop Grid */}
-            <div className="hidden md:grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-              {pricingTiers.map((tier) => (
-                <div key={tier.id} className="h-full pt-6">
-                  {renderPricingCard(tier)}
+            {isLoadingPlans ? (
+              <div className="flex flex-col items-center justify-center py-20 gap-4">
+                <Loader2 className="h-12 w-12 text-yellow-400 animate-spin" />
+                <p className="text-white font-bold tracking-widest animate-pulse">LOADING CHAMPION PLANS...</p>
+              </div>
+            ) : (
+              <>
+                {/* Mobile Carousel */}
+                <div className="md:hidden px-4">
+                  <Carousel className="w-full max-w-sm mx-auto" opts={{ loop: true }}>
+                    <CarouselContent>
+                      {pricingTiers.map((tier) => (
+                        <CarouselItem key={tier.id}>
+                          <div className="p-1 h-full pt-6">
+                            {renderPricingCard(tier)}
+                          </div>
+                        </CarouselItem>
+                      ))}
+                    </CarouselContent>
+                    <CarouselPrevious className="left-0 bg-yellow-400 text-black border-none hover:bg-yellow-500" />
+                    <CarouselNext className="right-0 bg-yellow-400 text-black border-none hover:bg-yellow-500" />
+                  </Carousel>
                 </div>
-              ))}
-            </div>
+
+                {/* Desktop Grid */}
+                <div className={`hidden md:grid gap-8 items-stretch max-w-6xl mx-auto px-4 ${
+                  pricingTiers.length === 1 ? 'grid-cols-1 max-w-md' : 
+                  pricingTiers.length === 2 ? 'grid-cols-2 max-w-4xl' : 
+                  pricingTiers.length === 3 ? 'grid-cols-3' :
+                  'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
+                }`}>
+                  {pricingTiers.map((tier) => (
+                    <div key={tier.id} className="h-full pt-6">
+                      {renderPricingCard(tier)}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
           {/* Bottom Section */}

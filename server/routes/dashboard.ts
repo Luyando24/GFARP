@@ -322,7 +322,7 @@ export const handleGetAdminTransactions: RequestHandler = async (req, res) => {
       LIMIT $1 OFFSET $2
     `;
 
-    const result = await query(queryText, [limit, offset]);
+    const result = await query(queryText, [limit as any, offset as any]);
 
     const transactions = result.rows.map(row => ({
       id: row.id,
@@ -417,11 +417,13 @@ export const handleGetSubscriptions: RequestHandler = async (req, res) => {
 };
 
 export const handleGetNewAccounts: RequestHandler = async (req, res) => {
+  console.log('[DASHBOARD] GET /new-accounts request received');
   try {
     // Get academies registered in the last 30 days
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
+    console.log('[DASHBOARD] Fetching new academies since:', thirtyDaysAgo.toISOString());
     const result = await query(`
       SELECT 
         a.id,
@@ -436,6 +438,7 @@ export const handleGetNewAccounts: RequestHandler = async (req, res) => {
       GROUP BY a.id, a.name, a.district, a.province, a.address, a.created_at, a.status
       ORDER BY a.created_at DESC
     `, [thirtyDaysAgo.toISOString()]);
+    console.log(`[DASHBOARD] Found ${result.rows.length} new accounts`);
 
     // Get stats for the last week and month
     const oneWeekAgo = new Date();
@@ -446,12 +449,14 @@ export const handleGetNewAccounts: RequestHandler = async (req, res) => {
       FROM academies
       WHERE created_at >= $1
     `, [oneWeekAgo.toISOString()]);
+    console.log(`[DASHBOARD] New accounts this week: ${weekResult.rows[0].count}`);
 
     const monthResult = await query(`
       SELECT COUNT(*) as count
       FROM academies
       WHERE created_at >= $1
     `, [thirtyDaysAgo.toISOString()]);
+    console.log(`[DASHBOARD] New accounts this month: ${monthResult.rows[0].count}`);
 
     // Calculate growth rate (comparing this month to previous month)
     const twoMonthsAgo = new Date();
@@ -489,13 +494,18 @@ export const handleGetNewAccounts: RequestHandler = async (req, res) => {
       accounts: newAccounts,
       stats: stats
     });
-  } catch (error) {
-    console.error('Error fetching new accounts:', error);
-    res.status(500).json({ error: 'Failed to fetch new accounts data' });
+  } catch (error: any) {
+    console.error('[DASHBOARD] Error fetching new accounts:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch new accounts data',
+      details: error.message 
+    });
   }
 };
 
 export const handleGetCountryDistribution: RequestHandler = async (req, res) => {
+  console.log('[DASHBOARD] GET /country-distribution request received');
   try {
     // Get academy distribution by country
     const countryQuery = `
@@ -508,7 +518,9 @@ export const handleGetCountryDistribution: RequestHandler = async (req, res) => 
       ORDER BY academy_count DESC
     `;
 
+    console.log('[DASHBOARD] Executing country distribution query');
     const result = await query(countryQuery);
+    console.log(`[DASHBOARD] Country distribution returned ${result.rows.length} countries`);
     const totalAcademies = result.rows.reduce((sum, row) => sum + parseInt(row.academy_count), 0);
 
     // Country flags mapping (basic set)
@@ -551,9 +563,13 @@ export const handleGetCountryDistribution: RequestHandler = async (req, res) => 
       countries: countryDistribution,
       stats: stats
     });
-  } catch (error) {
-    console.error('Error fetching country distribution:', error);
-    res.status(500).json({ error: 'Failed to fetch country distribution data' });
+  } catch (error: any) {
+    console.error('[DASHBOARD] Error fetching country distribution:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to fetch country distribution data',
+      details: error.message 
+    });
   }
 };
 

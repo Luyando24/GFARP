@@ -309,7 +309,11 @@ const PlayerDetails = () => {
       const file = uploadedFiles[docType];
       if (file) {
         try {
-          const result = await uploadPlayerDocument(player.id, file, docType);
+          const apiDocType = docType === 'passportId' ? 'passport_id' : 
+                            docType === 'playerPhoto' ? 'player_photo' : 
+                            docType === 'proofOfTraining' ? 'proof_of_training' : 
+                            'birth_certificate';
+          const result = await uploadPlayerDocument(player.id, file, apiDocType as any);
           if (result.success) {
             // Clear the uploaded file from state
             setUploadedFiles(prev => ({

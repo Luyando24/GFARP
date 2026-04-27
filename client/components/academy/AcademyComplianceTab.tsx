@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Api } from '@/lib/api';
 import { useLanguage } from '@/lib/i18n';
 import {
     Upload,
@@ -126,8 +127,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
 
         try {
             setLoading(true);
-            const response = await fetch(`/api/compliance-documents?academyId=${academyId}`);
-            const result = await response.json();
+            const result = await Api.get<{ success: boolean; data: any[] }>(`compliance-documents?academyId=${academyId}`);
 
             if (result.success) {
                 setDocuments(result.data);
@@ -187,12 +187,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
                 formData.append('expiry_date', newDocument.expiry_date);
             }
 
-            const response = await fetch('/api/compliance-documents/upload', {
-                method: 'POST',
-                body: formData,
-            });
-
-            const result = await response.json();
+            const result = await Api.postFormData<{ success: boolean; message?: string; data: any }>('compliance-documents/upload', formData);
 
             if (result.success) {
                 toast({
@@ -226,11 +221,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
         if (!window.confirm('Are you sure you want to delete this document?')) return;
 
         try {
-            const response = await fetch(`/api/compliance-documents/${documentId}`, {
-                method: 'DELETE',
-            });
-
-            const result = await response.json();
+            const result = await Api.delete<{ success: boolean; message?: string }>(`compliance-documents/${documentId}`);
 
             if (result.success) {
                 toast({

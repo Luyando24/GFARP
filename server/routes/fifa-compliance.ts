@@ -1,20 +1,45 @@
 import { Router } from 'express';
 import { query } from '../lib/db.js';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = Router();
+
+// Apply authentication to all FIFA compliance routes
+router.use(authenticateToken);
 
 // GET /api/fifa-compliance - Get all compliance records for an academy
 router.get('/', async (req, res) => {
   try {
-    const { academy_id, status, compliance_type, limit = 50, offset = 0 } = req.query;
+    let { academy_id, status, compliance_type, limit = 50, offset = 0 } = req.query;
+    const user = (req as any).user;
+    const userRole = user?.role?.toUpperCase();
+
+    // Security & Session Pick-up:
+    // 1. If user is a direct academy/agency admin, user.id is the target organization ID
+    // 2. If user is a staff member, we must look up their academy_id from staff_users
+    if (userRole === 'ACADEMY_ADMIN' || userRole === 'AGENCY_ADMIN') {
+        academy_id = user.id;
+        console.log(`[FIFA-COMP] Using direct OrgAdmin ID: ${academy_id} (Role: ${userRole})`);
+    } else if (user && userRole !== 'ADMIN' && userRole !== 'SUPERADMIN') {
+        const staffRes = await query('SELECT academy_id FROM staff_users WHERE id = $1', [user.id]);
+        if (staffRes.rows.length > 0 && staffRes.rows[0].academy_id) {
+            academy_id = staffRes.rows[0].academy_id;
+            console.log(`[FIFA-COMP] Using staff-linked academy_id: ${academy_id} for user: ${user.id}`);
+        }
+    }
+
+
+
+
 
     let sql = `
       SELECT fc.*, 
-             a.name as academy_name,
-             COUNT(fcd.id) as document_count,
-             COUNT(fca.id) as action_count
+             COALESCE(a.name, ag.name) as academy_name,
+             COUNT(DISTINCT fcd.id) as document_count,
+             COUNT(DISTINCT fca.id) as action_count
       FROM fifa_compliance fc
-      JOIN academies a ON fc.academy_id = a.id
+      LEFT JOIN academies a ON fc.academy_id = a.id
+      LEFT JOIN agencies ag ON fc.academy_id = ag.id
       LEFT JOIN fifa_compliance_documents fcd ON fc.id = fcd.compliance_id
       LEFT JOIN fifa_compliance_actions fca ON fc.id = fca.compliance_id
       WHERE 1=1
@@ -41,7 +66,7 @@ router.get('/', async (req, res) => {
     }
 
     sql += `
-      GROUP BY fc.id, a.name
+      GROUP BY fc.id, a.name, ag.name
       ORDER BY fc.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;

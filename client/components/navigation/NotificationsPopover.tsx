@@ -6,6 +6,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { formatDistanceToNow } from 'date-fns';
 
+import { Api } from '@/lib/api';
+import { getSession } from '@/lib/auth';
+
 interface Notification {
     id: string;
     userNotificationId: string;
@@ -28,18 +31,12 @@ export function NotificationsPopover() {
         setLoading(true);
         try {
             // Get userId from storage
-            const storage = JSON.parse(localStorage.getItem('football-auth-storage') || '{}');
-            const userId = storage?.state?.user?.id;
+            const session = getSession();
+            const userId = session?.userId;
 
             if (!userId) return;
 
-            const apiUrl = import.meta.env.VITE_API_URL || '/api';
-            const response = await fetch(`${apiUrl}/notifications/list?userId=${userId}`, {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('football-auth-token')}`
-                }
-            });
-            const result = await response.json();
+            const result = await Api.get<any>(`/notifications/list?userId=${userId}`);
             
             if (result.success) {
                 setNotifications(result.data);
@@ -61,15 +58,7 @@ export function NotificationsPopover() {
 
     const markAsRead = async (userNotificationId: string) => {
         try {
-            const apiUrl = import.meta.env.VITE_API_URL || '/api';
-            await fetch(`${apiUrl}/notifications/mark-read`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('football-auth-token')}`
-                },
-                body: JSON.stringify({ userNotificationId })
-            });
+            await Api.post('/notifications/mark-read', { userNotificationId });
 
             // Update local state
             setNotifications(prev => prev.map(n => 

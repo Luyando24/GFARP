@@ -30,7 +30,7 @@ import {
   Trophy,
   Star,
   FileText,
-  Image,
+  Image as ImageIcon,
   Upload,
   Camera,
   Eye,
@@ -40,7 +40,9 @@ import {
   Instagram,
   Facebook,
   Globe,
-  Lock
+  Lock,
+  Shield,
+  Clock
 } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -57,7 +59,7 @@ const getBase64ImageFromURL = (url: string): Promise<string> => {
         return;
     }
 
-    const img = new Image();
+    const img = new window.Image();
     // Cache buster to bypass browser cache which might lack CORS headers
     const cacheBuster = url.includes('?') ? `&t=${new Date().getTime()}` : `?t=${new Date().getTime()}`;
     img.crossOrigin = 'anonymous'; 
@@ -169,6 +171,20 @@ export default function PlayerDashboard() {
     } catch (error) {
       console.error("Failed to fetch plans", error);
     }
+  };
+
+  // Helper to check if current plan has a feature
+  const hasFeature = (featureName: string) => {
+    if (currentPlan === 'pro') return true; // Legacy/Exempted
+    if (!currentPlan || currentPlan === 'free') {
+       // Default free features
+       const freeFeatures = ["Basic player profile", "Public profile link", "Document storage (500MB)"];
+       return freeFeatures.some(f => f.toLowerCase().includes(featureName.toLowerCase()));
+    }
+    const plan = plans.find(p => p.id === currentPlan);
+    if (!plan) return false;
+    const features = Array.isArray(plan.features) ? plan.features : [];
+    return features.some((f: string) => f.toLowerCase().includes(featureName.toLowerCase()));
   };
 
   const checkPaymentStatus = async () => {
@@ -664,7 +680,7 @@ export default function PlayerDashboard() {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-gradient-to-b from-[#005391] to-[#0066b3] border-r-4 border-yellow-400 transition-transform duration-300 ease-in-out min-h-[calc(100vh-64px)]`}>
+        <aside className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:sticky lg:top-16 z-40 w-64 bg-gradient-to-b from-[#005391] to-[#0066b3] border-r-4 border-yellow-400 transition-transform duration-300 ease-in-out h-[calc(100vh-64px)] overflow-y-auto`}>
           <div className="flex flex-col h-full pt-4 lg:pt-0">
             <nav className="flex-1 px-4 py-6 space-y-2">
               {sidebarItems.map((item) => {
@@ -833,7 +849,7 @@ export default function PlayerDashboard() {
                           </div>
                         ) : (
                           <div className="text-center py-8 text-slate-500 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
-                            <Image className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                            <ImageIcon className="h-10 w-10 mx-auto mb-2 opacity-50" />
                             <p>No images in gallery</p>
                             <Button variant="link" onClick={() => setActiveTab('profile')} className="mt-2">
                               Add Images
@@ -919,7 +935,7 @@ export default function PlayerDashboard() {
                               <img src={formData.cover_image_url} alt="Cover" className="w-full h-full object-cover" />
                             ) : (
                               <div className="flex items-center justify-center h-full text-slate-400">
-                                <Image className="h-10 w-10 mr-2" />
+                                <ImageIcon className="h-10 w-10 mr-2" />
                                 <span>No cover image set</span>
                               </div>
                             )}
@@ -1198,9 +1214,14 @@ export default function PlayerDashboard() {
                       </div>
 
                       {/* Gallery Images Section */}
-                      <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700">
-                        <Label className="text-lg font-semibold">Gallery Images (Max 3)</Label>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700 relative">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-lg font-semibold">Gallery Images (Max 3)</Label>
+                          {!hasFeature('Video highlights') && (
+                            <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 uppercase font-black">PRO FEATURE</Badge>
+                          )}
+                        </div>
+                        <div className={`grid grid-cols-1 sm:grid-cols-3 gap-4 ${!hasFeature('Video highlights') ? "opacity-40 grayscale pointer-events-none" : ""}`}>
                           {[0, 1, 2].map((index) => (
                             <div key={index} className="space-y-2">
                               <div className="relative aspect-video bg-slate-100 dark:bg-slate-800 rounded-lg overflow-hidden border-2 border-dashed border-slate-300 dark:border-slate-600 flex items-center justify-center group hover:border-blue-500 transition-colors">
@@ -1237,7 +1258,7 @@ export default function PlayerDashboard() {
                                     htmlFor={`gallery-upload-${index}`}
                                     className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-blue-500"
                                   >
-                                    <Image className="h-8 w-8 mb-2" />
+                                    <ImageIcon className="h-8 w-8 mb-2" />
                                     <span className="text-xs">Upload Image</span>
                                   </label>
                                 )}
@@ -1252,29 +1273,52 @@ export default function PlayerDashboard() {
                             </div>
                           ))}
                         </div>
+                        {!hasFeature('Video highlights') && (
+                          <div className="absolute inset-0 top-12 bg-white/40 dark:bg-slate-900/40 backdrop-blur-[1px] flex items-center justify-center rounded-lg z-20">
+                            <Button variant="ghost" size="sm" onClick={() => setActiveTab('subscription')} className="text-blue-600 font-black uppercase tracking-widest text-xs hover:bg-blue-50 py-6">
+                              <Lock className="h-4 w-4 mr-2" /> Upgrade to unlock Gallery
+                            </Button>
+                          </div>
+                        )}
                       </div>
 
-                      <div className="space-y-2">
-                        <Label>Video Links</Label>
-                        <Input
-                          placeholder="Video Link 1"
-                          value={formData.video_links?.[0] || ''}
-                          onChange={(e) => {
-                            const newLinks = [...(formData.video_links || [])];
-                            newLinks[0] = e.target.value;
-                            setFormData(prev => ({ ...prev, video_links: newLinks }));
-                          }}
-                          className="mb-2"
-                        />
-                        <Input
-                          placeholder="Video Link 2"
-                          value={formData.video_links?.[1] || ''}
-                          onChange={(e) => {
-                            const newLinks = [...(formData.video_links || [])];
-                            newLinks[1] = e.target.value;
-                            setFormData(prev => ({ ...prev, video_links: newLinks }));
-                          }}
-                        />
+                      <div className="space-y-2 relative">
+                        <div className="flex items-center justify-between">
+                          <Label>Video Links</Label>
+                          {!hasFeature('Video highlights') && (
+                            <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">PRO FEATURE</Badge>
+                          )}
+                        </div>
+                        <div className={!hasFeature('Video highlights') ? "opacity-50 pointer-events-none grayscale" : ""}>
+                          <Input
+                            placeholder="Video Link 1"
+                            value={formData.video_links?.[0] || ''}
+                            onChange={(e) => {
+                              const newLinks = [...(formData.video_links || [])];
+                              newLinks[0] = e.target.value;
+                              setFormData(prev => ({ ...prev, video_links: newLinks }));
+                            }}
+                            className="mb-2"
+                            disabled={!hasFeature('Video highlights')}
+                          />
+                          <Input
+                            placeholder="Video Link 2"
+                            value={formData.video_links?.[1] || ''}
+                            onChange={(e) => {
+                              const newLinks = [...(formData.video_links || [])];
+                              newLinks[1] = e.target.value;
+                              setFormData(prev => ({ ...prev, video_links: newLinks }));
+                            }}
+                            disabled={!hasFeature('Video highlights')}
+                          />
+                        </div>
+                        {!hasFeature('Video highlights') && (
+                          <div className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 backdrop-blur-[1px] flex items-center justify-center rounded-lg">
+                            <Button variant="ghost" size="sm" onClick={() => setActiveTab('subscription')} className="text-blue-600 font-bold hover:bg-blue-50">
+                              <Lock className="h-3 w-3 mr-1" /> Upgrade to add Videos
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </CardContent>
@@ -1298,55 +1342,98 @@ export default function PlayerDashboard() {
                 </div>
 
                 {(!currentPlan || currentPlan === 'free') && (
-                  <div className="max-w-md mx-auto mb-8">
-                    {/* Pro Plan */}
-                    <Card className="cursor-pointer transition-all hover:border-blue-500 hover:shadow-md flex flex-col relative overflow-hidden border-2 border-blue-100 dark:border-blue-900">
-                      <div className="absolute top-0 right-0 bg-blue-600 text-white text-xs px-2 py-1 font-bold">RECOMMENDED</div>
-                      <CardHeader className="text-center pb-2">
-                        <CardTitle className="text-2xl text-blue-900 dark:text-blue-100">Pro Plan</CardTitle>
-                        <div className="text-4xl font-bold text-blue-600 mt-2">$20</div>
-                        <p className="text-sm text-slate-500">One-time payment for lifetime access</p>
-                      </CardHeader>
-                      <CardContent className="flex-1 pt-4">
-                        <ul className="space-y-3 mb-6">
-                          <li className="flex items-center text-sm"><Check className="h-5 w-5 mr-3 text-green-500 flex-shrink-0" /> Unlimited profile updates</li>
-                          <li className="flex items-center text-sm"><Check className="h-5 w-5 mr-3 text-green-500 flex-shrink-0" /> Video highlights upload</li>
-                          <li className="flex items-center text-sm"><Check className="h-5 w-5 mr-3 text-green-500 flex-shrink-0" /> Direct messaging with scouts</li>
-                          <li className="flex items-center text-sm"><Check className="h-5 w-5 mr-3 text-green-500 flex-shrink-0" /> Priority support</li>
-                          <li className="flex items-center text-sm"><Check className="h-5 w-5 mr-3 text-green-500 flex-shrink-0" /> Verified player badge</li>
-                        </ul>
-                      </CardContent>
-                      <CardFooter>
-                        <Button 
-                          className="w-full h-12 text-lg bg-blue-600 hover:bg-blue-700 text-white shadow-lg" 
-                          onClick={() => openPaymentModal(plans[0] || { id: 'pro', name: 'Pro Plan', price: 20 })}
-                        >
-                          Get Pro Access
-                        </Button>
-                      </CardFooter>
-                    </Card>
+                  <div className={`grid grid-cols-1 ${plans.length > 1 ? 'md:grid-cols-2 lg:grid-cols-3' : 'max-w-md mx-auto'} gap-8 mb-8`}>
+                    {plans.length > 0 ? (
+                      [...plans]
+                        .sort((a, b) => parseFloat(a.price) - parseFloat(b.price))
+                        .map((plan) => {
+                          const isMostExpensive = parseFloat(plan.price) === Math.max(...plans.map(p => parseFloat(p.price)));
+                          return (
+                            <Card key={plan.id} className={`cursor-pointer transition-all hover:border-blue-500 hover:shadow-2xl flex flex-col relative overflow-hidden border-2 ${isMostExpensive ? 'border-blue-600 dark:border-blue-400 shadow-xl scale-105 z-10' : 'border-slate-100 dark:border-slate-800 shadow-sm'}`}>
+                              {isMostExpensive && (
+                                <div className="absolute top-0 right-0 bg-blue-600 text-white text-[10px] px-4 py-1.5 font-black uppercase tracking-widest rounded-bl-lg shadow-lg">RECOMMENDED</div>
+                              )}
+                              <CardHeader className="text-center pb-4 pt-8 bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+                                <CardTitle className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight">{plan.name}</CardTitle>
+                                <div className="flex items-center justify-center gap-1 mt-4">
+                                  <span className="text-2xl font-bold text-blue-600">$</span>
+                                  <span className="text-5xl font-black text-blue-600 tracking-tighter">{plan.price}</span>
+                                </div>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">{plan.billingCycle === 'one-time' || !plan.billingCycle ? 'Lifetime Billing' : `${plan.billingCycle} billing`}</p>
+                              </CardHeader>
+                              <CardContent className="flex-1 pt-8 px-6">
+                                <div className="space-y-4 mb-8">
+                                  {Array.isArray(plan.features) ? (
+                                    plan.features.map((feature: string, fIdx: number) => (
+                                      <div key={fIdx} className="flex items-start gap-3">
+                                        <div className="mt-0.5 h-5 w-5 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                                          <Check className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                                        </div>
+                                        <span className="text-sm font-bold text-slate-700 dark:text-slate-300 leading-tight">{feature}</span>
+                                      </div>
+                                    ))
+                                  ) : (
+                                    <p className="text-sm text-slate-500 italic">Plan features coming soon</p>
+                                  )}
+                                </div>
+                              </CardContent>
+                              <CardFooter className="pb-8 px-6 pt-2">
+                                <Button 
+                                  className={`w-full h-14 text-sm font-black uppercase tracking-widest transition-all duration-300 shadow-xl ${isMostExpensive ? 'bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white hover:scale-[1.02]' : 'bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800'}`}
+                                  onClick={() => openPaymentModal(plan)}
+                                >
+                                  {parseFloat(plan.price) === 0 ? 'Get Started' : `Get ${plan.name}`}
+                                </Button>
+                              </CardFooter>
+                            </Card>
+                          );
+                        })
+                    ) : (
+                      <div className="col-span-full py-12 text-center">
+                        <Loader2 className="h-10 w-10 animate-spin text-blue-600 mx-auto mb-4" />
+                        <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">Loading premium plans...</p>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {currentPlan && (
-                  <Card className={`${currentPlan === 'pro' ? 'bg-green-50 border-green-200' : 'bg-slate-50 border-slate-200'}`}>
-                    <CardContent className="pt-6">
-                      <div className="flex items-center gap-4">
-                        <div className={`h-12 w-12 rounded-full ${currentPlan === 'pro' ? 'bg-green-100' : 'bg-blue-100'} flex items-center justify-center`}>
-                          {currentPlan === 'pro' ? (
-                            <Check className="h-6 w-6 text-green-600" />
-                          ) : (
-                            <CreditCard className="h-6 w-6 text-blue-600" />
-                          )}
+                {currentPlan && currentPlan !== 'free' && (
+                  <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-lg relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-2 opacity-10">
+                      <Shield className="h-20 w-20 text-green-600" />
+                    </div>
+                    <CardContent className="pt-8 pb-8">
+                      <div className="flex items-center gap-6">
+                        <div className="h-16 w-16 rounded-2xl bg-green-500 flex items-center justify-center shadow-lg shadow-green-200">
+                          <Check className="h-8 w-8 text-white" />
                         </div>
                         <div>
-                          <h3 className={`text-lg font-medium ${currentPlan === 'pro' ? 'text-green-900' : 'text-slate-900'}`}>
-                            Current Status: {currentPlan.toUpperCase()}
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge className="bg-green-600 hover:bg-green-600 text-white font-black uppercase tracking-widest text-[10px]">ACTIVE SUBSCRIPTION</Badge>
+                          </div>
+                          <h3 className="text-2xl font-black text-slate-900 uppercase italic tracking-tight">
+                            {plans.find(p => p.id === currentPlan)?.name || 'PREMIUM'} PLAN
                           </h3>
-                          <p className={currentPlan === 'pro' ? 'text-green-700' : 'text-slate-600'}>
-                            {currentPlan === 'pro' 
-                              ? "You have full access to all premium features." 
-                              : "You are currently on the Free plan. Upgrade below to unlock premium features."}
+                          <p className="text-green-700 font-medium">
+                            You have full access to all professional features and scouting tools.
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {currentPlan === 'free' && (
+                  <Card className="bg-slate-50 border-slate-200 border-dashed">
+                    <CardContent className="pt-6 pb-6">
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 rounded-xl bg-slate-200 flex items-center justify-center">
+                          <Clock className="h-6 w-6 text-slate-500" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-bold text-slate-900 uppercase">Current Status: FREE</h3>
+                          <p className="text-slate-600">
+                            Upgrade below to unlock verified badges and direct scouting access.
                           </p>
                         </div>
                       </div>
@@ -1390,9 +1477,12 @@ export default function PlayerDashboard() {
                       </div>
                       <Button
                         className="w-full h-12 text-md font-semibold bg-blue-600 hover:bg-blue-700 transition-all shadow-md"
-                        onClick={currentPlan === 'pro' ? generatePDF : () => setActiveTab('subscription')}
+                        onClick={hasFeature('Unlimited profile updates') || hasFeature('Elite') ? generatePDF : () => {
+                           toast.info("PDF Generation is a Pro feature. Please upgrade your plan.");
+                           setActiveTab('subscription');
+                        }}
                       >
-                        {currentPlan === 'pro' ? (
+                        {hasFeature('Unlimited profile updates') || hasFeature('Elite') ? (
                           <>
                             <Download className="mr-2 h-5 w-5" />
                             Generate & Download

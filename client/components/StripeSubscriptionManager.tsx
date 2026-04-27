@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
+import { Api } from '@/lib/api';
 import StripePaymentForm from './StripePaymentForm';
 import { formatCurrency } from '@/lib/stripe';
 
@@ -49,16 +50,8 @@ const StripeSubscriptionManager: React.FC<SubscriptionManagerProps> = ({
 
   const fetchSubscriptionStatus = async () => {
     try {
-      const response = await fetch('/api/stripe/subscription-status', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      
-      if (response.ok) {
-        const data = await response.json();
-        setSubscriptionStatus(data.data);
-      }
+      const data = await Api.get<any>('/stripe/subscription-status');
+      setSubscriptionStatus(data.data);
     } catch (error) {
       console.error('Error fetching subscription status:', error);
     }
@@ -70,18 +63,9 @@ const StripeSubscriptionManager: React.FC<SubscriptionManagerProps> = ({
 
     try {
       // Create subscription and get client secret
-      const response = await fetch('/api/stripe/create-subscription', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          planId: plan.id
-        })
+      const data = await Api.post<any>('/stripe/create-subscription', {
+        planId: plan.id
       });
-
-      const data = await response.json();
 
       if (data.success) {
         if (data.data.clientSecret) {
@@ -103,16 +87,7 @@ const StripeSubscriptionManager: React.FC<SubscriptionManagerProps> = ({
   const createSubscription = async (planId: string) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/stripe/create-subscription', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ planId })
-      });
-
-      const data = await response.json();
+      const data = await Api.post<any>('/stripe/create-subscription', { planId });
 
       if (data.success) {
         toast.success('Subscription created successfully!');
@@ -132,16 +107,7 @@ const StripeSubscriptionManager: React.FC<SubscriptionManagerProps> = ({
   const handleUpgrade = async (newPlanId: string) => {
     setLoading(true);
     try {
-      const response = await fetch('/api/stripe/upgrade-subscription', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ newPlanId })
-      });
-
-      const data = await response.json();
+      const data = await Api.post<any>('/stripe/upgrade-subscription', { newPlanId });
 
       if (data.success) {
         toast.success('Subscription upgraded successfully!');
@@ -167,16 +133,7 @@ const StripeSubscriptionManager: React.FC<SubscriptionManagerProps> = ({
 
     setLoading(true);
     try {
-      const response = await fetch('/api/stripe/cancel-subscription', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ immediately })
-      });
-
-      const data = await response.json();
+      const data = await Api.post<any>('/stripe/cancel-subscription', { immediately });
 
       if (data.success) {
         toast.success(data.message);

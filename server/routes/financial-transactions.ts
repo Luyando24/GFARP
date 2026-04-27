@@ -162,7 +162,7 @@ const handleGetSummary: RequestHandler = async (req, res) => {
       ) as combined
       GROUP BY month, transaction_type
       ORDER BY month
-    `, [academyId, year]);
+    `, [academyId, year as any]);
 
     const monthlyBreakdown = monthlyResult.rows.map((row: any) => ({
       month: Number(row.month),
@@ -200,7 +200,7 @@ const handleGetBudgetCategories: RequestHandler = async (req, res) => {
       SELECT * FROM budget_categories 
       WHERE academy_id = $1 AND fiscal_year = $2 AND is_active = true
       ORDER BY category_type, category_name
-    `, [academyId, year]);
+    `, [academyId, year as any]);
 
     res.json({
       success: true,

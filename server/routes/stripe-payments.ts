@@ -162,9 +162,12 @@ router.post('/create-checkout-session', authenticateToken, (async (req, res) => 
       customer: customerId,
       payment_method_types: ['card'],
       line_items: [
-        {
+        plan.stripe_price_id ? {
+          price: plan.stripe_price_id,
+          quantity: 1,
+        } : {
           price_data: {
-            currency: 'usd',
+            currency: plan.currency?.toLowerCase() || 'usd',
             product_data: {
               name: `${plan.name} Plan (${billingCycle})`,
               description: promoCodeId ? `Includes discount` : undefined,

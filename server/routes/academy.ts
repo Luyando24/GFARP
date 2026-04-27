@@ -14,7 +14,7 @@ const decrypt = (value: any) => {
         return value.toString('utf8');
     }
     if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
-        return Buffer.from(value).toString('utf8');
+        return Buffer.from(value as ArrayBuffer).toString('utf8');
     }
     if (typeof value === 'string') return value;
     return String(value);
@@ -229,7 +229,17 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
       [id]
     );
 
-    const decryptedPlayers = playersResult.rows.map(p => ({
+    interface PlayerRow {
+        id: string;
+        first_name_cipher: any;
+        last_name_cipher: any;
+        position: string;
+        registrationDate?: string;
+        createdAt?: string;
+        [key: string]: any;
+    }
+
+    const decryptedPlayers = (playersResult.rows as PlayerRow[]).map(p => ({
         ...p,
         firstName: decrypt(p.first_name_cipher),
         lastName: decrypt(p.last_name_cipher),

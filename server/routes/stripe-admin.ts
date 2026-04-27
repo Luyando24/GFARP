@@ -257,13 +257,17 @@ router.get('/settings', (async (req, res) => {
       map[row.key] = { value: row.value, is_secret: row.is_secret };
     }
 
-    const secretKey = map['stripe.secret_key']?.value || null;
-    const webhookSecret = map['stripe.webhook_secret']?.value || null;
+    // Check database first, then environment variables
+    const secretKey = map['stripe.secret_key']?.value || process.env.STRIPE_SECRET_KEY || null;
+    const webhookSecret = map['stripe.webhook_secret']?.value || process.env.STRIPE_WEBHOOK_SECRET || null;
+    
+    const isFromEnv = !map['stripe.secret_key']?.value && !!process.env.STRIPE_SECRET_KEY;
     const mode = secretKey?.startsWith('sk_live_') ? 'live' : (secretKey?.startsWith('sk_test_') ? 'test' : null);
 
     res.json({
       secret_key_set: !!secretKey,
       webhook_secret_set: !!webhookSecret,
+      is_env_config: isFromEnv,
       mode,
     });
   } catch (error: any) {

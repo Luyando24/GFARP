@@ -3,6 +3,41 @@ import { query, transaction } from '../lib/db.js';
 
 const router = express.Router();
 
+// Get notifications for a specific user (used by NotificationsPopover)
+router.get('/list', (async (req, res) => {
+  try {
+    const userId = req.query.userId || (req as any).user?.id;
+
+    if (!userId) {
+      return res.status(400).json({ error: 'User ID is required' });
+    }
+
+    const sql = `
+      SELECT 
+        n.id,
+        un.id as "userNotificationId",
+        n.title,
+        n.message,
+        n.type,
+        n.category,
+        n.action_url as "actionUrl",
+        CASE WHEN un.read_at IS NOT NULL THEN true ELSE false END as read,
+        n.created_at as "createdAt"
+      FROM notifications n
+      JOIN user_notifications un ON n.id = un.notification_id
+      WHERE un.user_id = $1
+      ORDER BY n.created_at DESC
+      LIMIT 50
+    `;
+
+    const { rows } = await query(sql, [userId]);
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Error fetching notification list:', error);
+    res.status(500).json({ error: 'Failed to fetch notifications' });
+  }
+}) as RequestHandler);
+
 // Get all notifications (with filtering options)
 router.get('/', (async (req, res) => {
   try {
@@ -86,6 +121,33 @@ router.get('/:id', (async (req, res) => {
   } catch (error) {
     console.error('Error fetching notification:', error);
     res.status(500).json({ error: 'Failed to fetch notification' });
+  }
+}) as RequestHandler);
+
+// Mark notification as read by userNotificationId
+router.post('/mark-read', (async (req, res) => {
+  try {
+    const { userNotificationId } = req.body;
+    if (!userNotificationId) {
+      return res.status(400).json({ error: 'User Notification ID is required' });
+    }
+
+    const sql = `
+      UPDATE user_notifications
+      SET read = true, read_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `;
+
+    const { rows } = await query(sql, [userNotificationId]);
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'Notification record not found' });
+    }
+
+    res.json({ success: true, data: rows[0] });
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+    res.status(500).json({ error: 'Failed to mark notification as read' });
   }
 }) as RequestHandler);
 

@@ -4,36 +4,77 @@ import { uploadMiddleware } from './player-documents.js';
 import { supabase } from '../lib/supabase.js';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
+import { authenticateToken } from '../middleware/auth.js';
 
 const router = Router();
+
+// Apply authentication to all compliance routes
+router.use(authenticateToken);
 
 // GET /api/compliance-documents?academyId=...
 router.get('/', async (req, res) => {
   try {
-    const { academyId } = req.query;
+    let { academyId } = req.query;
+    const user = (req as any).user;
+    const userRole = user?.role?.toUpperCase();
+
+    // Security & Session Pick-up:
+    // 1. If user is a direct academy/agency admin, user.id is the target organization ID
+    // 2. If user is a staff member, we must look up their academy_id from staff_users
+    // 3. System admins can specify any academyId in the query
+    if (userRole === 'ACADEMY_ADMIN' || userRole === 'AGENCY_ADMIN') {
+        academyId = user.id;
+        console.log(`[COMPLIANCE] Using direct OrgAdmin ID: ${academyId} (Role: ${userRole})`);
+    } else if (user && userRole !== 'ADMIN' && userRole !== 'SUPERADMIN') {
+        const staffRes = await query('SELECT academy_id FROM staff_users WHERE id = $1', [user.id]);
+        if (staffRes.rows.length > 0 && staffRes.rows[0].academy_id) {
+            academyId = staffRes.rows[0].academy_id;
+            console.log(`[COMPLIANCE] Using staff-linked academyId: ${academyId} for user: ${user.id}`);
+        }
+    }
 
     if (!academyId) {
-      return res.status(400).json({ success: false, message: 'Academy ID is required' });
+        return res.status(400).json({ success: false, message: 'Academy ID is required or session is invalid' });
     }
+
+    // Check if organization exists first (either academy or agency) to avoid FK violations
+    const academyCheck = await query('SELECT id FROM academies WHERE id = $1', [academyId as string]);
+    const agencyCheck = academyCheck.rows.length === 0 
+        ? await query('SELECT id FROM agencies WHERE id = $1', [academyId as string])
+        : { rows: [] };
+
+    if (academyCheck.rows.length === 0 && agencyCheck.rows.length === 0) {
+      return res.status(404).json({ 
+        success: false, 
+        message: `Organization with ID ${academyId} not found. Please log out and log in again.` 
+      });
+    }
+
 
     // Find/Create compliance record
     let complianceId;
-    const complianceResult = await query(
-      `SELECT id FROM fifa_compliance WHERE academy_id = $1 AND compliance_type = 'general' LIMIT 1`,
-      [academyId]
-    );
-    
-    if (complianceResult.rows.length > 0) {
-      complianceId = complianceResult.rows[0].id;
-    } else {
-      // Create default compliance record
-      const newComp = await query(
-        `INSERT INTO fifa_compliance (academy_id, compliance_type, title, description, status)
-         VALUES ($1, 'general', 'General FIFA Compliance', 'Standard compliance requirements', 'pending')
-         RETURNING id`,
-        [academyId]
+    try {
+      const complianceResult = await query(
+        `SELECT id FROM fifa_compliance WHERE academy_id = $1 AND compliance_type = 'general' LIMIT 1`,
+        [academyId as string]
       );
-      complianceId = newComp.rows[0].id;
+      
+      if (complianceResult.rows.length > 0) {
+        complianceId = complianceResult.rows[0].id;
+      } else {
+        // Create default compliance record
+        console.log(`Creating default compliance record for academy: ${academyId}`);
+        const newComp = await query(
+          `INSERT INTO fifa_compliance (academy_id, compliance_type, title, description, status)
+           VALUES ($1, 'general', 'General FIFA Compliance', 'Standard compliance requirements', 'pending')
+           RETURNING id`,
+          [academyId as string]
+        );
+        complianceId = newComp.rows[0].id;
+      }
+    } catch (dbError) {
+      console.error('Database error in compliance-documents GET:', dbError);
+      return res.status(500).json({ success: false, message: 'Database error', details: (dbError as Error).message });
     }
 
     const result = await query(
@@ -43,20 +84,26 @@ router.get('/', async (req, res) => {
     
     // Transform result to include public URL
     const documents = result.rows.map(doc => {
-        const { data: urlData } = supabase.storage
-            .from('compliance-documents')
-            .getPublicUrl(doc.file_path);
+        let publicUrl = '';
+        try {
+          const { data: urlData } = supabase.storage
+              .from('compliance-documents')
+              .getPublicUrl(doc.file_path);
+          publicUrl = urlData?.publicUrl || '';
+        } catch (storageError) {
+          console.error('Error getting public URL:', storageError);
+        }
         
         return {
             ...doc,
-            fileUrl: urlData.publicUrl
+            fileUrl: publicUrl
         };
     });
 
     res.json({ success: true, data: documents });
   } catch (error) {
     console.error('Error fetching compliance documents:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch documents' });
+    res.status(500).json({ success: false, message: 'Failed to fetch documents', error: (error as Error).message });
   }
 });
 
@@ -122,7 +169,7 @@ router.post('/upload', uploadMiddleware, async (req, res) => {
         filePath, 
         file.size, 
         file.mimetype, 
-        'academy_admin', 
+        academyId, // academyId is a valid UUID
         expiry_date || null,
         description || ''
       ]
@@ -218,6 +265,68 @@ router.delete('/:id', async (req, res) => {
         res.json({ success: true, message: 'Document deleted' });
     } catch (error) {
         res.status(500).json({ success: false, message: 'Error deleting document' });
+    }
+});
+
+// GET /api/compliance-documents/admin-list - List all compliance documents for admin review
+router.get('/admin-list', async (req, res) => {
+    try {
+        const result = await query(`
+            SELECT fcd.*, a.name as academy_name, fc.academy_id
+            FROM fifa_compliance_documents fcd
+            JOIN fifa_compliance fc ON fcd.compliance_id = fc.id
+            JOIN academies a ON fc.academy_id = a.id
+            ORDER BY fcd.upload_date DESC
+        `);
+        
+        // Transform result to include public URL
+        const documents = result.rows.map(doc => {
+            const { data: urlData } = supabase.storage
+                .from('compliance-documents')
+                .getPublicUrl(doc.file_path);
+            
+            return {
+                ...doc,
+                fileUrl: urlData.publicUrl
+            };
+        });
+
+        res.json({ success: true, data: documents });
+    } catch (error) {
+        console.error('Error fetching admin compliance list:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch documents' });
+    }
+});
+
+// GET /api/compliance-documents/stats - Get compliance statistics for admin dashboard
+router.get('/stats', async (req, res) => {
+    try {
+        const stats = await query(`
+            SELECT 
+                COUNT(*) as total_documents,
+                COUNT(*) FILTER (WHERE status = 'pending') as pending_count,
+                COUNT(*) FILTER (WHERE status = 'verified') as verified_count,
+                COUNT(*) FILTER (WHERE status = 'rejected') as rejected_count
+            FROM fifa_compliance_documents
+        `);
+        
+        const academyStats = await query(`
+            SELECT 
+                COUNT(DISTINCT academy_id) as total_academies,
+                COUNT(DISTINCT academy_id) FILTER (WHERE status = 'verified') as compliant_academies
+            FROM fifa_compliance
+        `);
+
+        res.json({ 
+            success: true, 
+            data: {
+                ...stats.rows[0],
+                ...academyStats.rows[0]
+            }
+        });
+    } catch (error) {
+        console.error('Error fetching compliance stats:', error);
+        res.status(500).json({ success: false, message: 'Failed to fetch statistics' });
     }
 });
 

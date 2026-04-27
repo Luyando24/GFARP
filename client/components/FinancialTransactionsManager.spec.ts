@@ -17,12 +17,13 @@ vi.mock("../lib/api", () => ({
 describe("Budget Management API", () => {
   const mockAcademyId = "test-academy-123";
   const mockBudgetCategory = {
-    id: "budget-1",
+    id: 1,
     academy_id: mockAcademyId,
     category_name: "Training Equipment",
     description: "Equipment for player training",
     category_type: "expense" as const,
-    budgeted_amount: "5000.00",
+    budgeted_amount: 5000.00,
+    period_type: "monthly" as const,
     fiscal_year: 2024,
     is_active: true,
     created_at: "2024-01-01T00:00:00Z",
@@ -59,7 +60,8 @@ describe("Budget Management API", () => {
         category_name: "New Equipment",
         description: "New training equipment",
         category_type: "expense" as const,
-        budgeted_amount: "3000.00",
+        budgeted_amount: 3000.00,
+        period_type: "monthly" as const,
         fiscal_year: 2024,
         is_active: true
       };
@@ -67,14 +69,14 @@ describe("Budget Management API", () => {
       (createBudgetCategory as any).mockResolvedValue({
         ...mockBudgetCategory,
         ...newCategory,
-        id: "budget-2"
+        id: 2
       });
 
       const result = await createBudgetCategory(mockAcademyId, newCategory);
 
       expect(createBudgetCategory).toHaveBeenCalledWith(mockAcademyId, newCategory);
-      expect(result.category_name).toBe(newCategory.category_name);
-      expect(result.budgeted_amount).toBe(newCategory.budgeted_amount);
+      expect((result as any).category_name).toBe(newCategory.category_name);
+      expect((result as any).budgeted_amount).toBe(newCategory.budgeted_amount);
     });
 
     it("should handle validation errors", async () => {
@@ -91,7 +93,7 @@ describe("Budget Management API", () => {
         new Error("Validation failed: Category name is required")
       );
 
-      await expect(createBudgetCategory(mockAcademyId, invalidCategory))
+      await expect(createBudgetCategory(mockAcademyId, invalidCategory as any))
         .rejects.toThrow("Validation failed");
     });
   });
@@ -100,7 +102,7 @@ describe("Budget Management API", () => {
     it("should update an existing budget category", async () => {
       const updates = {
         category_name: "Updated Equipment",
-        budgeted_amount: "6000.00"
+        budgeted_amount: 6000.00
       };
 
       const updatedCategory = {
@@ -114,8 +116,8 @@ describe("Budget Management API", () => {
       const result = await updateBudgetCategory(mockBudgetCategory.id, updates);
 
       expect(updateBudgetCategory).toHaveBeenCalledWith(mockBudgetCategory.id, updates);
-      expect(result.category_name).toBe(updates.category_name);
-      expect(result.budgeted_amount).toBe(updates.budgeted_amount);
+      expect((result as any).category_name).toBe(updates.category_name);
+      expect((result as any).budgeted_amount).toBe(updates.budgeted_amount);
     });
 
     it("should handle non-existent category", async () => {
@@ -123,7 +125,7 @@ describe("Budget Management API", () => {
         new Error("Budget category not found")
       );
 
-      await expect(updateBudgetCategory("non-existent", {}))
+      await expect(updateBudgetCategory(999, {}))
         .rejects.toThrow("Budget category not found");
     });
   });
@@ -142,7 +144,7 @@ describe("Budget Management API", () => {
         new Error("Budget category not found")
       );
 
-      await expect(deleteBudgetCategory("non-existent"))
+      await expect(deleteBudgetCategory(999))
         .rejects.toThrow("Budget category not found");
     });
   });
@@ -177,7 +179,8 @@ describe("Budget Form Validation", () => {
         category_name: "Training Equipment",
         description: "Equipment for training",
         category_type: "expense",
-        budgeted_amount: "5000.00",
+        budgeted_amount: 5000.00,
+        period_type: "monthly",
         fiscal_year: 2024,
         is_active: true
       };
@@ -190,7 +193,7 @@ describe("Budget Form Validation", () => {
     it("should reject empty category name", () => {
       const invalidForm = {
         category_name: "",
-        budgeted_amount: "5000.00",
+        budgeted_amount: 5000.00,
         fiscal_year: 2024
       };
 
@@ -202,7 +205,7 @@ describe("Budget Form Validation", () => {
     it("should reject zero or negative budgeted amount", () => {
       const invalidForm = {
         category_name: "Test Category",
-        budgeted_amount: "0",
+        budgeted_amount: 0,
         fiscal_year: 2024
       };
 
@@ -214,7 +217,7 @@ describe("Budget Form Validation", () => {
     it("should reject invalid fiscal year", () => {
       const invalidForm = {
         category_name: "Test Category",
-        budgeted_amount: "5000.00",
+        budgeted_amount: 5000.00,
         fiscal_year: 2019 // Too early
       };
 
@@ -226,7 +229,7 @@ describe("Budget Form Validation", () => {
     it("should handle multiple validation errors", () => {
       const invalidForm = {
         category_name: "",
-        budgeted_amount: "-100",
+        budgeted_amount: -100,
         fiscal_year: 2040
       };
 

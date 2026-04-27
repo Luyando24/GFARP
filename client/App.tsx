@@ -13,11 +13,14 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import AuthLogin from "./pages/AuthLogin";
 import AdminLogin from "./pages/AdminLogin";
+import LoginPortal from "./pages/LoginPortal";
+import AgencyLogin from "./pages/AgencyLogin";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Shop from "./pages/Shop";
 import RegisterAcademy from "./pages/RegisterAcademy";
+import RegisterAgency from "./pages/RegisterAgency";
 import CompleteProfile from "./pages/CompleteProfile";
 import AcademyDashboard from "./pages/AcademyDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
@@ -98,6 +101,8 @@ const App = () => {
               <Route path="/admin/login" element={<AdminLogin />} />
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/portal" element={<LoginPortal />} />
+              <Route path="/agency/login" element={<AgencyLogin />} />
               <Route path="/reset-password" element={<ResetPassword />} />
 
               {/* Temporary Setup Route */}
@@ -105,6 +110,8 @@ const App = () => {
 
               {/* Academy Registration - Public route */}
               <Route path="/academy-registration" element={<RegisterAcademy />} />
+              {/* Agency Registration - Public route */}
+              <Route path="/agency-registration" element={<RegisterAgency />} />
               <Route path="/verify-email" element={<VerifyEmail />} />
               <Route path="/verification-pending" element={<VerificationPending />} />
               <Route path="/complete-profile" element={<CompleteProfile />} />
@@ -128,8 +135,8 @@ const App = () => {
                 <Route path="/player/dashboard" element={<PlayerDashboard />} />
               </Route>
 
-              {/* Academy Dashboard - Protected route requiring authentication */}
-              <Route element={<ProtectedRoute allowedRoles={["academy"]} />}>
+              {/* Academy & Agency Dashboard - Protected route requiring authentication */}
+              <Route element={<ProtectedRoute allowedRoles={["academy", "agency_admin"]} />}>
                 <Route path="/academy-dashboard" element={<AcademyDashboard />} />
                 <Route path="/academy-dashboard/player-details/:id" element={<PlayerDetails />} />
               </Route>

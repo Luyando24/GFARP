@@ -6,6 +6,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { CreditCard, Wallet, DollarSign, Loader2, CheckCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
+import { Api } from '@/lib/api';
 
 interface PaymentMethodSelectorProps {
   isOpen: boolean;
@@ -39,12 +40,9 @@ export default function PaymentMethodSelector({
     
     setValidatingPromo(true);
     try {
-      const res = await fetch('/api/admin/discounts/validate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: promoCode })
+      const data = await Api.post<{ success: boolean; data: any; message?: string }>('/admin/discounts/validate', {
+        code: promoCode
       });
-      const data = await res.json();
       
       if (data.success) {
         setAppliedDiscount({
@@ -92,22 +90,13 @@ export default function PaymentMethodSelector({
     setIsProcessing(true);
     try {
       if (paymentMethod === 'CARD') {
-        const response = await fetch('/api/subscriptions/upgrade', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
+        const result = await Api.post<{ success: boolean; url?: string; message?: string }>('/subscriptions/upgrade', {
           academyId,
           newPlanId: selectedPlan.id,
           paymentMethod,
           paymentReference: 'DASHBOARD_UPGRADE',
           notes: `Upgraded to ${selectedPlan.name} plan`
-        }),
-      });
-
-        const result = await response.json();
+        });
 
         if (result.success && result.url) {
           // Redirect to Stripe Checkout

@@ -4,38 +4,32 @@ import { query } from '../lib/db.js';
 // Get Academy Profile
 export async function handleGetAcademyProfile(req: Request, res: Response) {
   try {
-    const academyId = (req as any).user.id;
+    const orgId = (req as any).user.id;
+    const role = (req as any).user.role;
+    const isAgency = role === 'AGENCY_ADMIN';
+    const table = isAgency ? 'agencies' : 'academies';
     
-    // Fetch academy details
-    // We select columns that exist in the football-auth.ts schema
-    // and alias them to match the expected response structure
-    const academyResult = await query(
-      `SELECT id, name, email, director_name as contact_person, phone, address, 
-              district as city, province as country, 
-              founded_year, website, 
-              status, storage_used, created_at 
-       FROM academies WHERE id = $1`,
-      [academyId]
-    );
+    // Fetch organization details
+    const orgQuery = isAgency 
+      ? `SELECT id, name, email, phone, address, city, country, website, bio as description, logo_url as logo, status, created_at FROM agencies WHERE id = $1`
+      : `SELECT id, name, email, director_name as contact_person, phone, address, district as city, province as country, founded_year, website, status, storage_used, created_at FROM academies WHERE id = $1`;
 
-    if (academyResult.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'Academy not found'
-      });
-    }
+    const orgResult = await query(orgQuery, [orgId]);
 
-    const academy = academyResult.rows[0];
+    const org = orgResult.rows[0];
 
     // Fetch active subscription
+    const subTable = isAgency ? 'agency_subscriptions' : 'academy_subscriptions';
+    const idColumn = isAgency ? 'agency_id' : 'academy_id';
+    
     const subResult = await query(
       `SELECT sp.name, sp.player_limit, sp.storage_limit, 
-              asub.status, asub.end_date, asub.auto_renew
-       FROM academy_subscriptions asub
-       JOIN subscription_plans sp ON asub.plan_id = sp.id
-       WHERE asub.academy_id = $1 AND asub.status = 'ACTIVE'
-       ORDER BY asub.created_at DESC LIMIT 1`,
-      [academyId]
+              s.status, s.end_date, s.auto_renew
+       FROM ${subTable} s
+       JOIN subscription_plans p ON s.plan_id = p.id
+       WHERE s.${idColumn} = $1 AND s.status = 'ACTIVE'
+       ORDER BY s.created_at DESC LIMIT 1`,
+      [orgId]
     );
 
     const currentSubscription = subResult.rows[0] || null;
@@ -46,8 +40,8 @@ export async function handleGetAcademyProfile(req: Request, res: Response) {
       const pResult = await query(
         `SELECT COUNT(*) as total, 
                 COUNT(CASE WHEN is_active = true THEN 1 END) as active 
-         FROM players WHERE academy_id = $1`, 
-        [academyId]
+         FROM players WHERE ${idColumn} = $1`, 
+        [orgId]
       );
       if (pResult.rows.length > 0) {
         playerStats = { 
@@ -62,35 +56,38 @@ export async function handleGetAcademyProfile(req: Request, res: Response) {
     let docCount = 0;
     try {
       const dResult = await query(
-        `SELECT COUNT(*) as total FROM documents WHERE academy_id = $1`,
-        [academyId]
+        `SELECT COUNT(*) as total FROM documents WHERE ${idColumn} = $1`,
+        [orgId]
       );
       if (dResult.rows.length > 0) docCount = parseInt(dResult.rows[0].total);
     } catch (e) {
       // ignore
     }
 
+    const profileData = {
+      id: org.id,
+      name: org.name,
+      email: org.email,
+      contactPerson: org.contact_person || null, 
+      phone: org.phone,
+      address: org.address,
+      city: org.city,
+      country: org.country,
+      licenseNumber: null, 
+      foundedYear: org.founded_year || null,
+      website: org.website,
+      description: org.description || null,
+      logo: org.logo || null,
+      isVerified: org.status === 'active',
+      storageUsed: parseInt(org.storage_used || '0'),
+      createdAt: org.created_at
+    };
+
     res.json({
       success: true,
       data: {
-        academy: {
-          id: academy.id,
-          name: academy.name,
-          email: academy.email,
-          contactPerson: academy.contact_person, 
-          phone: academy.phone,
-          address: academy.address,
-          city: academy.city,
-          country: academy.country,
-          licenseNumber: null, // Not in schema
-          foundedYear: academy.founded_year,
-          website: academy.website,
-          description: null, // Not in schema
-          logo: null, // Not in schema
-          isVerified: academy.status === 'active', // Best guess mapping
-          storageUsed: parseInt(academy.storage_used || '0'),
-          createdAt: academy.created_at
-        },
+        organization: profileData,
+        academy: profileData, // Aliased for backward compatibility
         subscription: currentSubscription ? {
           plan: currentSubscription.name,
           status: currentSubscription.status,
@@ -103,7 +100,7 @@ export async function handleGetAcademyProfile(req: Request, res: Response) {
           totalPlayers: playerStats.total,
           activePlayers: playerStats.active,
           totalDocuments: docCount,
-          storageUsedMB: Math.round(parseInt(academy.storage_used || '0') / (1024 * 1024))
+          storageUsedMB: Math.round(parseInt(org.storage_used || '0') / (1024 * 1024))
         },
         recentActivities: [] // Placeholder for now
       }
@@ -121,7 +118,11 @@ export async function handleGetAcademyProfile(req: Request, res: Response) {
 // Update Academy Profile
 export async function handleUpdateAcademyProfile(req: Request, res: Response) {
   try {
-    const academyId = (req as any).user.id;
+    const orgId = (req as any).user.id;
+    const role = (req as any).user.role;
+    const isAgency = role === 'AGENCY_ADMIN';
+    const table = isAgency ? 'agencies' : 'academies';
+
     const {
       name,
       contactPerson,
@@ -138,7 +139,7 @@ export async function handleUpdateAcademyProfile(req: Request, res: Response) {
 
     // Build dynamic update query
     const updates: string[] = [];
-    const values: any[] = [academyId];
+    const values: any[] = [orgId];
     let paramIndex = 2;
 
     if (name) { updates.push(`name = $${paramIndex++}`); values.push(name); }
@@ -153,6 +154,9 @@ export async function handleUpdateAcademyProfile(req: Request, res: Response) {
     if (description) { updates.push(`description = $${paramIndex++}`); values.push(description); }
     if (logo) { updates.push(`logo = $${paramIndex++}`); values.push(logo); }
     
+    if (isAgency && description) { updates.push(`bio = $${paramIndex++}`); values.push(description); }
+    if (isAgency && logo) { updates.push(`logo_url = $${paramIndex++}`); values.push(logo); }
+    
     updates.push(`updated_at = NOW()`);
 
     if (updates.length === 1) { // Only updated_at
@@ -163,7 +167,7 @@ export async function handleUpdateAcademyProfile(req: Request, res: Response) {
     }
 
     const result = await query(
-      `UPDATE academies SET ${updates.join(', ')} WHERE id = $1 RETURNING *`,
+      `UPDATE ${table} SET ${updates.join(', ')} WHERE id = $1 RETURNING *`,
       values
     );
 

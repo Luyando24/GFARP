@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({
-  redirectPath = "/login",
+  redirectPath = "/portal",
   allowedRoles,
 }: ProtectedRouteProps) => {
   const { session } = useAuth();
@@ -27,6 +27,8 @@ export const ProtectedRoute = ({
       case "admin":
         return <Navigate to="/dashboard" replace />;
       case "academy":
+        return <Navigate to="/academy-dashboard" replace />;
+      case "agency_admin":
         return <Navigate to="/academy-dashboard" replace />;
       case "individual_player":
         return <Navigate to="/player/dashboard" replace />;

@@ -11,8 +11,9 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle, CardFooter, CardDescription } from "@/components/ui/card";
+import { Api } from '@/lib/api';
+import { Badge } from "@/components/ui/badge";
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -52,7 +53,7 @@ export default function BlogEditor() {
     const { id } = useParams();
     const navigate = useNavigate();
     const { toast } = useToast();
-    const { user } = useAuth();
+    const { session: user } = useAuth();
     
     const [isLoading, setIsLoading] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -118,7 +119,7 @@ export default function BlogEditor() {
 
     const handleLogout = () => {
         clearSession();
-        navigate('/admin/login');
+        navigate('/portal');
     };
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -150,15 +151,7 @@ export default function BlogEditor() {
             formData.append('file', file);
             formData.append('folder', 'blog-images');
 
-            const response = await fetch('/api/uploads', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('football-auth-token')}`
-                },
-                body: formData
-            });
-
-            const result = await response.json();
+            const result = await Api.post<any>('/uploads', formData);
 
             if (result.success) {
                 setFormData(prev => ({ ...prev, image_url: result.data.url }));
@@ -197,7 +190,7 @@ export default function BlogEditor() {
 
         setIsSaving(true);
         try {
-            const url = id ? `/api/blogs/${id}` : '/api/blogs';
+            const url = id ? `/blogs/${id}` : '/blogs';
             const method = id ? 'PUT' : 'POST';
             
             const payload = {
@@ -205,18 +198,11 @@ export default function BlogEditor() {
                 tags: formData.tags.split(',').map(t => t.trim()).filter(t => t)
             };
 
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('football-auth-token')}`
-                },
-                body: JSON.stringify(payload)
-            });
+            const result = method === 'PUT' 
+                ? await Api.put<any>(url, payload)
+                : await Api.post<any>(url, payload);
 
-            const result = await response.json();
-
-            if (response.ok) {
+            if (result.success || result.id) {
                 toast({ 
                     title: "Success", 
                     description: `Blog post ${id ? 'updated' : 'created'} successfully` 

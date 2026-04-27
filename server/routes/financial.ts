@@ -99,7 +99,7 @@ const handleGetSummary: RequestHandler = async (req, res) => {
 const handleGetTransactions: RequestHandler = async (req, res) => {
     try {
         const { page = 1, limit = 10 } = req.query;
-        const academyId = req.params.academyId || req.query.academyId;
+        const academyId = (req.params.academyId || req.query.academyId) as string;
         
         if (!academyId) {
             return res.status(400).json({ success: false, message: 'Academy ID is required' });

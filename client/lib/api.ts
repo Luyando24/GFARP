@@ -49,6 +49,8 @@ export interface Player {
   emergencyPhone?: string;
   height?: number;
   weight?: number;
+  isActive?: boolean;
+  jerseyNumber?: string;
 }
 
 // Transfer types
@@ -77,33 +79,46 @@ export interface Transfer {
   approved_by?: string;
   created_at: string;
   updated_at: string;
+  academyId?: string;
+  createdBy?: string;
 }
 
 // Subscription types
 export interface SubscriptionPlan {
   id: string;
   name: string;
+  description?: string;
   price: number;
-  billing_cycle: 'MONTHLY' | 'YEARLY';
+  currency: string;
+  billingCycle: 'MONTHLY' | 'YEARLY' | 'LIFETIME' | 'month' | 'year';
+  playerLimit: number;
   features: string[];
-  player_limit: number;
-  stripe_price_id: string;
+  isActive: boolean;
+  isFree: boolean;
+  sortOrder: number;
+  stripe_price_id?: string;
+  billing_cycle?: 'MONTHLY' | 'YEARLY';
+  player_limit?: number;
 }
 
 export interface Subscription {
   id: string;
-  academy_id: string;
-  plan_id: string;
-  stripe_subscription_id: string;
-  status: 'ACTIVE' | 'CANCELLED' | 'PAST_DUE' | 'TRIALING';
-  start_date: string;
-  end_date: string;
-  auto_renew: boolean;
-  created_at: string;
-  updated_at: string;
+  academy_id?: string;
+  plan_id?: string;
+  stripe_subscription_id?: string;
+  status: 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED' | 'SUSPENDED' | 'PAST_DUE' | 'TRIALING' | 'active' | 'pending' | 'expired' | 'cancelled' | 'suspended';
+  start_date?: string;
+  end_date?: string;
+  startDate?: string;
+  endDate?: string;
+  auto_renew?: boolean;
+  autoRenew?: boolean;
+  created_at?: string;
+  updated_at?: string;
   planName?: string;
   price?: number;
   daysRemaining?: number;
+  features?: string[];
 }
 
 export interface SubscriptionData {
@@ -247,6 +262,30 @@ export const Api = {
     });
   },
 
+  async postFormData<T>(path: string, formData: FormData): Promise<T> {
+    const session = getSession();
+    const token = session?.tokens?.accessToken;
+    
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE}/${path.startsWith('/') ? path.substring(1) : path}`, {
+      method: 'POST',
+      headers,
+      body: formData,
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+    }
+
+    return response.json() as Promise<T>;
+  },
+
   async delete<T>(path: string): Promise<T> {
     return http<T>(path, {
       method: "DELETE",
@@ -254,9 +293,10 @@ export const Api = {
   },
 
   // Players
-  async getPlayers(academyId?: string, page = 1, limit = 10): Promise<PlayersListResponse> {
+  async getPlayers(academyId?: string, agencyId?: string | number, page: string | number = 1, limit: string | number = 10): Promise<PlayersListResponse> {
     const academyParam = academyId ? `&academyId=${academyId}` : '';
-    return http<PlayersListResponse>(`/football-players?page=${page}&limit=${limit}${academyParam}`);
+    const agencyParam = agencyId ? `&agencyId=${agencyId}` : '';
+    return http<PlayersListResponse>(`/football-players?page=${page}&limit=${limit}${academyParam}${agencyParam}`);
   },
 
   async getPlayer(playerId: string): Promise<PlayerResponse> {
@@ -268,7 +308,7 @@ export const Api = {
     return http<{ success: boolean; data: any[] }>(`/football-players/search?q=${encodeURIComponent(query)}&limit=${limit}${academyParam}`);
   },
 
-  async createPlayer(playerData: Omit<Player, 'id' | 'createdAt' | 'updatedAt' | 'isActive'> & { academyId: string }): Promise<PlayerResponse> {
+  async createPlayer(playerData: Omit<Player, 'id' | 'createdAt' | 'updatedAt' | 'isActive'> & { academyId?: string; agencyId?: string }): Promise<PlayerResponse> {
     return http<PlayerResponse>('/football-players', {
       method: 'POST',
       body: JSON.stringify(playerData),
@@ -510,137 +550,6 @@ export const Api = {
       body: JSON.stringify(payload),
     });
   },
-};
-
-// Lightweight in-browser mock for development and offline demo
-
-const mock = {
-  async login({ email, password, userType }: LoginRequest & { userType?: string }): Promise<AuthSession> {
-    // Check for superadmin credentials first
-    if (email === "admin@system.com" && password === "admin123") {
-      return {
-        userId: "superadmin-001",
-        role: "superadmin",
-        schoolId: null,
-        tokens: { accessToken: uuidv4(), expiresInSec: 3600 },
-      };
-    }
-
-    const user = await db.staffUsers.where({ email }).first();
-    if (!user) throw new Error("Account not found. Please register.");
-    const hash = await sha256Hex(password);
-    if (user.passwordHash !== hash) throw new Error("Invalid credentials");
-
-    // Determine role based on userType if provided
-    const role = userType ? userType : user.role;
-
-    return {
-      userId: user.id,
-      role: role,
-      schoolId: user.schoolId,
-      tokens: { accessToken: uuidv4(), expiresInSec: 3600 },
-    };
-  },
-
-  async requestPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // In mock mode, we just return success to simulate the email being sent
-    // We could check if user exists, but typically for security we return success anyway
-    return {
-      success: true,
-      message: "If an account exists with this email, a password reset link has been sent."
-    };
-  },
-
-  async resetPassword(token: string, password: string): Promise<{ success: boolean; message: string }> {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1500));
-
-    // In a real mock, we would validate the token and update the user's password
-    // For now, we just simulate success
-    return {
-      success: true,
-      message: "Password successfully reset"
-    };
-  },
-  async registerSchool(payload: {
-    schoolName: string;
-    schoolType: string;
-    email: string;
-    password: string;
-    firstName: string;
-    lastName: string;
-    phoneNumber: string;
-    role: string;
-  }): Promise<{ userId: string; schoolId: string }> {
-    const existing = await db.schoolUsers
-      .where({ email: payload.email })
-      .first();
-    if (existing) throw new Error("Email already registered");
-
-    const now = new Date().toISOString();
-
-    // Create school
-    const schoolId = uuidv4();
-    const school = {
-      id: schoolId,
-      name: payload.schoolName,
-      type: payload.schoolType,
-      code: slugify(payload.schoolName),
-      address: "",
-      phone: payload.phoneNumber,
-      createdAt: now,
-      updatedAt: now,
-    };
-    await db.schools.put(school);
-
-    // Create user
-    const userId = uuidv4();
-    const user = {
-      id: userId,
-      schoolId,
-      email: payload.email,
-      passwordHash: await sha256Hex(payload.password),
-      role: payload.role || "admin",
-      firstName: payload.firstName,
-      lastName: payload.lastName,
-      phoneNumber: payload.phoneNumber,
-      isActive: true,
-      createdAt: now,
-      updatedAt: now,
-    };
-    await db.staffUsers.put(user);
-
-    return { userId, schoolId };
-  },
-  async createTask(req: CreateTaskRequest): Promise<CreateTaskResponse> {
-    const now = new Date().toISOString();
-    const taskRecord = {
-      id: uuidv4(),
-      assigneeId: req.assigneeId,
-      schoolId: req.schoolId,
-      taskNumber: `TASK-${Date.now()}`,
-      title: req.title,
-      description: req.description,
-      category: req.category,
-      priority: req.priority,
-      status: "assigned" as const,
-      createdAt: now,
-      updatedAt: now,
-    };
-    await db.tasks.put(taskRecord);
-    return { task: taskRecord };
-  },
-  async listTasks(assigneeId?: string): Promise<ListTasksResponse> {
-    let query = db.tasks.orderBy('updatedAt').reverse();
-    if (assigneeId) {
-      query = db.tasks.where({ assigneeId }).reverse().sortBy('updatedAt');
-    }
-    const items = await query.toArray();
-    return { items };
-  },
 
   // FIFA Compliance
   async getFifaCompliance(academyId?: string): Promise<{ success: boolean; data: any[] }> {
@@ -743,6 +652,137 @@ const mock = {
   async getFifaComplianceDashboard(academyId?: string): Promise<{ success: boolean; data: any }> {
     const academyParam = academyId ? `?academyId=${academyId}` : '';
     return http<{ success: boolean; data: any }>(`/fifa-compliance/dashboard${academyParam}`);
+  },
+};
+
+// Lightweight in-browser mock for development and offline demo
+
+const mock = {
+  async login({ email, password, userType }: LoginRequest & { userType?: string }): Promise<AuthSession> {
+    // Check for superadmin credentials first
+    if (email === "admin@system.com" && password === "admin123") {
+      return {
+        userId: "superadmin-001",
+        role: "superadmin",
+        schoolId: null,
+        tokens: { accessToken: uuidv4(), expiresInSec: 3600 },
+      };
+    }
+
+    const user = await db.staffUsers.where({ email }).first();
+    if (!user) throw new Error("Account not found. Please register.");
+    const hash = await sha256Hex(password);
+    if (user.passwordHash !== hash) throw new Error("Invalid credentials");
+
+    // Determine role based on userType if provided
+    const role = userType ? userType : user.role;
+
+    return {
+      userId: user.id,
+      role: role as any,
+      schoolId: user.schoolId,
+      tokens: { accessToken: uuidv4(), expiresInSec: 3600 },
+    };
+  },
+
+  async requestPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // In mock mode, we just return success to simulate the email being sent
+    // We could check if user exists, but typically for security we return success anyway
+    return {
+      success: true,
+      message: "If an account exists with this email, a password reset link has been sent."
+    };
+  },
+
+  async resetPassword(token: string, password: string): Promise<{ success: boolean; message: string }> {
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // In a real mock, we would validate the token and update the user's password
+    // For now, we just simulate success
+    return {
+      success: true,
+      message: "Password successfully reset"
+    };
+  },
+  async registerSchool(payload: {
+    schoolName: string;
+    schoolType: string;
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    phoneNumber: string;
+    role: string;
+  }): Promise<{ userId: string; schoolId: string }> {
+    const existing = await db.schoolUsers
+      .where({ email: payload.email })
+      .first();
+    if (existing) throw new Error("Email already registered");
+
+    const now = new Date().toISOString();
+
+    // Create school
+    const schoolId = uuidv4();
+    const school = {
+      id: schoolId,
+      name: payload.schoolName,
+      type: payload.schoolType,
+      code: slugify(payload.schoolName),
+      address: "",
+      phone: payload.phoneNumber,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await db.schools.put(school);
+
+    // Create user
+    const userId = uuidv4();
+    const user = {
+      id: userId,
+      schoolId,
+      email: payload.email,
+      passwordHash: await sha256Hex(payload.password),
+      role: payload.role || "admin",
+      firstName: payload.firstName,
+      lastName: payload.lastName,
+      phoneNumber: payload.phoneNumber,
+      isActive: true,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await db.staffUsers.put(user);
+
+    return { userId, schoolId };
+  },
+  async createTask(req: CreateTaskRequest): Promise<CreateTaskResponse> {
+    const now = new Date().toISOString();
+    const taskRecord = {
+      id: uuidv4(),
+      assigneeId: req.assigneeId,
+      schoolId: req.schoolId,
+      taskNumber: `TASK-${Date.now()}`,
+      title: req.title,
+      description: req.description,
+      category: req.category,
+      priority: req.priority,
+      status: "assigned" as const,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await db.tasks.put(taskRecord);
+    return { success: true, message: "Task created", task: taskRecord as any };
+  },
+  async listTasks(assigneeId?: string): Promise<ListTasksResponse> {
+    const query: any = assigneeId 
+      ? db.tasks.where({ assigneeId }).reverse()
+      : db.tasks.orderBy('updatedAt').reverse();
+    
+    const items = await (query.toArray ? query.toArray() : query);
+    return { success: true, message: "Tasks listed", tasks: (items as any) || [] } as any;
   },
 };
 export async function enqueueSync(op: Parameters<typeof db.syncQueue.add>[0]) {
@@ -1349,63 +1389,22 @@ export const PlayerApi = {
 };
 
 // ===== SUBSCRIPTION MANAGEMENT API =====
-
-// Subscription types
-export interface SubscriptionPlan {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  currency: string;
-  billingCycle: 'MONTHLY' | 'YEARLY' | 'LIFETIME';
-  playerLimit: number;
-  features: string[];
-  isActive: boolean;
-  isFree: boolean;
-  sortOrder: number;
+export interface RegisterPersonnelRequest {
+  firstName: string;
+  lastName: string;
+  email: string;
+  role: string;
+  academyId?: string;
+  agencyId?: string;
 }
 
-export interface Subscription {
-  id: string;
-  status: 'PENDING' | 'ACTIVE' | 'EXPIRED' | 'CANCELLED' | 'SUSPENDED';
-  planName: string;
-  price: number;
-  startDate: string;
-  endDate: string;
-  autoRenew: boolean;
-  daysRemaining: number;
+export interface RegisterPersonnelResponse {
+  success: boolean;
+  message: string;
+  data?: any;
 }
 
-export interface SubscriptionUsage {
-  playerCount: number;
-  playerUsagePercentage: number;
-}
 
-export interface SubscriptionLimits {
-  playerLimit: number;
-}
-
-export interface SubscriptionData {
-  subscription: Subscription;
-  limits: SubscriptionLimits;
-  usage: SubscriptionUsage;
-}
-
-export interface SubscriptionHistory {
-  id: string;
-  action: string;
-  reason: string;
-  previousPlan?: string;
-  newPlan?: string;
-  createdAt: string;
-}
-
-export interface UpgradeSubscriptionRequest {
-  planId: string;
-  paymentMethod: 'CASH' | 'BANK_TRANSFER' | 'MOBILE_MONEY' | 'CARD';
-  paymentReference?: string;
-  notes?: string;
-}
 
 // Get current academy subscription
 export async function getCurrentSubscription(academyId?: string): Promise<SubscriptionData | null> {

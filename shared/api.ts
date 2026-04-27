@@ -17,7 +17,11 @@ export type UserRole =
   | "parent"
   | "student"
   | "superadmin"
-  | "academy";
+  | "academy"
+  | "agency"
+  | "agency_admin"
+  | "individual_player"
+  | "sales_agent";
 
 export interface School {
   id: UUID;
@@ -32,6 +36,23 @@ export interface School {
   schoolType: "primary" | "secondary" | "combined";
   isGovernment: boolean; // true for government schools, false for private
   emisId?: EMIS_ID; // Ministry of Education ID
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Agency {
+  id: UUID;
+  name: string;
+  code: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  bio?: string;
+  logoUrl?: string;
+  status: 'active' | 'inactive' | 'suspended';
   createdAt: string;
   updatedAt: string;
 }
@@ -153,6 +174,8 @@ export interface AuthSession {
   schoolId?: UUID; // for school users
   campusId?: UUID; // for users at a specific campus
   studentId?: UUID; // for student users
+  agencyId?: UUID; // for agency users
+  email?: string;
   tokens: AuthTokens;
 }
 
@@ -1135,4 +1158,31 @@ export class Api {
     // Implementation would export to EMIS format
     return "";
   }
+}
+
+export interface SubscriptionPlan {
+  id: UUID;
+  name: string;
+  description?: string;
+  price: number;
+  currency: string;
+  billing_cycle: 'MONTHLY' | 'YEARLY' | 'LIFETIME';
+  player_limit: number;
+  storage_limit: number;
+  features: string[];
+  is_active: boolean;
+  is_free: boolean;
+  sort_order: number;
+  target_type: 'ACADEMY' | 'INDIVIDUAL' | 'AGENCY';
+  stripe_product_id?: string;
+  stripe_price_id?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface StripeSettings {
+  secret_key_set: boolean;
+  webhook_secret_set: boolean;
+  is_env_config?: boolean;
+  mode: 'test' | 'live' | null;
 }

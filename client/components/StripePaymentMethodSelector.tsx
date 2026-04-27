@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { CreditCard, Wallet, DollarSign, Loader2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import StripePaymentForm from './StripePaymentForm';
+import { Api } from '@/lib/api';
 import { formatCurrency } from '../lib/stripe';
 
 interface PaymentMethodSelectorProps {
@@ -63,31 +64,12 @@ export default function StripePaymentMethodSelector({
     setIsProcessing(true);
     try {
       // First, ensure we have a Stripe customer
-      const customerResponse = await fetch('/api/stripe/create-customer', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-
-      if (!customerResponse.ok) {
-        throw new Error('Failed to create Stripe customer');
-      }
+      const customerResult = await Api.post<{ success: boolean; message?: string }>('/stripe/create-customer', {});
 
       // Create subscription
-      const response = await fetch('/api/stripe/create-subscription', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          planId: selectedPlan!.id
-        }),
+      const result = await Api.post<{ success: boolean; data: { clientSecret: string }; message?: string }>('/stripe/create-subscription', {
+        planId: selectedPlan!.id
       });
-
-      const result = await response.json();
 
       if (result.success && result.data.clientSecret) {
         setClientSecret(result.data.clientSecret);
@@ -113,21 +95,12 @@ export default function StripePaymentMethodSelector({
   const handleCashPayment = async () => {
     setIsProcessing(true);
     try {
-      const response = await fetch('/api/subscriptions/upgrade', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({
-          academyId,
-          newPlanId: selectedPlan!.id,
-          paymentMethod: 'CASH',
-          notes: `Cash payment for ${selectedPlan!.name}`
-        }),
+      const result = await Api.post<{ success: boolean; message?: string }>('/subscriptions/upgrade', {
+        academyId,
+        newPlanId: selectedPlan!.id,
+        paymentMethod: 'CASH',
+        notes: `Cash payment for ${selectedPlan!.name}`
       });
-
-      const result = await response.json();
 
       if (result.success) {
         toast({

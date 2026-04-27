@@ -25,6 +25,7 @@
     "migrate:settings": "node scripts/run-system-settings-migration.cjs"
   },
   "dependencies": {
+    "@stripe/react-stripe-js": "^6.2.0",
     "@stripe/stripe-js": "^8.2.0",
     "@supabase/supabase-js": "^2.76.1",
     "@types/bcryptjs": "^2.4.6",
@@ -45,6 +46,8 @@
     "pg": "^8.16.3",
     "postgres": "^3.4.7",
     "react-helmet-async": "^3.0.0",
+    "react-hot-toast": "^2.6.0",
+    "react-markdown": "^10.1.0",
     "serverless-http": "^3.2.0",
     "stripe": "^19.2.0",
     "uuid": "^11.1.0",

@@ -8,30 +8,31 @@ import { getStripe, createStripeCustomer } from '../lib/stripe.js';
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
-const PRO_PLAN = {
-  id: 'pro',
-  name: 'Pro Plan',
-  description: 'One-time payment for full access',
-  price: 20,
-  currency: 'USD',
-  billingCycle: 'one-time',
-  features: [
-    'Unlimited profile updates',
-    'Video highlights upload',
-    'Direct messaging with scouts',
-    'Priority support',
-    'Verified player badge'
-  ],
-  isFree: false,
-  isActive: true
-};
+// Plans are now fetched from the database
 
 // Get Player Plans
-router.get('/plans', (req, res) => {
-  res.json({
-    success: true,
-    data: [PRO_PLAN]
-  });
+router.get('/plans', async (req, res) => {
+  try {
+    const result = await query(
+      "SELECT id, name, description, price, currency, billing_cycle as \"billingCycle\", features, is_free as \"isFree\", is_active as \"isActive\" FROM subscription_plans WHERE target_type = 'INDIVIDUAL' AND is_active = true ORDER BY sort_order ASC"
+    );
+    
+    // Parse features if string
+    const plans = result.rows.map(plan => {
+      if (typeof plan.features === 'string') {
+        try { plan.features = JSON.parse(plan.features); } catch (e) {}
+      }
+      return plan;
+    });
+
+    res.json({
+      success: true,
+      data: plans
+    });
+  } catch (error: any) {
+    console.error('Get player plans error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Create Checkout Session
@@ -40,9 +41,16 @@ router.post('/create-checkout-session', authenticateToken, async (req, res) => {
     const userId = (req as any).user.id;
     const { planId, successUrl, cancelUrl } = req.body;
 
-    if (planId !== 'pro') {
-      return res.status(400).json({ error: 'Invalid plan ID' });
+    if (!planId) {
+      return res.status(400).json({ error: 'Plan ID is required' });
     }
+
+    // Get plan details from DB
+    const planResult = await query('SELECT * FROM subscription_plans WHERE id = $1', [planId]);
+    if (planResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Plan not found' });
+    }
+    const plan = planResult.rows[0];
 
     // Get player details
     const playerResult = await query(
@@ -79,12 +87,12 @@ router.post('/create-checkout-session', authenticateToken, async (req, res) => {
       line_items: [
         {
           price_data: {
-            currency: 'usd',
+            currency: plan.currency.toLowerCase(),
             product_data: {
-              name: PRO_PLAN.name,
-              description: PRO_PLAN.description,
+              name: plan.name,
+              description: plan.description,
             },
-            unit_amount: PRO_PLAN.price * 100,
+            unit_amount: Math.round(parseFloat(plan.price) * 100),
           },
           quantity: 1,
         },
@@ -268,7 +276,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
        COALESCE(
          (SELECT 'pro' FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile'),
          (SELECT plan_type FROM player_purchases 
-          WHERE player_id = $1 AND status = 'completed' AND plan_type = 'pro'
+          WHERE player_id = $1 AND status = 'completed'
           ORDER BY created_at DESC LIMIT 1),
          'free'
        ) as active_plan
@@ -350,6 +358,58 @@ router.put('/profile', authenticateToken, async (req, res) => {
       social_links,
       slug
     } = req.body;
+
+    // Fetch user's active plan features
+    const userProfile = await query(
+      `SELECT ip.email, 
+       COALESCE(
+         (SELECT 'pro' FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile'),
+         (SELECT plan_type FROM player_purchases 
+          WHERE player_id = $1 AND status = 'completed'
+          ORDER BY created_at DESC LIMIT 1),
+         'free'
+       ) as active_plan
+       FROM individual_players ip WHERE ip.id = $1`,
+      [userId]
+    );
+
+    const activePlanId = userProfile.rows[0]?.active_plan;
+    
+    // Get plan features
+    let features: string[] = [];
+    if (activePlanId === 'pro') {
+      features = ["Unlimited profile updates", "Video highlights upload", "Direct messaging with scouts", "Priority support", "Verified player badge"];
+    } else if (activePlanId !== 'free') {
+      const planRes = await query("SELECT features FROM subscription_plans WHERE id = $1", [activePlanId]);
+      if (planRes.rows.length > 0) {
+        features = planRes.rows[0].features;
+        if (typeof features === 'string') {
+          try { features = JSON.parse(features); } catch (e) { features = []; }
+        }
+      }
+    } else {
+      features = ["Basic player profile", "Public profile link", "Document storage (500MB)"];
+    }
+
+    // FEATURE ENFORCEMENT
+    const hasFeature = (f: string) => features.some(feat => feat.toLowerCase().includes(f.toLowerCase()));
+
+    // 1. Video Highlights
+    if (video_links && video_links.length > 0 && !hasFeature('Video highlights')) {
+      return res.status(403).json({ success: false, message: 'Video highlights are not included in your current plan. Please upgrade to Pro.' });
+    }
+
+    // 2. Gallery Images
+    if (gallery_images && gallery_images.length > 0 && !hasFeature('Pro features') && !hasFeature('Verified career history') && activePlanId === 'free') {
+       // Free plan doesn't mention gallery, but Pro mentions 'Unlimited profile updates' which usually includes gallery
+       // We'll be strict: Gallery requires at least Pro
+       return res.status(403).json({ success: false, message: 'Gallery images are not included in your current plan. Please upgrade to Pro.' });
+    }
+
+    // 3. Slug / Link Name
+    if (slug && activePlanId === 'free' && !hasFeature('Public profile link')) {
+       // Actually Free has Public profile link, so this is allowed.
+    }
 
     // Sanitize numeric fields to prevent Postgres cast errors from empty strings
     let sanitizedAge = (age === '' || age === null || age === undefined) ? null : parseInt(age as string);

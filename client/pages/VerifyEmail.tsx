@@ -45,7 +45,7 @@ export default function VerifyEmail() {
               role: 'academy',
               schoolId: data.data.user.academy_id, // Mapping academy_id to schoolId for compatibility
               tokens: { accessToken: data.data.token, expiresInSec: 24 * 3600 }
-            };
+            } as any;
             
             localStorage.setItem('isNewRegistration', 'false'); // Clear new reg flag
             

@@ -11,6 +11,8 @@ export function saveSession(s: AuthSession) {
 export function clearSession() {
   localStorage.removeItem(KEY);
   window.dispatchEvent(new CustomEvent("auth:changed"));
+  // Redirect to portal after logout
+  window.location.href = "/portal";
 }
 
 export function getSession(): AuthSession | null {

@@ -118,7 +118,7 @@ interface PerformanceMetrics {
 
 const DatabaseManagement = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { session: user } = useAuth();
   const { toast } = useToast();
   usePageTitle("Database Management");
 
@@ -198,7 +198,7 @@ const DatabaseManagement = () => {
         description: backupDescription || 'Manual backup'
       });
 
-      if (response.success) {
+      if ((response as any).success) {
         toast({
           title: "Success",
           description: "Database backup created successfully",
@@ -224,7 +224,7 @@ const DatabaseManagement = () => {
 
       const response = await Api.post('/database/optimize');
 
-      if (response.success) {
+      if ((response as any).success) {
         toast({
           title: "Success",
           description: "Database optimization completed successfully",
@@ -245,7 +245,7 @@ const DatabaseManagement = () => {
 
   const handleLogout = () => {
     clearSession();
-    navigate('/admin/login');
+    navigate('/portal');
   };
 
   const formatUptime = (seconds: number) => {

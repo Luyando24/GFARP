@@ -8,6 +8,7 @@ import { Input } from '../components/ui/input';
 import { Textarea } from '../components/ui/textarea';
 import { Badge } from '../components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '../components/ui/dialog';
 import { Label } from '../components/ui/label';
@@ -83,7 +84,7 @@ interface SupportStats {
 
 const AdminSupportManagement = () => {
   const navigate = useNavigate();
-  const { session, loading: authLoading } = useAuth();
+  const { session } = useAuth();
   const { toast } = useToast();
 
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -133,16 +134,23 @@ const AdminSupportManagement = () => {
   };
 
   useEffect(() => {
-    if (!authLoading && session?.role !== 'superadmin') {
+    if (!session) {
+      // Allow a short delay for session to load from localStorage
+      const savedSession = localStorage.getItem('ipims_auth_session');
+      if (!savedSession) {
+        navigate('/login');
+      }
+      return;
+    }
+    
+    if (session?.role !== 'superadmin') {
       navigate('/login');
       return;
     }
     
-    if (session?.role === 'superadmin') {
-      fetchTickets();
-      fetchStats();
-    }
-  }, [session, authLoading, navigate]);
+    fetchTickets();
+    fetchStats();
+  }, [session, navigate]);
 
   useEffect(() => {
     filterAndSortTickets();
@@ -203,8 +211,8 @@ const AdminSupportManagement = () => {
       let bValue = b[sortBy as keyof SupportTicket];
 
       if (sortBy === 'created_at' || sortBy === 'updated_at') {
-        aValue = new Date(aValue as string).getTime();
-        bValue = new Date(bValue as string).getTime();
+        aValue = new Date(aValue as string).getTime() as any;
+        bValue = new Date(bValue as string).getTime() as any;
       }
 
       if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
@@ -357,7 +365,7 @@ const AdminSupportManagement = () => {
     });
   };
 
-  if (authLoading || isLoading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-7xl mx-auto">

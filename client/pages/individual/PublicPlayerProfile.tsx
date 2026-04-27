@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { PlayerProfile } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,6 +15,7 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 
 export default function PublicPlayerProfile({ slug }: { slug?: string }) {
   const params = useParams<{ id: string; slug: string }>();
+  const navigate = useNavigate();
   const id = params.id;
   const routeSlug = params.slug;
   const effectiveSlug = slug || routeSlug;
@@ -63,6 +64,10 @@ export default function PublicPlayerProfile({ slug }: { slug?: string }) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleGoHome = () => {
+    navigate("/");
   };
 
   const copyPageLink = () => {

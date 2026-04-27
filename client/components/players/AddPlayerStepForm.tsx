@@ -282,6 +282,7 @@ const AddPlayerStepForm: React.FC<AddPlayerStepFormProps> = ({
         height: '',
         weight: '',
         email: '',
+        phoneCountryCode: '+260',
         phone: '',
         currentClub: '',
         trainingStartDate: '',

@@ -51,7 +51,7 @@ export default async function handler(
             return value.toString('utf8');
         }
         if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
-            return Buffer.from(value).toString('utf8');
+            return Buffer.from(value as any).toString('utf8');
         }
         if (typeof value === 'string') return value;
         return String(value);

@@ -130,6 +130,7 @@ import SalesAgentsManager from '@/components/admin/SalesAgentsManager';
 import TestimonialManagement from '@/components/admin/TestimonialManagement';
 import DiscountManager from '@/components/admin/DiscountManager';
 import ExemptionManager from '@/components/admin/ExemptionManager';
+import PlanManagement from '@/components/admin/PlanManagement';
 import { usePageTitle } from "@/hooks/usePageTitle";
 
 // Real admin data will be fetched from API
@@ -878,7 +879,7 @@ export default function AdminDashboard() {
     website: "",
     capacity: ""
   });
-  const [formErrors, setFormErrors] = useState({});
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // Authentication check: allow both admin and superadmin
   useEffect(() => {
@@ -939,7 +940,7 @@ export default function AdminDashboard() {
 
   const handleLogout = () => {
     clearSession();
-    navigate("/admin/login");
+    navigate("/portal");
   };
 
   const handleViewCompliance = (compliance) => {
@@ -984,8 +985,8 @@ export default function AdminDashboard() {
   };
 
   // Academy management handlers
-  const validateAcademyForm = (formData) => {
-    const errors = {};
+  const validateAcademyForm = (formData: any) => {
+    const errors: any = {};
     if (!formData.name.trim()) errors.name = "Academy name is required";
     if (!formData.director.trim()) errors.director = "Director name is required";
     if (!formData.location.trim()) errors.location = "Location is required";
@@ -1175,6 +1176,7 @@ export default function AdminDashboard() {
       title: "Reports & Settings",
       items: [
         { id: "finances", label: "Financial Overview", icon: DollarSign },
+        { id: "billing", label: "Price Plans & Billing", icon: CreditCard },
         { id: "blog", label: "Blog Management", icon: BookOpen },
         { id: "system", label: "System Settings", icon: Settings },
         { id: "analytics", label: "Analytics", icon: BarChart3 }
@@ -1269,7 +1271,7 @@ export default function AdminDashboard() {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-gradient-to-b from-[#005391] to-[#0066b3] border-r-4 border-yellow-400 transition-transform duration-300 ease-in-out min-h-screen`}>
+        <aside className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:sticky lg:top-16 z-40 w-64 bg-gradient-to-b from-[#005391] to-[#0066b3] border-r-4 border-yellow-400 transition-transform duration-300 ease-in-out h-[calc(100vh-64px)] overflow-y-auto`}>
           <div className="flex flex-col h-full pt-16 lg:pt-0">
             <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto">
               {sidebarGroups.map((group) => (
@@ -1698,8 +1700,8 @@ export default function AdminDashboard() {
                               <TableCell>{player.email}</TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-2">
-                                  <Badge variant={player.current_plan?.toLowerCase() === 'pro' ? 'default' : 'outline'}>
-                                    {'Pro Plan'}
+                                  <Badge variant={player.current_plan ? 'default' : 'outline'}>
+                                    {player.current_plan || 'No Plan'}
                                   </Badge>
                                   {player.is_exempted && (
                                     <Badge variant="secondary" className="bg-green-100 text-green-800 border-green-200">
@@ -2284,6 +2286,11 @@ export default function AdminDashboard() {
                   </div>
                 </CardContent>
               </Card>
+            </TabsContent>
+
+            {/* Price Plans & Billing Tab */}
+            <TabsContent value="billing" className="space-y-6">
+              <PlanManagement />
             </TabsContent>
 
             <TabsContent value="system" className="space-y-6">

@@ -765,10 +765,10 @@ export default function AcademyManagement() {
                       <TableCell>
                         <div>
                           <p className="font-medium">{academy.name}</p>
-                          <p className="text-sm text-muted-foreground">{academy.email}</p>
+                          <p className="text-xs text-muted-foreground">{(academy as any).player_count || 0} players</p>
                         </div>
                       </TableCell>
-                      <TableCell>{academy.player_count || 0}</TableCell>
+                      <TableCell>{(academy as any).player_count || 0}</TableCell>
                       <TableCell>
                         <Button
                           variant="ghost"
@@ -780,7 +780,7 @@ export default function AcademyManagement() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
-                          {academy.subscriptionPlan || "Pro Plan"}
+                          {(academy as any).subscriptionPlan || "Pro Plan"}
                         </Badge>
                       </TableCell>
                       <TableCell>

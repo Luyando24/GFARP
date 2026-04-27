@@ -11,7 +11,9 @@ import { Textarea } from "../ui/textarea";
 import { Progress } from "../ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
-import { useToast } from "../../hooks/use-toast";
+import { useToast } from "@/components/ui/use-toast";
+import { getSession } from "@/lib/auth";
+import { Api } from "@/lib/api";
 import {
   Plus,
   Search,
@@ -34,7 +36,6 @@ import {
   BarChart3,
   Loader2
 } from "lucide-react";
-import { Api } from "../../lib/api";
 import SubscriptionNotice from "../ui/SubscriptionNotice";
 
 interface Player {
@@ -93,7 +94,8 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
       // Get current academy ID from auth session
       const session = JSON.parse(localStorage.getItem("ipims_auth_session") || "{}");
       const academyId = session?.schoolId || session?.academyId;
-      const response = await Api.getPlayers(academyId);
+      const agencyId = session?.agencyId;
+      const response = await Api.getPlayers(academyId, agencyId);
       if (response.success && response.data && Array.isArray((response as any).data.players)) {
         // Server returns { data: { players: [...] } }
         setPlayers((response as any).data.players);
@@ -129,21 +131,20 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
   const openAddPlayerDialog = async () => {
     // Check subscription limit before opening dialog
     try {
-      const session = JSON.parse(localStorage.getItem("ipims_auth_session") || "{}");
-      const academyId = session?.schoolId || session?.academyId;
+      const session = getSession() as any;
+      const academyId = session?.schoolId || session?.academyId || session?.agencyId;
 
       if (!academyId) {
         toast({
           title: "Error",
-          description: "Could not find academy information. Please try logging in again.",
+          description: "Could not find organization information. Please try logging in again.",
           variant: "destructive"
         });
         return;
       }
 
       // Check current subscription and player count
-      const response = await fetch(`/api/subscriptions/current?academyId=${academyId}`);
-      const result = await response.json();
+      const result = await Api.get<any>(`/subscriptions/current?academyId=${academyId}`);
 
       if (result.success && result.data) {
         const { playerCount, playerLimit } = result.data;
@@ -174,11 +175,12 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
     try {
       const session = JSON.parse(localStorage.getItem("ipims_auth_session") || "{}");
       const academyId = session?.schoolId || session?.academyId;
+      const agencyId = session?.agencyId;
 
-      if (!academyId) {
+      if (!academyId && !agencyId) {
         toast({
           title: "Error",
-          description: "Could not find academy information. Please try logging in again.",
+          description: "Could not find organization information. Please try logging in again.",
           variant: "destructive"
         });
         setLoading(false);
@@ -199,6 +201,7 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
         phone: combinedPhone,
         jerseyNumber: playerData.jerseyNumber ? parseInt(playerData.jerseyNumber) : null,
         academyId,
+        agencyId,
         // Additional fields to persist
         nationality: playerData.nationality,
         height: playerData.height,
@@ -219,14 +222,22 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
 
             // Upload documents in parallel
             await Promise.all(documentTypes.map(async (docType) => {
-              const file = playerData.uploadedDocuments[docType];
+              const file = playerData.uploadedDocuments![docType];
               if (file) {
-                try {
-                  await uploadPlayerDocument(playerId, file, docType);
-                } catch (error) {
-                  console.error(`Failed to upload ${docType}:`, error);
-                  // We don't fail the whole process if a document upload fails, 
-                  // but we could show a warning toast
+                // Map camelCase to snake_case for the API
+                const mappedType = {
+                  passportId: 'passport_id',
+                  playerPhoto: 'player_photo',
+                  proofOfTraining: 'proof_of_training',
+                  birthCertificate: 'birth_certificate'
+                }[docType] as any;
+
+                if (mappedType) {
+                  try {
+                    await uploadPlayerDocument(playerId, file, mappedType);
+                  } catch (error) {
+                    console.error(`Failed to upload ${String(docType)}:`, error);
+                  }
                 }
               }
             }));

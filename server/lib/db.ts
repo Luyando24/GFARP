@@ -1,6 +1,12 @@
 import pg from 'pg';
 const { Pool } = pg;
 import bcrypt from 'bcryptjs';
+import path from 'path';
+import dotenv from 'dotenv';
+
+// Ensure environment variables are loaded from the root .env
+dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true });
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: true });
 
 // Resolve database connection string for production/serverless environments
 function resolveConnectionString(): string | undefined {
@@ -155,10 +161,12 @@ export async function query(text: string, params?: (string | number | boolean | 
     const result = await client.query(text, params);
     return { rows: result.rows };
   } catch (error) {
-    console.error('Database query error:', error);
+    console.error('[DB] Database query error:', error.message);
+    if (error.code) console.error('[DB] Error code:', error.code);
+    if (error.detail) console.error('[DB] Error detail:', error.detail);
 
     // Handle specific table access for super admin dashboard
-    if (text.includes('SELECT COUNT(*) as count FROM academies')) {
+    if (client && text.includes('SELECT COUNT(*) as count FROM academies')) {
       console.log('Attempting to create academies table if it does not exist');
       try {
         // Create academies table if it doesn't exist
