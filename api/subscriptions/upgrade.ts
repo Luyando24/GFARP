@@ -39,44 +39,44 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        // 1. Get current subscription
-        const { data: currentSubscription, error: currentSubError } = await supabase
-            .from('academy_subscriptions')
-            .select('*, subscription_plans(name)')
-            .eq('academy_id', academyId)
-            .eq('status', 'ACTIVE')
-            .single();
-
-        // 2. Get new plan details
-        // Check for fallback/mock plans first (pro)
+        // 1. Get new plan details first to determine the target table
         let newPlan;
-        if (newPlanId === 'pro') {
-            const fallbackPlans = [
-                { id: 'pro', name: 'Pro Plan', price: 49.99 }
-            ];
-            newPlan = fallbackPlans.find(p => p.id === newPlanId);
-        } else {
-            // Fetch from DB if not a fallback plan ID
-            const { data: dbPlan, error: newPlanError } = await supabase
-                .from('subscription_plans')
-                .select('*')
-                .eq('id', newPlanId)
-                .eq('is_active', true)
-                .single();
-            
-            if (!newPlanError && dbPlan) {
-                newPlan = dbPlan;
+        const { data: dbPlan, error: newPlanError } = await supabase
+            .from('subscription_plans')
+            .select('*')
+            .eq('id', newPlanId)
+            .eq('is_active', true)
+            .single();
+        
+        if (newPlanError || !dbPlan) {
+            // Check fallback
+            if (newPlanId === 'pro') {
+                newPlan = { id: 'pro', name: 'Pro Plan', price: 49.99, target_type: 'ACADEMY' };
+            } else {
+                throw new Error('Invalid or inactive subscription plan');
             }
+        } else {
+            newPlan = dbPlan;
         }
 
-        if (!newPlan) {
-            throw new Error('Invalid or inactive subscription plan');
-        }
+        const isAgencyPlan = newPlan.target_type === 'AGENCY';
+        const isIndividualPlan = newPlan.target_type === 'INDIVIDUAL';
+        
+        const subTable = isAgencyPlan ? 'agency_subscriptions' : 'academy_subscriptions';
+        const idColumn = isAgencyPlan ? 'agency_id' : 'academy_id';
+
+        // 2. Get current subscription from the appropriate table
+        const { data: currentSubscription } = await supabase
+            .from(subTable)
+            .select('*, subscription_plans(name)')
+            .eq(idColumn, academyId)
+            .eq('status', 'ACTIVE')
+            .maybeSingle();
 
         // 3. Deactivate current subscription if exists
         if (currentSubscription) {
             await supabase
-                .from('academy_subscriptions')
+                .from(subTable)
                 .update({ status: 'CANCELLED', updated_at: new Date().toISOString() })
                 .eq('id', currentSubscription.id);
         }
@@ -87,65 +87,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const endDate = new Date();
         endDate.setMonth(endDate.getMonth() + 1); // 1 month subscription
 
-        // If we are using a fallback plan (e.g. 'pro') that doesn't exist in the DB,
-        // we can't insert it as a foreign key if the column type is UUID and references subscription_plans.
-        // We need to check if the plan exists in DB first.
-        // If it's a fallback plan and not in DB, we should try to find a real plan ID or create a placeholder plan.
-        
-        let dbPlanId = newPlanId;
-        
-        // If it's a fallback plan, ensure it exists in the DB to satisfy foreign key constraints
-        if (newPlanId === 'pro') {
-             // Try to find it again just to be sure
-             const { data: existingPlan } = await supabase
-                .from('subscription_plans')
-                .select('id')
-                .eq('name', newPlan.name) // Search by name since ID might not be valid UUID
-                .single();
-                
-             if (existingPlan) {
-                 dbPlanId = existingPlan.id;
-             } else {
-                 // If it doesn't exist, we might need to create it if possible, or fail gracefully.
-                 // However, usually fallback IDs are not valid UUIDs.
-                 // Let's check if the input 'newPlanId' is a valid UUID.
-                 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-                 if (!uuidRegex.test(newPlanId)) {
-                     // It's not a UUID, so we can't use it if the column is UUID.
-                     // We must create a temporary plan in the DB or find one.
-                     // For now, let's try to insert the plan into subscription_plans if it doesn't exist
-                     // with a new valid UUID.
-                     
-                     const newDbPlanId = uuidv4();
-                     const { error: insertPlanError } = await supabase
-                        .from('subscription_plans')
-                        .insert({
-                            id: newDbPlanId,
-                            name: newPlan.name,
-                            price: newPlan.price,
-                            interval: 'month',
-                            description: 'Auto-generated plan',
-                            is_active: true
-                        });
-                        
-                     if (!insertPlanError) {
-                         dbPlanId = newDbPlanId;
-                     } else {
-                         // If we can't create it, we are stuck.
-                         // But maybe the column allows text?
-                         // So it IS a UUID column.
-                         console.warn('Could not create plan in DB, using fallback ID which might fail:', newPlanId);
-                     }
-                 }
-             }
-        }
-
         const { data: newSubscription, error: createSubError } = await supabase
-            .from('academy_subscriptions')
+            .from(subTable)
             .insert({
                 id: newSubscriptionId,
-                academy_id: academyId,
-                plan_id: dbPlanId,
+                [idColumn]: academyId,
+                plan_id: newPlan.id,
                 status: 'ACTIVE',
                 start_date: startDate.toISOString(),
                 end_date: endDate.toISOString(),
@@ -155,13 +102,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .single();
 
         if (createSubError) {
-            // If it's a UUID error, it means the DB expects a UUID but we sent a non-UUID string
-            // This implies the fallback plan ID is not in the DB and the DB enforces UUID foreign key
-            // In this case, we can't really create a relationship if the plan doesn't exist in DB
-            // BUT, for the sake of this fix, if we are using a fallback plan, we probably shouldn't be inserting into
-            // academy_subscriptions with a plan_id that doesn't exist in subscription_plans table if FK exists.
-            // However, if we assume the DB is flexible or we are just mocking:
-            throw new Error('Failed to create new subscription: ' + createSubError.message);
+            throw new Error(`Failed to create new subscription in ${subTable}: ${createSubError.message}`);
         }
 
         // 5. Log history

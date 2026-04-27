@@ -14,57 +14,68 @@ import { authenticateToken } from '../middleware/auth.js';
 
 const router = Router();
 
-// Create Stripe customer for academy
-router.post('/create-customer', authenticateToken, (async (req, res) => {
-  // Create subscription with Stripe (Legacy - keep for backward compatibility or direct calls)
-router.post('/create-subscription', authenticateToken, (async (req, res) => {
-  try {
-    const academyId = (req as any).user?.id;
+// Helper to get entity info
+const getEntityInfo = (user: any) => {
+  const isAgency = user?.role === 'agency';
+  return {
+    isAgency,
+    table: isAgency ? 'agencies' : 'academies',
+    subTable: isAgency ? 'agency_subscriptions' : 'academy_subscriptions',
+    idColumn: isAgency ? 'agency_id' : 'academy_id',
+    entityLabel: isAgency ? 'Agency' : 'Academy'
+  };
+};
 
-    if (!academyId) {
+// Create Stripe customer
+router.post('/create-customer', authenticateToken, (async (req, res) => {
+  try {
+    const entityId = (req as any).user?.id;
+    const { table, entityLabel } = getEntityInfo((req as any).user);
+
+    if (!entityId) {
       return res.status(401).json({
         success: false,
         message: 'Authentication required'
       });
     }
 
-    // Get academy details
-    const academyResult = await query(
-      'SELECT name, email, stripe_customer_id FROM academies WHERE id = $1',
-      [academyId]
+    // Get entity details
+    const entityResult = await query(
+      `SELECT name, email, stripe_customer_id FROM ${table} WHERE id = $1`,
+      [entityId]
     );
 
-    if (academyResult.rows.length === 0) {
+    if (entityResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Academy not found'
+        message: `${entityLabel} not found`
       });
     }
 
-    const academy = academyResult.rows[0];
+    const entity = entityResult.rows[0];
 
     // Check if customer already exists
-    if (academy.stripe_customer_id) {
+    if (entity.stripe_customer_id) {
       return res.json({
         success: true,
         message: 'Customer already exists',
         data: {
-          customerId: academy.stripe_customer_id
+          customerId: entity.stripe_customer_id
         }
       });
     }
 
     // Create Stripe customer
     const customer = await createStripeCustomer(
-      academy.email,
-      academy.name,
-      { academyId }
+      entity.email,
+      entity.name,
+      { entityId, type: entityLabel.toLowerCase() }
     );
 
-    // Update academy with customer ID
+    // Update entity with customer ID
     await query(
-      'UPDATE academies SET stripe_customer_id = $1, updated_at = NOW() WHERE id = $2',
-      [customer.id, academyId]
+      `UPDATE ${table} SET stripe_customer_id = $1, updated_at = NOW() WHERE id = $2`,
+      [customer.id, entityId]
     );
 
     res.json({
@@ -87,13 +98,14 @@ router.post('/create-subscription', authenticateToken, (async (req, res) => {
 // Create checkout session for subscription upgrade
 router.post('/create-checkout-session', authenticateToken, (async (req, res) => {
   try {
-    const academyId = (req as any).user?.id;
+    const entityId = (req as any).user?.id;
+    const { table } = getEntityInfo((req as any).user);
     const { planId, billingCycle, successUrl, cancelUrl, promoCodeId } = req.body;
 
-    if (!academyId || !planId) {
+    if (!entityId || !planId) {
       return res.status(400).json({
         success: false,
-        message: 'Academy ID and plan ID are required'
+        message: 'Entity ID and plan ID are required'
       });
     }
 
@@ -115,12 +127,10 @@ router.post('/create-checkout-session', authenticateToken, (async (req, res) => 
     
     // Apply billing cycle adjustment
     if (billingCycle === 'yearly') {
-      // Logic for yearly pricing ($499 for Pro)
-      price = 499;
+      price = price * 10; // Simple 2 months free logic or use plan.price_yearly if exists
     }
 
     // Apply Promo Code
-    let discountAmount = 0;
     if (promoCodeId) {
       const promoRes = await query(
         `SELECT * FROM promo_codes 
@@ -133,27 +143,25 @@ router.post('/create-checkout-session', authenticateToken, (async (req, res) => 
       if (promoRes.rows.length > 0) {
         const promo = promoRes.rows[0];
         const percent = parseFloat(promo.discount_percent);
-        discountAmount = (price * percent) / 100;
-        price = Math.max(0, price - discountAmount);
+        price = Math.max(0, price - (price * percent / 100));
         
-        // Increment usage count
         await query('UPDATE promo_codes SET used_count = used_count + 1 WHERE id = $1', [promoCodeId]);
       }
     }
 
-    // Get academy details for customer creation
-    const academyResult = await query(
-      'SELECT name, email, stripe_customer_id FROM academies WHERE id = $1',
-      [academyId]
+    // Get entity details for customer creation
+    const entityResult = await query(
+      `SELECT name, email, stripe_customer_id FROM ${table} WHERE id = $1`,
+      [entityId]
     );
-    const academy = academyResult.rows[0];
+    const entity = entityResult.rows[0];
 
     // Ensure Stripe customer exists
-    let customerId = academy.stripe_customer_id;
+    let customerId = entity.stripe_customer_id;
     if (!customerId) {
-      const customer = await createStripeCustomer(academy.email, academy.name, { academyId });
+      const customer = await createStripeCustomer(entity.email, entity.name, { entityId });
       customerId = customer.id;
-      await query('UPDATE academies SET stripe_customer_id = $1 WHERE id = $2', [customerId, academyId]);
+      await query(`UPDATE ${table} SET stripe_customer_id = $1 WHERE id = $2`, [customerId, entityId]);
     }
 
     // Create Checkout Session
@@ -170,18 +178,17 @@ router.post('/create-checkout-session', authenticateToken, (async (req, res) => 
             currency: plan.currency?.toLowerCase() || 'usd',
             product_data: {
               name: `${plan.name} Plan (${billingCycle})`,
-              description: promoCodeId ? `Includes discount` : undefined,
             },
-            unit_amount: Math.round(price * 100), // Stripe expects cents
+            unit_amount: Math.round(price * 100),
           },
           quantity: 1,
         },
       ],
-      mode: 'payment', // Using payment mode for simplicity, or 'subscription' if using Stripe Products
+      mode: plan.stripe_price_id ? 'subscription' : 'payment',
       success_url: successUrl,
       cancel_url: cancelUrl,
       metadata: {
-        academyId,
+        entityId,
         planId,
         billingCycle,
         promoCodeId: promoCodeId || null
@@ -203,29 +210,33 @@ router.post('/create-checkout-session', authenticateToken, (async (req, res) => 
     });
   }
 }) as RequestHandler);
+
+// Create subscription directly (via card payment element)
+router.post('/create-subscription', authenticateToken, (async (req, res) => {
   try {
-    const academyId = (req as any).user?.id;
+    const entityId = (req as any).user?.id;
+    const { table, subTable, idColumn, entityLabel } = getEntityInfo((req as any).user);
     const { planId } = req.body;
 
-    if (!academyId || !planId) {
+    if (!entityId || !planId) {
       return res.status(400).json({
         success: false,
-        message: 'Academy ID and plan ID are required'
+        message: 'Entity ID and plan ID are required'
       });
     }
 
     const result = await transaction(async (client) => {
-      // Get academy details
-      const academyResult = await client.query(
-        'SELECT name, email, stripe_customer_id FROM academies WHERE id = $1',
-        [academyId]
+      // Get entity details
+      const entityResult = await client.query(
+        `SELECT name, email, stripe_customer_id FROM ${table} WHERE id = $1`,
+        [entityId]
       );
 
-      if (academyResult.rows.length === 0) {
-        throw new Error('Academy not found');
+      if (entityResult.rows.length === 0) {
+        throw new Error(`${entityLabel} not found`);
       }
 
-      const academy = academyResult.rows[0];
+      const entity = entityResult.rows[0];
 
       // Get plan details
       const planResult = await client.query(
@@ -240,18 +251,18 @@ router.post('/create-checkout-session', authenticateToken, (async (req, res) => 
       const plan = planResult.rows[0];
 
       // Create Stripe customer if doesn't exist
-      let customerId = academy.stripe_customer_id;
+      let customerId = entity.stripe_customer_id;
       if (!customerId) {
         const customer = await createStripeCustomer(
-          academy.email,
-          academy.name,
-          { academyId }
+          entity.email,
+          entity.name,
+          { entityId }
         );
         customerId = customer.id;
 
         await client.query(
-          'UPDATE academies SET stripe_customer_id = $1, updated_at = NOW() WHERE id = $2',
-          [customerId, academyId]
+          `UPDATE ${table} SET stripe_customer_id = $1, updated_at = NOW() WHERE id = $2`,
+          [customerId, entityId]
         );
       }
 
@@ -263,21 +274,21 @@ router.post('/create-checkout-session', authenticateToken, (async (req, res) => 
       const stripeSubscription = await createStripeSubscription(
         customerId,
         plan.stripe_price_id,
-        { academyId, planId }
+        { entityId, planId }
       );
       const subData: any = (stripeSubscription as any)?.data ?? stripeSubscription;
 
       // Create local subscription record
       const subscriptionId = uuidv4();
       await client.query(`
-        INSERT INTO academy_subscriptions (
-          id, academy_id, plan_id, stripe_subscription_id, status, 
+        INSERT INTO ${subTable} (
+          id, ${idColumn}, plan_id, stripe_subscription_id, status, 
           start_date, end_date, auto_renew, created_at, updated_at
         )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
       `, [
         subscriptionId,
-        academyId,
+        entityId,
         planId,
         stripeSubscription.id,
         'PENDING',
@@ -288,7 +299,7 @@ router.post('/create-checkout-session', authenticateToken, (async (req, res) => 
 
       let clientSecret: string | null = null;
       const latestInvoice: any = (subData.latest_invoice ?? stripeSubscription.latest_invoice);
-      if (typeof latestInvoice !== 'string') {
+      if (typeof latestInvoice !== 'string' && latestInvoice) {
         const paymentIntent: any = latestInvoice.payment_intent;
         if (typeof paymentIntent !== 'string') {
           clientSecret = paymentIntent?.client_secret ?? null;
@@ -321,13 +332,14 @@ router.post('/create-checkout-session', authenticateToken, (async (req, res) => 
 // Upgrade subscription
 router.post('/upgrade-subscription', authenticateToken, (async (req, res) => {
   try {
-    const academyId = (req as any).user?.id;
+    const entityId = (req as any).user?.id;
+    const { subTable, idColumn } = getEntityInfo((req as any).user);
     const { newPlanId } = req.body;
 
-    if (!academyId || !newPlanId) {
+    if (!entityId || !newPlanId) {
       return res.status(400).json({
         success: false,
-        message: 'Academy ID and new plan ID are required'
+        message: 'Entity ID and new plan ID are required'
       });
     }
 
@@ -335,12 +347,12 @@ router.post('/upgrade-subscription', authenticateToken, (async (req, res) => {
       // Get current subscription
       const currentSubResult = await client.query(`
         SELECT s.*, p.stripe_price_id as current_stripe_price_id
-        FROM academy_subscriptions s
+        FROM ${subTable} s
         JOIN subscription_plans p ON s.plan_id = p.id
-        WHERE s.academy_id = $1 AND s.status = 'ACTIVE'
+        WHERE s.${idColumn} = $1 AND s.status = 'ACTIVE'
         ORDER BY s.created_at DESC
         LIMIT 1
-      `, [academyId]);
+      `, [entityId]);
 
       if (currentSubResult.rows.length === 0) {
         throw new Error('No active subscription found');
@@ -371,7 +383,7 @@ router.post('/upgrade-subscription', authenticateToken, (async (req, res) => {
 
         // Update local subscription
         await client.query(`
-          UPDATE academy_subscriptions 
+          UPDATE ${subTable} 
           SET 
             plan_id = $1,
             end_date = $2,
@@ -389,15 +401,12 @@ router.post('/upgrade-subscription', authenticateToken, (async (req, res) => {
           stripeSubscriptionId: updatedData.id
         };
       } else {
-        // Handle local subscription upgrade (e.g., from free to paid)
         // Cancel current subscription
         await client.query(
-          'UPDATE academy_subscriptions SET status = $1, updated_at = NOW() WHERE id = $2',
+          `UPDATE ${subTable} SET status = $1, updated_at = NOW() WHERE id = $2`,
           ['CANCELLED', currentSubscription.id]
         );
 
-        // Create new subscription (this will trigger the create-subscription logic)
-        // For now, return instructions to create new subscription
         return {
           type: 'new_subscription_required',
           message: 'Please create a new subscription for the upgraded plan'
@@ -423,10 +432,11 @@ router.post('/upgrade-subscription', authenticateToken, (async (req, res) => {
 // Cancel subscription
 router.post('/cancel-subscription', authenticateToken, (async (req, res) => {
   try {
-    const academyId = (req as any).user?.id;
+    const entityId = (req as any).user?.id;
+    const { subTable, idColumn } = getEntityInfo((req as any).user);
     const { immediately = false } = req.body;
 
-    if (!academyId) {
+    if (!entityId) {
       return res.status(401).json({
         success: false,
         message: 'Authentication required'
@@ -436,11 +446,11 @@ router.post('/cancel-subscription', authenticateToken, (async (req, res) => {
     const result = await transaction(async (client) => {
       // Get current subscription
       const subscriptionResult = await client.query(`
-        SELECT * FROM academy_subscriptions 
-        WHERE academy_id = $1 AND status = 'ACTIVE'
+        SELECT * FROM ${subTable} 
+        WHERE ${idColumn} = $1 AND status = 'ACTIVE'
         ORDER BY created_at DESC
         LIMIT 1
-      `, [academyId]);
+      `, [entityId]);
 
       if (subscriptionResult.rows.length === 0) {
         throw new Error('No active subscription found');
@@ -456,7 +466,7 @@ router.post('/cancel-subscription', authenticateToken, (async (req, res) => {
       // Update local subscription
       const newStatus = immediately ? 'CANCELLED' : 'ACTIVE';
       await client.query(`
-        UPDATE academy_subscriptions 
+        UPDATE ${subTable} 
         SET 
           status = $1,
           auto_renew = false,
@@ -489,37 +499,38 @@ router.post('/cancel-subscription', authenticateToken, (async (req, res) => {
 // Create payment intent for one-time payments
 router.post('/create-payment-intent', authenticateToken, (async (req, res) => {
   try {
-    const academyId = (req as any).user?.id;
+    const entityId = (req as any).user?.id;
+    const { table, entityLabel } = getEntityInfo((req as any).user);
     const { amount, currency = 'usd', description } = req.body;
 
-    if (!academyId || !amount) {
+    if (!entityId || !amount) {
       return res.status(400).json({
         success: false,
-        message: 'Academy ID and amount are required'
+        message: 'Entity ID and amount are required'
       });
     }
 
-    // Get academy details
-    const academyResult = await query(
-      'SELECT stripe_customer_id FROM academies WHERE id = $1',
-      [academyId]
+    // Get entity details
+    const entityResult = await query(
+      `SELECT stripe_customer_id FROM ${table} WHERE id = $1`,
+      [entityId]
     );
 
-    if (academyResult.rows.length === 0) {
+    if (entityResult.rows.length === 0) {
       return res.status(404).json({
         success: false,
-        message: 'Academy not found'
+        message: `${entityLabel} not found`
       });
     }
 
-    const customerId = academyResult.rows[0].stripe_customer_id;
+    const customerId = entityResult.rows[0].stripe_customer_id;
 
     // Create payment intent
     const paymentIntent = await createPaymentIntent(
       amount,
       currency,
       customerId,
-      { academyId, description }
+      { entityId, description }
     );
 
     res.json({
@@ -542,9 +553,10 @@ router.post('/create-payment-intent', authenticateToken, (async (req, res) => {
 // Get subscription status
 router.get('/subscription-status', authenticateToken, (async (req, res) => {
   try {
-    const academyId = (req as any).user?.id;
+    const entityId = (req as any).user?.id;
+    const { subTable, idColumn } = getEntityInfo((req as any).user);
 
-    if (!academyId) {
+    if (!entityId) {
       return res.status(401).json({
         success: false,
         message: 'Authentication required'
@@ -554,12 +566,12 @@ router.get('/subscription-status', authenticateToken, (async (req, res) => {
     // Get current subscription
     const subscriptionResult = await query(`
       SELECT s.*, p.name as plan_name, p.price, p.stripe_price_id
-      FROM academy_subscriptions s
+      FROM ${subTable} s
       JOIN subscription_plans p ON s.plan_id = p.id
-      WHERE s.academy_id = $1 AND s.status IN ('ACTIVE', 'PENDING')
+      WHERE s.${idColumn} = $1 AND s.status IN ('ACTIVE', 'PENDING')
       ORDER BY s.created_at DESC
       LIMIT 1
-    `, [academyId]);
+    `, [entityId]);
 
     if (subscriptionResult.rows.length === 0) {
       return res.json({
