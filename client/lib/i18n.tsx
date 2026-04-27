@@ -28,6 +28,8 @@ export type TranslationKey =
   | 'hero.badge' | 'hero.title1' | 'hero.title2' | 'hero.subtitle' | 'hero.cta.register' | 'hero.cta.start' | 'hero.cta.startJourney'
   // Features
   | 'features.title.main' | 'features.title.sub' | 'features.playerReg.title' | 'features.playerReg.desc' | 'features.docMgmt.title' | 'features.docMgmt.desc' | 'features.finMgmt.title' | 'features.finMgmt.desc' | 'features.fifaComp.title' | 'features.fifaComp.desc'
+  | 'features.scouting.title' | 'features.scouting.desc' | 'features.transfers.title' | 'features.transfers.desc' | 'features.commissions.title' | 'features.commissions.desc'
+  | 'features.profile.title' | 'features.profile.desc' | 'features.opportunities.title' | 'features.opportunities.desc' | 'features.compliance.title' | 'features.compliance.desc'
   // Dashboard
   | 'dash.menu.dashboard' | 'dash.menu.players' | 'dash.menu.transfers' | 'dash.menu.finances' | 'dash.menu.compliance' | 'dash.menu.settings' | 'dash.welcome' | 'dash.role' | 'dash.search'
   | 'dash.stats.players' | 'dash.stats.transfers' | 'dash.stats.revenue' | 'dash.stats.subscription'
@@ -59,6 +61,12 @@ export type TranslationKey =
   | 'landing.benefits.item4.title' | 'landing.benefits.item4.desc'
   | 'landing.benefits.item5.title' | 'landing.benefits.item5.desc'
   | 'landing.benefits.item6.title' | 'landing.benefits.item6.desc'
+  | 'landing.benefits.player.item1.title' | 'landing.benefits.player.item1.desc'
+  | 'landing.benefits.player.item2.title' | 'landing.benefits.player.item2.desc'
+  | 'landing.benefits.player.item3.title' | 'landing.benefits.player.item3.desc'
+  | 'landing.benefits.agency.item1.title' | 'landing.benefits.agency.item1.desc'
+  | 'landing.benefits.agency.item2.title' | 'landing.benefits.agency.item2.desc'
+  | 'landing.benefits.agency.item3.title' | 'landing.benefits.agency.item3.desc'
   // Pricing
   | 'landing.pricing.title.tiers' | 'landing.pricing.title.choose' | 'landing.pricing.month' | 'landing.pricing.year'
   | 'landing.pricing.toggle.monthly' | 'landing.pricing.toggle.yearly' | 'landing.pricing.save'
@@ -307,10 +315,10 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'nav.contact': 'CONTACT',
     'nav.getStarted': 'GET STARTED',
     'nav.register': 'REGISTER ACADEMY',
-    'hero.badge': 'SOCCER CIRCULAR PLATFORM',
-    'hero.title1': "INVEST IN YOUR PLAYERS'",
-    'hero.title2': 'FUTURE WITH SOCCER CIRCULAR',
-    'hero.subtitle': 'Register your academy players today • Secure future compensation payments',
+    'hero.badge': 'GLOBAL FOOTBALL ECOSYSTEM',
+    'hero.title1': 'THE FUTURE OF',
+    'hero.title2': 'FOOTBALL MANAGEMENT',
+    'hero.subtitle': 'The most advanced platform for Academies, Professional Players, and Agencies. Manage registrations, transfers, and compliance with ease.',
     'hero.cta.register': 'GET STARTED',
     'hero.cta.start': 'BOOK DEMO',
     'hero.cta.startJourney': 'START YOUR CHAMPIONSHIP JOURNEY',
@@ -433,6 +441,30 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pricing.lifetime': '/lifetime',
     'auth.register.agency': 'Agency Registration',
     'auth.register.agencySubtitle': 'Sign up as a professional agency to manage your talent',
+    'features.scouting.title': 'ELITE SCOUTING NETWORK',
+    'features.scouting.desc': 'Access a global network of talent. Discover rising stars with advanced filters and performance analytics tailored for professional agencies.',
+    'features.transfers.title': 'SMART TRANSFER MANAGEMENT',
+    'features.transfers.desc': 'Manage negotiations and player movements with ease. Automated contract tracking and FIFA-compliant transfer workflows.',
+    'features.commissions.title': 'COMMISSION TRACKING',
+    'features.commissions.desc': 'Never miss a payment. Track your agent commissions, solidarity contributions, and training compensation in one centralized financial dashboard.',
+    'features.profile.title': 'DIGITAL FOOTBALL RESUME',
+    'features.profile.desc': 'Create a professional digital profile that showcases your stats, matches, and achievements to academies and agencies worldwide.',
+    'features.opportunities.title': 'CAREER OPPORTUNITIES',
+    'features.opportunities.desc': 'Connect directly with top academies and professional agencies. Get discovered and take the next step in your professional football journey.',
+    'features.compliance.title': 'FIFA COMPLIANCE READY',
+    'features.compliance.desc': 'Stay compliant with the latest FIFA regulations. Automated document management ensuring your professional status is always verified.',
+    'landing.benefits.player.item1.title': 'MAXIMIZE EXPOSURE',
+    'landing.benefits.player.item1.desc': 'Get your profile in front of hundreds of verified academies and professional agencies looking for talent.',
+    'landing.benefits.player.item2.title': 'CAREER ROADMAP',
+    'landing.benefits.player.item2.desc': 'Track your development progress and receive guidance on reaching professional standards in the global game.',
+    'landing.benefits.player.item3.title': 'SECURE DOCUMENTATION',
+    'landing.benefits.player.item3.desc': 'Keep all your essential documents, IDs, and certificates secure and accessible for trial applications and registrations.',
+    'landing.benefits.agency.item1.title': 'STREAMLINED OPERATIONS',
+    'landing.benefits.agency.item1.desc': 'Manage your entire player portfolio from a single dashboard. Reduce administrative overhead and focus on talent development.',
+    'landing.benefits.agency.item2.title': 'DATA-DRIVEN SCOUTING',
+    'landing.benefits.agency.item2.desc': 'Use advanced metrics and performance data to identify high-potential players before the competition does.',
+    'landing.benefits.agency.item3.title': 'GUARANTEED COMPLIANCE',
+    'landing.benefits.agency.item3.desc': 'Our platform ensures all your activities meet FIFA regulations, protecting your agency and your players from legal risks.',
     
 
 
@@ -691,10 +723,10 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'nav.contact': 'CONTACTO',
     'nav.getStarted': 'COMENZAR',
     'nav.register': 'REGISTRAR ACADEMIA',
-    'hero.badge': 'PLATAFORMA SOCCER CIRCULAR',
-    'hero.title1': 'INVIERTA EN EL FUTURO',
-    'hero.title2': 'DE SUS JUGADORES CON SOCCER CIRCULAR',
-    'hero.subtitle': 'Registre a los jugadores de su academia hoy • Asegure futuros pagos de compensación',
+    'hero.badge': 'ECOSISTEMA DE FÚTBOL GLOBAL',
+    'hero.title1': 'EL FUTURO DE LA',
+    'hero.title2': 'GESTIÓN DEL FÚTBOL',
+    'hero.subtitle': 'La plataforma más avanzada para Academias, Jugadores Profesionales y Agencias. Gestione registros, transferencias y cumplimiento con facilidad.',
     'hero.cta.register': 'REGISTRAR ACADEMIA',
     'hero.cta.start': 'COMENZAR',
     'hero.cta.startJourney': 'COMIENCE SU VIAJE DE CAMPEONATO',
@@ -813,6 +845,30 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pricing.tab.agencies': 'Para Agencias',
     'auth.register.agency': 'Registro de Agencia',
     'auth.register.agencySubtitle': 'Regístrese como una agencia profesional para gestionar su talento',
+    'features.scouting.title': 'RED DE SCOUTING DE ÉLITE',
+    'features.scouting.desc': 'Acceda a una red global de talento. Descubra estrellas en ascenso con filtros avanzados y análisis de rendimiento adaptados a agencias profesionales.',
+    'features.transfers.title': 'GESTIÓN INTELIGENTE DE TRANSFERENCIAS',
+    'features.transfers.desc': 'Gestione negociaciones y movimientos de jugadores con facilidad. Seguimiento automatizado de contratos y flujos de trabajo de transferencia conformes con FIFA.',
+    'features.commissions.title': 'SEGUIMIENTO DE COMISIONES',
+    'features.commissions.desc': 'No pierda nunca un pago. Rastree sus comisiones de agente, contribuciones de solidaridad y compensación por formación en un panel financiero centralizado.',
+    'features.profile.title': 'RESUMEN DE FÚTBOL DIGITAL',
+    'features.profile.desc': 'Cree un perfil digital profesional que muestre sus estadísticas, partidos y logros a academias y agencias de todo el mundo.',
+    'features.opportunities.title': 'OPORTUNIDADES DE CARRERA',
+    'features.opportunities.desc': 'Conéctese directamente con las mejores academias y agencias profesionales. Dése a conocer y dé el siguiente paso en su carrera profesional.',
+    'features.compliance.title': 'LISTO PARA EL CUMPLIMIENTO FIFA',
+    'features.compliance.desc': 'Manténgase al día con las últimas regulaciones de la FIFA. Gestión documental automatizada que garantiza que su estatus profesional esté siempre verificado.',
+    'landing.benefits.player.item1.title': 'MAXIMICE LA EXPOSICIÓN',
+    'landing.benefits.player.item1.desc': 'Ponga su perfil frente a cientos de academias verificadas y agencias profesionales que buscan talento.',
+    'landing.benefits.player.item2.title': 'HOJA DE RUTA PROFESIONAL',
+    'landing.benefits.player.item2.desc': 'Rastree su progreso de desarrollo y reciba orientación para alcanzar los estándares profesionales en el fútbol global.',
+    'landing.benefits.player.item3.title': 'DOCUMENTACIÓN SEGURA',
+    'landing.benefits.player.item3.desc': 'Mantenga todos sus documentos esenciales, identificaciones y certificados seguros y accesibles para solicitudes de pruebas y registros.',
+    'landing.benefits.agency.item1.title': 'OPERACIONES OPTIMIZADAS',
+    'landing.benefits.agency.item1.desc': 'Gestione toda su cartera de jugadores desde un solo panel. Reduzca la carga administrativa y concéntrese en el desarrollo del talento.',
+    'landing.benefits.agency.item2.title': 'SCOUTING BASADO EN DATOS',
+    'landing.benefits.agency.item2.desc': 'Utilice métricas avanzadas y datos de rendimiento para identificar jugadores de alto potencial antes que la competencia.',
+    'landing.benefits.agency.item3.title': 'CUMPLIMIENTO GARANTIZADO',
+    'landing.benefits.agency.item3.desc': 'Nuestra plataforma garantiza que todas sus actividades cumplan con las regulaciones de la FIFA, protegiendo a su agencia y a sus jugadores.',
     'footer.tagline': 'Plataforma Global de Academias de Fútbol',
     'footer.description': 'Únase a la plataforma de registro FIFA más confiable del mundo utilizada por academias de élite en todo el mundo',
     'footer.about': 'SOBRE NOSOTROS',

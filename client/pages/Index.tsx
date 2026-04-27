@@ -27,6 +27,8 @@ export default function Index() {
   const [plans, setPlans] = useState<any[]>([]);
   const [isLoadingPlans, setIsLoadingPlans] = useState(true);
   const [activeTab, setActiveTab] = useState<'ACADEMY' | 'INDIVIDUAL' | 'AGENCY'>('ACADEMY');
+  const [featuresTab, setFeaturesTab] = useState<'ACADEMY' | 'INDIVIDUAL' | 'AGENCY'>('ACADEMY');
+  const [benefitsTab, setBenefitsTab] = useState<'ACADEMY' | 'INDIVIDUAL' | 'AGENCY'>('ACADEMY');
   usePageTitle("Home");
 
   useEffect(() => {
@@ -485,119 +487,194 @@ export default function Index() {
               </span>
             </h2>
           </div>
+          
+          {/* Features Tabs */}
+          <div className="flex justify-center mb-12">
+            <Tabs 
+              defaultValue="ACADEMY" 
+              value={featuresTab} 
+              onValueChange={(val) => setFeaturesTab(val as 'ACADEMY' | 'INDIVIDUAL' | 'AGENCY')}
+              className="w-full max-w-xl"
+            >
+              <TabsList className="grid w-full grid-cols-3 bg-blue-50/50 border border-blue-200/30 p-1 rounded-full h-14">
+                <TabsTrigger 
+                  value="ACADEMY" 
+                  className="rounded-full font-black text-[10px] sm:text-xs tracking-widest data-[state=active]:bg-[#005391] data-[state=active]:text-white text-[#005391] transition-all duration-300 h-full"
+                >
+                  {t('landing.pricing.tab.academies')}
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="INDIVIDUAL" 
+                  className="rounded-full font-black text-[10px] sm:text-xs tracking-widest data-[state=active]:bg-[#005391] data-[state=active]:text-white text-[#005391] transition-all duration-300 h-full"
+                >
+                  {t('landing.pricing.tab.players')}
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="AGENCY" 
+                  className="rounded-full font-black text-[10px] sm:text-xs tracking-widest data-[state=active]:bg-[#005391] data-[state=active]:text-white text-[#005391] transition-all duration-300 h-full"
+                >
+                  {t('landing.pricing.tab.agencies')}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
 
-          {/* Features Grid - Tournament Card Style */}
+          {/* Features Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
-            {/* Feature 1 - Player Registration */}
-            <Link to="/academy-dashboard" className="block">
-              <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden cursor-pointer">
-                {/* Card Header */}
-                <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#005391] to-[#0066b3]"></div>
-
-                {/* Icon Badge */}
-                <div className="relative mb-6">
-                  <div className="w-20 h-20 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-[#005391]/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
-                    <Users className="h-10 w-10 text-white" />
+            {featuresTab === 'ACADEMY' ? (
+              <>
+                {/* Academy Feature 1 */}
+                <Link to="/academy-registration" className="block">
+                  <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden cursor-pointer h-full flex flex-col">
+                    <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#005391] to-[#0066b3]"></div>
+                    <div className="relative mb-6">
+                      <div className="w-20 h-20 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-500">
+                        <Users className="h-10 w-10 text-white" />
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-[#005391]">{t('features.playerReg.title')}</h3>
+                    <p className="text-gray-600 mb-6 flex-grow">{t('features.playerReg.desc')}</p>
+                    <Button className="w-full bg-gradient-to-r from-[#005391] to-[#0066b3] text-white font-bold py-4 rounded-xl">
+                      {t('nav.getStarted')}
+                    </Button>
                   </div>
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center">
-                    <Star className="h-4 w-4 text-black fill-current" />
+                </Link>
+                {/* Academy Feature 2 */}
+                <Link to="/academy-registration" className="block">
+                  <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden cursor-pointer h-full flex flex-col">
+                    <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-yellow-400 to-yellow-500"></div>
+                    <div className="relative mb-6">
+                      <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-500">
+                        <FileText className="h-10 w-10 text-black" />
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-yellow-600">{t('features.docMgmt.title')}</h3>
+                    <p className="text-gray-600 mb-6 flex-grow">{t('features.docMgmt.desc')}</p>
+                    <Button className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 text-black font-bold py-4 rounded-xl">
+                      {t('nav.getStarted')}
+                    </Button>
                   </div>
-                </div>
-
-                {/* Content */}
-                <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-[#005391] transition-colors duration-300">
-                  {t('features.playerReg.title')}
-                </h3>
-                <p className="text-gray-600 leading-relaxed mb-6 group-hover:text-gray-700 transition-colors duration-300">
-                  {t('features.playerReg.desc')}
-                </p>
-
-                {/* CTA Button */}
-                <Button className="w-full bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#0066b3] hover:to-[#005391] text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 pointer-events-none">
-                  <div className="flex items-center justify-center gap-2">
-                    {t('nav.getStarted')}
-                    <Target className="h-4 w-4" />
+                </Link>
+                {/* Academy Feature 3 */}
+                <Link to="/academy-registration" className="block">
+                  <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden cursor-pointer h-full flex flex-col">
+                    <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-green-400 to-green-500"></div>
+                    <div className="relative mb-6">
+                      <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-500">
+                        <Shield className="h-10 w-10 text-white" />
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-green-600">{t('features.fifaComp.title')}</h3>
+                    <p className="text-gray-600 mb-6 flex-grow">{t('features.fifaComp.desc')}</p>
+                    <Button className="w-full bg-gradient-to-r from-green-400 to-green-500 text-white font-bold py-4 rounded-xl">
+                      {t('nav.getStarted')}
+                    </Button>
                   </div>
-                </Button>
-
-                {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-[#005391]/5 to-[#0066b3]/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl"></div>
-              </div>
-            </Link>
-
-            {/* Feature 2 - Document Management */}
-            <Link to="/academy-dashboard" className="block">
-              <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden cursor-pointer">
-                {/* Card Header */}
-                <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-yellow-400 to-yellow-500"></div>
-
-                {/* Icon Badge */}
-                <div className="relative mb-6">
-                  <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-yellow-500/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
-                    <FileText className="h-10 w-10 text-black" />
+                </Link>
+              </>
+            ) : featuresTab === 'INDIVIDUAL' ? (
+              <>
+                {/* Player Feature 1 */}
+                <Link to="/player/register" className="block">
+                  <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden cursor-pointer h-full flex flex-col">
+                    <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-400 to-blue-600"></div>
+                    <div className="relative mb-6">
+                      <div className="w-20 h-20 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-500">
+                        <UserCheck className="h-10 w-10 text-white" />
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-blue-600">{t('features.profile.title')}</h3>
+                    <p className="text-gray-600 mb-6 flex-grow">{t('features.profile.desc')}</p>
+                    <Button className="w-full bg-gradient-to-r from-blue-400 to-blue-600 text-white font-bold py-4 rounded-xl">
+                      {t('nav.getStarted')}
+                    </Button>
                   </div>
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-[#005391] to-[#0066b3] rounded-full flex items-center justify-center">
-                    <Shield className="h-4 w-4 text-white" />
+                </Link>
+                {/* Player Feature 2 */}
+                <Link to="/player/register" className="block">
+                  <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden cursor-pointer h-full flex flex-col">
+                    <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-orange-400 to-orange-600"></div>
+                    <div className="relative mb-6">
+                      <div className="w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-500">
+                        <Target className="h-10 w-10 text-white" />
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-orange-600">{t('features.opportunities.title')}</h3>
+                    <p className="text-gray-600 mb-6 flex-grow">{t('features.opportunities.desc')}</p>
+                    <Button className="w-full bg-gradient-to-r from-orange-400 to-orange-600 text-white font-bold py-4 rounded-xl">
+                      {t('nav.getStarted')}
+                    </Button>
                   </div>
-                </div>
-
-                {/* Content */}
-                <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-yellow-600 transition-colors duration-300">
-                  {t('features.docMgmt.title')}
-                </h3>
-                <p className="text-gray-600 leading-relaxed mb-6 group-hover:text-gray-700 transition-colors duration-300">
-                  {t('features.docMgmt.desc')}
-                </p>
-
-                {/* CTA Button */}
-                <Button className="w-full bg-gradient-to-r from-yellow-400 to-yellow-500 hover:from-yellow-500 hover:to-yellow-600 text-black font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 pointer-events-none">
-                  <div className="flex items-center justify-center gap-2">
-                    {t('nav.getStarted')}
-                    <Target className="h-4 w-4" />
+                </Link>
+                {/* Player Feature 3 */}
+                <Link to="/player/register" className="block">
+                  <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden cursor-pointer h-full flex flex-col">
+                    <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-indigo-400 to-indigo-600"></div>
+                    <div className="relative mb-6">
+                      <div className="w-20 h-20 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-500">
+                        <Shield className="h-10 w-10 text-white" />
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-indigo-600">{t('features.compliance.title')}</h3>
+                    <p className="text-gray-600 mb-6 flex-grow">{t('features.compliance.desc')}</p>
+                    <Button className="w-full bg-gradient-to-r from-indigo-400 to-indigo-600 text-white font-bold py-4 rounded-xl">
+                      {t('nav.getStarted')}
+                    </Button>
                   </div>
-                </Button>
-
-                {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-yellow-400/5 to-yellow-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl"></div>
-              </div>
-            </Link>
-
-            {/* Feature 3 - FIFA Compliance */}
-            <Link to="/academy-dashboard" className="block">
-              <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden cursor-pointer">
-                {/* Card Header */}
-                <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-green-400 to-green-500"></div>
-
-                {/* Icon Badge */}
-                <div className="relative mb-6">
-                  <div className="w-20 h-20 bg-gradient-to-br from-green-400 to-green-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-green-500/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
-                    <Shield className="h-10 w-10 text-white" />
+                </Link>
+              </>
+            ) : (
+              <>
+                {/* Agency Feature 1 */}
+                <Link to="/register-agency" className="block">
+                  <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden cursor-pointer h-full flex flex-col">
+                    <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-purple-400 to-purple-600"></div>
+                    <div className="relative mb-6">
+                      <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-500">
+                        <Globe className="h-10 w-10 text-white" />
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-purple-600">{t('features.scouting.title')}</h3>
+                    <p className="text-gray-600 mb-6 flex-grow">{t('features.scouting.desc')}</p>
+                    <Button className="w-full bg-gradient-to-r from-purple-400 to-purple-600 text-white font-bold py-4 rounded-xl">
+                      {t('nav.getStarted')}
+                    </Button>
                   </div>
-                  <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-[#005391] to-[#0066b3] rounded-full flex items-center justify-center">
-                    <CheckCircle className="h-4 w-4 text-white" />
+                </Link>
+                {/* Agency Feature 2 */}
+                <Link to="/register-agency" className="block">
+                  <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden cursor-pointer h-full flex flex-col">
+                    <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-cyan-400 to-cyan-600"></div>
+                    <div className="relative mb-6">
+                      <div className="w-20 h-20 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-500">
+                        <TrendingUp className="h-10 w-10 text-white" />
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-cyan-600">{t('features.transfers.title')}</h3>
+                    <p className="text-gray-600 mb-6 flex-grow">{t('features.transfers.desc')}</p>
+                    <Button className="w-full bg-gradient-to-r from-cyan-400 to-cyan-600 text-white font-bold py-4 rounded-xl">
+                      {t('nav.getStarted')}
+                    </Button>
                   </div>
-                </div>
-
-                {/* Content */}
-                <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-green-600 transition-colors duration-300">
-                  {t('features.fifaComp.title')}
-                </h3>
-                <p className="text-gray-600 leading-relaxed mb-6 group-hover:text-gray-700 transition-colors duration-300">
-                  {t('features.fifaComp.desc')}
-                </p>
-
-                {/* CTA Button */}
-                <Button className="w-full bg-gradient-to-r from-green-400 to-green-500 hover:from-green-500 hover:to-green-600 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 pointer-events-none">
-                  <div className="flex items-center justify-center gap-2">
-                    {t('nav.getStarted')}
-                    <Target className="h-4 w-4" />
+                </Link>
+                {/* Agency Feature 3 */}
+                <Link to="/register-agency" className="block">
+                  <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden cursor-pointer h-full flex flex-col">
+                    <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-pink-400 to-pink-600"></div>
+                    <div className="relative mb-6">
+                      <div className="w-20 h-20 bg-gradient-to-br from-pink-400 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-500">
+                        <DollarSign className="h-10 w-10 text-white" />
+                      </div>
+                    </div>
+                    <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-pink-600">{t('features.commissions.title')}</h3>
+                    <p className="text-gray-600 mb-6 flex-grow">{t('features.commissions.desc')}</p>
+                    <Button className="w-full bg-gradient-to-r from-pink-400 to-pink-600 text-white font-bold py-4 rounded-xl">
+                      {t('nav.getStarted')}
+                    </Button>
                   </div>
-                </Button>
-
-                {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-br from-green-400/5 to-green-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-3xl"></div>
-              </div>
-            </Link>
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Bottom CTA */}
@@ -635,151 +712,148 @@ export default function Index() {
             </h2>
           </div>
 
-          {/* Benefits Grid - Tournament Card Style */}
+          {/* Benefits Tabs */}
+          <div className="flex justify-center mb-12">
+            <Tabs 
+              defaultValue="ACADEMY" 
+              value={benefitsTab} 
+              onValueChange={(val) => setBenefitsTab(val as 'ACADEMY' | 'INDIVIDUAL' | 'AGENCY')}
+              className="w-full max-w-xl"
+            >
+              <TabsList className="grid w-full grid-cols-3 bg-blue-50/50 border border-blue-200/30 p-1 rounded-full h-14">
+                <TabsTrigger 
+                  value="ACADEMY" 
+                  className="rounded-full font-black text-[10px] sm:text-xs tracking-widest data-[state=active]:bg-[#005391] data-[state=active]:text-white text-[#005391] transition-all duration-300 h-full"
+                >
+                  {t('landing.pricing.tab.academies')}
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="INDIVIDUAL" 
+                  className="rounded-full font-black text-[10px] sm:text-xs tracking-widest data-[state=active]:bg-[#005391] data-[state=active]:text-white text-[#005391] transition-all duration-300 h-full"
+                >
+                  {t('landing.pricing.tab.players')}
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="AGENCY" 
+                  className="rounded-full font-black text-[10px] sm:text-xs tracking-widest data-[state=active]:bg-[#005391] data-[state=active]:text-white text-[#005391] transition-all duration-300 h-full"
+                >
+                  {t('landing.pricing.tab.agencies')}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+
+          {/* Benefits Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
-            {/* Benefit 1 - FIFA Registration */}
-            <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
-              {/* Card Header */}
-              <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#005391] to-[#0066b3]"></div>
-
-              {/* Icon Badge */}
-              <div className="relative mb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-[#005391]/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
-                  <Shield className="h-10 w-10 text-white" />
+            {benefitsTab === 'ACADEMY' ? (
+              <>
+                {/* Benefit 1 - FIFA Registration */}
+                <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#005391] to-[#0066b3]"></div>
+                  <div className="relative mb-6">
+                    <div className="w-20 h-20 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-500">
+                      <Shield className="h-10 w-10 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-[#005391]">{t('landing.benefits.item1.title')}</h3>
+                  <p className="text-gray-600 leading-relaxed">{t('landing.benefits.item1.desc')}</p>
                 </div>
-                <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center">
-                  <Star className="h-4 w-4 text-black fill-current" />
+                {/* Benefit 2 - Solidarity Mechanism */}
+                <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-green-500 to-emerald-600"></div>
+                  <div className="relative mb-6">
+                    <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-500">
+                      <DollarSign className="h-10 w-10 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-green-600">{t('landing.benefits.item3.title')}</h3>
+                  <p className="text-gray-600 leading-relaxed">{t('landing.benefits.item3.desc')}</p>
                 </div>
-              </div>
-
-              {/* Content */}
-              <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-[#005391] transition-colors duration-300">
-                {t('landing.benefits.item1.title')}
-              </h3>
-              <p className="text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors duration-300">
-                {t('landing.benefits.item1.desc')}
-              </p>
-            </div>
-
-            {/* Benefit 2 - Training Compensation */}
-            <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
-              {/* Card Header */}
-              <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-green-500 to-emerald-600"></div>
-
-              {/* Icon Badge */}
-              <div className="relative mb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-green-500/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
-                  <DollarSign className="h-10 w-10 text-white" />
+                {/* Benefit 3 - Analytics Dashboard */}
+                <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-yellow-400 to-yellow-500"></div>
+                  <div className="relative mb-6">
+                    <div className="w-20 h-20 bg-gradient-to-br from-yellow-400 to-yellow-500 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-500">
+                      <BarChart3 className="h-10 w-10 text-black" />
+                    </div>
+                  </div>
+                  <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-yellow-600">{t('landing.benefits.item6.title')}</h3>
+                  <p className="text-gray-600 leading-relaxed">{t('landing.benefits.item6.desc')}</p>
                 </div>
-                <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center">
-                  <Trophy className="h-4 w-4 text-black" />
+              </>
+            ) : benefitsTab === 'INDIVIDUAL' ? (
+              <>
+                {/* Player Benefit 1 */}
+                <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-400 to-blue-600"></div>
+                  <div className="relative mb-6">
+                    <div className="w-20 h-20 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-500">
+                      <Globe className="h-10 w-10 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-blue-600">{t('landing.benefits.player.item1.title')}</h3>
+                  <p className="text-gray-600 leading-relaxed">{t('landing.benefits.player.item1.desc')}</p>
                 </div>
-              </div>
-
-              {/* Content */}
-              <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-green-600 transition-colors duration-300">
-                {t('landing.benefits.item2.title')}
-              </h3>
-              <p className="text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors duration-300">
-                {t('landing.benefits.item2.desc')}
-              </p>
-            </div>
-
-            {/* Benefit 3 - Solidarity Mechanism */}
-            <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
-              {/* Card Header */}
-              <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#005391] to-[#0066b3]"></div>
-
-              {/* Icon Badge */}
-              <div className="relative mb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-[#005391]/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
-                  <Globe className="h-10 w-10 text-white" />
+                {/* Player Benefit 2 */}
+                <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-orange-400 to-orange-600"></div>
+                  <div className="relative mb-6">
+                    <div className="w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-500">
+                      <TrendingUp className="h-10 w-10 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-orange-600">{t('landing.benefits.player.item2.title')}</h3>
+                  <p className="text-gray-600 leading-relaxed">{t('landing.benefits.player.item2.desc')}</p>
                 </div>
-                <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center">
-                  <Star className="h-4 w-4 text-black fill-current" />
+                {/* Player Benefit 3 */}
+                <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-indigo-400 to-indigo-600"></div>
+                  <div className="relative mb-6">
+                    <div className="w-20 h-20 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-500">
+                      <Shield className="h-10 w-10 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-indigo-600">{t('landing.benefits.player.item3.title')}</h3>
+                  <p className="text-gray-600 leading-relaxed">{t('landing.benefits.player.item3.desc')}</p>
                 </div>
-              </div>
-
-              {/* Content */}
-              <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-[#005391] transition-colors duration-300">
-                {t('landing.benefits.item3.title')}
-              </h3>
-              <p className="text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors duration-300">
-                {t('landing.benefits.item3.desc')}
-              </p>
-            </div>
-
-            {/* Benefit 4 - Compliance Monitoring */}
-            <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
-              {/* Card Header */}
-              <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#005391] to-[#0066b3]"></div>
-
-              {/* Icon Badge */}
-              <div className="relative mb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-[#005391]/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
-                  <CheckCircle className="h-10 w-10 text-white" />
+              </>
+            ) : (
+              <>
+                {/* Agency Benefit 1 */}
+                <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-purple-400 to-purple-600"></div>
+                  <div className="relative mb-6">
+                    <div className="w-20 h-20 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-500">
+                      <Building2 className="h-10 w-10 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-purple-600">{t('landing.benefits.agency.item1.title')}</h3>
+                  <p className="text-gray-600 leading-relaxed">{t('landing.benefits.agency.item1.desc')}</p>
                 </div>
-                <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center">
-                  <Star className="h-4 w-4 text-black fill-current" />
+                {/* Agency Benefit 2 */}
+                <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-cyan-400 to-cyan-600"></div>
+                  <div className="relative mb-6">
+                    <div className="w-20 h-20 bg-gradient-to-br from-cyan-400 to-cyan-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-500">
+                      <BarChart3 className="h-10 w-10 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-cyan-600">{t('landing.benefits.agency.item2.title')}</h3>
+                  <p className="text-gray-600 leading-relaxed">{t('landing.benefits.agency.item2.desc')}</p>
                 </div>
-              </div>
-
-              {/* Content */}
-              <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-[#005391] transition-colors duration-300">
-                {t('landing.benefits.item4.title')}
-              </h3>
-              <p className="text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors duration-300">
-                {t('landing.benefits.item4.desc')}
-              </p>
-            </div>
-
-            {/* Benefit 5 - Document Security */}
-            <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
-              {/* Card Header */}
-              <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#005391] to-[#0066b3]"></div>
-
-              {/* Icon Badge */}
-              <div className="relative mb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-[#005391]/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
-                  <FileText className="h-10 w-10 text-white" />
+                {/* Agency Benefit 3 */}
+                <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
+                  <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-pink-400 to-pink-600"></div>
+                  <div className="relative mb-6">
+                    <div className="w-20 h-20 bg-gradient-to-br from-pink-400 to-pink-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-500">
+                      <Shield className="h-10 w-10 text-white" />
+                    </div>
+                  </div>
+                  <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-pink-600">{t('landing.benefits.agency.item3.title')}</h3>
+                  <p className="text-gray-600 leading-relaxed">{t('landing.benefits.agency.item3.desc')}</p>
                 </div>
-                <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center">
-                  <Star className="h-4 w-4 text-black fill-current" />
-                </div>
-              </div>
-
-              {/* Content */}
-              <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-[#005391] transition-colors duration-300">
-                {t('landing.benefits.item5.title')}
-              </h3>
-              <p className="text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors duration-300">
-                {t('landing.benefits.item5.desc')}
-              </p>
-            </div>
-
-            {/* Benefit 6 - Analytics Dashboard */}
-            <div className="group relative bg-white rounded-3xl p-8 shadow-xl hover:shadow-2xl transition-all duration-700 transform hover:scale-105 hover:-translate-y-4 border-2 border-transparent hover:border-[#005391]/20 overflow-hidden">
-              {/* Card Header */}
-              <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-[#005391] to-[#0066b3]"></div>
-
-              {/* Icon Badge */}
-              <div className="relative mb-6">
-                <div className="w-20 h-20 bg-gradient-to-br from-[#005391] to-[#0066b3] rounded-2xl flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:shadow-[#005391]/25 transition-all duration-500 transform group-hover:scale-110 group-hover:rotate-3">
-                  <BarChart3 className="h-10 w-10 text-white" />
-                </div>
-                <div className="absolute -top-2 -right-2 w-8 h-8 bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full flex items-center justify-center">
-                  <Star className="h-4 w-4 text-black fill-current" />
-                </div>
-              </div>
-
-              {/* Content */}
-              <h3 className="text-2xl font-black text-[#001a33] mb-4 group-hover:text-[#005391] transition-colors duration-300">
-                {t('landing.benefits.item6.title')}
-              </h3>
-              <p className="text-gray-600 leading-relaxed group-hover:text-gray-700 transition-colors duration-300">
-                {t('landing.benefits.item6.desc')}
-              </p>
-            </div>
+              </>
+            )}
           </div>
         </div>
       </section>
