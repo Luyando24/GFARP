@@ -98,11 +98,21 @@ export default function PaymentMethodSelector({
           notes: `Upgraded to ${selectedPlan.name} plan`
         });
 
-        if (result.success && result.url) {
-          // Redirect to Stripe Checkout
-          window.location.href = result.url;
+        if (result.success) {
+          if (result.url) {
+            // Redirect to Stripe Checkout
+            window.location.href = result.url;
+          } else {
+            // Success without redirect (e.g. manual/cash)
+            toast({
+              title: "Success",
+              description: result.message || `Successfully upgraded to ${selectedPlan.name} plan`,
+            });
+            onSuccess();
+            onClose();
+          }
         } else {
-          throw new Error(result.message || 'Failed to create checkout session');
+          throw new Error(result.message || 'Failed to upgrade subscription');
         }
       } else {
         toast({

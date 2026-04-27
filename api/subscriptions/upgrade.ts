@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
+import Stripe from 'stripe';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('[VERCEL] Subscription upgrade request received');
@@ -39,7 +40,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
         const supabase = createClient(supabaseUrl, supabaseKey);
 
-        // 1. Get new plan details first to determine the target table
+        // 1. Get new plan details first
         let newPlan;
         const { data: dbPlan, error: newPlanError } = await supabase
             .from('subscription_plans')
@@ -49,9 +50,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .single();
         
         if (newPlanError || !dbPlan) {
-            // Check fallback
             if (newPlanId === 'pro') {
-                newPlan = { id: 'pro', name: 'Pro Plan', price: 49.99, target_type: 'ACADEMY' };
+                newPlan = { id: 'pro', name: 'Pro Plan', price: 49.99, target_type: 'ACADEMY', currency: 'USD' };
             } else {
                 throw new Error('Invalid or inactive subscription plan');
             }
@@ -62,10 +62,73 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const isAgencyPlan = newPlan.target_type === 'AGENCY';
         const isIndividualPlan = newPlan.target_type === 'INDIVIDUAL';
         
+        // 2. Handle Stripe Checkout if method is CARD
+        if (paymentMethod === 'CARD' && newPlan.price > 0) {
+            const stripeSecret = process.env.STRIPE_SECRET_KEY;
+            if (!stripeSecret) throw new Error('Stripe is not configured on the server');
+
+            const stripe = new Stripe(stripeSecret, { apiVersion: '2023-10-16' as any });
+
+            // Get organization details for customer
+            const orgTable = isAgencyPlan ? 'agencies' : 'academies';
+            const { data: org } = await supabase.from(orgTable).select('*').eq('id', academyId).single();
+            
+            if (!org) throw new Error('Organization not found');
+
+            // Ensure Stripe customer exists
+            let customerId = org.stripe_customer_id;
+            if (!customerId) {
+                const customer = await stripe.customers.create({
+                    email: org.email,
+                    name: org.name,
+                    metadata: { orgId: academyId, type: newPlan.target_type }
+                });
+                customerId = customer.id;
+                await supabase.from(orgTable).update({ stripe_customer_id: customerId }).eq('id', academyId);
+            }
+
+            const clientUrl = process.env.CLIENT_URL || 'https://soccercircular.com';
+            
+            const session = await stripe.checkout.sessions.create({
+                customer: customerId,
+                payment_method_types: ['card'],
+                line_items: [
+                    newPlan.stripe_price_id ? {
+                        price: newPlan.stripe_price_id,
+                        quantity: 1,
+                    } : {
+                        price_data: {
+                            currency: newPlan.currency?.toLowerCase() || 'usd',
+                            product_data: {
+                                name: `${newPlan.name} Plan`,
+                                description: `Subscription upgrade to ${newPlan.name}`,
+                            },
+                            unit_amount: Math.round(Number(newPlan.price) * 100),
+                        },
+                        quantity: 1,
+                    },
+                ],
+                mode: 'payment',
+                success_url: `${clientUrl}/subscription/success?session_id={CHECKOUT_SESSION_ID}`,
+                cancel_url: `${clientUrl}/subscription/cancel`,
+                metadata: {
+                    orgId: academyId,
+                    planId: newPlanId,
+                    type: newPlan.target_type
+                }
+            });
+
+            return res.status(200).json({
+                success: true,
+                message: 'Redirecting to checkout...',
+                url: session.url
+            });
+        }
+
+        // 3. Manual Upgrade logic (for CASH or Free plans)
         const subTable = isAgencyPlan ? 'agency_subscriptions' : 'academy_subscriptions';
         const idColumn = isAgencyPlan ? 'agency_id' : 'academy_id';
 
-        // 2. Get current subscription from the appropriate table
         const { data: currentSubscription } = await supabase
             .from(subTable)
             .select('*, subscription_plans(name)')
@@ -73,7 +136,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .eq('status', 'ACTIVE')
             .maybeSingle();
 
-        // 3. Deactivate current subscription if exists
         if (currentSubscription) {
             await supabase
                 .from(subTable)
@@ -81,11 +143,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 .eq('id', currentSubscription.id);
         }
 
-        // 4. Create new subscription
         const newSubscriptionId = uuidv4();
         const startDate = new Date();
         const endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + 1); // 1 month subscription
+        endDate.setMonth(endDate.getMonth() + 1);
 
         const { data: newSubscription, error: createSubError } = await supabase
             .from(subTable)
@@ -101,41 +162,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             .select()
             .single();
 
-        if (createSubError) {
-            throw new Error(`Failed to create new subscription in ${subTable}: ${createSubError.message}`);
-        }
+        if (createSubError) throw new Error(`Failed to create new subscription: ${createSubError.message}`);
 
-        // 5. Log history
-        const action = currentSubscription ? 'UPGRADED' : 'CREATED';
-        const historyNotes = currentSubscription
-            ? `Plan upgraded from ${currentSubscription.subscription_plans?.name || 'Unknown'} to ${newPlan.name}`
-            : `Initial subscription created with ${newPlan.name} plan`;
+        // Log history
+        await supabase.from('subscription_history').insert({
+            subscription_id: newSubscriptionId,
+            action: currentSubscription ? 'UPGRADED' : 'CREATED',
+            old_plan_id: currentSubscription?.plan_id || null,
+            new_plan_id: newPlanId,
+            notes: currentSubscription ? `Plan upgraded to ${newPlan.name}` : `Initial subscription created`
+        });
 
-        await supabase
-            .from('subscription_history')
-            .insert({
-                subscription_id: newSubscriptionId,
-                action: action,
-                old_plan_id: currentSubscription?.plan_id || null,
-                new_plan_id: newPlanId,
-                notes: historyNotes
-            });
-
-        // 6. Create payment record
-        const paymentId = uuidv4();
-
-        await supabase
-            .from('subscription_payments')
-            .insert({
-                id: paymentId,
-                subscription_id: newSubscriptionId,
-                amount: newPlan.price,
-                currency: 'USD',
-                payment_method: (paymentMethod || 'CARD'), // Default to CARD if null
-                payment_reference: (paymentReference || null),
-                status: paymentMethod !== 'CASH' ? 'COMPLETED' : 'PENDING',
-                notes: notes
-            });
+        // Create payment record
+        await supabase.from('subscription_payments').insert({
+            id: uuidv4(),
+            subscription_id: newSubscriptionId,
+            amount: newPlan.price,
+            currency: 'USD',
+            payment_method: (paymentMethod || 'CASH'),
+            payment_reference: (paymentReference || 'DASHBOARD_UPGRADE'),
+            status: paymentMethod === 'CASH' ? 'PENDING' : 'COMPLETED',
+            notes: notes
+        });
 
         return res.status(200).json({
             success: true,
@@ -144,12 +192,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 subscription: {
                     id: newSubscription.id,
                     planName: newPlan.name,
-                    status: newSubscription.status,
-                    startDate: newSubscription.start_date,
-                    endDate: newSubscription.end_date
-                },
-                paymentId: paymentId,
-                paymentStatus: paymentMethod !== 'CASH' ? 'COMPLETED' : 'PENDING'
+                    status: newSubscription.status
+                }
             }
         });
 
