@@ -103,16 +103,12 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
   // Extract targetType robustly
   let targetType = 'ACADEMY';
   if (req.query.targetType) {
-    if (Array.isArray(req.query.targetType)) {
-      targetType = String(req.query.targetType[0]);
-    } else {
-      targetType = String(req.query.targetType);
-    }
+    targetType = Array.isArray(req.query.targetType) 
+      ? String(req.query.targetType[0]) 
+      : String(req.query.targetType);
   }
   
-  // Normalize to uppercase to match DB constraints
   targetType = targetType.toUpperCase();
-  console.log('[SUBSCRIPTION] Normalized targetType:', targetType);
 
   // Start timeout timer that will send fallback plans
   const timeoutId = setTimeout(() => {
@@ -140,9 +136,6 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
 
     plansQuery += ' ORDER BY sort_order ASC';
 
-    console.log('[SUBSCRIPTION] SQL Query:', plansQuery.replace(/\s+/g, ' ').trim());
-    console.log('[SUBSCRIPTION] SQL Params:', JSON.stringify([targetType]));
-    
     const result = await query(plansQuery, [targetType]);
 
     // Clear timeout if query succeeded
@@ -155,10 +148,6 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
     }
 
     responded = true;
-    console.log(`[SUBSCRIPTION] Query returned ${result.rows.length} rows`);
-    if (result.rows.length > 0) {
-      console.log('[SUBSCRIPTION] First row sample target_type:', result.rows[0].target_type);
-    }
 
     let plans = result.rows.map(plan => {
       // Parse features if it's a JSON string
@@ -188,7 +177,6 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
         storage_limit: plan.storage_limit || 5368709120 // Default 5GB if missing
       };
 
-      console.log('[SUBSCRIPTION] Mapped plan:', JSON.stringify(mappedPlan));
       return mappedPlan;
     });
 

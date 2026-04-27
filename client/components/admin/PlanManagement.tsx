@@ -61,17 +61,14 @@ export default function PlanManagement() {
     try {
       // Fetch Academy Plans
       const academyData = await Api.get<{ success: boolean; data: SubscriptionPlan[] }>('/subscriptions/plans?targetType=ACADEMY&includeInactive=true');
-      console.log('[ADMIN DEBUG] Academy plans response:', academyData);
       if (academyData.success) setAcademyPlans(academyData.data);
 
       // Fetch Player Plans
       const playerData = await Api.get<{ success: boolean; data: SubscriptionPlan[] }>('/subscriptions/plans?targetType=INDIVIDUAL&includeInactive=true');
-      console.log('[ADMIN DEBUG] Player plans response:', playerData);
       if (playerData.success) setPlayerPlans(playerData.data);
 
       // Fetch Agency Plans
       const agencyData = await Api.get<{ success: boolean; data: SubscriptionPlan[] }>('/subscriptions/plans?targetType=AGENCY&includeInactive=true');
-      console.log('[ADMIN DEBUG] Agency plans response:', agencyData);
       if (agencyData.success) setAgencyPlans(agencyData.data);
     } catch (error) {
       toast.error('Failed to load plans');
