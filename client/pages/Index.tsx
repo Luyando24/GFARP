@@ -144,15 +144,35 @@ export default function Index() {
       displayPrice = (plan.price * 12 * 0.8).toFixed(2);
     }
 
+    const planKey = plan.name.toLowerCase().includes('starter') ? 'starter' : 
+                    plan.name.toLowerCase().includes('pro') ? 'pro' : 
+                    plan.name.toLowerCase().includes('elite') ? 'elite' : 
+                    plan.name.toLowerCase().includes('agency') ? 'elite' : 'starter';
+
     return {
       id: plan.id,
-      name: plan.name,
+      name: t(`plans.${planKey}.name` as any) || plan.name,
       price: isFree ? t('landing.pricing.free') : `${plan.currency} ${displayPrice}`,
       period: isFree ? "" : plan.billing_cycle === 'LIFETIME' ? t('landing.pricing.lifetime') : billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year'),
-      desc: plan.description,
-      badge: isFree ? "Starter" : isPro ? "Recommended" : isElite ? "Premium" : "Standard",
+      desc: t(`plans.${planKey}.desc` as any) || plan.description,
+      badge: isFree ? t('landing.pricing.tier.starter') : isPro ? t('landing.pricing.tier.recommended') : isElite ? t('landing.pricing.tier.premium') : t('landing.pricing.tier.standard'),
       icon: isElite ? Crown : isPro ? Trophy : Building,
-      features: plan.features || [],
+      features: (plan.features || []).map((f: string) => {
+        const lowerF = f.toLowerCase();
+        if (lowerF.includes('player')) {
+          const count = f.match(/\d+/)?.[0] || plan.player_limit;
+          return t('plans.feature.playerCount', { count });
+        }
+        if (lowerF.includes('analytics')) return t('plans.feature.analytics');
+        if (lowerF.includes('priority support')) return t('plans.feature.prioritySupport');
+        if (lowerF.includes('email support')) return t('plans.feature.emailSupport');
+        if (lowerF.includes('registration')) return t('plans.feature.registration');
+        if (lowerF.includes('training')) return t('plans.feature.trainingTracking');
+        if (lowerF.includes('solidarity')) return t('plans.feature.solidarity');
+        if (lowerF.includes('compliance')) return t('plans.feature.fullCompliance');
+        if (lowerF.includes('24/7')) return t('plans.feature.247Support');
+        return f;
+      }),
       ctaLink: 
         plan.target_type === 'INDIVIDUAL' ? `/player/register?plan=${plan.id}` : 
         plan.target_type === 'AGENCY' ? `/agency-registration?plan=${plan.id}` :
@@ -1185,7 +1205,7 @@ export default function Index() {
              </div>
              <div className="text-center">
                 <div className="text-3xl font-black text-white mb-1">800+</div>
-                <div className="text-slate-500 text-sm font-bold tracking-widest">ACADEMIES</div>
+                <div className="text-slate-500 text-sm font-bold tracking-widest">{t('landing.testimonials.stat.academies')}</div>
              </div>
              <div className="text-center">
                 <div className="text-3xl font-black text-white mb-1">100%</div>

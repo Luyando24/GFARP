@@ -37,7 +37,7 @@ export type TranslationKey =
   | 'dash.plan.current' | 'dash.plan.manage' | 'dash.plan.nextBilling' | 'dash.plan.active' | 'dash.plan.inactive'
   | 'dash.plan.started' | 'dash.plan.status' | 'dash.plan.daysRemaining' | 'dash.plan.features' | 'dash.plan.usage'
   | 'dash.plan.billingHistory' | 'dash.plan.management' | 'dash.plan.select' | 'dash.plan.changePayment'
-  | 'dash.plan.downloadInvoice' | 'dash.plan.cancel'
+  | 'dash.plan.downloadInvoice' | 'dash.plan.cancel' | 'dash.plan.upgradeRequired' | 'dash.plan.upgradeNearLimit'
   | 'dash.academy.edit' | 'dash.academy.info' | 'dash.settings.title' | 'dash.settings.save' | 'dash.settings.cancel'
   | 'dash.profile.completeRequired' | 'dash.profile.completeRequiredDesc' | 'dash.profile.completeRequiredMsg' | 'dash.settings.complete'
   | 'dash.finance.manager.invoice' | 'dash.finance.manager.add' | 'dash.financial.margin' | 'dash.finance.manager.budget' | 'dash.finance.manager.desc' | 'dash.finance.manager.recent'
@@ -52,7 +52,7 @@ export type TranslationKey =
   | 'landing.step4.title' | 'landing.step4.desc'
   | 'landing.cta.journey'
   // Common
-  | 'common.loading' | 'common.error' | 'common.success' | 'common.save' | 'common.cancel' | 'common.delete' | 'common.edit' | 'common.view'
+  | 'common.loading' | 'common.error' | 'common.success' | 'common.save' | 'common.cancel' | 'common.delete' | 'common.edit' | 'common.view' | 'common.unlimited'
   // Benefits
   | 'landing.benefits.title.sub' | 'landing.benefits.title.main' | 'landing.benefits.title.platform'
   | 'landing.benefits.item1.title' | 'landing.benefits.item1.desc'
@@ -79,10 +79,10 @@ export type TranslationKey =
   | 'landing.pricing.feature.trainingTracking' | 'landing.pricing.feature.analytics' | 'landing.pricing.feature.unlimitedPlayers'
   | 'landing.pricing.feature.fullCompliance' | 'landing.pricing.feature.247Support' | 'landing.pricing.feature.solidarity'
   | 'landing.pricing.tab.academies' | 'landing.pricing.tab.players' | 'landing.pricing.tab.agencies' | 'landing.pricing.lifetime'
-  | 'landing.pricing.start.free' | 'landing.pricing.start.gold' | 'landing.pricing.popular' | 'landing.pricing.title.sub' | 'landing.pricing.free'
+  | 'landing.pricing.tier.starter' | 'landing.pricing.tier.recommended' | 'landing.pricing.tier.premium' | 'landing.pricing.tier.standard'
   // Testimonials
   | 'landing.testimonials.title.sub' | 'landing.testimonials.title.main1' | 'landing.testimonials.title.main2'
-  | 'landing.testimonials.stat.rating' | 'landing.testimonials.stat.players' | 'landing.testimonials.stat.using'
+  | 'landing.testimonials.stat.rating' | 'landing.testimonials.stat.players' | 'landing.testimonials.stat.academies' | 'landing.testimonials.stat.using'
   | 'landing.testimonials.badge.compliant' | 'landing.testimonials.badge.revenue' | 'landing.testimonials.badge.scale'
   | 'landing.cta.join'
   // Footer
@@ -145,9 +145,16 @@ export type TranslationKey =
   | 'landing.pitfalls.item6.title' | 'landing.pitfalls.item6.desc'
   // FAQ
   | 'landing.faq.title' | 'landing.faq.subtitle'
-  | 'landing.faq.q1' | 'landing.faq.a1'
-  | 'landing.faq.q2' | 'landing.faq.a2'
-  | 'landing.faq.q3' | 'landing.faq.a3'
+  | 'landing.faq.q16' | 'landing.faq.a16'
+  | 'landing.faq.q17' | 'landing.faq.a17'
+  // Plans and Features
+  | 'plans.starter.name' | 'plans.pro.name' | 'plans.elite.name'
+  | 'plans.starter.desc' | 'plans.pro.desc' | 'plans.elite.desc'
+  | 'plans.feature.playerCount' | 'plans.feature.advancedAnalytics' | 'plans.feature.prioritySupport'
+  | 'plans.feature.emailSupport' | 'plans.feature.registration' | 'plans.feature.trainingTracking'
+  | 'plans.feature.fullCompliance' | 'plans.feature.solidarity' | 'plans.feature.247Support'
+  | 'plans.feature.analytics'
+  // Contact
   | 'landing.faq.q4' | 'landing.faq.a4'
   | 'landing.faq.q5' | 'landing.faq.a5'
   | 'landing.faq.q6' | 'landing.faq.a6'
@@ -365,6 +372,8 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.plan.changePayment': 'Change Payment Method',
     'dash.plan.downloadInvoice': 'Download Invoice',
     'dash.plan.cancel': 'Cancel Subscription',
+    'dash.plan.upgradeRequired': 'Upgrade Required - Limit Reached',
+    'dash.plan.upgradeNearLimit': 'Upgrade Plan - Near Limit',
     'dash.academy.edit': 'Edit Academy',
     'dash.academy.info': 'Academy Information',
     'dash.settings.title': 'System Settings',
@@ -434,13 +443,34 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pricing.toggle.yearly': 'Yearly',
     'landing.pricing.save': 'Save 20%',
     'landing.pricing.tier2.ideal': 'For championship academies',
-    'landing.pricing.footer': 'All plans include FIFA-compliant security, regular updates, and access to our champion support team.',
+    'landing.pricing.tier.starter': 'Starter',
+    'landing.pricing.tier.recommended': 'Recommended',
+    'landing.pricing.tier.premium': 'Premium',
+    'landing.pricing.tier.standard': 'Standard',
     'landing.pricing.compare': 'COMPARE ALL FEATURES',
     'landing.testimonials.title.sub': 'CHAMPION TESTIMONIALS',
     'landing.testimonials.title.main1': 'WORLD-CLASS ACADEMY',
     'landing.testimonials.title.main2': 'SUCCESS STORIES',
     'landing.testimonials.stat.rating': 'RATING',
     'landing.testimonials.stat.players': 'PLAYERS',
+    'landing.testimonials.stat.academies': 'ACADEMIES',
+    // Plans and Features
+    'plans.starter.name': 'Starter Plan',
+    'plans.pro.name': 'Pro Plan',
+    'plans.elite.name': 'Elite Plan',
+    'plans.starter.desc': 'Ideal for new academies starting their journey.',
+    'plans.pro.desc': 'For established academies looking to grow.',
+    'plans.elite.desc': 'For world-class academies with multiple branches.',
+    'plans.feature.playerCount': 'Up to {count} players',
+    'plans.feature.advancedAnalytics': 'Advanced analytics & reporting',
+    'plans.feature.prioritySupport': 'Priority support',
+    'plans.feature.emailSupport': 'Email support',
+    'plans.feature.registration': 'Digital player registration',
+    'plans.feature.trainingTracking': 'Training compensation tracking',
+    'plans.feature.fullCompliance': 'Full FIFA compliance suite',
+    'plans.feature.solidarity': 'Solidarity mechanism management',
+    'plans.feature.247Support': '24/7 dedicated support',
+    'plans.feature.analytics': 'Performance analytics dashboard',
     'landing.testimonials.stat.using': 'USING',
     'landing.testimonials.badge.compliant': 'FIFA COMPLIANT',
     'landing.testimonials.badge.revenue': 'REVENUE OPTIMIZED',
@@ -2890,6 +2920,8 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'dash.plan.changePayment': 'تغيير طريقة الدفع',
     'dash.plan.downloadInvoice': 'تحميل الفاتورة',
     'dash.plan.cancel': 'إلغاء الاشتراك',
+    'dash.plan.upgradeRequired': 'مطلوب ترقية - تم الوصول للحد الأقصى',
+    'dash.plan.upgradeNearLimit': 'ترقية الخطة - قريب من الحد الأقصى',
     'dash.academy.edit': 'تعديل الأكاديمية',
     'dash.academy.info': 'معلومات الأكاديمية',
     'dash.settings.title': 'إعدادات النظام',
@@ -2904,6 +2936,10 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.step2.title': 'إضافة اللاعبين',
     'landing.step2.desc': 'سجل جميع لاعبيك بملفات تعريف كاملة ووثائق وسجل تدريب.',
     'landing.step3.title': 'إدارة المالية',
+    'landing.pricing.tier.starter': 'بداية',
+    'landing.pricing.tier.recommended': 'موصى به',
+    'landing.pricing.tier.premium': 'مميز',
+    'landing.pricing.tier.standard': 'قياسي',
     'landing.step3.desc': 'أنشئ فواتير احترافية وتتبع النفقات وراقب الإيرادات باستخدام أدواتنا المالية المتكاملة.',
     'landing.step4.title': 'استلام التعويض',
     'landing.step4.desc': 'استلم إشعارات تلقائية ومدفوعات آمنة عندما ينتقل لاعبوك إلى أندية محترفة.',
@@ -3174,6 +3210,24 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.faq.a11': 'نعم، قد يرث النادي الخلف حقوق التدريب، إذا كانت هناك وثائق تظهر استمرارية تاريخ التدريب.',
     'landing.faq.q12': '12. ماذا لو فقد النادي السجلات الأصلية (مثل القوائم الورقية القديمة)؟ هل هناك بديل؟',
     'landing.faq.a12': 'يمكن للأندية محاولة إعادة بناء السجلات (مثل رسائل البريد الإلكتروني القديمة، وقوائم البطولات المؤرشفة، والصور المؤرخة، وبيانات المدربين، وأرشيف الدوري، وما إلى ذلك). لكن الفيفا يتوقع أدلة، لذلك سيتم التدقيق في الوثائق المعاد بناؤها أو الجزئية.',
+    // Plans and Features
+    'plans.starter.name': 'خطة المبتدئين',
+    'plans.pro.name': 'الخطة الاحترافية',
+    'plans.elite.name': 'خطة النخبة',
+    'plans.starter.desc': 'مثالية للأكاديميات الجديدة التي تبدأ رحلتها.',
+    'plans.pro.desc': 'للأكاديميات القائمة التي تسعى للنمو.',
+    'plans.elite.desc': 'للأكاديميات العالمية ذات الفروع المتعددة.',
+    'plans.feature.playerCount': 'حتى {count} لاعب',
+    'plans.feature.advancedAnalytics': 'تحليلات وتقارير متقدمة',
+    'plans.feature.prioritySupport': 'دعم ذو أولوية',
+    'plans.feature.emailSupport': 'دعم عبر البريد الإلكتروني',
+    'plans.feature.registration': 'تسجيل اللاعبين الرقمي',
+    'plans.feature.trainingTracking': 'تتبع تعويضات التدريب',
+    'plans.feature.fullCompliance': 'حزمة امتثال الفيفا الكاملة',
+    'plans.feature.solidarity': 'إدارة آلية التضامن',
+    'plans.feature.247Support': 'دعم مخصص على مدار الساعة',
+    'plans.feature.analytics': 'لوحة تحليلات الأداء',
+    'landing.testimonials.stat.academies': 'الأكاديميات',
     'tasks.title': 'المهام',
     'tasks.add': 'إضافة مهمة',
     'tasks.empty': 'لا توجد مهام',
@@ -3545,7 +3599,7 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
 interface LanguageContextType {
   language: LanguageCode;
   setLanguage: (lang: LanguageCode) => void;
-  t: (key: TranslationKey) => string;
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string;
   dir: 'ltr' | 'rtl';
 }
 
@@ -3570,8 +3624,14 @@ export const LanguageProvider: React.FC<{ children: ReactNode }> = ({ children }
     document.documentElement.lang = lang;
   };
 
-  const t = (key: TranslationKey): string => {
-    return translations[language][key] || translations['en'][key] || key;
+  const t = (key: TranslationKey, params?: Record<string, string | number>): string => {
+    let text = translations[language][key] || translations['en'][key] || key;
+    if (params) {
+      Object.entries(params).forEach(([k, v]) => {
+        text = text.replace(`{${k}}`, String(v));
+      });
+    }
+    return text;
   };
 
   const dir = language === 'ar' ? 'rtl' : 'ltr';

@@ -568,10 +568,15 @@ export default function AcademyDashboard() {
       const data = await getCurrentSubscription(academyInfo.id);
       if (data) {
         // Map the API response to the UI model
+        const planKey = data.subscription?.planName?.toLowerCase().includes('starter') ? 'starter' : 
+                        data.subscription?.planName?.toLowerCase().includes('pro') ? 'pro' : 
+                        data.subscription?.planName?.toLowerCase().includes('elite') ? 'elite' : 
+                        data.subscription?.planName?.toLowerCase().includes('agency') ? 'elite' : 'starter';
+
         setSubscriptionData({
           id: data.subscription?.id,
           status: data.subscription?.status?.toLowerCase() || 'active',
-          planName: data.subscription?.planName,
+          planName: t(`plans.${planKey}.name` as any) || data.subscription?.planName,
           price: data.subscription?.price || 0,
           billingCycle: 'month',
           startDate: data.subscription?.startDate,
@@ -581,7 +586,22 @@ export default function AcademyDashboard() {
           playerLimit: data.limits?.playerLimit,
           playerCount: data.usage?.playerCount,
           playerUsagePercentage: data.usage?.playerUsagePercentage,
-          features: data.subscription?.features || []
+          features: (data.subscription?.features || []).map((f: string) => {
+            const lowerF = f.toLowerCase();
+            if (lowerF.includes('player')) {
+              const count = f.match(/\d+/)?.[0] || data.limits?.playerLimit;
+              return t('plans.feature.playerCount', { count });
+            }
+            if (lowerF.includes('analytics')) return t('plans.feature.analytics');
+            if (lowerF.includes('priority support')) return t('plans.feature.prioritySupport');
+            if (lowerF.includes('email support')) return t('plans.feature.emailSupport');
+            if (lowerF.includes('registration')) return t('plans.feature.registration');
+            if (lowerF.includes('training')) return t('plans.feature.trainingTracking');
+            if (lowerF.includes('solidarity')) return t('plans.feature.solidarity');
+            if (lowerF.includes('compliance')) return t('plans.feature.fullCompliance');
+            if (lowerF.includes('24/7')) return t('plans.feature.247Support');
+            return f;
+          })
         });
       } else {
         // Handle case when no subscription is found
@@ -590,7 +610,7 @@ export default function AcademyDashboard() {
         setSubscriptionData({
           id: "pro-default",
           status: "active",
-          planName: "Pro Plan",
+          planName: t('plans.pro.name'),
           price: 49.99,
           billingCycle: 'month',
           startDate: new Date().toISOString(),
@@ -600,7 +620,11 @@ export default function AcademyDashboard() {
           playerLimit: 500,
           playerCount: 0,
           playerUsagePercentage: 0,
-          features: ["Up to 500 players", "Advanced analytics", "Priority support"]
+          features: [
+            t('plans.feature.playerCount', { count: 500 }),
+            t('plans.feature.advancedAnalytics'),
+            t('plans.feature.prioritySupport')
+          ]
         });
       }
     } catch (error) {
@@ -2327,7 +2351,7 @@ export default function AcademyDashboard() {
                                 <div className="flex justify-between text-sm mb-1">
                                   <span>{t('dash.stats.players')}</span>
                                   <span>
-                                    {subscriptionData.playerCount || 0} / {subscriptionData.playerLimit === -1 ? 'Unlimited' : subscriptionData.playerLimit}
+                                    {subscriptionData.playerCount || 0} / {subscriptionData.playerLimit === -1 ? t('common.unlimited') : subscriptionData.playerLimit}
                                   </span>
                                 </div>
                                 <div className="w-full bg-slate-200 rounded-full h-2">
@@ -2360,8 +2384,8 @@ export default function AcademyDashboard() {
                                     >
                                       <Crown className="h-4 w-4 mr-2" />
                                       {((subscriptionData.playerCount || 0) / subscriptionData.playerLimit) >= 1
-                                        ? 'Upgrade Required - Limit Reached'
-                                        : 'Upgrade Plan - Near Limit'
+                                        ? t('dash.plan.upgradeRequired')
+                                        : t('dash.plan.upgradeNearLimit')
                                       }
                                     </Button>
                                   </div>
@@ -2479,69 +2503,89 @@ export default function AcademyDashboard() {
                                       }
 
                                       return (
-                                        <Card
-                                          key={plan.id}
-                                          className={`relative cursor-pointer transition-all duration-300 hover:shadow-lg border-2 ${
-                                            subscriptionData?.planName === plan.name
-                                              ? 'border-blue-500 bg-blue-50/30'
-                                              : isMostExpensive 
-                                                ? 'border-yellow-400 bg-yellow-50/10' 
-                                                : 'border-slate-200 hover:border-blue-300'
-                                          }`}
-                                          onClick={() => handleUpgradePlan(plan.id)}
-                                        >
-                                          {isMostExpensive && (
-                                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
-                                              <Badge className="bg-yellow-400 text-black font-black px-4 py-1 shadow-md border-none">
-                                                RECOMMENDED
-                                              </Badge>
-                                            </div>
-                                          )}
-                                          
-                                          <CardContent className="p-6">
-                                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                                              <div className="flex-1">
-                                                <div className="flex items-center gap-2">
-                                                  <h3 className="font-bold text-lg text-slate-900">{plan.name}</h3>
-                                                  {subscriptionData?.planName === plan.name && (
-                                                    <Badge className="bg-blue-600 text-white text-[10px]">
-                                                      {t('dash.plan.current')}
-                                                    </Badge>
-                                                  )}
+                                          <Card
+                                            key={plan.id}
+                                            className={`relative cursor-pointer transition-all duration-300 hover:shadow-lg border-2 ${
+                                              subscriptionData?.id === plan.id || subscriptionData?.planName === plan.name
+                                                ? 'border-blue-500 bg-blue-50/30'
+                                                : isMostExpensive 
+                                                  ? 'border-yellow-400 bg-yellow-50/10' 
+                                                  : 'border-slate-200 hover:border-blue-300'
+                                            }`}
+                                            onClick={() => handleUpgradePlan(plan.id)}
+                                          >
+                                            {isMostExpensive && (
+                                              <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                                                <Badge className="bg-yellow-400 text-black font-black px-4 py-1 shadow-md border-none">
+                                                  RECOMMENDED
+                                                </Badge>
+                                              </div>
+                                            )}
+                                            
+                                            <CardContent className="p-6">
+                                              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                                <div className="flex-1">
+                                                  <div className="flex items-center gap-2">
+                                                    <h3 className="font-bold text-lg text-slate-900">
+                                                      {plan.name.toLowerCase().includes('starter') ? t('plans.starter.name') : 
+                                                       plan.name.toLowerCase().includes('pro') ? t('plans.pro.name') : 
+                                                       plan.name.toLowerCase().includes('elite') ? t('plans.elite.name') : plan.name}
+                                                    </h3>
+                                                    {(subscriptionData?.id === plan.id || subscriptionData?.planName === plan.name) && (
+                                                      <Badge className="bg-blue-600 text-white text-[10px]">
+                                                        {t('dash.plan.current')}
+                                                      </Badge>
+                                                    )}
+                                                  </div>
+                                                  <p className="text-sm text-slate-600 mt-1">
+                                                    {plan.name.toLowerCase().includes('starter') ? t('plans.starter.desc') : 
+                                                     plan.name.toLowerCase().includes('pro') ? t('plans.pro.desc') : 
+                                                     plan.name.toLowerCase().includes('elite') ? t('plans.elite.desc') : plan.description}
+                                                  </p>
+                                                  
+                                                  <div className="mt-3 flex flex-wrap gap-2">
+                                                    {plan.features && (Array.isArray(plan.features) ? plan.features : []).slice(0, 3).map((f: string, i: number) => {
+                                                      const lowerF = f.toLowerCase();
+                                                      let translatedF = f;
+                                                      if (lowerF.includes('player')) {
+                                                        const count = f.match(/\d+/)?.[0] || plan.playerLimit || plan.player_limit;
+                                                        translatedF = t('plans.feature.playerCount', { count });
+                                                      } else if (lowerF.includes('analytics')) translatedF = t('plans.feature.analytics');
+                                                      else if (lowerF.includes('priority support')) translatedF = t('plans.feature.prioritySupport');
+                                                      else if (lowerF.includes('email support')) translatedF = t('plans.feature.emailSupport');
+                                                      else if (lowerF.includes('registration')) translatedF = t('plans.feature.registration');
+                                                      
+                                                      return (
+                                                        <div key={i} className="flex items-center gap-1 text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                                                          <CheckCircle className="h-3 w-3 text-green-500" />
+                                                          {translatedF}
+                                                        </div>
+                                                      );
+                                                    })}
+                                                  </div>
                                                 </div>
-                                                <p className="text-sm text-slate-600 mt-1">{plan.description}</p>
                                                 
-                                                <div className="mt-3 flex flex-wrap gap-2">
-                                                  {plan.features && (Array.isArray(plan.features) ? plan.features : []).slice(0, 3).map((f: string, i: number) => (
-                                                    <div key={i} className="flex items-center gap-1 text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                                                      <CheckCircle className="h-3 w-3 text-green-500" />
-                                                      {f}
-                                                    </div>
-                                                  ))}
+                                                <div className="text-right flex flex-col items-end">
+                                                  <div className="text-2xl font-black text-[#005391]">
+                                                    {displayPrice}
+                                                    <span className="text-xs font-normal text-slate-500 ml-1">
+                                                      /{billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year')}
+                                                    </span>
+                                                  </div>
+                                                  <div className="text-xs font-medium text-slate-500 mt-1 bg-slate-100 px-2 py-1 rounded">
+                                                    {plan.playerLimit === -1 ? t('common.unlimited') : (plan.playerLimit || plan.player_limit || 0)} {t('dash.stats.players')}
+                                                  </div>
+                                                  <Button 
+                                                    variant={(subscriptionData?.id === plan.id || subscriptionData?.planName === plan.name) ? "outline" : "default"}
+                                                    size="sm"
+                                                    className="mt-3 w-full md:w-auto font-bold"
+                                                  >
+                                                    {(subscriptionData?.id === plan.id || subscriptionData?.planName === plan.name) ? 'Stay on Plan' : 'Choose Plan'}
+                                                  </Button>
                                                 </div>
                                               </div>
-                                              
-                                              <div className="text-right flex flex-col items-end">
-                                                <div className="text-2xl font-black text-[#005391]">
-                                                  {displayPrice}
-                                                  <span className="text-xs font-normal text-slate-500 ml-1">
-                                                    /{billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year')}
-                                                  </span>
-                                                </div>
-                                                <div className="text-xs font-medium text-slate-500 mt-1 bg-slate-100 px-2 py-1 rounded">
-                                                  {plan.playerLimit === -1 ? 'Unlimited' : (plan.playerLimit || plan.player_limit || 0)} Players
-                                                </div>
-                                                <Button 
-                                                  variant={subscriptionData?.planName === plan.name ? "outline" : "default"}
-                                                  size="sm"
-                                                  className="mt-3 w-full md:w-auto font-bold"
-                                                >
-                                                  {subscriptionData?.planName === plan.name ? 'Stay on Plan' : 'Choose Plan'}
-                                                </Button>
-                                              </div>
-                                            </div>
-                                          </CardContent>
-                                        </Card>
+                                            </CardContent>
+                                          </Card>
                                       )
                                     })}
                                   </div>
