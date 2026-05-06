@@ -152,7 +152,7 @@ export default function Index() {
     return {
       id: plan.id,
       name: t(`plans.${planKey}.name` as any) || plan.name,
-      price: isFree ? t('landing.pricing.free') : `${plan.currency} ${displayPrice}`,
+      price: isFree ? t('landing.pricing.free') : `${t(`common.currency.${plan.currency?.toUpperCase()}` as any) || plan.currency} ${displayPrice}`,
       period: isFree ? "" : plan.billing_cycle === 'LIFETIME' ? t('landing.pricing.lifetime') : billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year'),
       desc: t(`plans.${planKey}.desc` as any) || plan.description,
       badge: isFree ? t('landing.pricing.tier.starter') : isPro ? t('landing.pricing.tier.recommended') : isElite ? t('landing.pricing.tier.premium') : t('landing.pricing.tier.standard'),
@@ -171,6 +171,28 @@ export default function Index() {
         if (lowerF.includes('solidarity')) return t('plans.feature.solidarity');
         if (lowerF.includes('compliance')) return t('plans.feature.fullCompliance');
         if (lowerF.includes('24/7')) return t('plans.feature.247Support');
+        if (lowerF.includes('dedicated manager')) return t('plans.feature.dedicatedManager');
+        if (lowerF.includes('white-label')) return t('plans.feature.whiteLabel');
+        if (lowerF.includes('api access')) return t('plans.feature.advancedApi');
+        if (lowerF.includes('financial tools')) return t('plans.feature.financialTools');
+        if (lowerF.includes('standard support')) return t('plans.feature.standardSupport');
+        if (lowerF.includes('profile placement')) return t('plans.feature.profilePlacement');
+        if (lowerF.includes('legal')) return t('plans.feature.legalGuidance');
+        if (lowerF.includes('trial notifications')) return t('plans.feature.trialNotifications');
+        if (lowerF.includes('video highlight')) return t('plans.feature.videoReels');
+        if (lowerF.includes('scout messaging')) return t('plans.feature.scoutMessaging');
+        if (lowerF.includes('digital resume')) return t('plans.feature.digitalResume');
+        if (lowerF.includes('public profile')) return t('plans.feature.publicProfile');
+        if (lowerF.includes('stats tracking')) return t('plans.feature.statsTracking');
+        if (lowerF.includes('api integration')) return t('plans.feature.apiIntegrations');
+        if (lowerF.includes('account team')) return t('plans.feature.accountTeam');
+        if (lowerF.includes('scouting filter')) return t('plans.feature.scoutingFilters');
+        if (lowerF.includes('commission tracking')) return t('plans.feature.commissionTracking');
+        if (lowerF.includes('sub-agent management')) return t('plans.feature.subAgentMgmt');
+        if (lowerF.includes('premium support')) return t('plans.feature.premiumSupport');
+        if (lowerF.includes('transfer tracking')) return t('plans.feature.transferTracking');
+        if (lowerF.includes('document cloud')) return t('plans.feature.documentCloud');
+        if (lowerF.includes('scouting tools')) return t('plans.feature.scoutingTools');
         return f;
       }),
       ctaLink: 

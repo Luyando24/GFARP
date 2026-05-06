@@ -55,7 +55,7 @@ export default function PlayerRegister() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-blue-900 flex items-center justify-center p-4 relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-blue-900 flex items-center justify-center p-4 relative overflow-hidden" dir={dir}>
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 left-20 w-32 h-32 border-2 border-white rounded-full"></div>
@@ -68,7 +68,7 @@ export default function PlayerRegister() {
         className="absolute top-6 left-6 flex items-center gap-2 text-white hover:text-yellow-300 transition-colors duration-200 z-10"
       >
         <ArrowLeft className="h-5 w-5" />
-        <span className="text-sm font-medium">Back to Home</span>
+        <span className="text-sm font-medium">{t('common.backHome')}</span>
       </Link>
 
       <Card className="w-full max-w-md shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
@@ -78,9 +78,9 @@ export default function PlayerRegister() {
               <User className="h-10 w-10 text-white" />
             </div>
             <h1 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent mb-2">
-              Player Registration
+              {t('auth.register.player')}
             </h1>
-            <p className="text-gray-500">Create your individual player profile</p>
+            <p className="text-gray-500">{t('auth.register.playerSubtitle')}</p>
           </div>
         </CardHeader>
         <CardContent>
@@ -88,7 +88,7 @@ export default function PlayerRegister() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Input
-                  placeholder="First Name"
+                  placeholder={t('auth.firstName')}
                   value={firstName}
                   onChange={(e) => setFirstName(e.target.value)}
                   required
@@ -96,7 +96,7 @@ export default function PlayerRegister() {
               </div>
               <div className="space-y-2">
                 <Input
-                  placeholder="Last Name"
+                  placeholder={t('auth.lastName')}
                   value={lastName}
                   onChange={(e) => setLastName(e.target.value)}
                   required
@@ -107,7 +107,7 @@ export default function PlayerRegister() {
             <div className="space-y-2">
               <Input
                 type="email"
-                placeholder="Email Address"
+                placeholder={t('auth.email')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -117,7 +117,7 @@ export default function PlayerRegister() {
             <div className="space-y-2">
               <Input
                 type="password"
-                placeholder="Password"
+                placeholder={t('auth.password')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -127,7 +127,7 @@ export default function PlayerRegister() {
             <div className="space-y-2">
               <Input
                 type="password"
-                placeholder="Confirm Password"
+                placeholder={t('auth.confirmPassword')}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
@@ -142,13 +142,13 @@ export default function PlayerRegister() {
 
             <Button type="submit" className="w-full bg-gradient-to-r from-green-600 to-blue-600 hover:from-green-700 hover:to-blue-700 text-white py-6" disabled={loading}>
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-              Create Account
+              {t('auth.createAccount')}
             </Button>
 
             <div className="text-center text-sm text-gray-500 mt-4">
-              Already have an account?{" "}
+              {t('auth.alreadyHaveAccount')}{" "}
               <Link to="/player/login" className="text-blue-600 hover:underline font-medium">
-                Log in
+                {t('auth.loginLink')}
               </Link>
             </div>
           </form>

@@ -47,6 +47,7 @@ import {
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import ThemeToggle from "@/components/navigation/ThemeToggle";
+import { useTranslation } from "@/lib/i18n";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { usePageTitle } from "@/hooks/usePageTitle";
 
@@ -101,7 +102,8 @@ const getBase64ImageFromURL = (url: string): Promise<string> => {
 
 export default function PlayerDashboard() {
   const { session, logout } = useAuth();
-  usePageTitle("Player Dashboard");
+  const { t, dir } = useTranslation();
+  usePageTitle(t('dash.portal.player'));
   const [searchParams, setSearchParams] = useSearchParams();
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -568,10 +570,10 @@ export default function PlayerDashboard() {
   }
 
   const sidebarItems = [
-    { id: "overview", label: "Overview", icon: Home },
-    { id: "profile", label: "Edit Profile", icon: User },
-    { id: "subscription", label: "Subscription", icon: CreditCard },
-    { id: "share", label: "Share & Export", icon: Share2 },
+    { id: "overview", label: t('dash.menu.overview'), icon: Home },
+    { id: "profile", label: t('dash.menu.editProfile'), icon: User },
+    { id: "subscription", label: t('dash.menu.subscription'), icon: CreditCard },
+    { id: "share", label: t('dash.menu.share'), icon: Share2 },
   ];
 
   const getInitials = (name: string) => {
@@ -605,7 +607,7 @@ export default function PlayerDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900" dir={dir}>
       {/* Header */}
       <header className="bg-white dark:bg-slate-900 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
         <div className="px-4 sm:px-6 lg:px-8">
@@ -633,7 +635,7 @@ export default function PlayerDashboard() {
                   <h1 className="text-lg font-bold text-slate-900 dark:text-white">
                     Soccer Circular
                   </h1>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Player Portal</p>
+                  <p className="text-sm text-slate-600 dark:text-slate-400">{t('dash.portal.player')}</p>
                 </div>
               </div>
             </div>
@@ -724,10 +726,10 @@ export default function PlayerDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
-                      Welcome, {profile?.display_name || 'Player'}
+                      {t('dash.welcome')}, {profile?.display_name || 'Player'}
                     </h2>
                     <p className="text-slate-600 dark:text-slate-400">
-                      Here is an overview of your profile and subscription.
+                      {t('dash.stats.overview')}
                     </p>
                   </div>
                   {currentPlan && (
@@ -754,32 +756,32 @@ export default function PlayerDashboard() {
                         <p className="text-slate-500 font-medium">{profile?.position || 'No Position'}</p>
                         <p className="text-slate-400 text-sm">{profile?.current_club || 'No Club'}</p>
 
-                        <div className="w-full mt-6 space-y-3">
-                          <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-500">Age</span>
-                            <span className="font-semibold">{profile?.age || '-'}</span>
+                          <div className="w-full mt-6 space-y-3">
+                            <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                              <span className="text-slate-500">{t('common.age')}</span>
+                              <span className="font-semibold">{profile?.age || '-'}</span>
+                            </div>
+                            <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                              <span className="text-slate-500">{t('common.nationality')}</span>
+                              <span className="font-semibold">{profile?.nationality || '-'}</span>
+                            </div>
+                            <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                              <span className="text-slate-500">{t('common.height')}</span>
+                              <span className="font-semibold">{profile?.height ? `${profile.height} cm` : '-'}</span>
+                            </div>
+                            <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                              <span className="text-slate-500">{t('common.weight')}</span>
+                              <span className="font-semibold">{profile?.weight ? `${profile.weight} kg` : '-'}</span>
+                            </div>
+                            <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+                              <span className="text-slate-500">{t('common.foot')}</span>
+                              <span className="font-semibold">{profile?.preferred_foot || '-'}</span>
+                            </div>
                           </div>
-                          <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-500">Nationality</span>
-                            <span className="font-semibold">{profile?.nationality || '-'}</span>
-                          </div>
-                          <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-500">Height</span>
-                            <span className="font-semibold">{profile?.height ? `${profile.height} cm` : '-'}</span>
-                          </div>
-                          <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-500">Weight</span>
-                            <span className="font-semibold">{profile?.weight ? `${profile.weight} kg` : '-'}</span>
-                          </div>
-                          <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
-                            <span className="text-slate-500">Foot</span>
-                            <span className="font-semibold">{profile?.preferred_foot || '-'}</span>
-                          </div>
-                        </div>
                       </CardContent>
                       <CardFooter className="justify-center pb-6">
                         <Button variant="outline" className="w-full" onClick={() => setActiveTab('profile')}>
-                          <Edit className="h-4 w-4 mr-2" /> Edit Profile
+                          <Edit className="h-4 w-4 mr-2" /> {t('dash.menu.editProfile')}
                         </Button>
                       </CardFooter>
                     </Card>
@@ -789,7 +791,7 @@ export default function PlayerDashboard() {
                   <div className="lg:col-span-2 space-y-6">
                     <Card>
                       <CardHeader>
-                        <CardTitle>Bio</CardTitle>
+                        <CardTitle>{t('common.bio')}</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <p className="text-slate-600 dark:text-slate-300 whitespace-pre-line">

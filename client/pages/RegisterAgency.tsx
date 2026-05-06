@@ -48,7 +48,7 @@ export default function RegisterAgency() {
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {};
-    if (!formData.name.trim()) newErrors.name = "Agency name is required";
+    if (!formData.name.trim()) newErrors.name = t('auth.error.agencyNameRequired');
     if (!formData.email.trim()) newErrors.email = t('auth.error.emailRequired');
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = t('auth.error.invalidEmail');
     if (!formData.password || formData.password.length < 8) newErrors.password = t('auth.error.passwordLength');
@@ -100,8 +100,8 @@ export default function RegisterAgency() {
         saveSession(session);
         
         toast({ 
-          title: "Registration Successful", 
-          description: "Welcome to Soccer Circular! Let's set up your agency profile." 
+          title: t('auth.success.title'), 
+          description: t('auth.success.agencyDesc') 
         });
         
         navigate('/complete-profile'); // Agencies can use the same profile completion flow
@@ -110,7 +110,7 @@ export default function RegisterAgency() {
       }
     } catch (error: any) {
       toast({ 
-        title: "Registration Error", 
+        title: t('common.error'), 
         description: error?.message || 'An unexpected error occurred', 
         variant: 'destructive' 
       });
@@ -162,7 +162,7 @@ export default function RegisterAgency() {
             <CardContent className="px-8 pb-10">
               <form className="space-y-5" onSubmit={handleSubmit}>
                 <div className="space-y-2">
-                  <label className="text-xs font-black text-slate-700 uppercase tracking-widest" htmlFor="name">Agency Name</label>
+                  <label className="text-xs font-black text-slate-700 uppercase tracking-widest" htmlFor="name">{t('auth.agencyName')}</label>
                   <div className="relative">
                     <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
                     <input

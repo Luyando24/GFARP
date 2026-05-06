@@ -2457,7 +2457,7 @@ export default function AcademyDashboard() {
                                     {isUpgrading ? (
                                       <>
                                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                        Upgrading...
+                                        {t('common.loading')}
                                       </>
                                     ) : (
                                       t('dash.plan.select')
@@ -2497,10 +2497,11 @@ export default function AcademyDashboard() {
                                         plan.price === Math.max(...availablePlans.map(p => p.price || 0)) &&
                                         plan.price > 0;
                                       
-                                      let displayPrice = `$${plan.price}`;
+                                      let displayPrice: string | number = plan.price;
                                       if (billingCycle === 'yearly') {
-                                        displayPrice = `$${Math.round(plan.price * 12 * 0.8)}`;
+                                        displayPrice = Math.round(plan.price * 12 * 0.8);
                                       }
+                                      const formattedPrice = `${t(`common.currency.${(plan.currency || 'USD').toUpperCase()}` as any) || plan.currency || 'USD'} ${displayPrice}`;
 
                                       return (
                                           <Card
@@ -2517,7 +2518,7 @@ export default function AcademyDashboard() {
                                             {isMostExpensive && (
                                               <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
                                                 <Badge className="bg-yellow-400 text-black font-black px-4 py-1 shadow-md border-none">
-                                                  RECOMMENDED
+                                                  {t('landing.pricing.tier.recommended')}
                                                 </Badge>
                                               </div>
                                             )}
@@ -2554,6 +2555,28 @@ export default function AcademyDashboard() {
                                                       else if (lowerF.includes('priority support')) translatedF = t('plans.feature.prioritySupport');
                                                       else if (lowerF.includes('email support')) translatedF = t('plans.feature.emailSupport');
                                                       else if (lowerF.includes('registration')) translatedF = t('plans.feature.registration');
+                                                      else if (lowerF.includes('dedicated manager')) translatedF = t('plans.feature.dedicatedManager');
+                                                      else if (lowerF.includes('white-label')) translatedF = t('plans.feature.whiteLabel');
+                                                      else if (lowerF.includes('api access')) translatedF = t('plans.feature.advancedApi');
+                                                      else if (lowerF.includes('financial tools')) translatedF = t('plans.feature.financialTools');
+                                                      else if (lowerF.includes('standard support')) translatedF = t('plans.feature.standardSupport');
+                                                      else if (lowerF.includes('profile placement')) translatedF = t('plans.feature.profilePlacement');
+                                                      else if (lowerF.includes('legal')) translatedF = t('plans.feature.legalGuidance');
+                                                      else if (lowerF.includes('trial notifications')) translatedF = t('plans.feature.trialNotifications');
+                                                      else if (lowerF.includes('video highlight')) translatedF = t('plans.feature.videoReels');
+                                                      else if (lowerF.includes('scout messaging')) translatedF = t('plans.feature.scoutMessaging');
+                                                      else if (lowerF.includes('digital resume')) translatedF = t('plans.feature.digitalResume');
+                                                      else if (lowerF.includes('public profile')) translatedF = t('plans.feature.publicProfile');
+                                                      else if (lowerF.includes('stats tracking')) translatedF = t('plans.feature.statsTracking');
+                                                      else if (lowerF.includes('api integration')) translatedF = t('plans.feature.apiIntegrations');
+                                                      else if (lowerF.includes('account team')) translatedF = t('plans.feature.accountTeam');
+                                                      else if (lowerF.includes('scouting filter')) translatedF = t('plans.feature.scoutingFilters');
+                                                      else if (lowerF.includes('commission tracking')) translatedF = t('plans.feature.commissionTracking');
+                                                      else if (lowerF.includes('sub-agent management')) translatedF = t('plans.feature.subAgentMgmt');
+                                                      else if (lowerF.includes('premium support')) translatedF = t('plans.feature.premiumSupport');
+                                                      else if (lowerF.includes('transfer tracking')) translatedF = t('plans.feature.transferTracking');
+                                                      else if (lowerF.includes('document cloud')) translatedF = t('plans.feature.documentCloud');
+                                                      else if (lowerF.includes('scouting tools')) translatedF = t('plans.feature.scoutingTools');
                                                       
                                                       return (
                                                         <div key={i} className="flex items-center gap-1 text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
@@ -2567,7 +2590,7 @@ export default function AcademyDashboard() {
                                                 
                                                 <div className="text-right flex flex-col items-end">
                                                   <div className="text-2xl font-black text-[#005391]">
-                                                    {displayPrice}
+                                                    {formattedPrice}
                                                     <span className="text-xs font-normal text-slate-500 ml-1">
                                                       /{billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year')}
                                                     </span>
@@ -2580,7 +2603,7 @@ export default function AcademyDashboard() {
                                                     size="sm"
                                                     className="mt-3 w-full md:w-auto font-bold"
                                                   >
-                                                    {(subscriptionData?.id === plan.id || subscriptionData?.planName === plan.name) ? 'Stay on Plan' : 'Choose Plan'}
+                                                    {(subscriptionData?.id === plan.id || subscriptionData?.planName === plan.name) ? t('dash.plan.stayOnPlan') : t('dash.plan.choosePlan')}
                                                   </Button>
                                                 </div>
                                               </div>
