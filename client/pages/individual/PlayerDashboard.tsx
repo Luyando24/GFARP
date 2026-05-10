@@ -1319,7 +1319,7 @@ export default function PlayerDashboard() {
                   <CardFooter className="flex justify-end gap-3 pb-6 border-t border-slate-100 dark:border-slate-800 pt-6">
                     <Button variant="outline" onClick={() => setActiveTab('overview')}>{t('common.cancel')}</Button>
                     <Button 
-                      onClick={saveProfile} 
+                      onClick={handleSaveProfile} 
                       disabled={saving}
                       className="bg-blue-600 hover:bg-blue-700 text-white min-w-[120px]"
                     >

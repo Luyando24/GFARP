@@ -340,49 +340,6 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
       }
     }
 
-    // Fallback: parse raw body if present
-    const rawBody: any = (req as any).rawBody;
-    if ((!name || !email) && rawBody) {
-      try {
-        if (typeof rawBody === 'string') {
-          assignFrom(JSON.parse(rawBody));
-        } else if (Buffer.isBuffer(rawBody)) {
-          assignFrom(JSON.parse(rawBody.toString('utf8')));
-        }
-      } catch (_) { }
-    }
-
-    // Fallback: read request stream
-    if (!name || !email || !password) {
-      const chunks: Buffer[] = [];
-      try {
-        await new Promise<void>((resolve) => {
-          const onData = (chunk: Buffer) => chunks.push(chunk);
-          const onEnd = () => {
-            req.off('data', onData);
-            req.off('end', onEnd);
-            resolve();
-          };
-          req.on('data', onData);
-          req.on('end', onEnd);
-        });
-        const raw = Buffer.concat(chunks).toString('utf8');
-        if (raw) { try { assignFrom(JSON.parse(raw)); } catch (_) { } }
-      } catch (_) { }
-    }
-
-    // Netlify/serverless: read original event body if present
-    if (!name || !email || !password) {
-      try {
-        const event: any = (req as any).event || (req as any).apiGateway || (req as any).requestContext?.event;
-        const bodyFromEvent = event?.body;
-        if (bodyFromEvent) {
-          const raw = event.isBase64Encoded ? Buffer.from(bodyFromEvent, 'base64').toString('utf8') : bodyFromEvent;
-          assignFrom(JSON.parse(raw));
-        }
-      } catch (_) { }
-    }
-
     // Allow minimal registration: email + password only
     if (!email || !password) {
       return res.status(400).json({
@@ -723,130 +680,7 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
 // Academy Login
 export const handleAcademyLogin: RequestHandler = async (req, res) => {
   try {
-    // Guard: database pool must be initialized (avoids implicit localhost connection)
-    // Guard: database pool must be initialized (avoids implicit localhost connection)
-    // (Implicitly handled by query helper)
-
-    // Debug instrumentation to inspect incoming request shape
-    const ct = req.headers['content-type'];
-    const method = req.method;
-    const url = req.url;
-    const bodyType = typeof (req as any).body;
-    let safePreview: any = undefined;
-    try {
-      const b: any = (req as any).body;
-      if (b && typeof b === 'object') {
-        safePreview = {
-          keys: Object.keys(b),
-          email: b.email,
-          password: b.password ? '<redacted>' : undefined,
-        };
-      } else if (typeof b === 'string') {
-        safePreview = `${b.slice(0, 100)}...`;
-      }
-    } catch (_) {
-      // ignore
-    }
-    console.log('[academy/login] req debug', { method, url, ct, bodyType, bodyPreview: safePreview });
-
-    // Robust body parsing to support serverless environments and edge cases
-    let email: string | undefined;
-    let password: string | undefined;
-
-    // Prefer JSON-parsed body
-    const incomingBody: any = (req as any).body;
-    if (incomingBody) {
-      if (typeof incomingBody === 'string') {
-        try {
-          const parsed = JSON.parse(incomingBody);
-          email = parsed?.email;
-          password = parsed?.password;
-        } catch (_) {
-          // ignore JSON parse error
-        }
-      } else if (Buffer.isBuffer(incomingBody)) {
-        try {
-          const parsed = JSON.parse(incomingBody.toString('utf8'));
-          email = parsed?.email;
-          password = parsed?.password;
-        } catch (_) {
-          // ignore
-        }
-      } else if (typeof incomingBody === 'object') {
-        email = incomingBody?.email;
-        password = incomingBody?.password;
-      }
-    }
-
-    // Fallback: attempt to parse raw body if present
-    const rawBody: any = (req as any).rawBody;
-    if ((!email || !password) && rawBody) {
-      try {
-        if (typeof rawBody === 'string') {
-          const parsed = JSON.parse(rawBody);
-          email = email || parsed?.email;
-          password = password || parsed?.password;
-        } else if (Buffer.isBuffer(rawBody)) {
-          const parsed = JSON.parse(rawBody.toString('utf8'));
-          email = email || parsed?.email;
-          password = password || parsed?.password;
-        }
-      } catch (_) {
-        // ignore
-      }
-    }
-
-    // Fallback: try to read request stream directly if body parsers failed
-    if (!email || !password) {
-      const chunks: Buffer[] = [];
-      try {
-        await new Promise<void>((resolve) => {
-          const onData = (chunk: Buffer) => chunks.push(chunk);
-          const onEnd = () => {
-            req.off('data', onData);
-            req.off('end', onEnd);
-            resolve();
-          };
-          req.on('data', onData);
-          req.on('end', onEnd);
-        });
-        const raw = Buffer.concat(chunks).toString('utf8');
-        if (raw) {
-          try {
-            const parsed = JSON.parse(raw);
-            email = email || parsed?.email;
-            password = password || parsed?.password;
-          } catch (_) {
-            // ignore
-          }
-        }
-      } catch (_) {
-        // ignore
-      }
-    }
-
-    // Fallback: accept query parameters in emergency cases
-    if (!email || !password) {
-      const q: any = (req as any).query || {};
-      if (typeof q.email === 'string') email = email || q.email;
-      if (typeof q.password === 'string') password = password || q.password;
-    }
-
-    // Netlify/serverless specific: try to read the original event body
-    if (!email || !password) {
-      try {
-        const event: any = (req as any).event || (req as any).apiGateway || (req as any).requestContext?.event;
-        const bodyFromEvent = event?.body;
-        if (bodyFromEvent) {
-          const raw = event.isBase64Encoded ? Buffer.from(bodyFromEvent, 'base64').toString('utf8') : bodyFromEvent;
-          const parsed = JSON.parse(raw);
-          email = email || parsed?.email;
-          password = password || parsed?.password;
-        }
-      } catch (_) {
-        // ignore
-      }
-    }
+    const { email, password } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Email and password are required' });
@@ -864,17 +698,32 @@ export const handleAcademyLogin: RequestHandler = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }
 
-    const academy = academyResult.rows[0];
+    let academy = academyResult.rows[0];
+    let passwordHash = academy.password_hash;
 
-    // Check if password_hash exists, if not, this academy needs to set up authentication
-    if (!academy.password_hash) {
+    // Check if password_hash exists, if not, try to fallback to staff_users table
+    if (!passwordHash) {
+      console.log(`[AUTH] Academy ${academy.id} has no password_hash, checking staff_users...`);
+      const staffResult = await query(`
+        SELECT password_hash FROM staff_users 
+        WHERE academy_id = $1 AND password_hash IS NOT NULL 
+        LIMIT 1
+      `, [academy.id]);
+
+      if (staffResult.rows.length > 0) {
+        passwordHash = staffResult.rows[0].password_hash;
+        console.log(`[AUTH] Found password_hash in staff_users for academy ${academy.id}`);
+      }
+    }
+
+    if (!passwordHash) {
       return res.status(401).json({
         success: false,
         message: 'Academy authentication not set up. Please contact support.'
       });
     }
 
-    const isValid = await verifyPassword(password, academy.password_hash);
+    const isValid = await verifyPassword(password, passwordHash);
     if (!isValid) {
       return res.status(401).json({ success: false, message: 'Invalid credentials' });
     }

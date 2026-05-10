@@ -21,7 +21,7 @@ export default function Index() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
-  const { t, dir } = useTranslation();
+  const { t, dir, language } = useTranslation();
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [isLoadingTestimonials, setIsLoadingTestimonials] = useState(true);
   const [plans, setPlans] = useState<any[]>([]);
@@ -159,6 +159,7 @@ export default function Index() {
       icon: isElite ? Crown : isPro ? Trophy : Building,
       features: (plan.features || []).map((f: string) => {
         const lowerF = f.toLowerCase();
+        console.log(`Translating feature: "${f}", lower: "${lowerF}", language: ${language}`);
         if (lowerF.includes('player')) {
           const count = f.match(/\d+/)?.[0] || plan.player_limit;
           return t('plans.feature.playerCount', { count });

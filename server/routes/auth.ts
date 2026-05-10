@@ -247,16 +247,16 @@ export const handleRegisterStaff: RequestHandler = async (req, res) => {
     // Create academy
     const academyId = uuidv4();
     const academyCode = createAcademyCode(academyName);
+    const passwordHash = await hashPassword(password);
 
     await query(
-      `INSERT INTO academies (id, name, code, address, district, province, phone) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [academyId, academyName, academyCode, "", "", "", ""]
+      `INSERT INTO academies (id, name, code, email, password_hash, address, district, province, phone) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [academyId, academyName, academyCode, email, passwordHash, "", "", "", ""]
     );
 
     // Create staff user
     const userId = uuidv4();
-    const passwordHash = await hashPassword(password);
 
     await query(
       `INSERT INTO staff_users (id, academy_id, email, password_hash, role, first_name, last_name, phone, is_active) 
@@ -302,16 +302,16 @@ export const handleRegisterSchool: RequestHandler = async (req, res) => {
     // Create academy (using academies table)
     const academyId = uuidv4();
     const academyCode = createAcademyCode(schoolName);
+    const passwordHash = await hashPassword(password);
 
     await query(
-      `INSERT INTO academies (id, name, code, address, district, province, phone) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [academyId, schoolName, academyCode, "", "", "", phoneNumber || ""]
+      `INSERT INTO academies (id, name, code, email, password_hash, address, district, province, phone) 
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+      [academyId, schoolName, academyCode, email, passwordHash, "", "", "", phoneNumber || ""]
     );
 
     // Create staff user (academy admin)
     const userId = uuidv4();
-    const passwordHash = await hashPassword(password);
 
     await query(
       `INSERT INTO staff_users (id, academy_id, email, password_hash, role, first_name, last_name, phone, is_active) 
