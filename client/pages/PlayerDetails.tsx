@@ -586,10 +586,10 @@ const PlayerDetails = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="sticky top-0 z-50 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 border-b border-gray-200 py-4 mb-6">
+        <div className="max-w-6xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button variant="ghost" onClick={() => navigate(-1)}>
               <ArrowLeft className="h-4 w-4" />
@@ -622,7 +622,9 @@ const PlayerDetails = () => {
             )}
           </div>
         </div>
+      </div>
 
+      <div className="max-w-6xl mx-auto px-6 pb-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Player Overview */}
           <div className="lg:col-span-1">
