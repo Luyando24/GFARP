@@ -1,4 +1,5 @@
 import "dotenv/config";
+import { query } from "./lib/db.js";
 import express from "express";
 import cors from "cors";
 import { handleDemo } from "./routes/demo.js";

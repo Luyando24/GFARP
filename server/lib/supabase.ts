@@ -1,4 +1,10 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import dotenv from 'dotenv';
+import path from 'path';
+
+// Ensure environment variables are loaded from the root .env files
+dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true });
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: true });
 
 // Supabase configuration for server-side operations
 // Lazy initialization to prevent crashes if env vars are missing at startup

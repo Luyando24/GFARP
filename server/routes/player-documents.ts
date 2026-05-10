@@ -90,8 +90,8 @@ export const handleUploadPlayerDocument: RequestHandler = async (req, res) => {
     const insertResult = await query(`
       INSERT INTO player_documents (
         player_id, document_type, original_filename, stored_filename, 
-        file_path, file_size, mime_type, uploaded_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+        file_path, file_size, mime_type, uploaded_by, is_active
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, true)
       RETURNING id, upload_date
     `, [
       playerId,
