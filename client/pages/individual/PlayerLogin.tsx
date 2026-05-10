@@ -44,6 +44,7 @@ export default function PlayerLogin() {
     }
   };
 
+  return (
     <div className="min-h-screen bg-gradient-to-br from-green-900 via-green-800 to-blue-900 flex items-center justify-center p-4 relative overflow-hidden" dir={dir}>
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10">
