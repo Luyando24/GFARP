@@ -47,6 +47,7 @@ import {
 import { toast } from "sonner";
 import jsPDF from "jspdf";
 import ThemeToggle from "@/components/navigation/ThemeToggle";
+import LanguageToggle from "@/components/navigation/LanguageToggle";
 import { useTranslation } from "@/lib/i18n";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -656,6 +657,7 @@ export default function PlayerDashboard() {
 
             {/* User Menu */}
             <div className="flex items-center gap-4">
+              <LanguageToggle />
               <ThemeToggle />
               <div className="flex items-center gap-3">
                 <Avatar className="h-8 w-8">
@@ -791,22 +793,22 @@ export default function PlayerDashboard() {
                   <div className="lg:col-span-2 space-y-6">
                     <Card>
                       <CardHeader>
-                        <CardTitle>{t('common.bio')}</CardTitle>
+                        <CardTitle>{t('dash.player.bio')}</CardTitle>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-slate-600 dark:text-slate-300 whitespace-pre-line">
-                          {profile?.bio || "No bio available. Go to 'Edit Profile' to add one."}
+                        <p className="text-slate-600 dark:text-slate-300">
+                          {profile?.bio || t('dash.player.noBio')}
                         </p>
                       </CardContent>
                     </Card>
 
                     <Card>
                       <CardHeader>
-                        <CardTitle>Career History</CardTitle>
+                        <CardTitle>{t('dash.player.careerHistory')}</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <p className="text-slate-600 dark:text-slate-300 whitespace-pre-line">
-                          {profile?.career_history || "No career history added."}
+                          {profile?.career_history || t('dash.player.noCareer')}
                         </p>
                       </CardContent>
                     </Card>
@@ -814,21 +816,21 @@ export default function PlayerDashboard() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <Card>
                         <CardHeader>
-                          <CardTitle className="text-sm font-medium">Honours & Awards</CardTitle>
+                          <CardTitle className="text-sm font-medium">{t('dash.player.honours')}</CardTitle>
                         </CardHeader>
                         <CardContent>
                           <p className="text-slate-600 dark:text-slate-300 whitespace-pre-line text-sm">
-                            {profile?.honours || "None added."}
+                            {profile?.honours || t('dash.player.none')}
                           </p>
                         </CardContent>
                       </Card>
                       <Card>
                         <CardHeader>
-                          <CardTitle className="text-sm font-medium">Education</CardTitle>
+                          <CardTitle className="text-sm font-medium">{t('dash.player.education')}</CardTitle>
                         </CardHeader>
                         <CardContent>
                           <p className="text-slate-600 dark:text-slate-300 whitespace-pre-line text-sm">
-                            {profile?.education || "None added."}
+                            {profile?.education || t('dash.player.none')}
                           </p>
                         </CardContent>
                       </Card>
@@ -836,7 +838,7 @@ export default function PlayerDashboard() {
 
                     <Card>
                       <CardHeader>
-                        <CardTitle>Gallery</CardTitle>
+                        <CardTitle>{t('dash.player.gallery')}</CardTitle>
                       </CardHeader>
                       <CardContent>
                         {profile?.gallery_images && profile.gallery_images.some(img => img) ? (
@@ -852,9 +854,9 @@ export default function PlayerDashboard() {
                         ) : (
                           <div className="text-center py-8 text-slate-500 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
                             <ImageIcon className="h-10 w-10 mx-auto mb-2 opacity-50" />
-                            <p>No images in gallery</p>
+                            <p>{t('dash.player.noGallery')}</p>
                             <Button variant="link" onClick={() => setActiveTab('profile')} className="mt-2">
-                              Add Images
+                              {t('dash.player.addImages')}
                             </Button>
                           </div>
                         )}
@@ -863,24 +865,24 @@ export default function PlayerDashboard() {
 
                     <Card>
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Subscription</CardTitle>
+                        <CardTitle className="text-sm font-medium">{t('dash.stats.subscription')}</CardTitle>
                         <CreditCard className="h-4 w-4 text-muted-foreground" />
                       </CardHeader>
                       <CardContent>
                         <div className="text-2xl font-bold">
-                          {currentPlan === 'pro' ? "Pro Plan Active" : "Free Plan"}
+                          {currentPlan === 'pro' ? t('dash.player.subActive') : t('dash.player.subFree')}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1 mb-4">
                           {currentPlan === 'pro' 
-                            ? "You have full access to all features." 
-                            : "Upgrade to Pro for unlimited updates and more."}
+                            ? t('dash.player.subActiveDesc') 
+                            : t('dash.player.subFreeDesc')}
                         </p>
                         {currentPlan !== 'pro' && (
                           <Button 
                             onClick={() => setActiveTab('subscription')} 
                             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
                           >
-                            View Subscription Plans
+                            {t('dash.player.viewPlans')}
                           </Button>
                         )}
                       </CardContent>
@@ -894,8 +896,8 @@ export default function PlayerDashboard() {
             {activeTab === 'profile' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Edit Profile</h2>
-                  <p className="text-slate-600 dark:text-slate-400">Update your information for the one-pager.</p>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('dash.player.editProfile')}</h2>
+                  <p className="text-slate-600 dark:text-slate-400">{t('dash.player.editProfileDesc')}</p>
                 </div>
 
                 <Card>
@@ -903,12 +905,12 @@ export default function PlayerDashboard() {
                     <div className="space-y-6">
                       {/* Profile Picture Section */}
                       <div className="flex flex-col items-center space-y-4 pb-6 border-b border-slate-200 dark:border-slate-700">
-                        <Label className="text-lg font-semibold">Profile Picture</Label>
+                        <Label className="text-lg font-semibold">{t('dash.player.profilePic')}</Label>
                         <div className="relative group">
                           <Avatar className="h-32 w-32 border-4 border-white shadow-lg cursor-pointer">
                             <AvatarImage src={formData.profile_image_url} />
                             <AvatarFallback className="text-4xl bg-slate-200">
-                              {getInitials(formData.display_name || 'Player')}
+                              {getInitials(formData.display_name || t('dash.share.newPlayer'))}
                             </AvatarFallback>
                           </Avatar>
                           <label
@@ -925,12 +927,12 @@ export default function PlayerDashboard() {
                             />
                           </label>
                         </div>
-                        <p className="text-xs text-slate-500">Click the camera icon to upload a new photo</p>
+                        <p className="text-xs text-slate-500">{t('dash.player.uploadPhoto')}</p>
                       </div>
 
                       {/* Cover Image Section */}
                       <div className="flex flex-col items-center space-y-4 pb-6 border-b border-slate-200 dark:border-slate-700">
-                        <Label className="text-lg font-semibold">Cover Image (Hero Background)</Label>
+                        <Label className="text-lg font-semibold">{t('dash.player.coverImage')}</Label>
                         <div className="relative group w-full max-w-md">
                           <div className="aspect-[3/1] rounded-xl overflow-hidden bg-slate-100 border-4 border-white shadow-lg relative">
                             {formData.cover_image_url ? (
@@ -938,7 +940,7 @@ export default function PlayerDashboard() {
                             ) : (
                               <div className="flex items-center justify-center h-full text-slate-400">
                                 <ImageIcon className="h-10 w-10 mr-2" />
-                                <span>No cover image set</span>
+                                <span>{t('dash.player.noCover')}</span>
                               </div>
                             )}
                           </div>
@@ -956,12 +958,12 @@ export default function PlayerDashboard() {
                             />
                           </label>
                         </div>
-                        <p className="text-xs text-slate-500">This will be the background of your profile header</p>
+                        <p className="text-xs text-slate-500">{t('dash.player.coverDesc')}</p>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2 md:col-span-2">
-                          <Label htmlFor="slug">Custom Link Name (Subdomain)</Label>
+                          <Label htmlFor="slug">{t('dash.player.customLink')}</Label>
                           <div className="flex items-center gap-2">
                             <span className="text-sm text-slate-500 font-mono">https://</span>
                             <div className="relative max-w-[200px] w-full">
@@ -970,7 +972,7 @@ export default function PlayerDashboard() {
                                 name="slug"
                                 value={formData.slug || ''}
                                 onChange={handleInputChange}
-                                placeholder="your-name"
+                                placeholder={t('dash.player.linkPlaceholder')}
                                 className={`font-mono pr-8 ${slugAvailable === false ? 'border-red-500 focus-visible:ring-red-500' : slugAvailable === true ? 'border-green-500 focus-visible:ring-green-500' : ''}`}
                               />
                               <div className="absolute right-2 top-1/2 -translate-y-1/2">
@@ -990,117 +992,111 @@ export default function PlayerDashboard() {
                               {slugMessage}
                             </p>
                           ) : (
-                            <p className="text-xs text-slate-500">Only lowercase letters, numbers, and hyphens.</p>
+                            <p className="text-xs text-slate-500">{t('dash.player.linkRules')}</p>
                           )}
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="display_name">Display Name</Label>
+                          <Label htmlFor="display_name">{t('dash.player.displayName')}</Label>
                           <Input
                             id="display_name"
                             name="display_name"
                             value={formData.display_name || ''}
                             onChange={handleInputChange}
-                            placeholder="e.g. John Doe"
+                            placeholder={t('dash.player.placeholderName')}
                           />
                         </div>
+
                         <div className="space-y-2">
-                          <Label htmlFor="age">Age</Label>
-                          <Input
-                            id="age"
-                            name="age"
-                            type="number"
-                            value={formData.age || ''}
-                            onChange={handleInputChange}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="nationality">Nationality</Label>
-                          <Input
-                            id="nationality"
-                            name="nationality"
-                            value={formData.nationality || ''}
-                            onChange={handleInputChange}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="position">Position</Label>
+                          <Label htmlFor="position">{t('dash.player.position')}</Label>
                           <Input
                             id="position"
                             name="position"
                             value={formData.position || ''}
                             onChange={handleInputChange}
-                            placeholder="e.g. Striker"
+                            placeholder={t('dash.player.placeholderPosition')}
                           />
                         </div>
+
                         <div className="space-y-2">
-                          <Label htmlFor="current_club">Current Club</Label>
+                          <Label htmlFor="nationality">{t('dash.player.nationality')}</Label>
+                          <Input
+                            id="nationality"
+                            name="nationality"
+                            value={formData.nationality || ''}
+                            onChange={handleInputChange}
+                            placeholder="e.g. Zambian"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-4 md:col-span-1">
+                          <div className="space-y-2">
+                            <Label htmlFor="height">{t('dash.player.height')}</Label>
+                            <Input
+                              id="height"
+                              name="height"
+                              type="number"
+                              value={formData.height || ''}
+                              onChange={handleInputChange}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="weight">{t('dash.player.weight')}</Label>
+                            <Input
+                              id="weight"
+                              name="weight"
+                              type="number"
+                              value={formData.weight || ''}
+                              onChange={handleInputChange}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="age">{t('dash.player.age')}</Label>
+                            <Input
+                              id="age"
+                              name="age"
+                              type="number"
+                              value={formData.age || ''}
+                              onChange={handleInputChange}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="foot">{t('dash.player.foot')}</Label>
+                          <Input
+                            id="foot"
+                            name="foot"
+                            value={formData.foot || ''}
+                            onChange={handleInputChange}
+                            placeholder="e.g. Right, Left, Both"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="current_club">{t('dash.player.currentClub')}</Label>
                           <Input
                             id="current_club"
                             name="current_club"
                             value={formData.current_club || ''}
                             onChange={handleInputChange}
+                            placeholder={t('dash.player.placeholderClub')}
                           />
                         </div>
+
                         <div className="space-y-2">
-                          <Label htmlFor="height">Height (cm)</Label>
+                          <Label htmlFor="email">{t('dash.player.email')}</Label>
                           <Input
-                            id="height"
-                            name="height"
-                            type="number"
-                            value={formData.height || ''}
-                            onChange={handleInputChange}
-                            placeholder="e.g. 185"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="weight">Weight (kg)</Label>
-                          <Input
-                            id="weight"
-                            name="weight"
-                            type="number"
-                            value={formData.weight || ''}
-                            onChange={handleInputChange}
-                            placeholder="e.g. 75"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="preferred_foot">Preferred Foot</Label>
-                          <select
-                            id="preferred_foot"
-                            name="preferred_foot"
-                            value={formData.preferred_foot || ''}
-                            onChange={(e) => setFormData(prev => ({ ...prev, preferred_foot: e.target.value }))}
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                          >
-                            <option value="">Select Foot</option>
-                            <option value="Right">Right</option>
-                            <option value="Left">Left</option>
-                            <option value="Both">Both</option>
-                          </select>
-                        </div>
-                        <div className="space-y-2 md:col-span-2">
-                          <Label htmlFor="transfermarket_link">TransferMarket Link</Label>
-                          <Input
-                            id="transfermarket_link"
-                            name="transfermarket_link"
-                            value={formData.transfermarket_link || ''}
-                            onChange={handleInputChange}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="contact_email">Scouting Contact Email</Label>
-                          <Input
-                            id="contact_email"
-                            name="contact_email"
+                            id="email"
+                            name="email"
                             type="email"
-                            value={formData.contact_email || ''}
+                            value={formData.email || ''}
                             onChange={handleInputChange}
-                            placeholder="Email for scouts/clubs"
+                            placeholder={t('dash.player.placeholderEmail')}
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="whatsapp_number">WhatsApp Number</Label>
+                          <Label htmlFor="whatsapp_number">{t('dash.player.whatsapp')}</Label>
                           <Input
                             id="whatsapp_number"
                             name="whatsapp_number"
@@ -1111,7 +1107,7 @@ export default function PlayerDashboard() {
                         </div>
 
                         <div className="space-y-2 md:col-span-2 pt-4 border-t border-slate-200 dark:border-slate-700">
-                          <Label className="text-lg font-semibold">Social Media Links</Label>
+                          <Label className="text-lg font-semibold">{t('dash.player.socialMedia')}</Label>
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                             <div className="relative">
                               <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
@@ -1166,51 +1162,49 @@ export default function PlayerDashboard() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="bio">Bio</Label>
+                        <Label htmlFor="bio">{t('dash.player.bio')}</Label>
                         <Textarea
                           id="bio"
                           name="bio"
                           value={formData.bio || ''}
                           onChange={handleInputChange}
-                          placeholder="Tell us about your football journey and goals..."
+                          placeholder={t('dash.player.bioPlaceholder')}
                           className="min-h-[100px]"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="career_history">Career Journey (Clubs & Seasons)</Label>
+                        <Label htmlFor="career_history">{t('dash.player.careerHistory')}</Label>
                         <Textarea
                           id="career_history"
                           name="career_history"
                           value={formData.career_history || ''}
                           onChange={handleInputChange}
-                          placeholder="e.g. 
-- ZUST FC (2023 - 2024): Key Striker
-- AFU FC (2022 - 2023): Forward"
+                          placeholder={t('dash.player.careerPlaceholder')}
                           className="min-h-[120px]"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="honours">Honours & Awards</Label>
+                        <Label htmlFor="honours">{t('dash.player.honours')}</Label>
                         <Textarea
                           id="honours"
                           name="honours"
                           value={formData.honours || ''}
                           onChange={handleInputChange}
-                          placeholder="e.g. Golden Boot (2023), League Champion (2022)"
+                          placeholder={t('dash.player.honoursPlaceholder')}
                           className="min-h-[80px]"
                         />
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="education">Education</Label>
+                        <Label htmlFor="education">{t('dash.player.education')}</Label>
                         <Textarea
                           id="education"
                           name="education"
                           value={formData.education || ''}
                           onChange={handleInputChange}
-                          placeholder="e.g. Bachelor's Degree, Sports Management (2021)"
+                          placeholder={t('dash.player.eduPlaceholder')}
                           className="min-h-[80px]"
                         />
                       </div>
@@ -1218,9 +1212,9 @@ export default function PlayerDashboard() {
                       {/* Gallery Images Section */}
                       <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700 relative">
                         <div className="flex items-center justify-between">
-                          <Label className="text-lg font-semibold">Gallery Images (Max 3)</Label>
+                          <Label className="text-lg font-semibold">{t('dash.player.galleryMax')}</Label>
                           {!hasFeature('Video highlights') && (
-                            <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 uppercase font-black">PRO FEATURE</Badge>
+                            <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 uppercase font-black">{t('dash.player.proFeature')}</Badge>
                           )}
                         </div>
                         <div className={`grid grid-cols-1 sm:grid-cols-3 gap-4 ${!hasFeature('Video highlights') ? "opacity-40 grayscale pointer-events-none" : ""}`}>
@@ -1261,7 +1255,7 @@ export default function PlayerDashboard() {
                                     className="cursor-pointer flex flex-col items-center justify-center w-full h-full text-slate-400 hover:text-blue-500"
                                   >
                                     <ImageIcon className="h-8 w-8 mb-2" />
-                                    <span className="text-xs">Upload Image</span>
+                                    <span className="text-xs">{t('dash.player.uploadImage')}</span>
                                   </label>
                                 )}
                                 <input
@@ -1278,7 +1272,7 @@ export default function PlayerDashboard() {
                         {!hasFeature('Video highlights') && (
                           <div className="absolute inset-0 top-12 bg-white/40 dark:bg-slate-900/40 backdrop-blur-[1px] flex items-center justify-center rounded-lg z-20">
                             <Button variant="ghost" size="sm" onClick={() => setActiveTab('subscription')} className="text-blue-600 font-black uppercase tracking-widest text-xs hover:bg-blue-50 py-6">
-                              <Lock className="h-4 w-4 mr-2" /> Upgrade to unlock Gallery
+                              <Lock className="h-4 w-4 mr-2" /> {t('dash.player.upgradeGallery')}
                             </Button>
                           </div>
                         )}
@@ -1286,49 +1280,60 @@ export default function PlayerDashboard() {
 
                       <div className="space-y-2 relative">
                         <div className="flex items-center justify-between">
-                          <Label>Video Links</Label>
+                          <Label>{t('dash.player.videoLinks')}</Label>
                           {!hasFeature('Video highlights') && (
-                            <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">PRO FEATURE</Badge>
+                            <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">{t('dash.player.proFeature')}</Badge>
                           )}
                         </div>
                         <div className={!hasFeature('Video highlights') ? "opacity-50 pointer-events-none grayscale" : ""}>
                           <Input
-                            placeholder="Video Link 1"
+                            placeholder={t('dash.player.videoPlaceholder', { n: 1 })}
                             value={formData.video_links?.[0] || ''}
                             onChange={(e) => {
-                              const newLinks = [...(formData.video_links || [])];
+                              const newLinks = [...(formData.video_links || ['', ''])];
                               newLinks[0] = e.target.value;
                               setFormData(prev => ({ ...prev, video_links: newLinks }));
                             }}
                             className="mb-2"
-                            disabled={!hasFeature('Video highlights')}
                           />
                           <Input
-                            placeholder="Video Link 2"
+                            placeholder={t('dash.player.videoPlaceholder', { n: 2 })}
                             value={formData.video_links?.[1] || ''}
                             onChange={(e) => {
-                              const newLinks = [...(formData.video_links || [])];
+                              const newLinks = [...(formData.video_links || ['', ''])];
                               newLinks[1] = e.target.value;
                               setFormData(prev => ({ ...prev, video_links: newLinks }));
                             }}
-                            disabled={!hasFeature('Video highlights')}
                           />
                         </div>
                         {!hasFeature('Video highlights') && (
-                          <div className="absolute inset-0 bg-white/40 dark:bg-slate-900/40 backdrop-blur-[1px] flex items-center justify-center rounded-lg">
-                            <Button variant="ghost" size="sm" onClick={() => setActiveTab('subscription')} className="text-blue-600 font-bold hover:bg-blue-50">
-                              <Lock className="h-3 w-3 mr-1" /> Upgrade to add Videos
+                          <div className="absolute inset-0 top-8 bg-white/10 dark:bg-slate-900/10 backdrop-blur-[1px] flex items-center justify-center rounded-lg z-20">
+                            <Button variant="ghost" size="sm" onClick={() => setActiveTab('subscription')} className="text-blue-600 font-black uppercase tracking-widest text-xs hover:bg-blue-50 py-6">
+                              <Lock className="h-4 w-4 mr-2" /> {t('dash.player.upgradeVideo')}
                             </Button>
                           </div>
                         )}
                       </div>
                     </div>
                   </CardContent>
-                  <CardFooter className="flex justify-end space-x-2 bg-slate-50 dark:bg-slate-800/50 p-4">
-                    <Button variant="outline" onClick={() => setActiveTab('overview')}>Cancel</Button>
-                    <Button onClick={handleSaveProfile} disabled={saving || (currentPlan !== 'pro' && currentPlan !== 'pdf' && false) /* Allow edit for now or restrict based on plan */}>
-                      {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-                      Save Changes
+                  <CardFooter className="flex justify-end gap-3 pb-6 border-t border-slate-100 dark:border-slate-800 pt-6">
+                    <Button variant="outline" onClick={() => setActiveTab('overview')}>{t('common.cancel')}</Button>
+                    <Button 
+                      onClick={saveProfile} 
+                      disabled={saving}
+                      className="bg-blue-600 hover:bg-blue-700 text-white min-w-[120px]"
+                    >
+                      {saving ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          {t('dash.player.saving')}
+                        </>
+                      ) : (
+                        <>
+                          <Save className="mr-2 h-4 w-4" />
+                          {t('dash.player.saveProfile')}
+                        </>
+                      )}
                     </Button>
                   </CardFooter>
                 </Card>
@@ -1339,8 +1344,8 @@ export default function PlayerDashboard() {
             {activeTab === 'subscription' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Subscription Plans</h2>
-                  <p className="text-slate-600 dark:text-slate-400">Choose the best plan for your needs.</p>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('dash.plan.subscriptionPlans')}</h2>
+                  <p className="text-slate-600 dark:text-slate-400">{t('dash.plan.chooseBest')}</p>
                 </div>
 
                 {(!currentPlan || currentPlan === 'free') && (
@@ -1350,23 +1355,81 @@ export default function PlayerDashboard() {
                         .sort((a, b) => parseFloat(a.price) - parseFloat(b.price))
                         .map((plan) => {
                           const isMostExpensive = parseFloat(plan.price) === Math.max(...plans.map(p => parseFloat(p.price)));
+                          
+                          const planKey = plan.name.toLowerCase().includes('starter') ? 'starter' : 
+                                          plan.name.toLowerCase().includes('pro') ? 'pro' : 
+                                          plan.name.toLowerCase().includes('elite') ? 'elite' : 
+                                          plan.name.toLowerCase().includes('agency') ? 'elite' : 
+                                          plan.name.toLowerCase().includes('basic') ? 'starter' : 'starter';
+
+                          const translatedFeatures = (plan.features || []).map((f: string) => {
+                            const lowerF = f.toLowerCase();
+                            
+                            // Specific Individual Features first to avoid broad matches
+                            if (lowerF.includes('verified') && lowerF.includes('badge')) return t('plans.feature.verifiedBadge');
+                            if (lowerF.includes('unlimited') && lowerF.includes('update')) return t('plans.feature.unlimitedUpdates');
+                            if (lowerF.includes('unlimited') && lowerF.includes('player')) return t('plans.feature.unlimitedPlayers');
+                            if (lowerF.includes('video highlight')) return t('plans.feature.videoReels');
+                            if (lowerF.includes('scout messaging')) return t('plans.feature.scoutMessaging');
+                            
+                            // Map dynamic features to translations
+                            if (lowerF.includes('player') && (lowerF.includes('up to') || f.match(/\d+/))) {
+                              const count = f.match(/\d+/)?.[0] || plan.player_limit;
+                              return t('plans.feature.playerCount', { count });
+                            }
+                            if (lowerF.includes('analytics')) return t('plans.feature.analytics');
+                            if (lowerF.includes('priority support')) return t('plans.feature.prioritySupport');
+                            if (lowerF.includes('email support')) return t('plans.feature.emailSupport');
+                            if (lowerF.includes('registration')) return t('plans.feature.registration');
+                            if (lowerF.includes('training')) return t('plans.feature.trainingTracking');
+                            if (lowerF.includes('solidarity')) return t('plans.feature.solidarity');
+                            if (lowerF.includes('compliance')) return t('plans.feature.fullCompliance');
+                            if (lowerF.includes('24/7')) return t('plans.feature.247Support');
+                            if (lowerF.includes('dedicated manager')) return t('plans.feature.dedicatedManager');
+                            if (lowerF.includes('white-label')) return t('plans.feature.whiteLabel');
+                            if (lowerF.includes('api access')) return t('plans.feature.advancedApi');
+                            if (lowerF.includes('financial tools')) return t('plans.feature.financialTools');
+                            if (lowerF.includes('standard support')) return t('plans.feature.standardSupport');
+                            if (lowerF.includes('profile placement')) return t('plans.feature.profilePlacement');
+                            if (lowerF.includes('legal')) return t('plans.feature.legalGuidance');
+                            if (lowerF.includes('trial notifications')) return t('plans.feature.trialNotifications');
+                            if (lowerF.includes('digital resume')) return t('plans.feature.digitalResume');
+                            if (lowerF.includes('public profile')) return t('plans.feature.publicProfile');
+                            if (lowerF.includes('stats tracking')) return t('plans.feature.statsTracking');
+                            if (lowerF.includes('api integration')) return t('plans.feature.apiIntegrations');
+                            if (lowerF.includes('account team')) return t('plans.feature.accountTeam');
+                            if (lowerF.includes('scouting filter')) return t('plans.feature.scoutingFilters');
+                            if (lowerF.includes('commission tracking')) return t('plans.feature.commissionTracking');
+                            if (lowerF.includes('sub-agent management')) return t('plans.feature.subAgentMgmt');
+                            if (lowerF.includes('premium support')) return t('plans.feature.premiumSupport');
+                            if (lowerF.includes('transfer tracking')) return t('plans.feature.transferTracking');
+                            if (lowerF.includes('document cloud')) return t('plans.feature.documentCloud');
+                            if (lowerF.includes('scouting tools')) return t('plans.feature.scoutingTools');
+                            return f;
+                          });
+
                           return (
                             <Card key={plan.id} className={`cursor-pointer transition-all hover:border-blue-500 hover:shadow-2xl flex flex-col relative overflow-hidden border-2 ${isMostExpensive ? 'border-blue-600 dark:border-blue-400 shadow-xl scale-105 z-10' : 'border-slate-100 dark:border-slate-800 shadow-sm'}`}>
                               {isMostExpensive && (
-                                <div className="absolute top-0 right-0 bg-blue-600 text-white text-[10px] px-4 py-1.5 font-black uppercase tracking-widest rounded-bl-lg shadow-lg">RECOMMENDED</div>
+                                <div className="absolute top-0 right-0 bg-blue-600 text-white text-[10px] px-4 py-1.5 font-black uppercase tracking-widest rounded-bl-lg shadow-lg">{t('dash.plan.recommended')}</div>
                               )}
                               <CardHeader className="text-center pb-4 pt-8 bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
-                                <CardTitle className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight">{plan.name}</CardTitle>
+                                <CardTitle className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight">{t(`plans.${planKey}.name` as any) || plan.name}</CardTitle>
                                 <div className="flex items-center justify-center gap-1 mt-4">
                                   <span className="text-2xl font-bold text-blue-600">$</span>
                                   <span className="text-5xl font-black text-blue-600 tracking-tighter">{plan.price}</span>
                                 </div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">{plan.billingCycle === 'one-time' || !plan.billingCycle ? 'Lifetime Billing' : `${plan.billingCycle} billing`}</p>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">
+                                  {plan.billingCycle === 'one-time' || !plan.billingCycle 
+                                    ? t('dash.plan.lifetimeBilling') 
+                                    : t('dash.plan.billingPeriod', { period: plan.billingCycle.toLowerCase() })
+                                  }
+                                </p>
                               </CardHeader>
                               <CardContent className="flex-1 pt-8 px-6">
                                 <div className="space-y-4 mb-8">
                                   {Array.isArray(plan.features) ? (
-                                    plan.features.map((feature: string, fIdx: number) => (
+                                    translatedFeatures.map((feature: string, fIdx: number) => (
                                       <div key={fIdx} className="flex items-start gap-3">
                                         <div className="mt-0.5 h-5 w-5 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
                                           <Check className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
@@ -1375,7 +1438,7 @@ export default function PlayerDashboard() {
                                       </div>
                                     ))
                                   ) : (
-                                    <p className="text-sm text-slate-500 italic">Plan features coming soon</p>
+                                    <p className="text-sm text-slate-500 italic">{t('dash.plan.noFeatures')}</p>
                                   )}
                                 </div>
                               </CardContent>
@@ -1384,7 +1447,10 @@ export default function PlayerDashboard() {
                                   className={`w-full h-14 text-sm font-black uppercase tracking-widest transition-all duration-300 shadow-xl ${isMostExpensive ? 'bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white hover:scale-[1.02]' : 'bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800'}`}
                                   onClick={() => openPaymentModal(plan)}
                                 >
-                                  {parseFloat(plan.price) === 0 ? 'Get Started' : `Get ${plan.name}`}
+                                  {parseFloat(plan.price) === 0 
+                                    ? t('dash.plan.getStarted') 
+                                    : t('dash.plan.getName', { name: t(`plans.${planKey}.name` as any) || plan.name })
+                                  }
                                 </Button>
                               </CardFooter>
                             </Card>
@@ -1393,7 +1459,7 @@ export default function PlayerDashboard() {
                     ) : (
                       <div className="col-span-full py-12 text-center">
                         <Loader2 className="h-10 w-10 animate-spin text-blue-600 mx-auto mb-4" />
-                        <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">Loading premium plans...</p>
+                        <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">{t('dash.plan.loading')}</p>
                       </div>
                     )}
                   </div>
@@ -1411,13 +1477,13 @@ export default function PlayerDashboard() {
                         </div>
                         <div>
                           <div className="flex items-center gap-2 mb-1">
-                            <Badge className="bg-green-600 hover:bg-green-600 text-white font-black uppercase tracking-widest text-[10px]">ACTIVE SUBSCRIPTION</Badge>
+                            <Badge className="bg-green-600 hover:bg-green-600 text-white font-black uppercase tracking-widest text-[10px]">{t('dash.plan.activeSubBadge')}</Badge>
                           </div>
                           <h3 className="text-2xl font-black text-slate-900 uppercase italic tracking-tight">
-                            {plans.find(p => p.id === currentPlan)?.name || 'PREMIUM'} PLAN
+                            {t('dash.plan.planLabel', { name: plans.find(p => p.id === currentPlan)?.name || 'PREMIUM' })}
                           </h3>
                           <p className="text-green-700 font-medium">
-                            You have full access to all professional features and scouting tools.
+                            {t('dash.plan.activeDesc')}
                           </p>
                         </div>
                       </div>
@@ -1433,9 +1499,9 @@ export default function PlayerDashboard() {
                           <Clock className="h-6 w-6 text-slate-500" />
                         </div>
                         <div>
-                          <h3 className="text-lg font-bold text-slate-900 uppercase">Current Status: FREE</h3>
+                          <h3 className="text-lg font-bold text-slate-900 uppercase">{t('dash.plan.statusFree')}</h3>
                           <p className="text-slate-600">
-                            Upgrade below to unlock verified badges and direct scouting access.
+                            {t('dash.plan.upgradeDesc')}
                           </p>
                         </div>
                       </div>
@@ -1449,8 +1515,8 @@ export default function PlayerDashboard() {
             {activeTab === 'share' && (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Share & Export</h2>
-                  <p className="text-slate-600 dark:text-slate-400">Distribute your profile to scouts and clubs.</p>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('dash.menu.share')}</h2>
+                  <p className="text-slate-600 dark:text-slate-400">{t('dash.share.subtitle')}</p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -1459,40 +1525,40 @@ export default function PlayerDashboard() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-xl">
                         <FileText className="h-6 w-6 text-blue-600" />
-                        Download PDF CV
+                        {t('dash.share.downloadPdf')}
                       </CardTitle>
-                      <CardDescription>Export your professional football CV for clubs and agents.</CardDescription>
+                      <CardDescription>{t('dash.share.pdfDesc')}</CardDescription>
                     </CardHeader>
                     <CardContent className="flex-1">
                       <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-xl mb-6 border border-slate-100 dark:border-slate-800">
                         <ul className="text-sm space-y-2 text-slate-600 dark:text-slate-400">
                           <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" /> Professional layout
+                            <Check className="h-4 w-4 text-green-500" /> {t('dash.share.pdfFeat1')}
                           </li>
                           <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" /> Key stats & contact info
+                            <Check className="h-4 w-4 text-green-500" /> {t('dash.share.pdfFeat2')}
                           </li>
                           <li className="flex items-center gap-2">
-                            <Check className="h-4 w-4 text-green-500" /> Easy to print or email
+                            <Check className="h-4 w-4 text-green-500" /> {t('dash.share.pdfFeat3')}
                           </li>
                         </ul>
                       </div>
                       <Button
                         className="w-full h-12 text-md font-semibold bg-blue-600 hover:bg-blue-700 transition-all shadow-md"
                         onClick={hasFeature('Unlimited profile updates') || hasFeature('Elite') ? generatePDF : () => {
-                           toast.info("PDF Generation is a Pro feature. Please upgrade your plan.");
+                           toast.info(t('dash.share.upgradeRequired'));
                            setActiveTab('subscription');
                         }}
                       >
                         {hasFeature('Unlimited profile updates') || hasFeature('Elite') ? (
                           <>
                             <Download className="mr-2 h-5 w-5" />
-                            Generate & Download
+                            {t('dash.share.generateDownload')}
                           </>
                         ) : (
                           <>
                             <Lock className="mr-2 h-5 w-5" />
-                            Unlock PDF Download
+                            {t('dash.share.unlockPdf')}
                           </>
                         )}
                       </Button>
@@ -1504,15 +1570,15 @@ export default function PlayerDashboard() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-xl">
                         <Globe className="h-6 w-6 text-green-600" />
-                        Digital Profile Link
+                        {t('dash.share.digitalProfile')}
                       </CardTitle>
-                      <CardDescription>Your unique webpage that lives on the internet.</CardDescription>
+                      <CardDescription>{t('dash.share.digitalDesc')}</CardDescription>
                     </CardHeader>
                     <CardContent className="flex-1">
                       {/* Preview Card */}
                       <div className="mb-6 p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 relative group">
                         <div className="absolute top-2 right-2">
-                          <Badge variant="outline" className="bg-white/80 dark:bg-slate-800/80">Preview</Badge>
+                          <Badge variant="outline" className="bg-white/80 dark:bg-slate-800/80">{t('dash.share.preview')}</Badge>
                         </div>
                         <div className="flex items-center gap-4">
                           <Avatar className="h-16 w-16 border-2 border-white dark:border-slate-700 shadow-sm">
@@ -1521,12 +1587,12 @@ export default function PlayerDashboard() {
                           </Avatar>
                           <div className="overflow-hidden">
                             <h4 className="font-bold text-slate-900 dark:text-white capitalize truncate">
-                              {profile?.display_name || "New Player"}
+                              {profile?.display_name || t('dash.share.newPlayer')}
                             </h4>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">{profile?.position || "Position not set"}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{profile?.position || t('dash.share.noPosition')}</p>
                             <div className="flex gap-1 mt-1">
-                              <Badge variant="secondary" className="text-[10px] py-0">{profile?.nationality || "Global"}</Badge>
-                              <Badge variant="secondary" className="text-[10px] py-0">{profile?.age ? `${profile.age}y` : 'Age'}</Badge>
+                              <Badge variant="secondary" className="text-[10px] py-0">{profile?.nationality || t('dash.share.global')}</Badge>
+                              <Badge variant="secondary" className="text-[10px] py-0">{profile?.age ? `${profile.age}y` : t('dash.share.ageLabel')}</Badge>
                             </div>
                           </div>
                         </div>
@@ -1541,12 +1607,12 @@ export default function PlayerDashboard() {
                             {currentPlan === 'pro' ? (
                               <>
                                 <Share2 className="mr-2 h-5 w-5" />
-                                Copy Link
+                                {t('dash.share.copyLink')}
                               </>
                             ) : (
                               <>
                                 <Lock className="mr-2 h-5 w-5" />
-                                Unlock Link
+                                {t('dash.share.unlockLink')}
                               </>
                             )}
                           </Button>
@@ -1569,7 +1635,7 @@ export default function PlayerDashboard() {
                         </div>
 
                         <div className="pt-2">
-                          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">Quick Share</p>
+                          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">{t('dash.share.quickShare')}</p>
                           <div className="flex gap-2">
                             <Button
                               variant="outline"

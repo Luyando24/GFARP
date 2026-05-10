@@ -124,6 +124,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Area, AreaChart, Bar, BarChart, Line, LineChart, Pie, PieChart, Cell, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from 'recharts';
 import ThemeToggle from '@/components/navigation/ThemeToggle';
+import LanguageToggle from '@/components/navigation/LanguageToggle';
 import { NotificationsPopover } from '@/components/navigation/NotificationsPopover';
 import BlogManagement from '@/components/admin/BlogManagement';
 import SalesAgentsManager from '@/components/admin/SalesAgentsManager';
@@ -1246,6 +1247,7 @@ export default function AdminDashboard() {
             {/* Admin Menu */}
             <div className="flex items-center gap-4">
               <NotificationsPopover />
+              <LanguageToggle />
               <ThemeToggle />
               <div className="flex items-center gap-3">
                 <Avatar className="h-8 w-8">
@@ -2387,7 +2389,7 @@ export default function AdminDashboard() {
                           variant="outline"
                           size="sm"
                           onClick={() => handleSystemSettingsChange('general', 'maintenanceMode', !systemSettings.general.maintenanceMode)}
-                          className={systemSettings.general.maintenanceMode ? "border-green-500 text-green-600" : ""}
+                          className={systemSettings.general.maintenanceMode ? "border-red-500 text-red-600" : ""}
                         >
                           {systemSettings.general.maintenanceMode ? (
                             <>
@@ -2402,6 +2404,30 @@ export default function AdminDashboard() {
                           )}
                         </Button>
                       </div>
+
+                      {systemSettings.general.maintenanceMode && (
+                        <div className="mt-4 space-y-4 p-4 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                          <div className="space-y-2">
+                            <Label htmlFor="maintenanceMessage">Maintenance Message</Label>
+                            <Textarea
+                              id="maintenanceMessage"
+                              placeholder="Enter message to show to users"
+                              value={systemSettings.general.maintenanceMessage}
+                              onChange={(e) => handleSystemSettingsChange('general', 'maintenanceMessage', e.target.value)}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="maintenanceEndTime">Expected Completion Time (optional)</Label>
+                            <Input
+                              id="maintenanceEndTime"
+                              type="text"
+                              placeholder="e.g. 2:00 PM EST or 1 hour"
+                              value={systemSettings.general.maintenanceEndTime}
+                              onChange={(e) => handleSystemSettingsChange('general', 'maintenanceEndTime', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

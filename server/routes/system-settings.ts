@@ -13,6 +13,8 @@ interface SystemSettingsData {
     dateFormat: string;
     currency: string;
     maintenanceMode: boolean;
+    maintenanceMessage: string;
+    maintenanceEndTime: string;
     registrationEnabled: boolean;
   };
   security: {
@@ -70,6 +72,8 @@ const defaultSettings: SystemSettingsData = {
     dateFormat: "MM/DD/YYYY",
     currency: "USD",
     maintenanceMode: false,
+    maintenanceMessage: "Soccer Circular is currently undergoing scheduled maintenance. We'll be back shortly!",
+    maintenanceEndTime: "",
     registrationEnabled: true
   },
   security: {

@@ -214,6 +214,25 @@ export async function query(text: string, params?: (string | number | boolean | 
       return { rows: [{ count: 0 }] };
     }
 
+    // Handle system_settings table access
+    if (text.includes('system_settings') && error.message.includes('does not exist')) {
+      console.log('Attempting to create system_settings table...');
+      try {
+        await client.query(`
+          CREATE TABLE IF NOT EXISTS system_settings (
+            key VARCHAR(255) PRIMARY KEY,
+            value TEXT NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+          )
+        `);
+        // Retry the query
+        const retryResult = await client.query(text, params);
+        return { rows: retryResult.rows };
+      } catch (createError) {
+        console.error('Failed to create system_settings table:', createError);
+      }
+    }
+
     throw error;
   } finally {
     if (client) {

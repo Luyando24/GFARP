@@ -58,13 +58,67 @@ import PlayerLogin from "./pages/individual/PlayerLogin";
 import PlayerDashboard from "./pages/individual/PlayerDashboard";
 import IndividualPlayerDetails from "./pages/admin/IndividualPlayerDetails";
 
+import Maintenance from "./pages/Maintenance";
+import { useState } from "react";
+
 const queryClient = new QueryClient();
 
 const App = () => {
+  const [systemSettings, setSystemSettings] = useState<any>(null);
+  const [isSettingsLoading, setIsSettingsLoading] = useState(true);
+
   useEffect(() => {
     syncService.start();
+    
+    // Fetch system settings
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('/api/system-settings');
+        if (res.ok) {
+          const data = await res.json();
+          setSystemSettings(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch system settings:', err);
+      } finally {
+        setIsSettingsLoading(false);
+      }
+    };
+
+    fetchSettings();
+
     return () => syncService.stop();
   }, []);
+
+  if (isSettingsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          <p className="text-slate-600 dark:text-slate-400 font-medium">Loading Soccer Circular...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Check for maintenance mode
+  const isMaintenanceMode = systemSettings?.general?.maintenanceMode;
+  const maintenanceMessage = systemSettings?.general?.maintenanceMessage;
+  const maintenanceEndTime = systemSettings?.general?.maintenanceEndTime;
+  
+  // Get user role from local storage to check for bypass without waiting for full auth mount
+  // This is a quick check, full auth will still happen in ProtectedRoute
+  const sessionData = localStorage.getItem('auth_session');
+  let isStaff = false;
+  try {
+    if (sessionData) {
+      const session = JSON.parse(sessionData);
+      isStaff = session.role === 'admin' || session.role === 'superadmin';
+    }
+  } catch (e) {}
+
+  const showMaintenance = isMaintenanceMode && !isStaff;
+
   return (
     <HelmetProvider>
       <QueryClientProvider client={queryClient}>
@@ -85,6 +139,14 @@ const App = () => {
                      subdomain = parts[0];
                  }
               }
+              if (showMaintenance && !window.location.pathname.startsWith('/admin')) {
+                return (
+                  <BrowserRouter>
+                    <Maintenance message={maintenanceMessage} endTime={maintenanceEndTime} />
+                  </BrowserRouter>
+                );
+              }
+
               if (subdomain) {
                 return (
                   <BrowserRouter>

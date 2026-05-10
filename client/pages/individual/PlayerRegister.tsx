@@ -8,6 +8,7 @@ import { useNavigate, Link } from "react-router-dom";
 import { User, ArrowLeft, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import LanguageToggle from "@/components/navigation/LanguageToggle";
 
 export default function PlayerRegister() {
   usePageTitle("Player Registration");
@@ -19,7 +20,7 @@ export default function PlayerRegister() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-  const { t } = useTranslation();
+  const { t, dir } = useTranslation();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,13 +64,16 @@ export default function PlayerRegister() {
         <div className="absolute bottom-32 left-1/4 w-16 h-16 border-2 border-white rounded-full"></div>
       </div>
 
-      <Link
-        to="/"
-        className="absolute top-6 left-6 flex items-center gap-2 text-white hover:text-yellow-300 transition-colors duration-200 z-10"
-      >
-        <ArrowLeft className="h-5 w-5" />
-        <span className="text-sm font-medium">{t('common.backHome')}</span>
-      </Link>
+      <div className="absolute top-6 left-6 right-6 flex items-center justify-between z-10">
+        <Link
+          to="/"
+          className="flex items-center gap-2 text-white hover:text-yellow-300 transition-colors duration-200"
+        >
+          <ArrowLeft className="h-5 w-5" />
+          <span className="text-sm font-medium">{t('common.backHome')}</span>
+        </Link>
+        <LanguageToggle />
+      </div>
 
       <Card className="w-full max-w-md shadow-2xl border-0 bg-white/95 backdrop-blur-sm">
         <CardHeader className="text-center pb-6">
