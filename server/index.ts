@@ -184,6 +184,25 @@ export function createServer() {
   api.get("/player-documents/:playerId", handleGetPlayerDocuments);
   api.delete("/player-documents/:documentId", handleDeletePlayerDocument);
 
+  // Temporary maintenance route to check database connection
+  api.get("/maintenance/check-db", async (req, res) => {
+    try {
+      const result = await query('SELECT current_database(), inet_server_addr(), inet_client_addr()');
+      const version = await query('SELECT version()');
+      res.json({
+        success: true,
+        database: result.rows[0].current_database,
+        serverAddr: result.rows[0].inet_server_addr,
+        clientAddr: result.rows[0].inet_client_addr,
+        version: version.rows[0].version,
+        envHasUrl: !!(process.env.DATABASE_URL || process.env.SUPABASE_DB_URL),
+        nodeEnv: process.env.NODE_ENV
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Individual Players routes
   api.use("/individual-players", individualPlayersRouter);
 

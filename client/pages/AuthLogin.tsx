@@ -41,7 +41,8 @@ export default function AuthLogin() {
       }
       
       // Academy login only
-      const response: any = await Api.post('football-auth/academy/login', { email, password });
+      const normalizedEmail = email.toLowerCase().trim();
+      const response: any = await Api.post('football-auth/academy/login', { email: normalizedEmail, password });
       if (response.success) {
         // Transform academy response to match AuthSession format
         const session = {

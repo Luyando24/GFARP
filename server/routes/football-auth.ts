@@ -348,8 +348,11 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
       });
     }
 
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
+
     // Check if academy already exists
-    const existingAcademyResult = await query('SELECT * FROM academies WHERE email = $1', [email]);
+    const existingAcademyResult = await query('SELECT * FROM academies WHERE email = $1', [normalizedEmail]);
     if (existingAcademyResult.rows.length > 0) {
       return res.status(409).json({
         success: false,
@@ -458,7 +461,7 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
         academyId,
         defaultName,
         academyCode,
-        email,
+        normalizedEmail,
         address || null,
         city || null,
         country || null,
@@ -467,7 +470,7 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
         'youth',
         'active',
         contactPerson || null,
-        email || null,
+        normalizedEmail,
         phone || null,
         foundedYear ? parseInt(foundedYear.toString()) : null,
         hashedPassword,
@@ -475,7 +478,7 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
       ] : [
         defaultName,
         academyCode,
-        email,
+        normalizedEmail,
         address || null,
         city || null,
         country || null,
@@ -484,7 +487,7 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
         'youth',
         'active',
         contactPerson || null,
-        email || null,
+        normalizedEmail,
         phone || null,
         foundedYear ? parseInt(foundedYear.toString()) : null,
         hashedPassword,
@@ -686,16 +689,25 @@ export const handleAcademyLogin: RequestHandler = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
 
-    // Find academy by email and verify password
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Find academy by email (allow any status for now to give better error)
     const academyResult = await query(`
-      SELECT id, name, email, address, district, province, phone, director_name, password_hash
+      SELECT id, name, email, address, district, province, phone, director_name, password_hash, status
       FROM academies
-      WHERE email = $1 AND status = 'active'
+      WHERE email = $1
       LIMIT 1
-    `, [email]);
+    `, [normalizedEmail]);
 
     if (academyResult.rows.length === 0) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
+
+    let academy = academyResult.rows[0];
+
+    if (academy.status !== 'active') {
+      return res.status(401).json({ success: false, message: `Account is ${academy.status}. Please contact support.` });
     }
 
     let academy = academyResult.rows[0];
@@ -725,7 +737,7 @@ export const handleAcademyLogin: RequestHandler = async (req, res) => {
 
     const isValid = await verifyPassword(password, passwordHash);
     if (!isValid) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
     const token = jwt.sign(
@@ -919,15 +931,23 @@ export const handleAgencyLogin: RequestHandler = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
 
-    const result = await query('SELECT * FROM agencies WHERE email = $1 AND status = \'active\'', [email]);
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const result = await query('SELECT * FROM agencies WHERE email = $1', [normalizedEmail]);
     if (result.rows.length === 0) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
     const agency = result.rows[0];
+
+    if (agency.status !== 'active') {
+      return res.status(401).json({ success: false, message: `Account is ${agency.status}. Please contact support.` });
+    }
+
     const isValid = await verifyPassword(password, agency.password_hash);
     if (!isValid) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
     const token = jwt.sign(

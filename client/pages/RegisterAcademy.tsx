@@ -68,8 +68,9 @@ export default function RegisterAcademy() {
       const searchParams = new URLSearchParams(location.search);
       const plan = searchParams.get('plan');
 
+      const normalizedEmail = formData.email.toLowerCase().trim();
       const submitData = {
-        email: formData.email,
+        email: normalizedEmail,
         password: formData.password,
         subscriptionPlan: plan,
         referralCode: formData.referralCode
