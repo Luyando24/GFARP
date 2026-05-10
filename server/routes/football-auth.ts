@@ -710,7 +710,6 @@ export const handleAcademyLogin: RequestHandler = async (req, res) => {
       return res.status(401).json({ success: false, message: `Account is ${academy.status}. Please contact support.` });
     }
 
-    let academy = academyResult.rows[0];
     let passwordHash = academy.password_hash;
 
     // Check if password_hash exists, if not, try to fallback to staff_users table
@@ -843,7 +842,10 @@ export const handleAgencyRegister: RequestHandler = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
 
-    const existingAgencyResult = await query('SELECT id FROM agencies WHERE email = $1', [email]);
+    // Normalize email
+    const normalizedEmail = email.toLowerCase().trim();
+
+    const existingAgencyResult = await query('SELECT id FROM agencies WHERE email = $1', [normalizedEmail]);
     if (existingAgencyResult.rows.length > 0) {
       return res.status(409).json({ success: false, message: 'Agency with this email already exists' });
     }
@@ -861,11 +863,25 @@ export const handleAgencyRegister: RequestHandler = async (req, res) => {
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/(^-|-$)/g, '') + '-' + Math.random().toString(36).slice(2, 8);
 
-      const agencyResult = await client.query(`
-        INSERT INTO agencies (id, name, code, email, password_hash, phone, address, city, country, status)
+      const agencyInsertQuery = `
+        INSERT INTO agencies (
+          id, name, code, email, password_hash, address, city, country, phone, status
+        )
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'active')
         RETURNING id, name, email, code
-      `, [agencyId, name || 'New Agency', agencyCode, email, hashedPassword, phone || null, address || null, city || null, country || null]);
+      `;
+
+      const agencyResult = await client.query(agencyInsertQuery, [
+        agencyId,
+        name || 'New Agency',
+        agencyCode,
+        normalizedEmail,
+        hashedPassword,
+        address || null,
+        city || null,
+        country || null,
+        phone || null
+      ]);
       
       const agency = agencyResult.rows[0];
 
