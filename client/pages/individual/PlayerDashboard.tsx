@@ -131,9 +131,13 @@ export default function PlayerDashboard() {
   const [selectedPlanForPurchase, setSelectedPlanForPurchase] = useState<any | null>(null);
 
   useEffect(() => {
-    fetchProfile();
-    fetchPlans();
-    checkPaymentStatus();
+    const initializeDashboard = async () => {
+      setLoading(true);
+      await fetchPlans();
+      await checkPaymentStatus();
+      await fetchProfile();
+    };
+    initializeDashboard();
   }, []);
 
   // Slug check effect
@@ -164,6 +168,13 @@ export default function PlayerDashboard() {
     const timer = setTimeout(checkSlug, 500); // 500ms debounce
     return () => clearTimeout(timer);
   }, [formData.slug, profile]);
+
+  // Autosave draft profile to localStorage when formData changes
+  useEffect(() => {
+    if (isEditing && profile && formData && Object.keys(formData).length > 0) {
+      localStorage.setItem('player_profile_draft', JSON.stringify(formData));
+    }
+  }, [formData, isEditing, profile]);
 
   const fetchPlans = async () => {
     try {
@@ -199,8 +210,21 @@ export default function PlayerDashboard() {
       try {
         await PlayerApi.verifyPayment(sessionId);
         toast.success("Subscription activated successfully!");
-        // Refresh profile to get updated plan status
-        fetchProfile();
+
+        // Save profile draft to DB if present
+        const draftStr = localStorage.getItem('player_profile_draft');
+        if (draftStr) {
+          try {
+            const draft = JSON.parse(draftStr);
+            await PlayerApi.updateProfile(draft);
+            toast.success("Your profile details have been saved successfully!");
+          } catch (e) {
+            console.error("Failed to save profile draft after payment", e);
+          } finally {
+            localStorage.removeItem('player_profile_draft');
+          }
+        }
+
         // Clean up URL
         setSearchParams(prev => {
           prev.delete('payment_success');
@@ -224,7 +248,22 @@ export default function PlayerDashboard() {
     try {
       const data = await PlayerApi.getProfile();
       setProfile(data);
-      setFormData(data);
+      
+      const draftStr = localStorage.getItem('player_profile_draft');
+      if (draftStr) {
+        try {
+          const draft = JSON.parse(draftStr);
+          setFormData({ ...data, ...draft });
+          setIsEditing(true);
+          setActiveTab('profile');
+        } catch (e) {
+          console.error("Failed to parse player profile draft", e);
+          setFormData(data);
+        }
+      } else {
+        setFormData(data);
+      }
+
       if (data.active_plan) {
         setCurrentPlan(data.active_plan);
       }
@@ -264,6 +303,7 @@ export default function PlayerDashboard() {
       // Safely merge profile to ensure state updates
       setProfile(prev => prev ? { ...prev, ...formData } as PlayerProfile : formData as PlayerProfile);
       setIsEditing(false);
+      localStorage.removeItem('player_profile_draft');
       toast.success("Profile updated successfully");
     } catch (error: any) {
       console.error("Failed to update profile", error);
@@ -287,7 +327,16 @@ export default function PlayerDashboard() {
     }
   };
 
+  const handleCancelEdit = () => {
+    setFormData(profile || {});
+    localStorage.removeItem('player_profile_draft');
+    setActiveTab('overview');
+  };
+
   const openPaymentModal = (plan: any) => {
+    if (formData) {
+      localStorage.setItem('player_profile_draft', JSON.stringify(formData));
+    }
     setSelectedPlanForPurchase(plan);
     setIsPaymentModalOpen(true);
   };
@@ -597,6 +646,8 @@ export default function PlayerDashboard() {
         const result = reader.result as string;
         if (field === 'profile_image_url') {
           setFormData(prev => ({ ...prev, profile_image_url: result }));
+        } else if (field === 'cover_image_url') {
+          setFormData(prev => ({ ...prev, cover_image_url: result }));
         } else if (field === 'gallery_images' && index !== undefined) {
           const newGallery = [...(formData.gallery_images || ['', '', ''])];
           newGallery[index] = result;
@@ -1063,11 +1114,11 @@ export default function PlayerDashboard() {
                         </div>
 
                         <div className="space-y-2">
-                          <Label htmlFor="foot">{t('dash.player.foot')}</Label>
+                          <Label htmlFor="preferred_foot">{t('dash.player.foot')}</Label>
                           <Input
-                            id="foot"
-                            name="foot"
-                            value={formData.foot || ''}
+                            id="preferred_foot"
+                            name="preferred_foot"
+                            value={formData.preferred_foot || ''}
                             onChange={handleInputChange}
                             placeholder="e.g. Right, Left, Both"
                           />
@@ -1317,7 +1368,7 @@ export default function PlayerDashboard() {
                     </div>
                   </CardContent>
                   <CardFooter className="flex justify-end gap-3 pb-6 border-t border-slate-100 dark:border-slate-800 pt-6">
-                    <Button variant="outline" onClick={() => setActiveTab('overview')}>{t('common.cancel')}</Button>
+                    <Button variant="outline" onClick={handleCancelEdit}>{t('common.cancel')}</Button>
                     <Button 
                       onClick={handleSaveProfile} 
                       disabled={saving}

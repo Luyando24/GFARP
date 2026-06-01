@@ -41,7 +41,7 @@ class EmailService {
   async sendEmail(options: EmailOptions): Promise<boolean> {
     try {
       const mailOptions = {
-        from: `"SOFWAN Platform" <${process.env.SMTP_USER}>`,
+        from: `"Soccer Circular" <${process.env.SMTP_USER}>`,
         to: options.to,
         subject: options.subject,
         html: options.html,
@@ -177,7 +177,7 @@ class EmailService {
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">SOFWAN Platform</h1>
+          <h1 style="color: white; margin: 0; font-size: 28px;">Soccer Circular</h1>
           <p style="color: #f0f0f0; margin: 10px 0 0 0;">Academy Management System</p>
         </div>
         
@@ -190,7 +190,7 @@ class EmailService {
           <p style="font-size: 16px; margin-bottom: 20px;">Dear ${academyName} Team,</p>
           
           <p style="font-size: 16px; margin-bottom: 20px;">
-            Your academy has been <strong style="color: ${statusColor};">${status}</strong> on the SOFWAN Platform.
+            Your academy has been <strong style="color: ${statusColor};">${status}</strong> on Soccer Circular.
           </p>
           
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -233,13 +233,13 @@ class EmailService {
           
           <p style="font-size: 14px; color: #666; margin-top: 30px;">
             If you have any questions or concerns, please contact our support team at 
-            <a href="mailto:support@sofwan.com" style="color: #667eea;">support@sofwan.com</a>
+            <a href="mailto:support@soccercircular.com" style="color: #667eea;">support@soccercircular.com</a>
           </p>
         </div>
         
         <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
           <p style="margin: 0; font-size: 12px; color: #666;">
-            © ${new Date().getFullYear()} SOFWAN Platform. All rights reserved.<br>
+            © ${new Date().getFullYear()} Soccer Circular. All rights reserved.<br>
             This is an automated message. Please do not reply to this email.
           </p>
         </div>
@@ -268,7 +268,7 @@ class EmailService {
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">SOFWAN Platform</h1>
+          <h1 style="color: white; margin: 0; font-size: 28px;">Soccer Circular</h1>
           <p style="color: #f0f0f0; margin: 10px 0 0 0;">Academy Management System</p>
         </div>
         
@@ -281,7 +281,7 @@ class EmailService {
           <p style="font-size: 16px; margin-bottom: 20px;">Dear ${academyName} Team,</p>
           
           <p style="font-size: 16px; margin-bottom: 20px;">
-            Your academy verification status has been updated to <strong style="color: ${statusColor};">${status}</strong> on the SOFWAN Platform.
+            Your academy verification status has been updated to <strong style="color: ${statusColor};">${status}</strong> on Soccer Circular.
           </p>
           
           <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -324,13 +324,13 @@ class EmailService {
           
           <p style="font-size: 14px; color: #666; margin-top: 30px;">
             If you have any questions or concerns, please contact our support team at 
-            <a href="mailto:support@sofwan.com" style="color: #667eea;">support@sofwan.com</a>
+            <a href="mailto:support@soccercircular.com" style="color: #667eea;">support@soccercircular.com</a>
           </p>
         </div>
         
         <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
           <p style="margin: 0; font-size: 12px; color: #666;">
-            © ${new Date().getFullYear()} SOFWAN Platform. All rights reserved.<br>
+            © ${new Date().getFullYear()} Soccer Circular. All rights reserved.<br>
             This is an automated message. Please do not reply to this email.
           </p>
         </div>
@@ -356,7 +356,7 @@ class EmailService {
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">SOFWAN Platform</h1>
+          <h1 style="color: white; margin: 0; font-size: 28px;">Soccer Circular</h1>
           <p style="color: #f0f0f0; margin: 10px 0 0 0;">Admin Notification</p>
         </div>
         
@@ -387,7 +387,7 @@ class EmailService {
         
         <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
           <p style="margin: 0; font-size: 12px; color: #666;">
-            © ${new Date().getFullYear()} SOFWAN Platform. All rights reserved.<br>
+            © ${new Date().getFullYear()} Soccer Circular. All rights reserved.<br>
             This is an automated admin notification.
           </p>
         </div>
@@ -420,7 +420,7 @@ class EmailService {
       </head>
       <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">SOFWAN Platform</h1>
+          <h1 style="color: white; margin: 0; font-size: 28px;">Soccer Circular</h1>
           <p style="color: #f0f0f0; margin: 10px 0 0 0;">Payment Receipt</p>
         </div>
         
@@ -461,13 +461,13 @@ class EmailService {
           
           <p style="font-size: 14px; color: #666; margin-top: 30px;">
             If you have any questions about this invoice or your subscription, please contact our support team at 
-            <a href="mailto:support@sofwan.com" style="color: #667eea;">support@sofwan.com</a>
+            <a href="mailto:support@soccercircular.com" style="color: #667eea;">support@soccercircular.com</a>
           </p>
         </div>
         
         <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
           <p style="margin: 0; font-size: 12px; color: #666;">
-            © ${new Date().getFullYear()} SOFWAN Platform. All rights reserved.<br>
+            © ${new Date().getFullYear()} Soccer Circular. All rights reserved.<br>
             This is an automated receipt. Please do not reply to this email.
           </p>
         </div>

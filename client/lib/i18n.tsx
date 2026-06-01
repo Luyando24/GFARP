@@ -81,6 +81,7 @@ export type TranslationKey =
   | 'landing.pricing.feature.fullCompliance' | 'landing.pricing.feature.247Support' | 'landing.pricing.feature.solidarity'
   | 'landing.pricing.tab.academies' | 'landing.pricing.tab.players' | 'landing.pricing.tab.agencies' | 'landing.pricing.lifetime'
   | 'landing.pricing.tier.starter' | 'landing.pricing.tier.recommended' | 'landing.pricing.tier.premium' | 'landing.pricing.tier.standard'
+  | 'landing.pricing.free' | 'landing.pricing.start.free' | 'landing.pricing.start.gold' | 'landing.pricing.popular' | 'landing.pricing.title.sub'
   // Testimonials
   | 'landing.testimonials.title.sub' | 'landing.testimonials.title.main1' | 'landing.testimonials.title.main2'
   | 'landing.testimonials.stat.rating' | 'landing.testimonials.stat.players' | 'landing.testimonials.stat.academies' | 'landing.testimonials.stat.using'
@@ -99,7 +100,7 @@ export type TranslationKey =
   | 'dash.compliance.report' | 'dash.compliance.data' | 'dash.compliance.documents' | 'dash.compliance.overall' | 'dash.compliance.areas' | 'dash.compliance.issues' | 'dash.compliance.review'
   | 'dash.compliance.breakdown' | 'dash.compliance.breakdownDesc' | 'dash.compliance.actions' | 'dash.compliance.actionsDesc' | 'dash.compliance.viewTasks' | 'dash.compliance.viewHistory' | 'dash.compliance.audit' | 'dash.compliance.auditDesc'
   | 'dash.plan.subscriptionPlans' | 'dash.plan.chooseBest' | 'dash.plan.recommended' | 'dash.plan.lifetimeBilling' | 'dash.plan.billingPeriod' | 'dash.plan.noFeatures' | 'dash.plan.getStarted' | 'dash.plan.getName' | 'dash.plan.loading' | 'dash.plan.activeSubBadge' | 'dash.plan.planLabel' | 'dash.plan.activeDesc' | 'dash.plan.statusFree' | 'dash.plan.upgradeDesc'
-  | 'dash.share.subtitle' | 'dash.share.downloadPdf' | 'dash.share.pdfDesc' | 'dash.share.pdfFeat1' | 'dash.share.pdfFeat2' | 'dash.share.pdfFeat3' | 'dash.share.generateDownload' | 'dash.share.unlockPdf' | 'dash.share.digitalProfile' | 'dash.share.digitalDesc' | 'dash.share.preview' | 'dash.share.newPlayer' | 'dash.share.noPosition' | 'dash.share.global' | 'dash.share.ageLabel' | 'dash.share.copyLink' | 'dash.share.unlockLink' | 'dash.share.quickShare'
+  | 'dash.share.subtitle' | 'dash.share.downloadPdf' | 'dash.share.pdfDesc' | 'dash.share.pdfFeat1' | 'dash.share.pdfFeat2' | 'dash.share.pdfFeat3' | 'dash.share.generateDownload' | 'dash.share.unlockPdf' | 'dash.share.digitalProfile' | 'dash.share.digitalDesc' | 'dash.share.preview' | 'dash.share.newPlayer' | 'dash.share.noPosition' | 'dash.share.global' | 'dash.share.ageLabel' | 'dash.share.copyLink' | 'dash.share.unlockLink' | 'dash.share.quickShare' | 'dash.share.upgradeRequired'
   | 'dash.player.bio' | 'dash.player.noBio' | 'dash.player.careerHistory' | 'dash.player.noCareer' | 'dash.player.honours' | 'dash.player.none' | 'dash.player.education' | 'dash.player.gallery' | 'dash.player.noGallery' | 'dash.player.addImages' | 'dash.player.subActive' | 'dash.player.subFree' | 'dash.player.subActiveDesc' | 'dash.player.subFreeDesc' | 'dash.player.viewPlans'
   | 'dash.player.editProfile' | 'dash.player.editProfileDesc' | 'dash.player.profilePic' | 'dash.player.uploadPhoto' | 'dash.player.coverImage' | 'dash.player.noCover' | 'dash.player.coverDesc' | 'dash.player.customLink' | 'dash.player.linkPlaceholder' | 'dash.player.linkRules' | 'dash.player.displayName' | 'dash.player.placeholderName' | 'dash.player.position' | 'dash.player.placeholderPosition' | 'dash.player.nationality' | 'dash.player.height' | 'dash.player.weight' | 'dash.player.age' | 'dash.player.foot' | 'dash.player.currentClub' | 'dash.player.placeholderClub' | 'dash.player.email' | 'dash.player.placeholderEmail' | 'dash.player.whatsapp' | 'dash.player.socialMedia' | 'dash.player.bioPlaceholder' | 'dash.player.careerPlaceholder' | 'dash.player.honoursPlaceholder' | 'dash.player.eduPlaceholder' | 'dash.player.galleryMax' | 'dash.player.proFeature' | 'dash.player.uploadImage' | 'dash.player.upgradeGallery' | 'dash.player.videoLinks' | 'dash.player.videoPlaceholder' | 'dash.player.upgradeVideo' | 'dash.player.saveProfile' | 'dash.player.saving'
   | 'dash.settings.academy' | 'dash.settings.academyDesc' | 'dash.settings.contact' | 'dash.settings.contactDesc' | 'dash.settings.director' | 'dash.settings.directorDesc'
@@ -150,8 +151,8 @@ export type TranslationKey =
   | 'landing.pitfalls.item6.title' | 'landing.pitfalls.item6.desc'
   // FAQ
   | 'landing.faq.title' | 'landing.faq.subtitle'
-  | 'landing.faq.q16' | 'landing.faq.a16'
-  | 'landing.faq.q17' | 'landing.faq.a17'
+  | 'landing.faq.q1' | 'landing.faq.a1' | 'landing.faq.q2' | 'landing.faq.a2' | 'landing.faq.q3' | 'landing.faq.a3' | 'landing.faq.q4' | 'landing.faq.a4' | 'landing.faq.q5' | 'landing.faq.a5' | 'landing.faq.q6' | 'landing.faq.a6'
+  | 'common.currency.USD'
   // Plans and Features
   | 'plans.starter.name' | 'plans.pro.name' | 'plans.elite.name'
   | 'plans.starter.desc' | 'plans.pro.desc' | 'plans.elite.desc'
@@ -162,7 +163,7 @@ export type TranslationKey =
   | 'plans.feature.profilePlacement' | 'plans.feature.legalGuidance' | 'plans.feature.trialNotifications' | 'plans.feature.videoReels' | 'plans.feature.scoutMessaging'
   | 'plans.feature.digitalResume' | 'plans.feature.publicProfile' | 'plans.feature.statsTracking'
   | 'plans.feature.apiIntegrations' | 'plans.feature.accountTeam' | 'plans.feature.scoutingFilters' | 'plans.feature.commissionTracking'
-  | 'plans.feature.subAgentMgmt' | 'plans.feature.premiumSupport' | 'plans.feature.transferTracking' | 'plans.feature.documentCloud' | 'plans.feature.scoutingTools'
+  | 'plans.feature.subAgentMgmt' | 'plans.feature.premiumSupport' | 'plans.feature.transferTracking' | 'plans.feature.documentCloud' | 'plans.feature.scoutingTools' | 'plans.feature.verifiedBadge' | 'plans.feature.unlimitedUpdates' | 'plans.feature.unlimitedPlayers'
   // Contact
   | 'auth.register.player' | 'auth.register.playerSubtitle' | 'auth.register.agency' | 'auth.register.agencySubtitle'
   | 'auth.firstName' | 'auth.lastName' | 'auth.agencyName' | 'auth.register.title' | 'auth.register.createAccount' | 'auth.register.subtitle'
@@ -612,8 +613,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'plans.feature.unlimitedUpdates': 'Unlimited profile updates',
     'plans.feature.unlimitedPlayers': 'Unlimited players',
     'common.currency.USD': 'USD',
-    'landing.pricing.free': 'FREE',
-    'landing.pricing.start.free': 'START FOR FREE',
     'auth.register.player': 'Player Registration',
     'auth.register.playerSubtitle': 'Create your individual player profile',
     'auth.register.agency': 'Agency Registration',
@@ -632,23 +631,8 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'auth.firstName': 'First Name',
     'auth.lastName': 'Last Name',
     'auth.agencyName': 'Agency Name',
-    'auth.register.title': 'Registration',
-    'auth.register.createAccount': 'Create Account',
-    'auth.register.subtitle': 'Join our global football network',
-    'auth.email': 'Email Address',
-    'auth.password': 'Password',
-    'auth.confirmPassword': 'Confirm Password',
-    'auth.label.referralCode': 'Referral Code',
-    'auth.placeholder.referralCode': 'Enter code if you have one',
-    'auth.registering': 'Registering...',
-    'auth.createAccount': 'Create Account',
-    'auth.alreadyHaveAccount': 'Already have an account?',
-    'auth.loginLink': 'Log in',
-    'auth.footer.approved': 'FIFA APPROVED PLATFORM',
-    'auth.success.title': 'Registration Successful',
     'auth.success.agencyDesc': "Welcome to Soccer Circular! Let's set up your agency profile.",
     'auth.error.agencyNameRequired': 'Agency name is required',
-    'common.backHome': 'Back to Home',
     'landing.testimonials.stat.using': 'USING',
     'landing.testimonials.badge.compliant': 'FIFA COMPLIANT',
     'landing.testimonials.badge.revenue': 'REVENUE OPTIMIZED',
@@ -658,8 +642,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pricing.tab.players': 'For Individual Players',
     'landing.pricing.tab.agencies': 'For Agencies',
     'landing.pricing.lifetime': '/lifetime',
-    'auth.register.agency': 'Agency Registration',
-    'auth.register.agencySubtitle': 'Sign up as a professional agency to manage your talent',
     'features.scouting.title': 'ELITE SCOUTING NETWORK',
     'features.scouting.desc': 'Access a global network of talent. Discover rising stars with advanced filters and performance analytics tailored for professional agencies.',
     'features.transfers.title': 'SMART TRANSFER MANAGEMENT',
@@ -707,7 +689,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'footer.copyright': 'Global Football Academy Registration Platform. All rights reserved.',
     'dash.profile.incomplete': 'Your academy profile is incomplete. Please complete your profile to unlock all features.',
     'dash.profile.complete': 'Complete Profile',
-    'dash.stats.overview': 'Academy management dashboard overview',
     'dash.transfers.title': 'Transfer Management',
     'dash.transfers.new': 'New Transfer',
     'dash.transfers.alert': 'All transfers must comply with FIFA regulations. Ensure proper documentation is submitted.',
@@ -1116,8 +1097,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'plans.feature.accountTeam': 'Equipo de cuenta dedicado',
     'plans.feature.statsTracking': 'Seguimiento de estadísticas básicas',
     'common.currency.USD': 'USD',
-    'landing.pricing.free': 'GRATIS',
-    'landing.pricing.start.free': 'EMPEZAR GRATIS',
     'auth.register.player': 'Registro de Jugador',
     'auth.register.playerSubtitle': 'Cree su perfil de jugador individual',
     'auth.register.agency': 'Registro de Agencia',
@@ -1155,8 +1134,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'common.foot': 'Pie Preferido',
     'common.bio': 'Biografía',
     'common.currentClub': 'Club Actual',
-    'auth.register.agency': 'Registro de Agencia',
-    'auth.register.agencySubtitle': 'Regístrese como una agencia profesional para gestionar su talento',
     'features.scouting.title': 'RED DE SCOUTING DE ÉLITE',
     'features.scouting.desc': 'Acceda a una red global de talento. Descubra estrellas en ascenso con filtros avanzados y análisis de rendimiento adaptados a agencias profesionales.',
     'features.transfers.title': 'GESTIÓN INTELIGENTE DE TRANSFERENCIAS',
@@ -1481,8 +1458,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'auth.portalTitle': 'Portal de Academia Profesional',
     'auth.welcome': 'Bienvenido de nuevo',
     'auth.login.subtitle': 'Inicie sesión para acceder a su panel',
-    'auth.email': 'Correo Electrónico',
-    'auth.password': 'Contraseña',
     'auth.remember': 'Recuérdame',
     'auth.forgotPassword': '¿Olvidó su contraseña?',
     'auth.signIn': 'Iniciar Sesión',
@@ -1491,23 +1466,13 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'auth.registerHere': 'Regístrese aquí',
     'auth.error.invalidEmail': 'Por favor ingrese un correo válido',
     'auth.error.loginFailed': 'Error al iniciar sesión',
-    'auth.register.title': 'Registro de Academia',
-    'auth.register.createAccount': 'Cree su Cuenta',
-    'auth.register.subtitle': 'Regístrese con correo y contraseña',
-    'auth.confirmPassword': 'Confirmar Contraseña',
     'auth.error.passwordMismatch': 'Las contraseñas no coinciden',
     'auth.error.passwordLength': 'La contraseña debe tener al menos 8 caracteres',
     'auth.error.emailRequired': 'El correo es obligatorio',
     'auth.error.confirmRequired': 'Por favor confirme su contraseña',
-    'auth.registering': 'Registrando...',
     'auth.createAccount': 'Crear Cuenta',
-    'auth.alreadyHaveAccount': '¿Ya tiene una cuenta?',
-    'auth.loginLink': 'Iniciar Sesión',
-    'auth.footer.approved': 'Plataforma Aprobada por Soccer Circular',
-    'auth.success.title': 'Registro Exitoso',
     'auth.success.desc': '¡Completemos su perfil de academia!',
     'auth.success.verifyEmail': 'Verifique su correo antes de iniciar sesión.',
-     'common.backHome': 'Volver al Inicio',
      'common.404.subtitle': '¡Ups! Página no encontrada',
       // Blog
       'blog.back': 'Volver al Blog',
@@ -2629,7 +2594,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.pricing.year': '/Jahr',
     'landing.pricing.toggle.monthly': 'Monatlich',
     'landing.pricing.toggle.yearly': 'Jährlich',
-    'landing.pricing.save': 'Sparen Sie 20%',
     'landing.pricing.tier2.ideal': 'Ideal für Meisterschaftsakademien',
     'landing.pricing.footer': 'Alle Pläne beinhalten FIFA-konforme Sicherheit, regelmäßige Updates und Zugang zu unserem Meisterschafts-Support-Team.',
     'landing.pricing.compare': 'ALLE FUNKTIONEN VERGLEICHEN',
@@ -3023,11 +2987,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.benefits.item6.desc': 'Analisi complete su registrazioni giocatori, tassi di conformità e metriche di performance dell\'accademia.',
     'landing.pricing.title.tiers': 'LIVELLI DI MEMBERSHIP FIFA',
     'landing.pricing.title.choose': 'SCEGLI IL TUO',
-    'landing.pricing.month': '/mese',
-    'landing.pricing.year': '/anno',
-    'landing.pricing.toggle.monthly': 'Mensile',
-    'landing.pricing.toggle.yearly': 'Annuale',
-    'landing.pricing.save': 'Risparmia il 20%',
     'landing.pricing.tier2.ideal': 'Ideale per accademie campionato',
     'landing.pricing.footer': 'Tutti i piani includono sicurezza conforme FIFA, aggiornamenti regolari e accesso al nostro team di supporto campione.',
     'landing.pricing.compare': 'CONFRONTA TUTTE LE FUNZIONALITÀ',
@@ -3569,7 +3528,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'footer.copyright': 'منصة تسجيل أكاديميات كرة القدم العالمية. جميع الحقوق محفوظة.',
     'dash.profile.incomplete': 'ملف تعريف الأكاديمية الخاص بك غير مكتمل. يرجى إكمال ملف التعريف الخاص بك لفتح جميع الميزات.',
     'dash.profile.complete': 'إكمال الملف الشخصي',
-    'dash.stats.overview': 'نظرة عامة على لوحة إدارة الأكاديمية',
     'dash.transfers.title': 'إدارة الانتقالات',
     'dash.transfers.new': 'انتقال جديد',
     'dash.transfers.alert': 'يجب أن تكون جميع الانتقالات متوافقة مع لوائح الفيفا. تأكد من تقديم الوثائق المناسبة.',
@@ -3804,16 +3762,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'plans.feature.verifiedBadge': 'شارة لاعب موثق',
     'plans.feature.unlimitedUpdates': 'تحديثات غير محدودة للملف الشخصي',
     'plans.feature.unlimitedPlayers': 'لاعبين غير محدودين',
-    'plans.feature.transferTracking': 'تتبع الانتقالات',
-    'plans.feature.documentCloud': 'سحابة المستندات',
-    'plans.feature.scoutingTools': 'أدوات الكشافة الأساسية',
-    'plans.feature.scoutingFilters': 'فلاتر الكشافة المتقدمة',
-    'plans.feature.commissionTracking': 'تتبع العمولات',
-    'plans.feature.subAgentMgmt': 'إدارة الوكلاء الفرعيين',
-    'plans.feature.premiumSupport': 'دعم متميز',
-    'plans.feature.apiIntegrations': 'تكاملات API',
-    'plans.feature.accountTeam': 'فريق حساب مخصص',
-    'plans.feature.statsTracking': 'تتبع الإحصائيات الأساسية',
     'common.currency.USD': 'دولار أمريكي',
     'landing.pricing.free': 'مجاني',
     'landing.pricing.start.free': 'ابدأ مجاناً',
@@ -4111,7 +4059,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'footer.copyright': '全球足球学院注册平台。保留所有权利。',
     'dash.profile.incomplete': '您的学院资料不完整。请完善您的资料以解锁所有功能。',
     'dash.profile.complete': '完善资料',
-    'dash.stats.overview': '学院管理仪表板概览',
     'dash.transfers.title': '转会管理',
     'dash.transfers.new': '新建转会',
     'dash.transfers.alert': '所有转会必须符合 FIFA 条例。请确保提交适当的文件。',
@@ -4357,16 +4304,6 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'plans.feature.verifiedBadge': '认证球员徽章',
     'plans.feature.unlimitedUpdates': '无限次资料更新',
     'plans.feature.unlimitedPlayers': '无限球员数量',
-    'plans.feature.transferTracking': '转会追踪',
-    'plans.feature.documentCloud': '云文档',
-    'plans.feature.scoutingTools': '基础球探工具',
-    'plans.feature.scoutingFilters': '高级球探过滤器',
-    'plans.feature.commissionTracking': '佣金追踪',
-    'plans.feature.subAgentMgmt': '子代理管理',
-    'plans.feature.premiumSupport': '高级支持',
-    'plans.feature.apiIntegrations': 'API 集成',
-    'plans.feature.accountTeam': '专属账户团队',
-    'plans.feature.statsTracking': '基础数据追踪',
     'common.currency.USD': '美元',
     'tasks.title': '任务',
     'tasks.add': '添加任务',

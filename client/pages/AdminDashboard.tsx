@@ -438,7 +438,9 @@ export default function AdminDashboard() {
       dateFormat: "MM/DD/YYYY",
       currency: "USD",
       maintenanceMode: false,
-      registrationEnabled: true
+      registrationEnabled: true,
+      maintenanceMessage: "",
+      maintenanceEndTime: ""
     },
     security: {
       twoFactorAuth: false,
