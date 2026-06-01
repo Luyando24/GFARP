@@ -1105,6 +1105,207 @@ export const handleDeletePlan: RequestHandler = async (req, res) => {
   }
 }
 
+// Manually Send Receipt (Admin only)
+export const handleSendReceiptManually: RequestHandler = async (req, res) => {
+  try {
+    const user = (req as any).user;
+    if (!user || (user.role !== 'admin' && user.role !== 'superadmin')) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only admins can manually send receipts'
+      });
+    }
+
+    const { paymentId } = req.body;
+    if (!paymentId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment ID is required'
+      });
+    }
+
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const isUuid = uuidRegex.test(paymentId);
+
+    let payment = null;
+    let isPlayerPurchase = false;
+    let purchase = null;
+
+    if (isUuid) {
+      // 1. Try to find in subscription_payments by id
+      const subPaymentResult = await query('SELECT * FROM subscription_payments WHERE id = $1', [paymentId]);
+      if (subPaymentResult.rows.length > 0) {
+        payment = subPaymentResult.rows[0];
+      } else {
+        // Try in player_purchases by id
+        const playerPurchaseResult = await query(`
+          SELECT 
+            pur.id, pur.amount, pur.plan_type, pur.status, pur.stripe_session_id, pur.created_at,
+            p.first_name, p.last_name, p.email
+          FROM player_purchases pur
+          JOIN individual_players p ON pur.player_id = p.id
+          WHERE pur.id = $1
+        `, [paymentId]);
+        if (playerPurchaseResult.rows.length > 0) {
+          purchase = playerPurchaseResult.rows[0];
+          isPlayerPurchase = true;
+        }
+      }
+    } else {
+      // Not a UUID: try to find by stripe identifier
+      const subPaymentResult = await query(`
+        SELECT * FROM subscription_payments 
+        WHERE stripe_invoice_id = $1 OR payment_reference = $1
+      `, [paymentId]);
+      if (subPaymentResult.rows.length > 0) {
+        payment = subPaymentResult.rows[0];
+      } else {
+        // Check player_purchases by stripe_session_id
+        const playerPurchaseResult = await query(`
+          SELECT 
+            pur.id, pur.amount, pur.plan_type, pur.status, pur.stripe_session_id, pur.created_at,
+            p.first_name, p.last_name, p.email
+          FROM player_purchases pur
+          JOIN individual_players p ON pur.player_id = p.id
+          WHERE pur.stripe_session_id = $1
+        `, [paymentId]);
+        if (playerPurchaseResult.rows.length > 0) {
+          purchase = playerPurchaseResult.rows[0];
+          isPlayerPurchase = true;
+        }
+      }
+    }
+
+    if (payment) {
+      if (payment.status !== 'COMPLETED') {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot send confirmation for a non-completed payment'
+        });
+      }
+
+      // Check academy subscriptions first
+      let subInfoResult = await query(`
+        SELECT 
+          a.name as org_name,
+          a.email as org_email,
+          p.name as plan_name
+        FROM academy_subscriptions s
+        JOIN academies a ON s.academy_id = a.id
+        JOIN subscription_plans p ON s.plan_id = p.id
+        WHERE s.id = $1
+      `, [payment.subscription_id]);
+
+      // If not academy, check agency subscriptions
+      if (subInfoResult.rows.length === 0) {
+        subInfoResult = await query(`
+          SELECT 
+            a.name as org_name,
+            a.email as org_email,
+            p.name as plan_name
+          FROM agency_subscriptions s
+          JOIN agencies a ON s.agency_id = a.id
+          JOIN subscription_plans p ON s.plan_id = p.id
+          WHERE s.id = $1
+        `, [payment.subscription_id]);
+      }
+
+      if (subInfoResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Subscription or organization details not found for this payment'
+        });
+      }
+
+      const orgInfo = subInfoResult.rows[0];
+      if (!orgInfo.org_email) {
+        return res.status(400).json({
+          success: false,
+          message: 'Organization email is not defined'
+        });
+      }
+
+      const emailSent = await emailService.sendPaymentConfirmationEmail(
+        orgInfo.org_email,
+        orgInfo.org_name,
+        Number(payment.amount),
+        payment.currency || 'USD',
+        orgInfo.plan_name,
+        payment.payment_reference || payment.id,
+        new Date(payment.created_at),
+        payment.stripe_invoice_id || undefined
+      );
+
+      if (emailSent) {
+        return res.json({
+          success: true,
+          message: 'Payment confirmation email sent successfully'
+        });
+      } else {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to send receipt email via SMTP'
+        });
+      }
+    }
+
+    if (isPlayerPurchase && purchase) {
+      if (purchase.status !== 'completed') {
+        return res.status(400).json({
+          success: false,
+          message: 'Cannot send confirmation for a non-completed player purchase'
+        });
+      }
+
+      if (!purchase.email) {
+        return res.status(400).json({
+          success: false,
+          message: 'Player email is not defined'
+        });
+      }
+
+      const recipientName = `${purchase.first_name || ''} ${purchase.last_name || ''}`.trim() || 'Player';
+      const planName = `${purchase.plan_type.charAt(0).toUpperCase() + purchase.plan_type.slice(1)} Plan`;
+
+      const emailSent = await emailService.sendPaymentConfirmationEmail(
+        purchase.email,
+        recipientName,
+        Number(purchase.amount),
+        'USD',
+        planName,
+        purchase.stripe_session_id || purchase.id,
+        new Date(purchase.created_at),
+        purchase.stripe_session_id || undefined
+      );
+
+      if (emailSent) {
+        return res.json({
+          success: true,
+          message: 'Payment confirmation email sent successfully'
+        });
+      } else {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to send receipt email via SMTP'
+        });
+      }
+    }
+
+    return res.status(404).json({
+      success: false,
+      message: 'Transaction not found in subscription payments or player purchases'
+    });
+
+  } catch (error: any) {
+    console.error('Send manual receipt error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to send receipt',
+      error: error.message
+    });
+  }
+};
+
 // Define the router and routes
 const subscriptionRouter = Router();
 subscriptionRouter.get('/current', authenticateToken, handleGetSubscription);
@@ -1116,5 +1317,6 @@ subscriptionRouter.post('/upgrade', authenticateToken, handleUpgradePlan);
 subscriptionRouter.post('/process-payment', authenticateToken, handleProcessCashPayment);
 subscriptionRouter.get('/history', authenticateToken, handleGetSubscriptionHistory);
 subscriptionRouter.post('/cancel', authenticateToken, handleCancelSubscription);
+subscriptionRouter.post('/send-receipt', authenticateToken, handleSendReceiptManually);
 
 export default subscriptionRouter;

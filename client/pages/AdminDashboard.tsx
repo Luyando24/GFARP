@@ -426,6 +426,7 @@ export default function AdminDashboard() {
   const [transactions, setTransactions] = useState([]);
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [viewingTransaction, setViewingTransaction] = useState<any | null>(null);
+  const [isSendingReceipt, setIsSendingReceipt] = useState(false);
 
   // System settings state
   const [systemSettings, setSystemSettings] = useState({
@@ -983,6 +984,49 @@ export default function AdminDashboard() {
   const handleExportFinancials = () => {
     // Handle financial data export
     console.log('Exporting financial data');
+  };
+
+  const handleSendReceipt = async (paymentId: string) => {
+    if (!paymentId) return;
+    setIsSendingReceipt(true);
+    try {
+      const token = session?.tokens?.accessToken;
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch('/api/subscriptions/send-receipt', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ paymentId }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        toast({
+          title: "Receipt Sent",
+          description: "Payment confirmation receipt email sent successfully",
+        });
+      } else {
+        toast({
+          title: "Failed to Send Receipt",
+          description: data.message || "Something went wrong while sending the receipt",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      console.error('Error sending manual receipt:', err);
+      toast({
+        title: "Error",
+        description: "Failed to connect to the server",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingReceipt(false);
+    }
   };
 
   // Academy management handlers
@@ -3786,6 +3830,20 @@ export default function AdminDashboard() {
           )}
 
           <DialogFooter>
+            {viewingTransaction?.status === 'COMPLETED' && (
+              <Button
+                variant="default"
+                disabled={isSendingReceipt}
+                onClick={() => handleSendReceipt(viewingTransaction.id)}
+              >
+                {isSendingReceipt ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Mail className="h-4 w-4 mr-2" />
+                )}
+                Send Receipt
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setViewingTransaction(null)}>
               Close
             </Button>

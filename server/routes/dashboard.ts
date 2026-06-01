@@ -304,12 +304,10 @@ export const handleGetAdminTransactions: RequestHandler = async (req, res) => {
   try {
     const { limit = 10, offset = 0 } = req.query;
 
-    // Fetch transactions from subscription_payments
-    // In a real system, you might want to UNION this with financial_transactions
     const queryText = `
       SELECT 
         sp.id,
-        a.name as academy_name,
+        a.name || ' (Academy)' as party_name,
         'subscription' as type,
         sp.amount,
         sp.payment_method,
@@ -318,7 +316,35 @@ export const handleGetAdminTransactions: RequestHandler = async (req, res) => {
       FROM subscription_payments sp
       JOIN academy_subscriptions sub ON sp.subscription_id = sub.id
       JOIN academies a ON sub.academy_id = a.id
-      ORDER BY sp.created_at DESC
+      
+      UNION ALL
+      
+      SELECT 
+        sp.id,
+        ag.name || ' (Agency)' as party_name,
+        'subscription' as type,
+        sp.amount,
+        sp.payment_method,
+        sp.created_at as date,
+        sp.status
+      FROM subscription_payments sp
+      JOIN agency_subscriptions sub ON sp.subscription_id = sub.id
+      JOIN agencies ag ON sub.agency_id = ag.id
+      
+      UNION ALL
+      
+      SELECT 
+        pur.id,
+        COALESCE(p.first_name || ' ' || p.last_name, p.email, 'Player') || ' (Player)' as party_name,
+        'player_plan' as type,
+        pur.amount,
+        'CARD' as payment_method,
+        pur.created_at as date,
+        UPPER(pur.status) as status
+      FROM player_purchases pur
+      JOIN individual_players p ON pur.player_id = p.id
+      
+      ORDER BY date DESC
       LIMIT $1 OFFSET $2
     `;
 
@@ -326,7 +352,7 @@ export const handleGetAdminTransactions: RequestHandler = async (req, res) => {
 
     const transactions = result.rows.map(row => ({
       id: row.id,
-      academy: row.academy_name,
+      academy: row.party_name,
       type: row.type,
       amount: parseFloat(row.amount),
       method: row.payment_method,
