@@ -170,7 +170,7 @@ export default function Support() {
                                     </div>
                                     <div>
                                         <p className="font-medium">{t('contact.info.email')}</p>
-                                        <p className="text-sm text-slate-500">sofwan@rihlasoccer.com</p>
+                                        <p className="text-sm text-slate-500">support@soccercircular.com</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-3">

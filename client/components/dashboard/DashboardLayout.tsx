@@ -80,7 +80,7 @@ export default function DashboardLayout({
                   <GraduationCap className="h-6 w-6 text-primary-foreground" />
                 </div>
                 <div>
-                  <h1 className="text-xl font-bold text-gray-900">SOFWAN</h1>
+                  <h1 className="text-xl font-bold text-gray-900">Soccer Circular</h1>
                   <p className="text-xs text-gray-500 leading-tight">
                     Professional Academy Management
                   </p>

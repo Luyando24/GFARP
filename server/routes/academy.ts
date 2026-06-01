@@ -63,7 +63,7 @@ async function logActivationHistory(
             academy.email,
             academy.name,
             newStatus,
-            adminEmail || 'system@sofwan.com',
+            adminEmail || 'system@soccercircular.com',
             reason
           );
         } else if (actionType === 'verify' || actionType === 'unverify') {
@@ -71,7 +71,7 @@ async function logActivationHistory(
             academy.email,
             academy.name,
             newStatus,
-            adminEmail || 'system@sofwan.com',
+            adminEmail || 'system@soccercircular.com',
             reason
           );
         }

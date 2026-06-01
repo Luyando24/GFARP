@@ -318,7 +318,7 @@ export default function SupportTab() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-3">
-              Email: support@sofwan.com
+              Email: support@soccercircular.com
             </p>
             <Button variant="outline" size="sm" className="w-full">
               Send Email

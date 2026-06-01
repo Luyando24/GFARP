@@ -159,7 +159,7 @@ export default function AdminSidebar({ collapsed = false, onToggle }: AdminSideb
       <div className="p-4 border-t">
         {!collapsed && (
           <div className="text-xs text-muted-foreground">
-            <p>SOFWAN Admin v1.0</p>
+            <p>Soccer Circular Admin v1.0</p>
             <p>System Management</p>
           </div>
         )}
