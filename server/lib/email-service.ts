@@ -128,6 +128,35 @@ class EmailService {
     });
   }
 
+  async sendPaymentConfirmationEmail(
+    toEmail: string,
+    recipientName: string,
+    amount: number,
+    currency: string,
+    planName: string,
+    paymentReference: string,
+    date: Date,
+    stripeInvoiceId?: string
+  ): Promise<boolean> {
+    const subject = `Payment Confirmed - ${planName} Plan`;
+    
+    const html = this.generatePaymentConfirmationTemplate(
+      recipientName,
+      amount,
+      currency,
+      planName,
+      paymentReference,
+      date,
+      stripeInvoiceId
+    );
+
+    return this.sendEmail({
+      to: toEmail,
+      subject,
+      html
+    });
+  }
+
   private generateActivationEmailTemplate(
     academyName: string,
     isActivated: boolean,
@@ -366,6 +395,87 @@ class EmailService {
       </html>
     `;
   }
+
+  private generatePaymentConfirmationTemplate(
+    recipientName: string,
+    amount: number,
+    currency: string,
+    planName: string,
+    paymentReference: string,
+    date: Date,
+    stripeInvoiceId?: string
+  ): string {
+    const formattedAmount = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency.toUpperCase()
+    }).format(amount);
+
+    return `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Payment Confirmation</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">SOFWAN Platform</h1>
+          <p style="color: #f0f0f0; margin: 10px 0 0 0;">Payment Receipt</p>
+        </div>
+        
+        <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none;">
+          <div style="text-align: center; margin-bottom: 30px;">
+            <div style="font-size: 48px; margin-bottom: 10px;">💳</div>
+            <h2 style="color: #10b981; margin: 0; font-size: 24px;">Payment Successful</h2>
+            <p style="color: #666; margin: 5px 0 0 0;">Thank you for your payment!</p>
+          </div>
+          
+          <p style="font-size: 16px; margin-bottom: 20px;">Dear ${recipientName},</p>
+          
+          <p style="font-size: 16px; margin-bottom: 20px;">
+            This email confirms that we have successfully received your payment for the <strong>${planName} Plan</strong>.
+          </p>
+          
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin: 0 0 15px 0; color: #495057;">Payment Details:</h3>
+            <p style="margin: 5px 0;"><strong>Plan:</strong> ${planName}</p>
+            <p style="margin: 5px 0;"><strong>Amount Paid:</strong> ${formattedAmount}</p>
+            <p style="margin: 5px 0;"><strong>Payment Method:</strong> Online</p>
+            <p style="margin: 5px 0;"><strong>Payment Reference:</strong> ${paymentReference}</p>
+            ${stripeInvoiceId ? `<p style="margin: 5px 0;"><strong>Invoice ID:</strong> ${stripeInvoiceId}</p>` : ''}
+            <p style="margin: 5px 0;"><strong>Date:</strong> ${date.toLocaleString()}</p>
+          </div>
+          
+          <div style="background: #e8f5e9; border: 1px solid #c8e6c9; color: #2e7d32; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <h4 style="margin: 0 0 10px 0;">✅ Access Active:</h4>
+            <p style="margin: 0;">Your plan's benefits are immediately active on your account. You can log in at any time to manage players, view reports, or adjust settings.</p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${process.env.CLIENT_URL || 'https://soccercircular.com'}" 
+               style="background: #667eea; color: white; padding: 12px 30px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: bold;">
+              Access Dashboard
+            </a>
+          </div>
+          
+          <p style="font-size: 14px; color: #666; margin-top: 30px;">
+            If you have any questions about this invoice or your subscription, please contact our support team at 
+            <a href="mailto:support@sofwan.com" style="color: #667eea;">support@sofwan.com</a>
+          </p>
+        </div>
+        
+        <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
+          <p style="margin: 0; font-size: 12px; color: #666;">
+            © ${new Date().getFullYear()} SOFWAN Platform. All rights reserved.<br>
+            This is an automated receipt. Please do not reply to this email.
+          </p>
+        </div>
+      </body>
+      </html>
+    `;
+  }
+
 
   private stripHtml(html: string): string {
     return html.replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();

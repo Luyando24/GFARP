@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { getStripe, STRIPE_WEBHOOK_SECRET } from '../lib/stripe.js';
 import { query, transaction } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
+import { emailService } from '../lib/email-service.js';
 
 const router = Router();
 
@@ -231,23 +232,50 @@ async function handleSubscriptionDeleted(subscription: any) {
 async function handlePaymentSucceeded(invoice: any) {
   console.log('Processing payment succeeded:', invoice.id);
 
+  let emailDetails: {
+    email: string;
+    name: string;
+    amount: number;
+    currency: string;
+    planName: string;
+    paymentReference: string;
+  } | null = null;
+
   try {
     await transaction(async (client) => {
-      // Find subscription
-      const subscriptionResult = await client.query(
-        'SELECT id, academy_id FROM academy_subscriptions WHERE stripe_subscription_id = $1',
-        [invoice.subscription]
-      );
+      // Find subscription, academy, and plan details
+      const subscriptionResult = await client.query(`
+        SELECT 
+          s.id as subscription_id, 
+          s.academy_id, 
+          a.name as academy_name, 
+          a.email as academy_email,
+          p.name as plan_name
+        FROM academy_subscriptions s
+        JOIN academies a ON s.academy_id = a.id
+        JOIN subscription_plans p ON s.plan_id = p.id
+        WHERE s.stripe_subscription_id = $1
+      `, [invoice.subscription]);
 
       if (subscriptionResult.rows.length === 0) {
         console.warn(`Subscription not found for invoice ${invoice.id}`);
         return;
       }
 
-      const { id: subscriptionId, academy_id: academyId } = subscriptionResult.rows[0];
+      const { 
+        subscription_id: subscriptionId, 
+        academy_id: academyId,
+        academy_name: academyName,
+        academy_email: academyEmail,
+        plan_name: planName
+      } = subscriptionResult.rows[0];
 
       // Create payment record
       const paymentId = uuidv4();
+      const amountPaid = invoice.amount_paid / 100;
+      const currency = invoice.currency.toUpperCase();
+      const paymentReference = invoice.payment_intent || invoice.id;
+
       await client.query(`
         INSERT INTO subscription_payments (
           id, subscription_id, amount, currency, payment_method, 
@@ -257,16 +285,28 @@ async function handlePaymentSucceeded(invoice: any) {
       `, [
         paymentId,
         subscriptionId,
-        invoice.amount_paid / 100, // Convert from cents
-        invoice.currency.toUpperCase(),
+        amountPaid,
+        currency,
         'CARD',
-        invoice.payment_intent,
+        paymentReference,
         invoice.id,
         'COMPLETED',
         'Payment processed via Stripe webhook'
       ]);
 
       console.log(`Payment recorded for subscription ${subscriptionId}, academy ${academyId}`);
+
+      // Set email details to be sent after commit
+      if (academyEmail) {
+        emailDetails = {
+          email: academyEmail,
+          name: academyName,
+          amount: amountPaid,
+          currency: currency,
+          planName: planName,
+          paymentReference: paymentReference
+        };
+      }
 
       // Check for sales agent and calculate commission
       const academyInfoResult = await client.query(
@@ -309,6 +349,25 @@ async function handlePaymentSucceeded(invoice: any) {
         }
       }
     });
+
+    // Send email outside the transaction after successful commit
+    if (emailDetails) {
+      try {
+        await emailService.sendPaymentConfirmationEmail(
+          emailDetails.email,
+          emailDetails.name,
+          emailDetails.amount,
+          emailDetails.currency,
+          emailDetails.planName,
+          emailDetails.paymentReference,
+          new Date(),
+          invoice.id
+        );
+        console.log(`Payment confirmation email sent to ${emailDetails.email}`);
+      } catch (emailErr) {
+        console.error('Error sending payment confirmation email:', emailErr);
+      }
+    }
   } catch (error: any) {
     console.error('Error handling payment succeeded:', error);
     throw error;
@@ -429,6 +488,15 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
 async function handleCheckoutSessionCompleted(session: any) {
   console.log('Processing checkout session completed:', session.id);
 
+  let emailDetails: {
+    email: string;
+    name: string;
+    amount: number;
+    currency: string;
+    planName: string;
+    paymentReference: string;
+  } | null = null;
+
   try {
     // Handle player subscription
     if (session.metadata?.type === 'player_subscription') {
@@ -453,7 +521,44 @@ async function handleCheckoutSessionCompleted(session: any) {
         ]);
         
         console.log(`Player purchase recorded for player ${playerId}`);
+
+        // Fetch player details for email confirmation
+        const playerResult = await client.query(
+          'SELECT first_name, last_name, email FROM individual_players WHERE id = $1',
+          [playerId]
+        );
+
+        if (playerResult.rows.length > 0 && playerResult.rows[0].email) {
+          const player = playerResult.rows[0];
+          emailDetails = {
+            email: player.email,
+            name: `${player.first_name || ''} ${player.last_name || ''}`.trim() || 'Player',
+            amount: session.amount_total / 100,
+            currency: (session.currency || 'USD').toUpperCase(),
+            planName: `${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
+            paymentReference: session.payment_intent || session.id
+          };
+        }
       });
+
+      // Send email confirmation outside the transaction
+      if (emailDetails) {
+        try {
+          await emailService.sendPaymentConfirmationEmail(
+            emailDetails.email,
+            emailDetails.name,
+            emailDetails.amount,
+            emailDetails.currency,
+            emailDetails.planName,
+            emailDetails.paymentReference,
+            new Date(),
+            session.id
+          );
+          console.log(`Player payment confirmation email sent to ${emailDetails.email}`);
+        } catch (emailErr) {
+          console.error('Error sending player payment confirmation email:', emailErr);
+        }
+      }
     }
   } catch (error: any) {
     console.error('Error handling checkout session completed:', error);

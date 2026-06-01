@@ -184,17 +184,35 @@ export function createServer() {
   api.get("/player-documents/:playerId", handleGetPlayerDocuments);
   api.delete("/player-documents/:documentId", handleDeletePlayerDocument);
 
-  // Temporary maintenance route to check database connection
+  // Temporary maintenance route to check database connection and schema
   api.get("/maintenance/check-db", async (req, res) => {
     try {
       const result = await query('SELECT current_database(), inet_server_addr(), inet_client_addr()');
       const version = await query('SELECT version()');
+      
+      // Check academies table schema
+      const academyCols = await query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'academies'
+      `);
+
+      // Check staff_users table schema
+      const staffCols = await query(`
+        SELECT column_name, data_type 
+        FROM information_schema.columns 
+        WHERE table_name = 'staff_users'
+      `);
+
       res.json({
         success: true,
         database: result.rows[0].current_database,
         serverAddr: result.rows[0].inet_server_addr,
-        clientAddr: result.rows[0].inet_client_addr,
         version: version.rows[0].version,
+        schemas: {
+          academies: academyCols.rows,
+          staff_users: staffCols.rows
+        },
         envHasUrl: !!(process.env.DATABASE_URL || process.env.SUPABASE_DB_URL),
         nodeEnv: process.env.NODE_ENV
       });
