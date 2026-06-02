@@ -305,9 +305,23 @@ export const handleGetSystemSettingsByCategory: RequestHandler = async (req, res
     settings.forEach(setting => {
       const key = setting.key.replace(`${category}.`, '');
       try {
-        categorySettings[key] = JSON.parse(setting.value);
+        const parsedValue = JSON.parse(setting.value);
+        
+        // Decrypt SMTP password if this is the email category and smtpPass field
+        if (category === 'email' && key === 'smtpPass' && typeof parsedValue === 'string') {
+          categorySettings[key] = decryptPassword(parsedValue);
+        } else {
+          categorySettings[key] = parsedValue;
+        }
       } catch {
-        categorySettings[key] = setting.value;
+        let stringValue = setting.value;
+        
+        // Decrypt SMTP password if this is the email category and smtpPass field
+        if (category === 'email' && key === 'smtpPass') {
+          stringValue = decryptPassword(setting.value);
+        }
+        
+        categorySettings[key] = stringValue;
       }
     });
 
