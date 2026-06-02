@@ -16,6 +16,7 @@ import {
   FileText,
   Download,
   Eye,
+  EyeOff,
   CheckCircle,
   AlertCircle,
   GraduationCap,
@@ -428,6 +429,7 @@ export default function AdminDashboard() {
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [viewingTransaction, setViewingTransaction] = useState<any | null>(null);
   const [isSendingReceipt, setIsSendingReceipt] = useState(false);
+  const [showSmtpPassword, setShowSmtpPassword] = useState(false);
 
   // System settings state
   const [systemSettings, setSystemSettings] = useState({
@@ -2416,14 +2418,27 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                       <Label htmlFor="smtpPass">SMTP Password</Label>
-                      <Input
-                        id="smtpPass"
-                        type="password"
-                        placeholder="••••••••"
-                        value={systemSettings.email.smtpPass}
-                        onChange={(e) => handleSystemSettingsChange('email', 'smtpPass', e.target.value)}
-                        className="mt-1.5"
-                      />
+                      <div className="relative mt-1.5">
+                        <Input
+                          id="smtpPass"
+                          type={showSmtpPassword ? "text" : "password"}
+                          placeholder="••••••••"
+                          value={systemSettings.email.smtpPass}
+                          onChange={(e) => handleSystemSettingsChange('email', 'smtpPass', e.target.value)}
+                          className="pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                          {showSmtpPassword ? (
+                            <EyeOff className="h-4 w-4" />
+                          ) : (
+                            <Eye className="h-4 w-4" />
+                          )}
+                        </button>
+                      </div>
                     </div>
                     <div>
                       <Label htmlFor="smtpFrom">From Email</Label>

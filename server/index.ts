@@ -2,6 +2,7 @@ import "dotenv/config";
 import { query } from "./lib/db.js";
 import express from "express";
 import cors from "cors";
+import { emailService } from "./lib/email-service.js";
 import { handleDemo } from "./routes/demo.js";
 import authRouter, {
   handleLogin,
@@ -66,6 +67,11 @@ export function createServer() {
   console.log("Creating Express server...");
   const app = express();
   console.log("[SERVER] Express app instantiated");
+
+  // Initialize email service with database configuration
+  emailService.initializeFromDatabase().catch(error => {
+    console.warn('[SERVER] Failed to initialize email service from database:', error);
+  });
 
   // Middleware
   app.use(cors());

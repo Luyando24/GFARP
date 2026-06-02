@@ -1158,6 +1158,9 @@ export const handleSendReceiptManually: RequestHandler = async (req, res) => {
         });
       }
 
+      // Ensure email service uses latest SMTP configuration from database
+      await emailService.initializeFromDatabase();
+
       const emailSent = await emailService.sendPaymentConfirmationEmail(
         orgInfo.org_email,
         orgInfo.org_name,
@@ -1196,6 +1199,9 @@ export const handleSendReceiptManually: RequestHandler = async (req, res) => {
           message: 'Player email is not defined'
         });
       }
+
+      // Ensure email service uses latest SMTP configuration from database
+      await emailService.initializeFromDatabase();
 
       const recipientName = `${purchase.first_name || ''} ${purchase.last_name || ''}`.trim() || 'Player';
       const planName = `${purchase.plan_type.charAt(0).toUpperCase() + purchase.plan_type.slice(1)} Plan`;
