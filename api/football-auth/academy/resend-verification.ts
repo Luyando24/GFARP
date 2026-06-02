@@ -72,42 +72,89 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         }
 
         // 4. Send Email
-        if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-            const transporter = nodemailer.createTransport({
+        let emailSent = false;
+        let emailError = null;
+
+        try {
+            // Try to get SMTP settings from database first
+            const { data: smtpSettings, error: smtpError } = await supabase
+                .from('system_settings')
+                .select('key, value')
+                .in('key', ['email.smtpHost', 'email.smtpPort', 'email.smtpSecure', 'email.smtpUser', 'email.smtpPass', 'email.smtpFrom']);
+
+            let smtpConfig = {
                 host: process.env.SMTP_HOST,
                 port: parseInt(process.env.SMTP_PORT || '587'),
                 secure: process.env.SMTP_SECURE === 'true',
-                auth: {
-                    user: process.env.SMTP_USER,
-                    pass: process.env.SMTP_PASS,
-                },
-            });
+                user: process.env.SMTP_USER,
+                pass: process.env.SMTP_PASS,
+                from: process.env.SMTP_FROM
+            };
 
-            // Determine base URL
-            const baseUrl = process.env.VITE_APP_URL || 'https://soccercircular.com'; 
-            const verificationLink = `${baseUrl}/verify-email?token=${verificationToken}`;
+            if (!smtpError && smtpSettings && smtpSettings.length > 0) {
+                // Use database settings
+                smtpSettings.forEach(setting => {
+                    const key = setting.key.replace('email.', '');
+                    if (key === 'smtpHost') smtpConfig.host = setting.value;
+                    if (key === 'smtpPort') smtpConfig.port = parseInt(setting.value);
+                    if (key === 'smtpSecure') smtpConfig.secure = setting.value === 'true';
+                    if (key === 'smtpUser') smtpConfig.user = setting.value;
+                    if (key === 'smtpPass') smtpConfig.pass = setting.value;
+                    if (key === 'smtpFrom') smtpConfig.from = setting.value;
+                });
+                console.log('[VERCEL] Using SMTP settings from database');
+            }
 
-            await transporter.sendMail({
-                from: `"Soccer Circular Support" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-                to: email,
-                subject: 'Verify your Soccer Circular Academy Account',
-                text: `Welcome to Soccer Circular!\n\nPlease verify your email address by clicking the link below:\n\n${verificationLink}\n\nIf you didn't create an account, you can safely ignore this email.`,
-                html: `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                        <h2 style="color: #005391;">Verify your email</h2>
-                        <p>Please verify your email address to activate your account and access the dashboard.</p>
-                        <div style="text-align: center; margin: 30px 0;">
-                            <a href="${verificationLink}" style="background-color: #005391; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Verify Email Address</a>
+            if (smtpConfig.host && smtpConfig.user && smtpConfig.pass) {
+                const transporter = nodemailer.createTransport({
+                    host: smtpConfig.host,
+                    port: smtpConfig.port,
+                    secure: smtpConfig.secure,
+                    auth: {
+                        user: smtpConfig.user,
+                        pass: smtpConfig.pass,
+                    },
+                });
+
+                // Determine base URL
+                const baseUrl = process.env.VITE_APP_URL || 'https://soccercircular.com';
+                const verificationLink = `${baseUrl}/verify-email?token=${verificationToken}`;
+
+                await transporter.sendMail({
+                    from: `"Soccer Circular Support" <${smtpConfig.from || smtpConfig.user}>`,
+                    to: email,
+                    subject: 'Verify your Soccer Circular Academy Account',
+                    text: `Welcome to Soccer Circular!\n\nPlease verify your email address by clicking the link below:\n\n${verificationLink}\n\nIf you didn't create an account, you can safely ignore this email.`,
+                    html: `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                            <h2 style="color: #005391;">Verify your email</h2>
+                            <p>Please verify your email address to activate your account and access the dashboard.</p>
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="${verificationLink}" style="background-color: #005391; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Verify Email Address</a>
+                            </div>
+                            <p>Or click this link: <a href="${verificationLink}">${verificationLink}</a></p>
+                            <p style="color: #666; font-size: 12px;">If you didn't create an account, you can safely ignore this email.</p>
                         </div>
-                        <p>Or click this link: <a href="${verificationLink}">${verificationLink}</a></p>
-                        <p style="color: #666; font-size: 12px;">If you didn't create an account, you can safely ignore this email.</p>
-                    </div>
-                `
+                    `
+                });
+                console.log('[VERCEL] Verification email resent to:', email);
+                emailSent = true;
+            } else {
+                console.warn('[VERCEL] SMTP configuration missing, skipping email verification send.');
+                console.log('[DEV] New Verification Token:', verificationToken);
+                emailError = 'SMTP configuration not found';
+            }
+        } catch (error: any) {
+            console.error('[VERCEL] Failed to send verification email:', error);
+            emailError = error.message;
+        }
+
+        if (!emailSent) {
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to send verification email. Please check SMTP configuration.',
+                error: emailError
             });
-            console.log('[VERCEL] Verification email resent to:', email);
-        } else {
-             console.warn('[VERCEL] SMTP configuration missing, skipping email verification send.');
-             console.log('[DEV] New Verification Token:', verificationToken);
         }
 
         return res.status(200).json({
