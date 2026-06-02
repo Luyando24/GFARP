@@ -179,10 +179,23 @@ function structureSettings(settings: Record<string, string>): SystemSettingsData
         try {
           // Try to parse as JSON for complex types
           const parsedValue = JSON.parse(value);
-          (structured[category as keyof SystemSettingsData] as any)[field] = parsedValue;
+          
+          // Decrypt SMTP password if this is the email.smtpPass field
+          if (category === 'email' && field === 'smtpPass' && typeof parsedValue === 'string') {
+            (structured[category as keyof SystemSettingsData] as any)[field] = decryptPassword(parsedValue);
+          } else {
+            (structured[category as keyof SystemSettingsData] as any)[field] = parsedValue;
+          }
         } catch {
           // If not JSON, use as string
-          (structured[category as keyof SystemSettingsData] as any)[field] = value;
+          let stringValue = value;
+          
+          // Decrypt SMTP password if this is the email.smtpPass field
+          if (category === 'email' && field === 'smtpPass') {
+            stringValue = decryptPassword(value);
+          }
+          
+          (structured[category as keyof SystemSettingsData] as any)[field] = stringValue;
         }
       }
     }
