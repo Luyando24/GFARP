@@ -3,6 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
 import { v4 as uuidv4 } from 'uuid';
 import nodemailer from 'nodemailer';
+import { getSmtpConfig } from '../../lib/smtp-config.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('[VERCEL] Academy registration request received');
@@ -162,36 +163,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let emailError = null;
 
         try {
-            // Try to get SMTP settings from database first
-            const { data: smtpSettings, error: smtpError } = await supabase
-                .from('system_settings')
-                .select('key, value')
-                .in('key', ['email.smtpHost', 'email.smtpPort', 'email.smtpSecure', 'email.smtpUser', 'email.smtpPass', 'email.smtpFrom']);
+            const smtpConfig = await getSmtpConfig(supabase, '[VERCEL] Registration');
 
-            let smtpConfig = {
-                host: process.env.SMTP_HOST,
-                port: parseInt(process.env.SMTP_PORT || '587'),
-                secure: process.env.SMTP_SECURE === 'true',
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-                from: process.env.SMTP_FROM
-            };
-
-            if (!smtpError && smtpSettings && smtpSettings.length > 0) {
-                // Use database settings
-                smtpSettings.forEach(setting => {
-                    const key = setting.key.replace('email.', '');
-                    if (key === 'smtpHost') smtpConfig.host = setting.value;
-                    if (key === 'smtpPort') smtpConfig.port = parseInt(setting.value);
-                    if (key === 'smtpSecure') smtpConfig.secure = setting.value === 'true';
-                    if (key === 'smtpUser') smtpConfig.user = setting.value;
-                    if (key === 'smtpPass') smtpConfig.pass = setting.value;
-                    if (key === 'smtpFrom') smtpConfig.from = setting.value;
-                });
-                console.log('[VERCEL] Using SMTP settings from database');
-            }
-
-            if (smtpConfig.host && smtpConfig.user && smtpConfig.pass) {
+            if (smtpConfig.isValid && smtpConfig.host && smtpConfig.user && smtpConfig.pass) {
                 const transporter = nodemailer.createTransport({
                     host: smtpConfig.host,
                     port: smtpConfig.port,
@@ -208,7 +182,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const verificationLink = `${baseUrl}/verify-email?token=${verificationToken}`;
 
                 await transporter.sendMail({
-                    from: `"Soccer Circular Support" <${smtpConfig.from || smtpConfig.user}>`,
+                    from: `"Soccer Circular Support" <${smtpConfig.from}>`,
                     to: body.email,
                     subject: 'Verify your Soccer Circular Academy Account',
                     text: `Welcome to Soccer Circular!\n\nThank you for registering your academy. Please verify your email address by clicking the link below:\n\n${verificationLink}\n\nIf you didn't create an account, you can safely ignore this email.`,
@@ -227,9 +201,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 console.log('[VERCEL] Verification email sent to:', body.email);
                 emailSent = true;
             } else {
-                console.warn('[VERCEL] SMTP configuration missing, skipping email verification send.');
+                console.warn('[VERCEL] SMTP configuration invalid or missing, skipping email verification send.');
                 console.log('[DEV] Verification Token:', verificationToken);
-                emailError = 'SMTP configuration not found';
+                emailError = smtpConfig.validationErrors ? smtpConfig.validationErrors.join(', ') : 'Unknown error';
             }
         } catch (error: any) {
             console.error('[VERCEL] Failed to send verification email:', error);

@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import nodemailer from 'nodemailer';
+import { getSmtpConfig } from '../lib/smtp-config.js';
 
 export const config = {
     maxDuration: 10,
@@ -24,6 +25,73 @@ export default async function handler(
     }
 
     try {
+        // Authentication check
+        const authHeader = req.headers.authorization;
+        if (!authHeader || !authHeader.startsWith('Bearer ')) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Authentication required' 
+            });
+        }
+
+        const token = authHeader.substring(7);
+        
+        // Initialize Supabase anon client for token verification only
+        const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+        const supabaseAnonKey = process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY;
+
+        if (!supabaseUrl || !supabaseAnonKey) {
+            return res.status(500).json({
+                success: false,
+                message: 'Server configuration error'
+            });
+        }
+
+        // Use anon client for token verification
+        const anonClient = createClient(supabaseUrl, supabaseAnonKey);
+
+        // Verify token and get user
+        const { data: { user }, error: authError } = await anonClient.auth.getUser(token);
+        
+        if (authError || !user) {
+            return res.status(401).json({ 
+                success: false, 
+                message: 'Invalid or expired token' 
+            });
+        }
+
+        // Initialize service-role client for admin operations
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (!supabaseServiceKey) {
+            return res.status(500).json({
+                success: false,
+                message: 'Server configuration error'
+            });
+        }
+
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+        // Authorization check - only admins and superadmins can update compliance documents
+        const { data: userData, error: userError } = await supabase
+            .from('staff_users')
+            .select('role')
+            .eq('id', user.id)
+            .single();
+
+        if (userError || !userData) {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'User not found or unauthorized' 
+            });
+        }
+
+        if (userData.role !== 'admin' && userData.role !== 'superadmin') {
+            return res.status(403).json({ 
+                success: false, 
+                message: 'Insufficient permissions. Admin or superadmin role required.' 
+            });
+        }
+
         const { documentId, status, rejectionReason } = req.body;
 
         if (!documentId || !status) {
@@ -41,20 +109,6 @@ export default async function handler(
                 message: 'Invalid status. Must be one of: pending, verified, rejected, expired'
             });
         }
-
-        // Initialize Supabase client
-        const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY;
-
-        if (!supabaseUrl || !supabaseKey) {
-            console.error('[VERCEL] Missing Supabase environment variables');
-            return res.status(500).json({
-                success: false,
-                message: 'Server configuration error'
-            });
-        }
-
-        const supabase = createClient(supabaseUrl, supabaseKey);
 
         // Fetch document details along with academy info for email
         const { data: docInfo, error: fetchError } = await supabase
@@ -103,15 +157,17 @@ export default async function handler(
         }
 
         // Send Email Notification
-        if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
-            try {
+        try {
+            const smtpConfig = await getSmtpConfig(supabase, '[VERCEL] Compliance Document');
+
+            if (smtpConfig.isValid && smtpConfig.host && smtpConfig.user && smtpConfig.pass) {
                 const transporter = nodemailer.createTransport({
-                    host: process.env.SMTP_HOST,
-                    port: parseInt(process.env.SMTP_PORT || '587'),
-                    secure: process.env.SMTP_SECURE === 'true',
+                    host: smtpConfig.host,
+                    port: smtpConfig.port,
+                    secure: smtpConfig.secure,
                     auth: {
-                        user: process.env.SMTP_USER,
-                        pass: process.env.SMTP_PASS,
+                        user: smtpConfig.user,
+                        pass: smtpConfig.pass,
                     },
                 });
 
@@ -148,7 +204,7 @@ export default async function handler(
 
                     if (subject && htmlContent) {
                         await transporter.sendMail({
-                            from: `"Soccer Circular Compliance" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+                            from: `"Soccer Circular Compliance" <${smtpConfig.from}>`,
                             to: academyEmail,
                             subject: subject,
                             html: htmlContent
@@ -156,10 +212,12 @@ export default async function handler(
                         console.log(`[VERCEL] Notification email sent to ${academyEmail} for status ${status}`);
                     }
                 }
-            } catch (emailError) {
-                console.error('[VERCEL] Failed to send notification email:', emailError);
-                // Don't fail the request, just log it
+            } else {
+                console.warn('[VERCEL] SMTP configuration invalid or missing, skipping email notification.');
             }
+        } catch (emailError) {
+            console.error('[VERCEL] Failed to send notification email:', emailError);
+            // Don't fail the request, just log it
         }
 
         // Create In-App Notification

@@ -1,6 +1,7 @@
 import { Router, RequestHandler } from 'express';
 import { query } from '../lib/db.js';
 import { emailService } from '../lib/email-service.js';
+import { encryptPassword, decryptPassword } from '../lib/encryption.js';
 
 const router = Router();
 
@@ -178,10 +179,23 @@ function structureSettings(settings: Record<string, string>): SystemSettingsData
         try {
           // Try to parse as JSON for complex types
           const parsedValue = JSON.parse(value);
-          (structured[category as keyof SystemSettingsData] as any)[field] = parsedValue;
+          
+          // Mask SMTP password - never return plaintext in GET endpoints
+          if (category === 'email' && field === 'smtpPass' && typeof parsedValue === 'string') {
+            (structured[category as keyof SystemSettingsData] as any)[field] = '••••••••';
+          } else {
+            (structured[category as keyof SystemSettingsData] as any)[field] = parsedValue;
+          }
         } catch {
           // If not JSON, use as string
-          (structured[category as keyof SystemSettingsData] as any)[field] = value;
+          let stringValue = value;
+          
+          // Mask SMTP password - never return plaintext in GET endpoints
+          if (category === 'email' && field === 'smtpPass') {
+            stringValue = '••••••••';
+          }
+          
+          (structured[category as keyof SystemSettingsData] as any)[field] = stringValue;
         }
       }
     }
@@ -197,7 +211,13 @@ function flattenSettings(settings: SystemSettingsData): Record<string, string> {
   Object.entries(settings).forEach(([category, categorySettings]) => {
     Object.entries(categorySettings).forEach(([key, value]) => {
       const flatKey = `${category}.${key}`;
-      flattened[flatKey] = typeof value === 'object' ? JSON.stringify(value) : String(value);
+      
+      // Encrypt SMTP password before saving
+      if (category === 'email' && key === 'smtpPass' && value) {
+        flattened[flatKey] = encryptPassword(String(value));
+      } else {
+        flattened[flatKey] = typeof value === 'object' ? JSON.stringify(value) : String(value);
+      }
     });
   });
 
@@ -285,9 +305,23 @@ export const handleGetSystemSettingsByCategory: RequestHandler = async (req, res
     settings.forEach(setting => {
       const key = setting.key.replace(`${category}.`, '');
       try {
-        categorySettings[key] = JSON.parse(setting.value);
+        const parsedValue = JSON.parse(setting.value);
+        
+        // Mask SMTP password - never return plaintext in GET endpoints
+        if (category === 'email' && key === 'smtpPass' && typeof parsedValue === 'string') {
+          categorySettings[key] = '••••••••';
+        } else {
+          categorySettings[key] = parsedValue;
+        }
       } catch {
-        categorySettings[key] = setting.value;
+        let stringValue = setting.value;
+        
+        // Mask SMTP password - never return plaintext in GET endpoints
+        if (category === 'email' && key === 'smtpPass') {
+          stringValue = '••••••••';
+        }
+        
+        categorySettings[key] = stringValue;
       }
     });
 
@@ -318,7 +352,15 @@ export const handleUpdateSystemSettingsByCategory: RequestHandler = async (req, 
     // Update each setting in the category
     const updatePromises = Object.entries(categoryData).map(([key, value]) => {
       const flatKey = `${category}.${key}`;
-      const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+      
+      // Encrypt SMTP password before saving
+      let stringValue: string;
+      if (category === 'email' && key === 'smtpPass' && value) {
+        stringValue = encryptPassword(String(value));
+      } else {
+        stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+      }
+      
       return setSettingValue(flatKey, stringValue);
     });
 

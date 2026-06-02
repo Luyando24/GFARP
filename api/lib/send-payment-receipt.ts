@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { getSmtpConfig } from './smtp-config.js';
 
 function buildReceiptHtml(
   recipientName: string,
@@ -40,6 +41,7 @@ function buildReceiptHtml(
 }
 
 async function sendViaSmtp(
+  supabase: SupabaseClient,
   toEmail: string,
   recipientName: string,
   amount: number,
@@ -47,36 +49,43 @@ async function sendViaSmtp(
   planName: string,
   paymentReference: string
 ): Promise<boolean> {
-  if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.warn('[PaymentReceipt] SMTP not configured, skipping receipt email');
+  try {
+    const smtpConfig = await getSmtpConfig(supabase, '[PaymentReceipt]');
+
+    if (!smtpConfig.isValid || !smtpConfig.host || !smtpConfig.user || !smtpConfig.pass) {
+      console.warn('[PaymentReceipt] SMTP configuration invalid or missing, skipping receipt email');
+      return false;
+    }
+
+    const transporter = nodemailer.createTransport({
+      host: smtpConfig.host,
+      port: smtpConfig.port,
+      secure: smtpConfig.secure,
+      auth: {
+        user: smtpConfig.user,
+        pass: smtpConfig.pass,
+      },
+    });
+
+    const date = new Date();
+    const formattedAmount = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currency.toUpperCase(),
+    }).format(amount);
+
+    await transporter.sendMail({
+      from: `"Soccer Circular" <${smtpConfig.from}>`,
+      to: toEmail,
+      subject: `Payment Confirmed - ${planName}`,
+      text: `Dear ${recipientName},\n\nYour payment of ${formattedAmount} for ${planName} was successful.\nReference: ${paymentReference}\nDate: ${date.toLocaleString()}`,
+      html: buildReceiptHtml(recipientName, amount, currency, planName, paymentReference, date),
+    });
+
+    return true;
+  } catch (error: any) {
+    console.error('[PaymentReceipt] Failed to send receipt email:', error);
     return false;
   }
-
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587', 10),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
-
-  const date = new Date();
-  const formattedAmount = new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: currency.toUpperCase(),
-  }).format(amount);
-
-  await transporter.sendMail({
-    from: `"Soccer Circular" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
-    to: toEmail,
-    subject: `Payment Confirmed - ${planName}`,
-    text: `Dear ${recipientName},\n\nYour payment of ${formattedAmount} for ${planName} was successful.\nReference: ${paymentReference}\nDate: ${date.toLocaleString()}`,
-    html: buildReceiptHtml(recipientName, amount, currency, planName, paymentReference, date),
-  });
-
-  return true;
 }
 
 export async function sendAcademyPaymentReceipt(
@@ -89,25 +98,48 @@ export async function sendAcademyPaymentReceipt(
   currency: string,
   paymentReference: string
 ): Promise<boolean> {
-  const { data: claimed, error: claimError } = await supabase
-    .from('subscription_payments')
-    .update({ receipt_email_sent_at: new Date().toISOString() })
-    .eq('id', paymentId)
-    .is('receipt_email_sent_at', null)
-    .select('id')
-    .maybeSingle();
+  try {
+    // Check if receipt has already been sent
+    const { data: existingPayment } = await supabase
+      .from('subscription_payments')
+      .select('id, receipt_email_sent_at')
+      .eq('id', paymentId)
+      .maybeSingle();
 
-  if (claimError) {
-    if (claimError.message?.includes('receipt_email_sent_at')) {
-      return sendViaSmtp(academyEmail, academyName, amount, currency, planName, paymentReference);
+    if (existingPayment && existingPayment.receipt_email_sent_at) {
+      console.log('[PaymentReceipt] Receipt already sent for this payment');
+      return false;
     }
-    console.error('[PaymentReceipt] Claim error:', claimError);
+
+    // Attempt to send the email first
+    const emailSent = await sendViaSmtp(supabase, academyEmail, academyName, amount, currency, planName, paymentReference);
+
+    if (!emailSent) {
+      console.warn('[PaymentReceipt] Failed to send receipt email, not marking as sent');
+      return false;
+    }
+
+    // Only mark as sent after successful email delivery
+    const { error: updateError } = await supabase
+      .from('subscription_payments')
+      .update({ receipt_email_sent_at: new Date().toISOString() })
+      .eq('id', paymentId);
+
+    if (updateError) {
+      // If the column doesn't exist, log but don't fail (email was sent successfully)
+      if (updateError.code === '42703') {
+        console.log('[PaymentReceipt] receipt_email_sent_at column does not exist, but email was sent successfully');
+        return true;
+      }
+      console.error('[PaymentReceipt] Failed to mark receipt as sent:', updateError);
+      // Email was sent successfully, so return true even if the update failed
+      return true;
+    }
+
+    console.log('[PaymentReceipt] Receipt sent and marked successfully');
+    return true;
+  } catch (error: any) {
+    console.error('[PaymentReceipt] Unexpected error in sendAcademyPaymentReceipt:', error);
     return false;
   }
-
-  if (!claimed) {
-    return false;
-  }
-
-  return sendViaSmtp(academyEmail, academyName, amount, currency, planName, paymentReference);
 }
