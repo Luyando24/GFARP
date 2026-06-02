@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlayerApi } from "@/lib/api";
 import { saveSession } from "@/lib/auth";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { User, ArrowLeft, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import LanguageToggle from "@/components/navigation/LanguageToggle";
@@ -16,6 +16,7 @@ export default function PlayerLogin() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +39,16 @@ export default function PlayerLogin() {
       navigate("/player/dashboard");
     } catch (e: any) {
       const errorMessage = String(e?.message || e);
+      if (e?.status === 403 || e?.data?.requireVerification) {
+        navigate("/verification-pending", {
+          state: {
+            email,
+            accountType: "player",
+            message: errorMessage,
+          },
+        });
+        return;
+      }
       setError(errorMessage);
     } finally {
       setLoading(false);
@@ -98,9 +109,9 @@ export default function PlayerLogin() {
               />
             </div>
 
-            {error && (
+            {(error || (location.state as { message?: string })?.message) && (
               <div className="p-3 bg-red-50 text-red-600 text-sm rounded-md border border-red-200">
-                {error}
+                {error || (location.state as { message?: string })?.message}
               </div>
             )}
 

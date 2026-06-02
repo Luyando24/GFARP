@@ -99,6 +99,12 @@ const setupTables = async (req: any, res: any) => {
       ALTER TABLE individual_players 
       ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255);
 
+      ALTER TABLE individual_players
+      ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS verification_token TEXT;
+
+      UPDATE individual_players SET email_verified = TRUE WHERE email_verified IS NOT TRUE;
+
       -- Create exempted_emails table
       CREATE TABLE IF NOT EXISTS exempted_emails (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

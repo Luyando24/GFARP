@@ -1334,13 +1334,36 @@ export interface PlayerProfile {
   slug?: string;
 }
 
+export interface PlayerRegisterResponse {
+  success: boolean;
+  message?: string;
+  requireVerification?: boolean;
+  token?: string;
+  user: IndividualPlayer;
+}
+
 export const PlayerApi = {
   async register(data: any) {
-    return Api.post<{ success: boolean; token: string; user: IndividualPlayer }>('/individual-players/register', data);
+    return Api.post<PlayerRegisterResponse>('/individual-players/register', data);
   },
 
   async login(data: any) {
     return Api.post<{ success: boolean; token: string; user: IndividualPlayer }>('/individual-players/login', data);
+  },
+
+  async verifyEmail(token: string) {
+    return Api.post<{
+      success: boolean;
+      message: string;
+      data?: { token: string; user: IndividualPlayer };
+    }>('/individual-players/verify-email', { token });
+  },
+
+  async resendVerification(email: string) {
+    return Api.post<{ success: boolean; message: string }>(
+      '/individual-players/resend-verification',
+      { email }
+    );
   },
 
   async getProfile() {

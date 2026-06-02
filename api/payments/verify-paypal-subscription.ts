@@ -1,6 +1,7 @@
 import { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
+import { sendAcademyPaymentReceipt } from '../lib/send-payment-receipt.js';
 
 export const config = {
     maxDuration: 10,
@@ -187,7 +188,7 @@ export default async function handler(
             .insert({
                 id: paymentId,
                 subscription_id: newSubscriptionId,
-                amount: parseFloat(amount),
+                amount: parseFloat(String(amount)),
                 currency: currency.toLowerCase(),
                 payment_method: 'PAYPAL',
                 payment_reference: subscriptionId,
@@ -196,6 +197,31 @@ export default async function handler(
                 created_at: new Date().toISOString(),
                 updated_at: new Date().toISOString()
             });
+
+        const { data: academy } = await supabase
+            .from('academies')
+            .select('name, email')
+            .eq('id', academyId)
+            .single();
+
+        const { data: plan } = await supabase
+            .from('subscription_plans')
+            .select('name')
+            .eq('id', planId)
+            .maybeSingle();
+
+        if (academy?.email) {
+            await sendAcademyPaymentReceipt(
+                supabase,
+                paymentId,
+                academy.email,
+                academy.name,
+                plan?.name || planId,
+                parseFloat(String(amount)),
+                currency.toUpperCase(),
+                subscriptionId
+            );
+        }
 
         console.log('[VERCEL] PayPal subscription verification successful');
         return res.json({

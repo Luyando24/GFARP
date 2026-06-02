@@ -106,7 +106,8 @@ import {
   MemoryStick,
   HardDriveIcon,
   BookOpen,
-  Loader2
+  Loader2,
+  Send
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -484,6 +485,15 @@ export default function AdminDashboard() {
       emailService: "",
       cloudStorage: "",
       analyticsService: ""
+    },
+    email: {
+      smtpHost: "",
+      smtpPort: 587,
+      smtpSecure: false,
+      smtpUser: "",
+      smtpPass: "",
+      smtpFrom: "",
+      testEmail: ""
     }
   });
 
@@ -1225,6 +1235,7 @@ export default function AdminDashboard() {
         { id: "finances", label: "Financial Overview", icon: DollarSign },
         { id: "billing", label: "Price Plans & Billing", icon: CreditCard },
         { id: "blog", label: "Blog Management", icon: BookOpen },
+        { id: "email-settings", label: "Email Settings", icon: Mail },
         { id: "system", label: "System Settings", icon: Settings },
         { id: "analytics", label: "Analytics", icon: BarChart3 }
       ]
@@ -2339,6 +2350,182 @@ export default function AdminDashboard() {
             {/* Price Plans & Billing Tab */}
             <TabsContent value="billing" className="space-y-6">
               <PlanManagement />
+            </TabsContent>
+
+            {/* Email Settings Tab */}
+            <TabsContent value="email-settings" className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-2xl font-bold text-slate-900 dark:text-white">
+                    Email Settings
+                  </h2>
+                  <p className="text-slate-600 dark:text-slate-400">
+                    Configure SMTP settings for email delivery
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button variant="outline" size="sm" onClick={saveSystemSettings}>
+                    <Save className="h-4 w-4 mr-2" />
+                    Save Settings
+                  </Button>
+                </div>
+              </div>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Mail className="h-5 w-5" />
+                    SMTP Configuration
+                  </CardTitle>
+                  <CardDescription>
+                    Configure your SMTP server settings for sending emails
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <Label htmlFor="smtpHost">SMTP Host</Label>
+                      <Input
+                        id="smtpHost"
+                        placeholder="smtp.gmail.com"
+                        value={systemSettings.email.smtpHost}
+                        onChange={(e) => handleSystemSettingsChange('email', 'smtpHost', e.target.value)}
+                        className="mt-1.5"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="smtpPort">SMTP Port</Label>
+                      <Input
+                        id="smtpPort"
+                        type="number"
+                        placeholder="587"
+                        value={systemSettings.email.smtpPort}
+                        onChange={(e) => handleSystemSettingsChange('email', 'smtpPort', parseInt(e.target.value) || 587)}
+                        className="mt-1.5"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="smtpUser">SMTP Username</Label>
+                      <Input
+                        id="smtpUser"
+                        placeholder="your-email@gmail.com"
+                        value={systemSettings.email.smtpUser}
+                        onChange={(e) => handleSystemSettingsChange('email', 'smtpUser', e.target.value)}
+                        className="mt-1.5"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="smtpPass">SMTP Password</Label>
+                      <Input
+                        id="smtpPass"
+                        type="password"
+                        placeholder="••••••••"
+                        value={systemSettings.email.smtpPass}
+                        onChange={(e) => handleSystemSettingsChange('email', 'smtpPass', e.target.value)}
+                        className="mt-1.5"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="smtpFrom">From Email</Label>
+                      <Input
+                        id="smtpFrom"
+                        placeholder="noreply@soccercircular.com"
+                        value={systemSettings.email.smtpFrom}
+                        onChange={(e) => handleSystemSettingsChange('email', 'smtpFrom', e.target.value)}
+                        className="mt-1.5"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="testEmail">Test Email Address</Label>
+                      <Input
+                        id="testEmail"
+                        type="email"
+                        placeholder="test@example.com"
+                        value={systemSettings.email.testEmail}
+                        onChange={(e) => handleSystemSettingsChange('email', 'testEmail', e.target.value)}
+                        className="mt-1.5"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t mt-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-0.5">
+                        <Label className="text-base">Use SSL/TLS</Label>
+                        <p className="text-sm text-muted-foreground">
+                          Enable secure connection for SMTP
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleSystemSettingsChange('email', 'smtpSecure', !systemSettings.email.smtpSecure)}
+                        className={systemSettings.email.smtpSecure ? "border-green-500 text-green-600" : ""}
+                      >
+                        {systemSettings.email.smtpSecure ? (
+                          <>
+                            <ToggleRight className="h-4 w-4 mr-2" />
+                            Enabled
+                          </>
+                        ) : (
+                          <>
+                            <ToggleLeft className="h-4 w-4 mr-2" />
+                            Disabled
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t mt-4">
+                    <Button
+                      type="button"
+                      onClick={async () => {
+                        if (!systemSettings.email.testEmail) {
+                          toast({
+                            title: "Error",
+                            description: "Please enter a test email address",
+                            variant: "destructive"
+                          });
+                          return;
+                        }
+                        try {
+                          const response = await fetch('/api/system-settings/email/test', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({ toEmail: systemSettings.email.testEmail }),
+                          });
+                          const result = await response.json();
+                          if (result.success) {
+                            toast({
+                              title: "Success",
+                              description: "Test email sent successfully",
+                            });
+                          } else {
+                            toast({
+                              title: "Error",
+                              description: result.error || "Failed to send test email",
+                              variant: "destructive"
+                            });
+                          }
+                        } catch (error) {
+                          toast({
+                            title: "Error",
+                            description: "Failed to send test email",
+                            variant: "destructive"
+                          });
+                        }
+                      }}
+                    >
+                      <Send className="h-4 w-4 mr-2" />
+                      Send Test Email
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="system" className="space-y-6">

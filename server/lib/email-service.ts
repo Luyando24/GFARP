@@ -1,4 +1,6 @@
 import nodemailer from 'nodemailer';
+import { query } from './db.js';
+import { decryptPassword } from './encryption.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -11,6 +13,7 @@ interface EmailConfig {
     user: string;
     pass: string;
   };
+  from?: string;
 }
 
 interface EmailOptions {
@@ -20,28 +23,130 @@ interface EmailOptions {
   text?: string;
 }
 
+/**
+ * Get SMTP configuration from database, falling back to environment variables
+ */
+async function getSmtpConfig(): Promise<EmailConfig> {
+  try {
+    // Try to get settings from database
+    const smtpHost = await query('SELECT value FROM system_settings WHERE key = $1', ['email.smtpHost']);
+    const smtpPort = await query('SELECT value FROM system_settings WHERE key = $1', ['email.smtpPort']);
+    const smtpSecure = await query('SELECT value FROM system_settings WHERE key = $1', ['email.smtpSecure']);
+    const smtpUser = await query('SELECT value FROM system_settings WHERE key = $1', ['email.smtpUser']);
+    const smtpPass = await query('SELECT value FROM system_settings WHERE key = $1', ['email.smtpPass']);
+    const smtpFrom = await query('SELECT value FROM system_settings WHERE key = $1', ['email.smtpFrom']);
+
+    // Check if we have database settings configured
+    if (smtpHost.rows.length > 0 && smtpHost.rows[0].value) {
+      const host = smtpHost.rows[0].value;
+      const port = smtpPort.rows.length > 0 ? parseInt(smtpPort.rows[0].value) : 587;
+      let secure = smtpSecure.rows.length > 0 ? smtpSecure.rows[0].value === 'true' : false;
+
+      // Fix Nodemailer secure flag based on standard port configurations
+      // Port 465 is implicit TLS (secure: true)
+      // Port 587 and 25 use STARTTLS (secure: false)
+      if (port === 587 || port === 25) {
+        secure = false;
+      } else if (port === 465) {
+        secure = true;
+      }
+
+      const user = smtpUser.rows.length > 0 ? smtpUser.rows[0].value : '';
+      const encryptedPass = smtpPass.rows.length > 0 ? smtpPass.rows[0].value : '';
+      const from = smtpFrom.rows.length > 0 ? smtpFrom.rows[0].value : '';
+
+      // Decrypt password
+      let pass = '';
+      if (encryptedPass) {
+        pass = decryptPassword(encryptedPass);
+      }
+
+      console.log('[EmailService] Using database SMTP configuration');
+      return {
+        host,
+        port,
+        secure,
+        auth: {
+          user,
+          pass
+        },
+        from: from || user
+      };
+    }
+  } catch (error) {
+    console.warn('[EmailService] Failed to load SMTP settings from database, falling back to environment variables:', error);
+  }
+
+  // Fall back to environment variables
+  console.log('[EmailService] Using environment variable SMTP configuration');
+  return {
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER || '',
+      pass: process.env.SMTP_PASS || ''
+    },
+    from: process.env.SMTP_FROM || process.env.SMTP_USER || ''
+  };
+}
+
 class EmailService {
   private transporter: nodemailer.Transporter;
+  private config: EmailConfig;
 
   constructor() {
-    // Configure email transporter based on environment variables
-    const config: EmailConfig = {
+    // Initialize with environment variables first (synchronous)
+    const envPort = parseInt(process.env.SMTP_PORT || '587');
+    let envSecure = process.env.SMTP_SECURE === 'true';
+    if (envPort === 587 || envPort === 25) envSecure = false;
+    else if (envPort === 465) envSecure = true;
+
+    this.config = {
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true',
+      port: envPort,
+      secure: envSecure,
       auth: {
         user: process.env.SMTP_USER || '',
         pass: process.env.SMTP_PASS || ''
-      }
+      },
+      from: process.env.SMTP_FROM || process.env.SMTP_USER || ''
     };
-
-    this.transporter = nodemailer.createTransport(config);
+    this.transporter = nodemailer.createTransport(this.config);
   }
 
-  async sendEmail(options: EmailOptions): Promise<boolean> {
+  /**
+   * Initialize SMTP configuration from database
+   * Call this after constructing the EmailService instance
+   */
+  async initializeFromDatabase(): Promise<void> {
+    try {
+      this.config = await getSmtpConfig();
+      this.transporter = nodemailer.createTransport(this.config);
+    } catch (error) {
+      console.error('[EmailService] Failed to initialize from database:', error);
+    }
+  }
+
+  /**
+   * Reload SMTP configuration from database
+   * Call this after updating SMTP settings in the database
+   */
+  async reloadConfiguration(): Promise<void> {
+    console.log('[EmailService] Reloading SMTP configuration...');
+    try {
+      this.config = await getSmtpConfig();
+      this.transporter = nodemailer.createTransport(this.config);
+      console.log('[EmailService] SMTP configuration reloaded successfully');
+    } catch (error) {
+      console.error('[EmailService] Failed to reload configuration:', error);
+    }
+  }
+
+  async sendEmail(options: EmailOptions): Promise<{ success: boolean; error?: string }> {
     try {
       const mailOptions = {
-        from: `"Soccer Circular" <${process.env.SMTP_USER}>`,
+        from: `"Soccer Circular" <${this.config.from || this.config.auth.user}>`,
         to: options.to,
         subject: options.subject,
         html: options.html,
@@ -50,10 +155,13 @@ class EmailService {
 
       const result = await this.transporter.sendMail(mailOptions);
       console.log('Email sent successfully:', result.messageId);
-      return true;
-    } catch (error) {
+      return { success: true };
+    } catch (error: any) {
       console.error('Failed to send email:', error);
-      return false;
+      return { 
+        success: false, 
+        error: error.message || 'Unknown error occurred while sending email' 
+      };
     }
   }
 
@@ -73,11 +181,12 @@ class EmailService {
       reason
     );
 
-    return this.sendEmail({
+    const result = await this.sendEmail({
       to: academyEmail,
       subject,
       html
     });
+    return result.success;
   }
 
   async sendAcademyVerificationEmail(
@@ -96,11 +205,12 @@ class EmailService {
       reason
     );
 
-    return this.sendEmail({
+    const result = await this.sendEmail({
       to: academyEmail,
       subject,
       html
     });
+    return result.success;
   }
 
   async sendAdminNotificationEmail(
@@ -121,10 +231,50 @@ class EmailService {
       reason
     );
 
-    return this.sendEmail({
+    const result = await this.sendEmail({
       to: adminEmail,
       subject,
       html
+    });
+    return result.success;
+  }
+
+  async sendPlayerRegistrationVerificationEmail(
+    playerEmail: string,
+    playerName: string,
+    verificationLink: string
+  ): Promise<boolean> {
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Verify your player account</title>
+      </head>
+      <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #059669 0%, #2563eb 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px;">Soccer Circular</h1>
+          <p style="color: #f0f0f0; margin: 10px 0 0 0;">Player Profile</p>
+        </div>
+        <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none;">
+          <p style="font-size: 16px;">Hi ${playerName},</p>
+          <p style="font-size: 16px;">Thanks for registering. Please verify your email address to activate your player account and access your dashboard.</p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${verificationLink}" style="background: linear-gradient(135deg, #059669, #2563eb); color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Verify Email Address</a>
+          </div>
+          <p style="font-size: 14px; color: #666;">Or copy this link: <a href="${verificationLink}">${verificationLink}</a></p>
+          <p style="font-size: 12px; color: #999;">If you didn't create an account, you can safely ignore this email.</p>
+        </div>
+      </body>
+      </html>
+    `;
+
+    return this.sendEmail({
+      to: playerEmail,
+      subject: 'Verify your Soccer Circular Player Account',
+      html,
+      text: `Hi ${playerName},\n\nPlease verify your email by visiting:\n${verificationLink}\n\nIf you didn't create an account, ignore this email.`,
     });
   }
 

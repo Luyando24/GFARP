@@ -1,5 +1,7 @@
 import { Router, RequestHandler } from 'express';
 import { query } from '../lib/db.js';
+import { encryptPassword, decryptPassword } from '../lib/encryption.js';
+import { emailService } from '../lib/email-service.js';
 
 const router = Router();
 
@@ -60,6 +62,15 @@ interface SystemSettingsData {
     cloudStorage: string;
     analyticsService: string;
   };
+  email: {
+    smtpHost: string;
+    smtpPort: number;
+    smtpSecure: boolean;
+    smtpUser: string;
+    smtpPass: string;
+    smtpFrom: string;
+    testEmail: string;
+  };
 }
 
 // Default system settings
@@ -118,6 +129,15 @@ const defaultSettings: SystemSettingsData = {
     emailService: "SendGrid",
     cloudStorage: "AWS S3",
     analyticsService: "Google Analytics"
+  },
+  email: {
+    smtpHost: "",
+    smtpPort: 587,
+    smtpSecure: false,
+    smtpUser: "",
+    smtpPass: "",
+    smtpFrom: "",
+    testEmail: ""
   }
 };
 
@@ -178,7 +198,13 @@ function flattenSettings(settings: SystemSettingsData): Record<string, string> {
   Object.entries(settings).forEach(([category, categorySettings]) => {
     Object.entries(categorySettings).forEach(([key, value]) => {
       const flatKey = `${category}.${key}`;
-      flattened[flatKey] = typeof value === 'object' ? JSON.stringify(value) : String(value);
+      
+      // Encrypt SMTP password before saving
+      if (category === 'email' && key === 'smtpPass' && value) {
+        flattened[flatKey] = encryptPassword(String(value));
+      } else {
+        flattened[flatKey] = typeof value === 'object' ? JSON.stringify(value) : String(value);
+      }
     });
   });
 
@@ -232,6 +258,9 @@ export const handleUpdateSystemSettings: RequestHandler = async (req, res) => {
     );
 
     await Promise.all(updatePromises);
+
+    // Reload email service configuration to apply new settings
+    await emailService.reloadConfiguration();
 
     res.json({
       success: true,
@@ -296,7 +325,15 @@ export const handleUpdateSystemSettingsByCategory: RequestHandler = async (req, 
     // Update each setting in the category
     const updatePromises = Object.entries(categoryData).map(([key, value]) => {
       const flatKey = `${category}.${key}`;
-      const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+      
+      // Encrypt SMTP password before saving
+      let stringValue: string;
+      if (category === 'email' && key === 'smtpPass' && value) {
+        stringValue = encryptPassword(String(value));
+      } else {
+        stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+      }
+      
       return setSettingValue(flatKey, stringValue);
     });
 
@@ -323,6 +360,9 @@ export const handleResetSystemSettings: RequestHandler = async (req, res) => {
     for (const [key, value] of Object.entries(flatSettings)) {
       await setSettingValue(key, value);
     }
+
+    // Reload email service configuration after reset
+    await emailService.reloadConfiguration();
 
     res.json({
       success: true,
@@ -376,6 +416,9 @@ export const handleRestoreSystemSettings: RequestHandler = async (req, res) => {
 
     await Promise.all(restorePromises);
 
+    // Reload email service configuration after restore
+    await emailService.reloadConfiguration();
+
     res.json({
       success: true,
       message: 'System settings restored successfully',
@@ -387,6 +430,94 @@ export const handleRestoreSystemSettings: RequestHandler = async (req, res) => {
   }
 }
 
+// POST /api/system-settings/email/test - Test email configuration
+export const handleTestEmail: RequestHandler = async (req, res) => {
+  try {
+    const { toEmail } = req.body;
+
+    console.log('[TestEmail] Request received for:', toEmail);
+
+    if (!toEmail) {
+      return res.status(400).json({ error: 'Test email address is required' });
+    }
+
+    // Reload email service configuration to use latest database settings
+    console.log('[TestEmail] Reloading email service configuration...');
+    await emailService.reloadConfiguration();
+    console.log('[TestEmail] Configuration reloaded');
+
+    // Send test email
+    console.log('[TestEmail] Sending test email...');
+    const result = await emailService.sendEmail({
+      to: toEmail,
+      subject: 'Soccer Circular - SMTP Configuration Test',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>SMTP Test</title>
+        </head>
+        <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">Soccer Circular</h1>
+            <p style="color: #f0f0f0; margin: 10px 0 0 0;">SMTP Configuration Test</p>
+          </div>
+
+          <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
+              <h2 style="color: #10b981; margin: 0; font-size: 24px;">SMTP Configuration Successful</h2>
+              <p style="color: #666; margin: 5px 0 0 0;">Your email settings are working correctly!</p>
+            </div>
+
+            <p style="font-size: 16px; margin-bottom: 20px;">
+              This email confirms that your SMTP configuration is working properly. You can now send emails through the Soccer Circular platform.
+            </p>
+
+            <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <h3 style="margin: 0 0 15px 0; color: #495057;">Test Details:</h3>
+              <p style="margin: 5px 0;"><strong>Test Date:</strong> ${new Date().toLocaleString()}</p>
+              <p style="margin: 5px 0;"><strong>Recipient:</strong> ${toEmail}</p>
+            </div>
+          </div>
+
+          <div style="background: #f8f9fa; padding: 20px; text-align: center; border-radius: 0 0 10px 10px; border: 1px solid #e0e0e0; border-top: none;">
+            <p style="margin: 0; font-size: 12px; color: #666;">
+              © ${new Date().getFullYear()} Soccer Circular. All rights reserved.<br>
+              This is an automated test email.
+            </p>
+          </div>
+        </body>
+        </html>
+      `
+    });
+
+    console.log('[TestEmail] Email send result:', result.success);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'Test email sent successfully'
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to send test email'
+      });
+    }
+  } catch (error) {
+    console.error('[TestEmail] Error sending test email:', error);
+    console.error('[TestEmail] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send test email',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
 // Route definitions
 router.get('/', handleGetSystemSettings);
 router.put('/', handleUpdateSystemSettings);
@@ -395,5 +526,6 @@ router.put('/category/:category', handleUpdateSystemSettingsByCategory);
 router.post('/reset', handleResetSystemSettings);
 router.get('/export', handleExportSystemSettings);
 router.post('/import', handleRestoreSystemSettings);
+router.post('/email/test', handleTestEmail);
 
 export default router;

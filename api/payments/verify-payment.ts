@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 import { v4 as uuidv4 } from 'uuid';
+import { sendAcademyPaymentReceipt } from '../lib/send-payment-receipt.js';
 
 // Version 2.0 - Fixed date handling and improved error handling
 
@@ -162,6 +163,43 @@ export default async function handler(
 
         if (existingSub) {
             console.log('[VERCEL] Subscription already processed');
+
+            const { data: existingPayment } = await supabase
+                .from('subscription_payments')
+                .select('id')
+                .eq('subscription_id', existingSub.id)
+                .or(`payment_reference.eq.${session.id},notes.ilike.%${session.id}%`)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .maybeSingle();
+
+            if (existingPayment?.id) {
+                const { data: academy } = await supabase
+                    .from('academies')
+                    .select('name, email')
+                    .eq('id', academyId)
+                    .single();
+
+                const { data: plan } = await supabase
+                    .from('subscription_plans')
+                    .select('name')
+                    .eq('id', planId)
+                    .maybeSingle();
+
+                if (academy?.email) {
+                    await sendAcademyPaymentReceipt(
+                        supabase,
+                        existingPayment.id,
+                        academy.email,
+                        academy.name,
+                        plan?.name || session.metadata?.planName || planId,
+                        session.amount_total ? session.amount_total / 100 : 0,
+                        (session.currency || 'usd').toUpperCase(),
+                        typeof session.payment_intent === 'string' ? session.payment_intent : session.id
+                    );
+                }
+            }
+
             return res.json({
                 success: true,
                 message: 'Subscription already processed',
@@ -299,6 +337,34 @@ export default async function handler(
                 created_at: safeISOString(new Date(), 'payment_created_at'),
                 updated_at: safeISOString(new Date(), 'payment_updated_at')
             });
+
+        const { data: academy } = await supabase
+            .from('academies')
+            .select('name, email')
+            .eq('id', academyId)
+            .single();
+
+        const { data: plan } = await supabase
+            .from('subscription_plans')
+            .select('name')
+            .eq('id', planId)
+            .maybeSingle();
+
+        if (academy?.email) {
+            const receiptSent = await sendAcademyPaymentReceipt(
+                supabase,
+                paymentId,
+                academy.email,
+                academy.name,
+                plan?.name || session.metadata?.planName || planId,
+                session.amount_total ? session.amount_total / 100 : 0,
+                (session.currency || 'usd').toUpperCase(),
+                typeof session.payment_intent === 'string' ? session.payment_intent : session.id
+            );
+            if (receiptSent) {
+                console.log('[VERCEL] Payment receipt email sent to', academy.email);
+            }
+        }
 
         return res.json({
             success: true,

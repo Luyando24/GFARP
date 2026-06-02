@@ -133,6 +133,13 @@ async function runPlayerSystemMigration() {
       ALTER TABLE individual_players 
       ADD COLUMN IF NOT EXISTS stripe_customer_id VARCHAR(255);
 
+      -- Email verification for individual players
+      ALTER TABLE individual_players
+      ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE,
+      ADD COLUMN IF NOT EXISTS verification_token TEXT;
+
+      UPDATE individual_players SET email_verified = TRUE WHERE email_verified IS NOT TRUE;
+
       -- Add stripe_session_id to player_purchases if not exists
       ALTER TABLE player_purchases 
       ADD COLUMN IF NOT EXISTS stripe_session_id VARCHAR(255);

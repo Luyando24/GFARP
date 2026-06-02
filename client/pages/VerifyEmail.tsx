@@ -1,16 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { useSearchParams, useNavigate, Link } from 'react-router-dom';
-import { CheckCircle, XCircle, Loader2, Mail } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '../hooks/use-toast';
 import { saveSession } from '@/lib/auth';
+import { PlayerApi } from '@/lib/api';
+
+type AccountType = 'academy' | 'player';
 
 export default function VerifyEmail() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { toast } = useToast();
   const token = searchParams.get('token');
+  const accountType: AccountType =
+    searchParams.get('type') === 'player' ? 'player' : 'academy';
 
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Verifying your email address...');
@@ -24,11 +29,37 @@ export default function VerifyEmail() {
 
     const verifyToken = async () => {
       try {
+        if (accountType === 'player') {
+          const data = await PlayerApi.verifyEmail(token);
+
+          if (data.success && data.data?.token) {
+            setStatus('success');
+            setMessage('Your email has been successfully verified!');
+
+            saveSession({
+              userId: data.data.user.id,
+              role: 'individual_player',
+              schoolId: null,
+              tokens: { accessToken: data.data.token, expiresInSec: 24 * 3600 },
+            });
+
+            toast({
+              title: 'Verification Successful',
+              description: 'Redirecting to your player dashboard...',
+            });
+
+            setTimeout(() => navigate('/player/dashboard'), 2000);
+            return;
+          }
+
+          setStatus('error');
+          setMessage(data.message || 'Verification failed. The token may be invalid or expired.');
+          return;
+        }
+
         const response = await fetch('/api/football-auth/verify-email', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token }),
         });
 
@@ -37,46 +68,46 @@ export default function VerifyEmail() {
         if (data.success) {
           setStatus('success');
           setMessage('Your email has been successfully verified!');
-          
-          // Auto-login if data is returned
+
           if (data.data && data.data.token) {
-             const session = {
+            const session = {
               userId: data.data.user.id,
               role: 'academy',
-              schoolId: data.data.user.academy_id, // Mapping academy_id to schoolId for compatibility
-              tokens: { accessToken: data.data.token, expiresInSec: 24 * 3600 }
+              schoolId: data.data.user.academy_id,
+              tokens: { accessToken: data.data.token, expiresInSec: 24 * 3600 },
             } as any;
-            
-            localStorage.setItem('isNewRegistration', 'false'); // Clear new reg flag
-            
-            // Store full academy data for the dashboard
+
+            localStorage.setItem('isNewRegistration', 'false');
+
             if (data.data.academy) {
-               localStorage.setItem('academy_data', JSON.stringify(data.data.academy));
+              localStorage.setItem('academy_data', JSON.stringify(data.data.academy));
             }
-            
+
             saveSession(session);
-            
+
             toast({
-              title: "Verification Successful",
-              description: "Redirecting to dashboard...",
+              title: 'Verification Successful',
+              description: 'Redirecting to dashboard...',
             });
 
-            setTimeout(() => {
-              navigate('/academy-dashboard');
-            }, 2000);
+            setTimeout(() => navigate('/academy-dashboard'), 2000);
           }
         } else {
           setStatus('error');
           setMessage(data.message || 'Verification failed. The token may be invalid or expired.');
         }
-      } catch (error) {
+      } catch {
         setStatus('error');
         setMessage('An unexpected error occurred. Please try again later.');
       }
     };
 
     verifyToken();
-  }, [token, navigate, toast]);
+  }, [token, accountType, navigate, toast]);
+
+  const dashboardPath = accountType === 'player' ? '/player/dashboard' : '/academy-dashboard';
+  const registerAgainPath =
+    accountType === 'player' ? '/player/register' : '/academy-registration';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-white flex items-center justify-center p-4">
@@ -92,9 +123,7 @@ export default function VerifyEmail() {
             {status === 'success' && 'Email Verified'}
             {status === 'error' && 'Verification Failed'}
           </CardTitle>
-          <CardDescription>
-            {message}
-          </CardDescription>
+          <CardDescription>{message}</CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
           {status === 'success' && (
@@ -102,7 +131,10 @@ export default function VerifyEmail() {
               <p className="text-sm text-gray-500">
                 You will be automatically redirected to your dashboard in a few seconds.
               </p>
-              <Button onClick={() => navigate('/academy-dashboard')} className="w-full bg-[#005391] hover:bg-[#004274]">
+              <Button
+                onClick={() => navigate(dashboardPath)}
+                className="w-full bg-[#005391] hover:bg-[#004274]"
+              >
                 Go to Dashboard
               </Button>
             </div>
@@ -114,17 +146,17 @@ export default function VerifyEmail() {
                 Please contact support if you believe this is an error or try registering again.
               </p>
               <div className="flex gap-3">
-                 <Button variant="outline" onClick={() => navigate('/')} className="flex-1">
+                <Button variant="outline" onClick={() => navigate('/')} className="flex-1">
                   Back to Home
                 </Button>
-                <Button onClick={() => navigate('/academy-registration')} className="flex-1">
+                <Button onClick={() => navigate(registerAgainPath)} className="flex-1">
                   Register Again
                 </Button>
               </div>
             </div>
           )}
-          
-           {status === 'loading' && (
+
+          {status === 'loading' && (
             <div className="text-center space-y-4">
               <p className="text-sm text-gray-500">
                 Please wait while we verify your account credentials...

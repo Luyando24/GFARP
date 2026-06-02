@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { authenticateToken } from '../middleware/auth.js';
 import { getStripe, createStripeCustomer, STRIPE_CONFIG } from '../lib/stripe.js';
 import { emailService } from '../lib/email-service.js';
+import { sendSubscriptionPaymentReceiptByPaymentId } from '../lib/payment-receipt.js';
 
 // Get Academy Subscription Details
 export const handleGetSubscription: RequestHandler = async (req, res) => {
@@ -553,24 +554,11 @@ export const handleUpgradePlan: RequestHandler = async (req, res) => {
 
     // If the payment is completed immediately (i.e. not PENDING/CASH), send email
     const isPaymentCompleted = result.newPlan.price === 0 || paymentMethod !== 'CASH';
-    if (isPaymentCompleted) {
+    if (isPaymentCompleted && result.paymentId) {
       try {
-        const orgResult = await query(
-          `SELECT name, email FROM ${orgTable} WHERE id = $1`,
-          [academyId]
-        );
-        if (orgResult.rows.length > 0 && orgResult.rows[0].email) {
-          const org = orgResult.rows[0];
-          await emailService.sendPaymentConfirmationEmail(
-            org.email,
-            org.name,
-            Number(result.newPlan.price),
-            'USD',
-            result.newPlan.name,
-            paymentReference || 'DASHBOARD_UPGRADE',
-            new Date()
-          );
-          console.log(`Payment confirmation email sent to ${org.email} for mock/direct upgrade`);
+        const sent = await sendSubscriptionPaymentReceiptByPaymentId(result.paymentId);
+        if (sent) {
+          console.log(`Payment confirmation email sent for payment ${result.paymentId}`);
         }
       } catch (emailErr) {
         console.error('Error sending upgrade confirmation email:', emailErr);
@@ -623,15 +611,6 @@ export const handleProcessCashPayment: RequestHandler = async (req, res) => {
       });
     }
 
-    let emailDetails: {
-      email: string;
-      name: string;
-      amount: number;
-      currency: string;
-      planName: string;
-      paymentReference: string;
-    } | null = null;
-
     const result = await transaction(async (client) => {
       // Update payment status
       const updatePaymentQuery = `
@@ -671,61 +650,15 @@ export const handleProcessCashPayment: RequestHandler = async (req, res) => {
         }
       }
 
-      if (status === 'COMPLETED') {
-        // Get subscription and org info
-        let subInfoResult = await client.query(`
-          SELECT 
-            a.name as org_name,
-            a.email as org_email,
-            p.name as plan_name
-          FROM academy_subscriptions s
-          JOIN academies a ON s.academy_id = a.id
-          JOIN subscription_plans p ON s.plan_id = p.id
-          WHERE s.id = $1
-        `, [payment.subscription_id]);
-
-        if (subInfoResult.rows.length === 0) {
-          subInfoResult = await client.query(`
-            SELECT 
-              a.name as org_name,
-              a.email as org_email,
-              p.name as plan_name
-            FROM agency_subscriptions s
-            JOIN agencies a ON s.agency_id = a.id
-            JOIN subscription_plans p ON s.plan_id = p.id
-            WHERE s.id = $1
-          `, [payment.subscription_id]);
-        }
-
-        if (subInfoResult.rows.length > 0 && subInfoResult.rows[0].org_email) {
-          const info = subInfoResult.rows[0];
-          emailDetails = {
-            email: info.org_email,
-            name: info.org_name,
-            amount: Number(payment.amount),
-            currency: payment.currency || 'USD',
-            planName: info.plan_name,
-            paymentReference: payment.payment_reference || payment.id
-          };
-        }
-      }
-
       return payment;
     });
 
-    // Send email outside the transaction after successful commit
-    if (emailDetails) {
+    if (status === 'COMPLETED' && result.id) {
       try {
-        await emailService.sendPaymentConfirmationEmail(
-          emailDetails.email,
-          emailDetails.name,
-          emailDetails.amount,
-          emailDetails.currency,
-          emailDetails.planName,
-          emailDetails.paymentReference,
-          new Date()
-        );
-        console.log(`Cash payment confirmation email sent to ${emailDetails.email}`);
+        const sent = await sendSubscriptionPaymentReceiptByPaymentId(result.id);
+        if (sent) {
+          console.log(`Cash payment confirmation email sent for payment ${result.id}`);
+        }
       } catch (emailErr) {
         console.error('Error sending cash payment confirmation email:', emailErr);
       }

@@ -39,6 +39,7 @@ import fifaComplianceRouter from "./routes/fifa-compliance.js";
 import complianceDocumentsRouter from "./routes/compliance-documents.js";
 import subscriptionRouter from "./routes/subscription-management.js";
 import stripePaymentsRouter from "./routes/stripe-payments.js";
+import paymentsRouter from "./routes/payments.js";
 import stripeWebhooksRouter from "./routes/stripe-webhooks.js";
 import stripeAdminRouter from "./routes/stripe-admin.js";
 import adminSalesRouter from "./routes/admin-sales.js";
@@ -150,6 +151,9 @@ export function createServer() {
 
   // Stripe payment routes
   api.use("/stripe", stripePaymentsRouter);
+
+  // Payment verification (Stripe checkout success callback)
+  api.use("/payments", paymentsRouter);
 
   // Stripe admin routes
   api.use("/stripe/admin", stripeAdminRouter);

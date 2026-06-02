@@ -4,9 +4,60 @@ import jwt from 'jsonwebtoken';
 import { query, hashPassword, verifyPassword, transaction } from '../lib/db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { getStripe, createStripeCustomer } from '../lib/stripe.js';
+import { emailService } from '../lib/email-service.js';
+import { sendPlayerPurchaseReceipt } from '../lib/payment-receipt.js';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+
+function getAppBaseUrl(): string {
+  return process.env.VITE_APP_URL || process.env.CLIENT_URL || 'http://localhost:8080';
+}
+
+let emailVerificationSchemaReady: Promise<void> | null = null;
+
+function ensureEmailVerificationSchema(): Promise<void> {
+  if (!emailVerificationSchemaReady) {
+    emailVerificationSchemaReady = (async () => {
+      await query(`
+        ALTER TABLE individual_players
+        ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE,
+        ADD COLUMN IF NOT EXISTS verification_token TEXT
+      `);
+      await query(`
+        UPDATE individual_players
+        SET email_verified = TRUE
+        WHERE email_verified IS NOT TRUE AND verification_token IS NULL
+      `);
+    })().catch((err) => {
+      emailVerificationSchemaReady = null;
+      console.warn('[Player] Could not ensure email verification columns:', err);
+      throw err;
+    });
+  }
+  return emailVerificationSchemaReady;
+}
+
+async function sendPlayerVerificationEmail(
+  email: string,
+  firstName: string,
+  lastName: string,
+  verificationToken: string
+): Promise<void> {
+  const verificationLink = `${getAppBaseUrl()}/verify-email?token=${verificationToken}&type=player`;
+  const playerName = `${firstName} ${lastName}`.trim() || 'Player';
+
+  await emailService.initializeFromDatabase();
+  const sent = await emailService.sendPlayerRegistrationVerificationEmail(
+    email,
+    playerName,
+    verificationLink
+  );
+
+  if (!sent) {
+    console.warn('[Player] SMTP not configured or send failed. Verification link:', verificationLink);
+  }
+}
 
 // Plans are now fetched from the database
 
@@ -156,8 +207,10 @@ router.post('/verify-payment', authenticateToken, async (req, res) => {
     if (session.payment_status === 'paid') {
       const planId = session.metadata?.planId || 'pro';
       const amount = session.amount_total ? session.amount_total / 100 : 0;
+      const currency = (session.currency || 'usd').toUpperCase();
+      const paymentReference =
+        typeof session.payment_intent === 'string' ? session.payment_intent : sessionId;
 
-      // Record purchase
       await query(
         `INSERT INTO player_purchases (player_id, plan_type, amount, status, stripe_session_id, created_at)
          VALUES ($1, $2, $3, 'completed', $4, NOW())
@@ -165,7 +218,24 @@ router.post('/verify-payment', authenticateToken, async (req, res) => {
         [userId, planId, amount, sessionId]
       );
 
-      res.json({ success: true, message: 'Payment verified and subscription activated' });
+      const receiptSent = await sendPlayerPurchaseReceipt(
+        sessionId,
+        userId,
+        planId,
+        amount,
+        currency,
+        paymentReference
+      );
+
+      if (receiptSent) {
+        console.log(`[Player] Payment receipt email sent for session ${sessionId}`);
+      }
+
+      res.json({
+        success: true,
+        message: 'Payment verified and subscription activated',
+        receiptEmailSent: receiptSent,
+      });
     } else {
       res.status(400).json({ error: 'Payment not completed' });
     }
@@ -180,51 +250,59 @@ router.post('/verify-payment', authenticateToken, async (req, res) => {
 // Register a new individual player
 router.post('/register', async (req, res) => {
   try {
+    await ensureEmailVerificationSchema();
     const { email, password, firstName, lastName } = req.body;
+    const normalizedEmail = String(email || '').toLowerCase().trim();
 
-    if (!email || !password || !firstName || !lastName) {
+    if (!normalizedEmail || !password || !firstName || !lastName) {
       return res.status(400).json({ error: 'All fields are required' });
     }
 
-    // Check if email already exists
     const existingUser = await query(
-      'SELECT id FROM individual_players WHERE email = $1',
-      [email]
+      'SELECT id, email_verified FROM individual_players WHERE email = $1',
+      [normalizedEmail]
     );
 
     if (existingUser.rows.length > 0) {
-      return res.status(400).json({ error: 'Email already registered' });
+      const existing = existingUser.rows[0];
+      if (existing.email_verified) {
+        return res.status(400).json({ error: 'Email already registered' });
+      }
+
+      await query('DELETE FROM individual_players WHERE id = $1', [existing.id]);
     }
 
     const hashedPassword = await hashPassword(password);
     const playerId = uuidv4();
+    const verificationToken = uuidv4();
 
-    // Create player account
     await query(
-      `INSERT INTO individual_players (id, email, password_hash, first_name, last_name)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [playerId, email, hashedPassword, firstName, lastName]
+      `INSERT INTO individual_players (
+         id, email, password_hash, first_name, last_name,
+         email_verified, verification_token
+       ) VALUES ($1, $2, $3, $4, $5, false, $6)`,
+      [playerId, normalizedEmail, hashedPassword, firstName, lastName, verificationToken]
     );
 
-    // Create empty profile
     await query(
       `INSERT INTO player_profiles (player_id) VALUES ($1)`,
       [playerId]
     );
 
-    // Generate token
-    const token = jwt.sign(
-      { id: playerId, email, name: `${firstName} ${lastName}`, role: 'individual_player' },
-      JWT_SECRET,
-      { expiresIn: '24h' }
+    await sendPlayerVerificationEmail(
+      normalizedEmail,
+      firstName,
+      lastName,
+      verificationToken
     );
 
     res.status(201).json({
       success: true,
-      token,
+      message: 'Registration successful. Please check your email to verify your account.',
+      requireVerification: true,
       user: {
         id: playerId,
-        email,
+        email: normalizedEmail,
         firstName,
         lastName,
         role: 'individual_player'
@@ -237,14 +315,132 @@ router.post('/register', async (req, res) => {
   }
 });
 
+// Verify email
+router.post('/verify-email', async (req, res) => {
+  try {
+    await ensureEmailVerificationSchema();
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Verification token is required' });
+    }
+
+    const result = await query(
+      `SELECT id, email, first_name, last_name, email_verified
+       FROM individual_players
+       WHERE verification_token = $1`,
+      [token]
+    );
+
+    if (result.rows.length === 0) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired verification token' });
+    }
+
+    const player = result.rows[0];
+
+    if (!player.email_verified) {
+      await query(
+        `UPDATE individual_players
+         SET email_verified = true, verification_token = null, updated_at = NOW()
+         WHERE id = $1`,
+        [player.id]
+      );
+    }
+
+    const accessToken = jwt.sign(
+      {
+        id: player.id,
+        email: player.email,
+        name: `${player.first_name} ${player.last_name}`,
+        role: 'individual_player'
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
+
+    res.json({
+      success: true,
+      message: 'Email verified successfully',
+      data: {
+        token: accessToken,
+        user: {
+          id: player.id,
+          email: player.email,
+          firstName: player.first_name,
+          lastName: player.last_name,
+          role: 'individual_player'
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Player verify email error:', error);
+    res.status(500).json({ success: false, message: 'Verification failed' });
+  }
+});
+
+// Resend verification email
+router.post('/resend-verification', async (req, res) => {
+  try {
+    await ensureEmailVerificationSchema();
+    const normalizedEmail = String(req.body.email || '').toLowerCase().trim();
+
+    if (!normalizedEmail) {
+      return res.status(400).json({ success: false, message: 'Email is required' });
+    }
+
+    const result = await query(
+      `SELECT id, email, first_name, last_name, email_verified
+       FROM individual_players WHERE email = $1`,
+      [normalizedEmail]
+    );
+
+    if (result.rows.length === 0) {
+      return res.json({
+        success: true,
+        message: 'If your account exists, a verification email has been sent.'
+      });
+    }
+
+    const player = result.rows[0];
+
+    if (player.email_verified) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is already verified. Please log in.'
+      });
+    }
+
+    const verificationToken = uuidv4();
+    await query(
+      'UPDATE individual_players SET verification_token = $1, updated_at = NOW() WHERE id = $2',
+      [verificationToken, player.id]
+    );
+
+    await sendPlayerVerificationEmail(
+      player.email,
+      player.first_name,
+      player.last_name,
+      verificationToken
+    );
+
+    res.json({ success: true, message: 'Verification email sent successfully' });
+  } catch (error) {
+    console.error('Player resend verification error:', error);
+    res.status(500).json({ success: false, message: 'Failed to send verification email' });
+  }
+});
+
 // Login
 router.post('/login', async (req, res) => {
   try {
+    await ensureEmailVerificationSchema();
     const { email, password } = req.body;
+    const normalizedEmail = String(email || '').toLowerCase().trim();
 
     const result = await query(
-      'SELECT id, email, password_hash, first_name, last_name FROM individual_players WHERE email = $1',
-      [email]
+      `SELECT id, email, password_hash, first_name, last_name, email_verified
+       FROM individual_players WHERE email = $1`,
+      [normalizedEmail]
     );
 
     if (result.rows.length === 0) {
@@ -256,6 +452,13 @@ router.post('/login', async (req, res) => {
 
     if (!isValid) {
       return res.status(401).json({ error: 'Invalid credentials' });
+    }
+
+    if (player.email_verified === false) {
+      return res.status(403).json({
+        error: 'Please verify your email address before logging in. Check your inbox for the verification link.',
+        requireVerification: true
+      });
     }
 
     const token = jwt.sign(

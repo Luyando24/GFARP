@@ -9,6 +9,7 @@ import { User, ArrowLeft, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import LanguageToggle from "@/components/navigation/LanguageToggle";
+import { useToast } from "@/hooks/use-toast";
 
 export default function PlayerRegister() {
   usePageTitle("Player Registration");
@@ -20,6 +21,7 @@ export default function PlayerRegister() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
   const { t, dir } = useTranslation();
 
   const submit = async (e: React.FormEvent) => {
@@ -38,6 +40,22 @@ export default function PlayerRegister() {
         email,
         password,
       });
+
+      if (res.requireVerification) {
+        toast({
+          title: t("auth.success.title"),
+          description: t("auth.success.verifyEmail"),
+          duration: 6000,
+        });
+        navigate("/verification-pending", {
+          state: { email, accountType: "player" },
+        });
+        return;
+      }
+
+      if (!res.token) {
+        throw new Error(res.message || "Registration failed");
+      }
 
       saveSession({
         userId: res.user.id,

@@ -3,7 +3,11 @@ import Stripe from 'stripe';
 import { getStripe, STRIPE_WEBHOOK_SECRET } from '../lib/stripe.js';
 import { query, transaction } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
-import { emailService } from '../lib/email-service.js';
+import {
+  sendAcademyReceiptForCheckoutSession,
+  sendPlayerPurchaseReceipt,
+  sendSubscriptionPaymentReceiptByPaymentId,
+} from '../lib/payment-receipt.js';
 
 const router = Router();
 
@@ -232,14 +236,7 @@ async function handleSubscriptionDeleted(subscription: any) {
 async function handlePaymentSucceeded(invoice: any) {
   console.log('Processing payment succeeded:', invoice.id);
 
-  let emailDetails: {
-    email: string;
-    name: string;
-    amount: number;
-    currency: string;
-    planName: string;
-    paymentReference: string;
-  } | null = null;
+  let paymentId: string | null = null;
 
   try {
     await transaction(async (client) => {
@@ -265,13 +262,19 @@ async function handlePaymentSucceeded(invoice: any) {
       const { 
         subscription_id: subscriptionId, 
         academy_id: academyId,
-        academy_name: academyName,
-        academy_email: academyEmail,
-        plan_name: planName
       } = subscriptionResult.rows[0];
 
-      // Create payment record
-      const paymentId = uuidv4();
+      const existingPayment = await client.query(
+        'SELECT id FROM subscription_payments WHERE stripe_invoice_id = $1',
+        [invoice.id]
+      );
+
+      if (existingPayment.rows.length > 0) {
+        paymentId = existingPayment.rows[0].id;
+        return;
+      }
+
+      paymentId = uuidv4();
       const amountPaid = invoice.amount_paid / 100;
       const currency = invoice.currency.toUpperCase();
       const paymentReference = invoice.payment_intent || invoice.id;
@@ -295,18 +298,6 @@ async function handlePaymentSucceeded(invoice: any) {
       ]);
 
       console.log(`Payment recorded for subscription ${subscriptionId}, academy ${academyId}`);
-
-      // Set email details to be sent after commit
-      if (academyEmail) {
-        emailDetails = {
-          email: academyEmail,
-          name: academyName,
-          amount: amountPaid,
-          currency: currency,
-          planName: planName,
-          paymentReference: paymentReference
-        };
-      }
 
       // Check for sales agent and calculate commission
       const academyInfoResult = await client.query(
@@ -350,22 +341,10 @@ async function handlePaymentSucceeded(invoice: any) {
       }
     });
 
-    // Send email outside the transaction after successful commit
-    if (emailDetails) {
-      try {
-        await emailService.sendPaymentConfirmationEmail(
-          emailDetails.email,
-          emailDetails.name,
-          emailDetails.amount,
-          emailDetails.currency,
-          emailDetails.planName,
-          emailDetails.paymentReference,
-          new Date(),
-          invoice.id
-        );
-        console.log(`Payment confirmation email sent to ${emailDetails.email}`);
-      } catch (emailErr) {
-        console.error('Error sending payment confirmation email:', emailErr);
+    if (paymentId) {
+      const sent = await sendSubscriptionPaymentReceiptByPaymentId(paymentId);
+      if (sent) {
+        console.log(`Payment confirmation email sent for payment ${paymentId}`);
       }
     }
   } catch (error: any) {
@@ -488,76 +467,49 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
 async function handleCheckoutSessionCompleted(session: any) {
   console.log('Processing checkout session completed:', session.id);
 
-  let emailDetails: {
-    email: string;
-    name: string;
-    amount: number;
-    currency: string;
-    planName: string;
-    paymentReference: string;
-  } | null = null;
-
   try {
-    // Handle player subscription
     if (session.metadata?.type === 'player_subscription') {
       const { playerId, planId } = session.metadata;
-      
+
       console.log(`Processing player subscription for player ${playerId}, plan ${planId}`);
-      
+
       await transaction(async (client) => {
-        // Record purchase
-        await client.query(`
-          INSERT INTO player_purchases (
+        await client.query(
+          `INSERT INTO player_purchases (
             player_id, plan_type, amount, status, stripe_session_id, created_at
           )
           VALUES ($1, $2, $3, $4, $5, NOW())
-          ON CONFLICT (stripe_session_id) DO NOTHING
-        `, [
-          playerId,
-          planId,
-          session.amount_total / 100, // Convert from cents
-          'completed',
-          session.id
-        ]);
-        
-        console.log(`Player purchase recorded for player ${playerId}`);
-
-        // Fetch player details for email confirmation
-        const playerResult = await client.query(
-          'SELECT first_name, last_name, email FROM individual_players WHERE id = $1',
-          [playerId]
+          ON CONFLICT (stripe_session_id) DO NOTHING`,
+          [
+            playerId,
+            planId,
+            session.amount_total / 100,
+            'completed',
+            session.id,
+          ]
         );
-
-        if (playerResult.rows.length > 0 && playerResult.rows[0].email) {
-          const player = playerResult.rows[0];
-          emailDetails = {
-            email: player.email,
-            name: `${player.first_name || ''} ${player.last_name || ''}`.trim() || 'Player',
-            amount: session.amount_total / 100,
-            currency: (session.currency || 'USD').toUpperCase(),
-            planName: `${planId.charAt(0).toUpperCase() + planId.slice(1)} Plan`,
-            paymentReference: session.payment_intent || session.id
-          };
-        }
+        console.log(`Player purchase recorded for player ${playerId}`);
       });
 
-      // Send email confirmation outside the transaction
-      if (emailDetails) {
-        try {
-          await emailService.sendPaymentConfirmationEmail(
-            emailDetails.email,
-            emailDetails.name,
-            emailDetails.amount,
-            emailDetails.currency,
-            emailDetails.planName,
-            emailDetails.paymentReference,
-            new Date(),
-            session.id
-          );
-          console.log(`Player payment confirmation email sent to ${emailDetails.email}`);
-        } catch (emailErr) {
-          console.error('Error sending player payment confirmation email:', emailErr);
-        }
+      const paymentReference =
+        typeof session.payment_intent === 'string' ? session.payment_intent : session.id;
+      const sent = await sendPlayerPurchaseReceipt(
+        session.id,
+        playerId,
+        planId,
+        session.amount_total / 100,
+        (session.currency || 'usd').toUpperCase(),
+        paymentReference
+      );
+      if (sent) {
+        console.log(`Player payment confirmation email sent for session ${session.id}`);
+      }
+    } else if (session.metadata?.academyId) {
+      const paymentIntent =
+        typeof session.payment_intent === 'string' ? session.payment_intent : null;
+      const sent = await sendAcademyReceiptForCheckoutSession(session.id, paymentIntent);
+      if (sent) {
+        console.log(`Academy payment confirmation email sent for session ${session.id}`);
       }
     }
   } catch (error: any) {
