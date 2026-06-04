@@ -180,22 +180,23 @@ function structureSettings(settings: Record<string, string>): SystemSettingsData
           // Try to parse as JSON for complex types
           const parsedValue = JSON.parse(value);
           
-          // Mask SMTP password - never return plaintext in GET endpoints
-          if (category === 'email' && field === 'smtpPass' && typeof parsedValue === 'string') {
-            (structured[category as keyof SystemSettingsData] as any)[field] = '••••••••';
+          // Omit SMTP password entirely from GET response to prevent saving masked value
+          if (category === 'email' && field === 'smtpPass') {
+            // Don't include smtpPass in the response
+            return;
           } else {
             (structured[category as keyof SystemSettingsData] as any)[field] = parsedValue;
           }
         } catch {
           // If not JSON, use as string
-          let stringValue = value;
           
-          // Mask SMTP password - never return plaintext in GET endpoints
+          // Omit SMTP password entirely from GET response to prevent saving masked value
           if (category === 'email' && field === 'smtpPass') {
-            stringValue = '••••••••';
+            // Don't include smtpPass in the response
+            return;
           }
           
-          (structured[category as keyof SystemSettingsData] as any)[field] = stringValue;
+          (structured[category as keyof SystemSettingsData] as any)[field] = value;
         }
       }
     }
@@ -304,24 +305,17 @@ export const handleGetSystemSettingsByCategory: RequestHandler = async (req, res
     const categorySettings: Record<string, any> = {};
     settings.forEach(setting => {
       const key = setting.key.replace(`${category}.`, '');
+      
+      // Omit SMTP password entirely from GET response to prevent saving masked value
+      if (category === 'email' && key === 'smtpPass') {
+        return;
+      }
+      
       try {
         const parsedValue = JSON.parse(setting.value);
-        
-        // Mask SMTP password - never return plaintext in GET endpoints
-        if (category === 'email' && key === 'smtpPass' && typeof parsedValue === 'string') {
-          categorySettings[key] = '••••••••';
-        } else {
-          categorySettings[key] = parsedValue;
-        }
+        categorySettings[key] = parsedValue;
       } catch {
-        let stringValue = setting.value;
-        
-        // Mask SMTP password - never return plaintext in GET endpoints
-        if (category === 'email' && key === 'smtpPass') {
-          stringValue = '••••••••';
-        }
-        
-        categorySettings[key] = stringValue;
+        categorySettings[key] = setting.value;
       }
     });
 

@@ -430,6 +430,7 @@ export default function AdminDashboard() {
   const [viewingTransaction, setViewingTransaction] = useState<any | null>(null);
   const [isSendingReceipt, setIsSendingReceipt] = useState(false);
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
+  const [passwordChanged, setPasswordChanged] = useState(false);
 
   // System settings state
   const [systemSettings, setSystemSettings] = useState({
@@ -917,16 +918,28 @@ export default function AdminDashboard() {
 
   const saveSystemSettings = async () => {
     try {
+      // Only include smtpPass if it has been changed by the user
+      const settingsToSave = passwordChanged 
+        ? systemSettings 
+        : {
+            ...systemSettings,
+            email: {
+              ...systemSettings.email,
+              smtpPass: undefined // Don't send password if not changed
+            }
+          };
+
       const res = await fetch('/api/system-settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(systemSettings),
+        body: JSON.stringify(settingsToSave),
       });
 
       if (res.ok) {
         console.log('System settings saved successfully');
+        setPasswordChanged(false); // Reset password changed flag
         // You could add a toast notification here
       } else {
         console.error('Failed to save system settings');
@@ -2424,7 +2437,10 @@ export default function AdminDashboard() {
                           type={showSmtpPassword ? "text" : "password"}
                           placeholder="••••••••"
                           value={systemSettings.email.smtpPass}
-                          onChange={(e) => handleSystemSettingsChange('email', 'smtpPass', e.target.value)}
+                          onChange={(e) => {
+                            handleSystemSettingsChange('email', 'smtpPass', e.target.value);
+                            setPasswordChanged(true);
+                          }}
                           className="pr-10"
                         />
                         <button
