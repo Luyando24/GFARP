@@ -213,6 +213,11 @@ function flattenSettings(settings: SystemSettingsData): Record<string, string> {
     Object.entries(categorySettings).forEach(([key, value]) => {
       const flatKey = `${category}.${key}`;
       
+      // Skip empty SMTP password to prevent overwriting existing password
+      if (category === 'email' && key === 'smtpPass' && !value) {
+        return;
+      }
+      
       // Encrypt SMTP password before saving
       if (category === 'email' && key === 'smtpPass' && value) {
         flattened[flatKey] = encryptPassword(String(value));
@@ -344,7 +349,15 @@ export const handleUpdateSystemSettingsByCategory: RequestHandler = async (req, 
     }
 
     // Update each setting in the category
-    const updatePromises = Object.entries(categoryData).map(([key, value]) => {
+    const updatePromises = Object.entries(categoryData)
+      .filter(([key, value]) => {
+        // Skip empty SMTP password to prevent overwriting existing password
+        if (category === 'email' && key === 'smtpPass' && !value) {
+          return false;
+        }
+        return true;
+      })
+      .map(([key, value]) => {
       const flatKey = `${category}.${key}`;
       
       // Encrypt SMTP password before saving
