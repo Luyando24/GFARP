@@ -17,8 +17,8 @@ function getEncryptionKey(): Buffer {
   
   if (!key) {
     if (!sessionKey) {
-      console.warn('ENCRYPTION_KEY environment variable not set. Using a generated key for this session only.');
-      sessionKey = crypto.randomBytes(32);
+      console.warn('ENCRYPTION_KEY environment variable not set. Using a fallback key for development.');
+      sessionKey = crypto.createHash('sha256').update('sofwan_default_fallback_encryption_key_2024').digest();
     }
     return sessionKey;
   }
