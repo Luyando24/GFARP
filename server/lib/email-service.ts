@@ -270,12 +270,13 @@ class EmailService {
       </html>
     `;
 
-    return this.sendEmail({
+    const result = await this.sendEmail({
       to: playerEmail,
       subject: 'Verify your Soccer Circular Player Account',
       html,
       text: `Hi ${playerName},\n\nPlease verify your email by visiting:\n${verificationLink}\n\nIf you didn't create an account, ignore this email.`,
     });
+    return result.success;
   }
 
   async sendPaymentConfirmationEmail(
@@ -300,11 +301,12 @@ class EmailService {
       stripeInvoiceId
     );
 
-    return this.sendEmail({
+    const result = await this.sendEmail({
       to: toEmail,
       subject,
       html
     });
+    return result.success;
   }
 
   private generateActivationEmailTemplate(

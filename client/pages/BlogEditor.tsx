@@ -151,7 +151,7 @@ export default function BlogEditor() {
             formData.append('file', file);
             formData.append('folder', 'blog-images');
 
-            const result = await Api.post<any>('/uploads', formData);
+            const result = await Api.postFormData<any>('/uploads', formData);
 
             if (result.success) {
                 setFormData(prev => ({ ...prev, image_url: result.data.url }));

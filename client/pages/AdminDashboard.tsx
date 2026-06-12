@@ -259,9 +259,16 @@ export default function AdminDashboard() {
   const fetchComplianceDocuments = async () => {
     try {
       setIsComplianceLoading(true);
+      const token = session?.tokens?.accessToken || localStorage.getItem('football-auth-token');
+      const authHeaders: Record<string, string> = {};
+      if (token) {
+        authHeaders['Authorization'] = `Bearer ${token}`;
+      }
 
       // Fetch documents
-      const docsResponse = await fetch('/api/compliance-documents/admin-list');
+      const docsResponse = await fetch('/api/compliance-documents/admin-list', {
+        headers: authHeaders
+      });
       const docsResult = await docsResponse.json();
 
       if (docsResult.success) {
@@ -275,7 +282,9 @@ export default function AdminDashboard() {
       }
 
       // Fetch stats
-      const statsResponse = await fetch('/api/compliance-documents/stats');
+      const statsResponse = await fetch('/api/compliance-documents/stats', {
+        headers: authHeaders
+      });
       const statsResult = await statsResponse.json();
 
       if (statsResult.success) {
@@ -332,11 +341,17 @@ export default function AdminDashboard() {
 
   const submitDocumentStatusUpdate = async (documentId: string, newStatus: string, reason?: string) => {
     try {
+      const token = session?.tokens?.accessToken || localStorage.getItem('football-auth-token');
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
       const response = await fetch('/api/compliance-documents/update-status', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           documentId,
           status: newStatus,

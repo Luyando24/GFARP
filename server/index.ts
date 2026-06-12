@@ -62,6 +62,8 @@ import {
 } from "./routes/demo-documents.js";
 import agenciesRouter from "./routes/agencies.js";
 import sitemapRouter from "./routes/sitemap.js";
+import blogsRouter from "./routes/blogs.js";
+import testimonialsRouter from "./routes/testimonials.js";
 
 export function createServer() {
   console.log("Creating Express server...");
@@ -187,6 +189,8 @@ export function createServer() {
   // FIFA compliance routes
   api.use("/fifa-compliance", fifaComplianceRouter);
   api.use("/compliance-documents", complianceDocumentsRouter);
+  api.use("/blogs", blogsRouter);
+  api.use("/testimonials", testimonialsRouter);
   console.log("[SERVER] Transfer & financial routes registered");
 
   // Player documents routes
