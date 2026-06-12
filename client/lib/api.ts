@@ -335,6 +335,13 @@ export const Api = {
     });
   },
 
+  async checkAcademySlugAvailability(slug: string, playerId?: string): Promise<{ available: boolean; message: string }> {
+    return http<{ available: boolean; message: string }>('/football-players/check-slug-availability', {
+      method: 'POST',
+      body: JSON.stringify({ slug, playerId }),
+    });
+  },
+
   // Transfers
   async getTransfers(academyId: string): Promise<{ success: boolean; data: Transfer[] }> {
     return http<{ success: boolean; data: Transfer[] }>(`/transfers?academyId=${academyId}`);

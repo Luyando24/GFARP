@@ -5,6 +5,45 @@ import crypto from 'crypto';
 
 const router = Router();
 
+// Auto-run migrations for players table rich fields
+(async () => {
+  try {
+    console.log('[FootballPlayers] Ensuring rich profile columns exist in players table...');
+    await query(`
+      ALTER TABLE players 
+      ADD COLUMN IF NOT EXISTS bio TEXT,
+      ADD COLUMN IF NOT EXISTS career_history TEXT,
+      ADD COLUMN IF NOT EXISTS honours TEXT,
+      ADD COLUMN IF NOT EXISTS education TEXT,
+      ADD COLUMN IF NOT EXISTS video_links TEXT[],
+      ADD COLUMN IF NOT EXISTS transfermarket_link VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS gallery_images TEXT[],
+      ADD COLUMN IF NOT EXISTS cover_image_url TEXT,
+      ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255),
+      ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(50),
+      ADD COLUMN IF NOT EXISTS social_links JSONB,
+      ADD COLUMN IF NOT EXISTS slug VARCHAR(100),
+      ADD COLUMN IF NOT EXISTS display_name VARCHAR(200),
+      ADD COLUMN IF NOT EXISTS profile_image_url TEXT;
+    `);
+    
+    await query(`
+      DO $$
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'players_slug_key'
+        ) THEN
+          ALTER TABLE players ADD CONSTRAINT players_slug_key UNIQUE (slug);
+        END IF;
+      END
+      $$;
+    `);
+    console.log('[FootballPlayers] Rich profile columns and constraints ensured successfully.');
+  } catch (error) {
+    console.error('[FootballPlayers] Failed to ensure rich profile columns:', error);
+  }
+})();
+
 // Simple encryption function (in production, use proper encryption)
 const encrypt = (text: string) => {
   if (!text) return Buffer.from('');
@@ -453,6 +492,10 @@ export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
                                 emergency_phone_cipher, 
                                 internal_notes_cipher, notes_cipher, 
                                 current_club_cipher, city_cipher, country_cipher,
+                                bio, career_history, honours, education, video_links,
+                                transfermarket_link, gallery_images, cover_image_url,
+                                contact_email, whatsapp_number, social_links, slug,
+                                display_name, profile_image_url,
                                 created_at, updated_at
                          FROM players WHERE id = $1`;
     const playerResult = await query(playerQuery, [playerId]);
@@ -506,6 +549,21 @@ export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
         country: decrypt(player.country_cipher) || '',
         cardId: player.card_id || '',
         cardQrSignature: player.card_qr_signature || '',
+        // Rich profile fields
+        bio: player.bio || '',
+        career_history: player.career_history || '',
+        honours: player.honours || '',
+        education: player.education || '',
+        video_links: player.video_links || [],
+        transfermarket_link: player.transfermarket_link || '',
+        gallery_images: player.gallery_images || [],
+        cover_image_url: player.cover_image_url || '',
+        contact_email: player.contact_email || '',
+        whatsapp_number: player.whatsapp_number || '',
+        social_links: player.social_links || {},
+        slug: player.slug || '',
+        display_name: player.display_name || '',
+        profile_image_url: player.profile_image_url || '',
         isActive: true,
         createdAt: player.created_at.toISOString(),
         updatedAt: player.updated_at.toISOString()
@@ -666,6 +724,64 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
       values.push(encrypt(updateData.notes || ''));
     }
 
+    // Rich profile fields for academy players
+    if (updateData.bio !== undefined) {
+      updates.push(`bio = $${paramCount++}`);
+      values.push(updateData.bio);
+    }
+    if (updateData.career_history !== undefined) {
+      updates.push(`career_history = $${paramCount++}`);
+      values.push(updateData.career_history);
+    }
+    if (updateData.honours !== undefined) {
+      updates.push(`honours = $${paramCount++}`);
+      values.push(updateData.honours);
+    }
+    if (updateData.education !== undefined) {
+      updates.push(`education = $${paramCount++}`);
+      values.push(updateData.education);
+    }
+    if (updateData.video_links !== undefined) {
+      updates.push(`video_links = $${paramCount++}`);
+      values.push(Array.isArray(updateData.video_links) ? updateData.video_links : []);
+    }
+    if (updateData.transfermarket_link !== undefined) {
+      updates.push(`transfermarket_link = $${paramCount++}`);
+      values.push(updateData.transfermarket_link);
+    }
+    if (updateData.gallery_images !== undefined) {
+      updates.push(`gallery_images = $${paramCount++}`);
+      values.push(Array.isArray(updateData.gallery_images) ? updateData.gallery_images : []);
+    }
+    if (updateData.cover_image_url !== undefined) {
+      updates.push(`cover_image_url = $${paramCount++}`);
+      values.push(updateData.cover_image_url);
+    }
+    if (updateData.contact_email !== undefined) {
+      updates.push(`contact_email = $${paramCount++}`);
+      values.push(updateData.contact_email);
+    }
+    if (updateData.whatsapp_number !== undefined) {
+      updates.push(`whatsapp_number = $${paramCount++}`);
+      values.push(updateData.whatsapp_number);
+    }
+    if (updateData.social_links !== undefined) {
+      updates.push(`social_links = $${paramCount++}`);
+      values.push(typeof updateData.social_links === 'string' ? updateData.social_links : JSON.stringify(updateData.social_links || {}));
+    }
+    if (updateData.slug !== undefined) {
+      updates.push(`slug = $${paramCount++}`);
+      values.push(updateData.slug && updateData.slug.trim() !== '' ? updateData.slug.trim() : null);
+    }
+    if (updateData.display_name !== undefined) {
+      updates.push(`display_name = $${paramCount++}`);
+      values.push(updateData.display_name);
+    }
+    if (updateData.profile_image_url !== undefined) {
+      updates.push(`profile_image_url = $${paramCount++}`);
+      values.push(updateData.profile_image_url);
+    }
+
     // Add updated_at timestamp
     updates.push(`updated_at = $${paramCount++}`);
     values.push(new Date());
@@ -717,6 +833,21 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
         notes: player.notes_cipher ? decrypt(player.notes_cipher) : '',
         cardId: player.card_id || '',
         cardQrSignature: player.card_qr_signature || '',
+        // Rich profile fields
+        bio: player.bio || '',
+        career_history: player.career_history || '',
+        honours: player.honours || '',
+        education: player.education || '',
+        video_links: player.video_links || [],
+        transfermarket_link: player.transfermarket_link || '',
+        gallery_images: player.gallery_images || [],
+        cover_image_url: player.cover_image_url || '',
+        contact_email: player.contact_email || '',
+        whatsapp_number: player.whatsapp_number || '',
+        social_links: player.social_links || {},
+        slug: player.slug || '',
+        display_name: player.display_name || '',
+        profile_image_url: player.profile_image_url || '',
         isActive: player.is_active,
         createdAt: player.created_at.toISOString(),
         updatedAt: player.updated_at.toISOString(),
@@ -1140,10 +1271,52 @@ export const handleBulkImportPlayers: RequestHandler = async (req, res) => {
   }
 }
 
+// Check Slug Availability for academy players
+export const handleCheckSlugAvailability: RequestHandler = async (req, res) => {
+  try {
+    const { slug, playerId } = req.body;
+
+    if (!slug) {
+      return res.status(400).json({ error: 'Slug is required' });
+    }
+
+    const slugRegex = /^[a-z0-9-]+$/;
+    if (!slugRegex.test(slug)) {
+      return res.json({ available: false, message: 'Link Name must contain only lowercase letters, numbers, and hyphens.' });
+    }
+
+    // Check if taken in player_profiles (individual players)
+    const indyCheck = await query(
+      'SELECT player_id FROM player_profiles WHERE slug = $1',
+      [slug]
+    );
+
+    if (indyCheck.rows.length > 0) {
+      return res.json({ available: false, message: 'Link Name is already taken.' });
+    }
+
+    // Check if taken in players (academy players)
+    const academyCheck = await query(
+      'SELECT id FROM players WHERE slug = $1 AND id != $2',
+      [slug, playerId || '']
+    );
+
+    if (academyCheck.rows.length > 0) {
+      return res.json({ available: false, message: 'Link Name is already taken.' });
+    }
+
+    res.json({ available: true, message: 'Link Name is available.' });
+  } catch (error) {
+    console.error('Check academy slug availability error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 // Mount routes
 router.get('/', handleGetAcademyPlayers);
 router.get('/search', handleSearchPlayers);
 router.get('/statistics', handleGetPlayerStatistics);
+router.post('/check-slug-availability', handleCheckSlugAvailability);
 router.get('/:playerId', handleGetPlayerDetails);
 router.post('/', handleCreatePlayer);
 router.put('/:playerId', handleUpdatePlayer);

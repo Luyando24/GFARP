@@ -268,6 +268,35 @@ async function ensurePlayersSchema(client: any) {
   await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS country_cipher BYTEA;`);
   await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS card_id TEXT;`);
   await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS card_qr_signature TEXT;`);
+  
+  // Rich profile columns for academy players (matching individual player profiles)
+  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS bio TEXT;`);
+  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS career_history TEXT;`);
+  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS honours TEXT;`);
+  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS education TEXT;`);
+  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS video_links TEXT[];`);
+  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS transfermarket_link VARCHAR(255);`);
+  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS gallery_images TEXT[];`);
+  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS cover_image_url TEXT;`);
+  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255);`);
+  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(50);`);
+  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS social_links JSONB;`);
+  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS slug VARCHAR(100);`);
+  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS display_name VARCHAR(200);`);
+  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS profile_image_url TEXT;`);
+  
+  // Add unique constraint on slug if not exists
+  await client.query(`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM pg_constraint WHERE conname = 'players_slug_key'
+      ) THEN
+        ALTER TABLE players ADD CONSTRAINT players_slug_key UNIQUE (slug);
+      END IF;
+    END
+    $$;
+  `);
 }
 
 // Academy Registration

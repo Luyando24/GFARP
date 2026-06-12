@@ -775,6 +775,22 @@ router.put('/profile', authenticateToken, async (req, res) => {
   }
 });
 
+// Robust decryption helper for players table cipher columns
+const decrypt = (value: any) => {
+  if (!value) return '';
+  if (typeof value === 'string' && value.startsWith('\\x')) {
+    return Buffer.from(value.slice(2), 'hex').toString('utf8');
+  }
+  if (Buffer.isBuffer(value)) {
+    return value.toString('utf8');
+  }
+  if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
+    return Buffer.from(value as ArrayBuffer).toString('utf8');
+  }
+  if (typeof value === 'string') return value;
+  return String(value);
+};
+
 // Get Public Profile
 router.get('/public/:id', async (req, res) => {
   try {
@@ -789,6 +805,67 @@ router.get('/public/:id', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
+      // Fallback: look up in academy players table (players)
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id);
+      if (isUuid) {
+        const academyResult = await query(
+          `SELECT id, first_name_cipher, last_name_cipher, dob_cipher, position, email_cipher, phone_cipher,
+                  jersey_number, height_cm, weight_kg, preferred_foot, nationality,
+                  bio, career_history, honours, education, video_links, transfermarket_link,
+                  gallery_images, cover_image_url, contact_email, whatsapp_number, social_links, slug,
+                  display_name, profile_image_url, current_club_cipher
+           FROM players
+           WHERE id = $1`,
+          [id]
+        );
+
+        if (academyResult.rows.length > 0) {
+          const p = academyResult.rows[0];
+          const firstName = decrypt(p.first_name_cipher);
+          const lastName = decrypt(p.last_name_cipher);
+          const dob = decrypt(p.dob_cipher);
+          
+          let calculatedAge = null;
+          if (dob) {
+            const birthDate = new Date(dob);
+            const today = new Date();
+            calculatedAge = today.getFullYear() - birthDate.getFullYear();
+            const m = today.getMonth() - birthDate.getMonth();
+            if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+              calculatedAge--;
+            }
+          }
+
+          const profile = {
+            id: p.id,
+            player_id: p.id,
+            first_name: firstName,
+            last_name: lastName,
+            display_name: p.display_name || `${firstName} ${lastName}`.trim(),
+            age: p.age || calculatedAge,
+            nationality: p.nationality || '',
+            position: p.position || '',
+            current_club: p.current_club_cipher ? decrypt(p.current_club_cipher) : '',
+            video_links: p.video_links || [],
+            transfermarket_link: p.transfermarket_link || '',
+            bio: p.bio || '',
+            profile_image_url: p.profile_image_url || '',
+            gallery_images: p.gallery_images || [],
+            height: p.height_cm || null,
+            weight: p.weight_kg || null,
+            preferred_foot: p.preferred_foot ? p.preferred_foot.charAt(0).toUpperCase() + p.preferred_foot.slice(1) : '',
+            cover_image_url: p.cover_image_url || '',
+            career_history: p.career_history || '',
+            honours: p.honours || '',
+            education: p.education || '',
+            contact_email: p.contact_email || decrypt(p.email_cipher) || '',
+            whatsapp_number: p.whatsapp_number || decrypt(p.phone_cipher) || '',
+            social_links: p.social_links || {},
+            slug: p.slug || '',
+          };
+          return res.json(profile);
+        }
+      }
       return res.status(404).json({ error: 'Profile not found' });
     }
 
@@ -816,6 +893,65 @@ router.get('/public/by-slug/:slug', async (req, res) => {
     );
 
     if (result.rows.length === 0) {
+      // Fallback: look up in academy players table (players)
+      const academyResult = await query(
+        `SELECT id, first_name_cipher, last_name_cipher, dob_cipher, position, email_cipher, phone_cipher,
+                jersey_number, height_cm, weight_kg, preferred_foot, nationality,
+                bio, career_history, honours, education, video_links, transfermarket_link,
+                gallery_images, cover_image_url, contact_email, whatsapp_number, social_links, slug,
+                display_name, profile_image_url, current_club_cipher
+         FROM players
+         WHERE slug = $1`,
+        [slug]
+      );
+
+      if (academyResult.rows.length > 0) {
+        const p = academyResult.rows[0];
+        const firstName = decrypt(p.first_name_cipher);
+        const lastName = decrypt(p.last_name_cipher);
+        const dob = decrypt(p.dob_cipher);
+        
+        let calculatedAge = null;
+        if (dob) {
+          const birthDate = new Date(dob);
+          const today = new Date();
+          calculatedAge = today.getFullYear() - birthDate.getFullYear();
+          const m = today.getMonth() - birthDate.getMonth();
+          if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+            calculatedAge--;
+          }
+        }
+
+        const profile = {
+          id: p.id,
+          player_id: p.id,
+          first_name: firstName,
+          last_name: lastName,
+          display_name: p.display_name || `${firstName} ${lastName}`.trim(),
+          age: p.age || calculatedAge,
+          nationality: p.nationality || '',
+          position: p.position || '',
+          current_club: p.current_club_cipher ? decrypt(p.current_club_cipher) : '',
+          video_links: p.video_links || [],
+          transfermarket_link: p.transfermarket_link || '',
+          bio: p.bio || '',
+          profile_image_url: p.profile_image_url || '',
+          gallery_images: p.gallery_images || [],
+          height: p.height_cm || null,
+          weight: p.weight_kg || null,
+          preferred_foot: p.preferred_foot ? p.preferred_foot.charAt(0).toUpperCase() + p.preferred_foot.slice(1) : '',
+          cover_image_url: p.cover_image_url || '',
+          career_history: p.career_history || '',
+          honours: p.honours || '',
+          education: p.education || '',
+          contact_email: p.contact_email || decrypt(p.email_cipher) || '',
+          whatsapp_number: p.whatsapp_number || decrypt(p.phone_cipher) || '',
+          social_links: p.social_links || {},
+          slug: p.slug || '',
+        };
+        return res.json(profile);
+      }
+
       return res.status(404).json({ error: 'Profile not found' });
     }
 
