@@ -34,12 +34,7 @@ const handleUpload: RequestHandler = async (req, res) => {
             return res.status(400).json({ success: false, error: 'No file uploaded' });
         }
 
-        // Ensure bucket exists
         const BUCKET_NAME = 'public-uploads';
-        const { data: buckets } = await supabase.storage.listBuckets();
-        if (!buckets?.find(b => b.name === BUCKET_NAME)) {
-            await supabase.storage.createBucket(BUCKET_NAME, { public: true });
-        }
 
         const fileExtension = path.extname(file.originalname);
         const fileName = `${uuidv4()}${fileExtension}`;
