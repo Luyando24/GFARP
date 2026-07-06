@@ -64,7 +64,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
             // Auto-generate slug if not provided
             const slug = body.slug || body.title.toLowerCase()
-                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/[^\p{L}\p{N}]+/gu, '-')
                 .replace(/(^-|-$)+/g, '');
 
             const { data, error } = await supabase
