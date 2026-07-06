@@ -62,7 +62,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             if (body.title) updates.title = body.title;
             if (body.content) updates.content = body.content;
             if (body.excerpt !== undefined) updates.excerpt = body.excerpt;
-            if (body.slug) updates.slug = body.slug;
+            if (body.slug) {
+                let cleanSlug = body.slug.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/(^-|-$)+/g, '');
+                updates.slug = await getUniqueSlug(supabase, cleanSlug, id as string);
+            }
             if (body.image_url !== undefined) updates.image_url = body.image_url;
             if (body.author_name) updates.author_name = body.author_name;
             if (body.seo_title) updates.seo_title = body.seo_title;
@@ -125,4 +128,50 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             message: error.message || 'Internal server error'
         });
     }
+}
+
+async function getUniqueSlug(supabase: any, baseSlug: string, excludeId?: string): Promise<string> {
+    let query = supabase
+        .from('blogs')
+        .select('id, slug')
+        .eq('slug', baseSlug);
+    
+    if (excludeId) {
+        query = query.neq('id', excludeId);
+    }
+    
+    const { data: exactMatch, error: exactError } = await query;
+    if (exactError) throw exactError;
+    
+    if (!exactMatch || exactMatch.length === 0) {
+        return baseSlug;
+    }
+    
+    let suffixQuery = supabase
+        .from('blogs')
+        .select('id, slug')
+        .like('slug', `${baseSlug}-%`);
+        
+    if (excludeId) {
+        suffixQuery = suffixQuery.neq('id', excludeId);
+    }
+    
+    const { data: matches, error: suffixError } = await suffixQuery;
+    if (suffixError) throw suffixError;
+    
+    if (!matches || matches.length === 0) {
+        return `${baseSlug}-1`;
+    }
+    
+    const suffixes = matches
+        .map((m: any) => {
+            const parts = m.slug.split('-');
+            const lastPart = parts[parts.length - 1];
+            const num = parseInt(lastPart, 10);
+            return isNaN(num) ? 0 : num;
+        })
+        .filter((num: number) => num > 0);
+        
+    const maxSuffix = suffixes.length > 0 ? Math.max(...suffixes) : 0;
+    return `${baseSlug}-${maxSuffix + 1}`;
 }

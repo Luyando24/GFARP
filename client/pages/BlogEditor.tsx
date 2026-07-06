@@ -35,6 +35,7 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth, clearSession } from '@/lib/auth';
+import { slugify } from '@/lib/utils';
 
 interface BlogPost {
     id: string;
@@ -59,6 +60,7 @@ export default function BlogEditor() {
     const [isSaving, setIsSaving] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = React.useRef<HTMLInputElement>(null);
+    const [isSlugManuallyEdited, setIsSlugManuallyEdited] = useState(false);
     
     const [formData, setFormData] = useState({
         title: "",
@@ -96,6 +98,8 @@ export default function BlogEditor() {
                     seo_description: blog.seo_description || "",
                     tags: blog.tags ? blog.tags.join(", ") : ""
                 });
+                const expectedSlug = slugify(blog.title, null);
+                setIsSlugManuallyEdited(!!blog.slug && blog.slug !== expectedSlug);
             } else {
                 toast({
                     title: "Error",
@@ -276,7 +280,14 @@ export default function BlogEditor() {
                                         <Input
                                             id="title"
                                             value={formData.title}
-                                            onChange={(e) => setFormData({...formData, title: e.target.value})}
+                                            onChange={(e) => {
+                                                const newTitle = e.target.value;
+                                                const updates: any = { title: newTitle };
+                                                if (!isSlugManuallyEdited) {
+                                                    updates.slug = slugify(newTitle, null);
+                                                }
+                                                setFormData(prev => ({ ...prev, ...updates }));
+                                            }}
                                             placeholder="Enter post title"
                                         />
                                     </div>
@@ -286,7 +297,22 @@ export default function BlogEditor() {
                                         <Input
                                             id="slug"
                                             value={formData.slug}
-                                            onChange={(e) => setFormData({...formData, slug: e.target.value})}
+                                            onChange={(e) => {
+                                                const newSlug = e.target.value;
+                                                if (newSlug === "") {
+                                                    setIsSlugManuallyEdited(false);
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        slug: slugify(prev.title, null)
+                                                    }));
+                                                } else {
+                                                    setIsSlugManuallyEdited(true);
+                                                    setFormData(prev => ({
+                                                        ...prev,
+                                                        slug: newSlug
+                                                    }));
+                                                }
+                                            }}
                                             placeholder="auto-generated-from-title"
                                         />
                                         <p className="text-xs text-muted-foreground">
