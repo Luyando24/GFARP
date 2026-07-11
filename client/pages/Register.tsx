@@ -51,7 +51,7 @@ export default function Register() {
         tokens: { accessToken: (res as any).token || res.userId, expiresInSec: 3600 },
       });
       
-      navigate("/dashboard");
+      navigate("/admin");
     } catch (e: any) {
       const errorMessage = String(e?.message || e);
       setError(errorMessage);

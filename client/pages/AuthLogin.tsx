@@ -23,7 +23,7 @@ export default function AuthLogin() {
   // Redirect if already logged in
   useEffect(() => {
     if (session) {
-      navigate("/dashboard");
+      navigate("/academy-dashboard");
     }
   }, [session, navigate]);
 

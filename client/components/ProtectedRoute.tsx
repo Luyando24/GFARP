@@ -25,7 +25,7 @@ export const ProtectedRoute = ({
       case "superadmin":
         return <Navigate to="/admin" replace />;
       case "admin":
-        return <Navigate to="/dashboard" replace />;
+        return <Navigate to="/admin" replace />;
       case "academy":
         return <Navigate to="/academy-dashboard" replace />;
       case "agency_admin":
@@ -33,7 +33,7 @@ export const ProtectedRoute = ({
       case "individual_player":
         return <Navigate to="/player/dashboard" replace />;
       case "headteacher":
-        return <Navigate to="/dashboard" replace />;
+        return <Navigate to="/portal" replace />;
       case "teacher":
         return <Navigate to="/teacher" replace />;
       case "student":
