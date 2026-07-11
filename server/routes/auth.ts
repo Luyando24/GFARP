@@ -11,11 +11,112 @@ import {
   RegisterStaffResponse,
 } from "../../shared/api.js";
 import { query, hashPassword, verifyPassword } from "../lib/db.js";
+import { emailService } from "../lib/email-service.js";
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Create router
 const router = Router();
+
+type ResetAccountType = "academy" | "agency" | "admin";
+
+const PASSWORD_RESET_RESPONSE = {
+  success: true,
+  message: "If an account exists with this email, a password reset link has been sent."
+};
+
+router.post('/auth/forgot-password', async (req, res) => {
+  const email = String(req.body?.email || '').trim().toLowerCase();
+
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+    return res.status(400).json({ success: false, message: 'A valid email address is required.' });
+  }
+
+  try {
+    let accountType: ResetAccountType | null = null;
+
+    const academy = await query('SELECT id FROM academies WHERE LOWER(email) = $1 LIMIT 1', [email]);
+    if (academy.rows.length) {
+      accountType = 'academy';
+    } else {
+      const agency = await query('SELECT id FROM agencies WHERE LOWER(email) = $1 LIMIT 1', [email]);
+      if (agency.rows.length) {
+        accountType = 'agency';
+      } else {
+        const admin = await query('SELECT id FROM "Admin" WHERE LOWER(email) = $1 LIMIT 1', [email]);
+        if (admin.rows.length) accountType = 'admin';
+      }
+    }
+
+    // Always return the same response so this endpoint cannot be used to enumerate accounts.
+    if (!accountType) return res.json(PASSWORD_RESET_RESPONSE);
+
+    const token = jwt.sign(
+      { email, accountType, purpose: 'password-reset' },
+      JWT_SECRET,
+      { expiresIn: '30m' }
+    );
+    const appUrl = (process.env.APP_URL || process.env.FRONTEND_URL || 'https://www.soccercircular.com').replace(/\/$/, '');
+    const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(token)}`;
+    const result = await emailService.sendEmail({
+      to: email,
+      subject: 'Reset your Soccer Circular password',
+      html: `<p>We received a request to reset your Soccer Circular password.</p><p><a href="${resetUrl}">Reset your password</a></p><p>This link expires in 30 minutes. If you did not request this, you can ignore this email.</p>`
+    });
+
+    if (!result.success) {
+      console.error('[AUTH] Password reset email could not be sent:', result.error);
+      return res.status(503).json({ success: false, message: 'Password reset email is temporarily unavailable. Please try again later.' });
+    }
+
+    return res.json(PASSWORD_RESET_RESPONSE);
+  } catch (error) {
+    console.error('[AUTH] Forgot password error:', error);
+    return res.status(500).json({ success: false, message: 'Unable to process the password reset request.' });
+  }
+});
+
+router.post('/auth/reset-password', async (req, res) => {
+  const token = String(req.body?.token || '');
+  const password = String(req.body?.password || '');
+
+  if (password.length < 8) {
+    return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long.' });
+  }
+
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload & {
+      email?: string;
+      accountType?: ResetAccountType;
+      purpose?: string;
+    };
+    if (payload.purpose !== 'password-reset' || !payload.email || !payload.accountType) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired password reset link.' });
+    }
+
+    const passwordHash = await hashPassword(password);
+    let result;
+    if (payload.accountType === 'academy') {
+      result = await query('UPDATE academies SET password_hash = $1, updated_at = NOW() WHERE LOWER(email) = $2 RETURNING id', [passwordHash, payload.email]);
+      await query('UPDATE staff_users SET password_hash = $1, updated_at = NOW() WHERE LOWER(email) = $2', [passwordHash, payload.email]);
+    } else if (payload.accountType === 'agency') {
+      result = await query('UPDATE agencies SET password_hash = $1, updated_at = NOW() WHERE LOWER(email) = $2 RETURNING id', [passwordHash, payload.email]);
+    } else {
+      result = await query('UPDATE "Admin" SET password_hash = $1, updated_at = NOW() WHERE LOWER(email) = $2 RETURNING id', [passwordHash, payload.email]);
+    }
+
+    if (!result.rows.length) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired password reset link.' });
+    }
+    return res.json({ success: true, message: 'Your password has been reset successfully.' });
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError || error instanceof jwt.TokenExpiredError) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired password reset link.' });
+    }
+    console.error('[AUTH] Reset password error:', error);
+    return res.status(500).json({ success: false, message: 'Unable to reset the password.' });
+  }
+});
 
 // Helper function to create academy code
 function createAcademyCode(name: string): string {
