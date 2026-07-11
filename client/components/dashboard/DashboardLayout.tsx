@@ -13,7 +13,6 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth, clearSession } from '@/lib/auth';
 import { useNavigate } from 'react-router-dom';
-import SchoolSidebar from './SchoolSidebar';
 import AdminSidebar from './AdminSidebar';
 import Breadcrumb from './Breadcrumb';
 import ThemeToggle from '@/components/navigation/ThemeToggle';
@@ -24,11 +23,6 @@ interface DashboardLayoutProps {
   subtitle?: string; // Made optional since we're not using it anymore
   icon?: React.ReactNode; // Made optional since we're not using it anymore
   isAdmin?: boolean;
-  activeTab?: string;
-  onAddStudent?: () => void;
-  studentCount?: number;
-  teacherCount?: number;
-  classCount?: number;
 }
 
 export default function DashboardLayout({
@@ -36,12 +30,7 @@ export default function DashboardLayout({
   title,
   subtitle,
   icon,
-  isAdmin = false,
-  activeTab,
-  onAddStudent,
-  studentCount,
-  teacherCount,
-  classCount
+  isAdmin = false
 }: DashboardLayoutProps) {
   const { session } = useAuth();
   const navigate = useNavigate();
@@ -212,13 +201,11 @@ export default function DashboardLayout({
       {/* Main Layout with Sidebar */}
       <div className="flex h-[calc(100vh-73px)]">
         {/* Sidebar */}
-        {isAdmin ? (
+        {isAdmin && (
           <AdminSidebar
             collapsed={sidebarCollapsed}
             onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
           />
-        ) : (
-          <SchoolSidebar activeTab={activeTab} onAddStudent={onAddStudent} studentCount={studentCount} teacherCount={teacherCount} classCount={classCount} />
         )}
 
         {/* Main Content Area */}

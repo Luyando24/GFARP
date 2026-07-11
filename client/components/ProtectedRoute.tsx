@@ -32,15 +32,6 @@ export const ProtectedRoute = ({
         return <Navigate to="/academy-dashboard" replace />;
       case "individual_player":
         return <Navigate to="/player/dashboard" replace />;
-      case "headteacher":
-        return <Navigate to="/portal" replace />;
-      case "teacher":
-        return <Navigate to="/teacher" replace />;
-      case "student":
-        return <Navigate to="/student-portal" replace />;
-      case "parent":
-        return <Navigate to="/parent" replace />;
-
       default:
         return <Navigate to="/" replace />;
     }

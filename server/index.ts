@@ -6,7 +6,6 @@ import { emailService } from "./lib/email-service.js";
 import { handleDemo } from "./routes/demo.js";
 import authRouter, {
   handleLogin,
-  handleRegisterSchool,
   handleRegisterSuperAdmin,
   handleListSuperAdmins,
   handleDeleteSuperAdmin,
@@ -25,7 +24,6 @@ import {
 import notificationsRouter from "./routes/notifications.js";
 import supportRouter from "./routes/support.js";
 import databaseRouter from "./routes/database.js";
-import setupRouter from "./routes/setup.js";
 import setupPlayerDbRouter from "./routes/setup-player-db.js";
 import individualPlayersRouter from "./routes/individual-players.js";
 import systemSettingsRouter from "./routes/system-settings.js";
@@ -102,7 +100,6 @@ export function createServer() {
 
   // Authentication routes
   api.post("/auth/login", handleLogin);
-  api.post("/auth/register-school", handleRegisterSchool);
   api.post("/auth/register-superadmin", handleRegisterSuperAdmin);
   api.get("/auth/list-superadmins", handleListSuperAdmins);
   api.delete("/auth/delete-superadmin/:userId", handleDeleteSuperAdmin);
@@ -130,7 +127,6 @@ export function createServer() {
   api.use("/database", databaseRouter);
 
   // Setup routes
-  api.use("/setup", setupRouter);
   api.use("/", setupPlayerDbRouter);
 
   // System settings routes

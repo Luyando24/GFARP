@@ -15,7 +15,6 @@ import AuthLogin from "./pages/AuthLogin";
 import AdminLogin from "./pages/AdminLogin";
 import LoginPortal from "./pages/LoginPortal";
 import AgencyLogin from "./pages/AgencyLogin";
-import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import Shop from "./pages/Shop";
@@ -161,7 +160,6 @@ const App = () => {
               <Route path="/shop" element={<Shop />} />
               <Route path="/login" element={<AuthLogin />} />
               <Route path="/admin/login" element={<AdminLogin />} />
-              <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/portal" element={<LoginPortal />} />
               <Route path="/agency/login" element={<AgencyLogin />} />
