@@ -17,7 +17,7 @@ vi.mock('../../lib/db.js', () => ({
   verifyPassword: vi.fn().mockResolvedValue(true),
 }));
 
-import { query, transaction, verifyPassword } from '../../lib/db.js';
+import { query, transaction, hashPassword, verifyPassword } from '../../lib/db.js';
 
 vi.mock('../../lib/email-service.js', () => ({
   emailService: {
@@ -25,14 +25,21 @@ vi.mock('../../lib/email-service.js', () => ({
     sendAcademyActivationEmail: vi.fn(),
     sendAcademyVerificationEmail: vi.fn(),
     sendAdminNotificationEmail: vi.fn(),
+    sendEmail: vi.fn().mockResolvedValue({ success: true }),
   }
 }));
+
+import { emailService } from '../../lib/email-service.js';
 
 describe('Football Auth Routes', () => {
   let app: any;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    (query as any).mockReset().mockResolvedValue({ rows: [] });
+    (hashPassword as any).mockReset().mockResolvedValue('hashed_password');
+    (verifyPassword as any).mockReset().mockResolvedValue(true);
+    (emailService.sendEmail as any).mockReset().mockResolvedValue({ success: true });
     app = createServer();
   });
 
@@ -124,6 +131,74 @@ describe('Football Auth Routes', () => {
       expect(response.body.message).toBe('Academy registered successfully');
       expect(response.body.data.academy.email).toBe('new@academy.com');
       expect(response.body.data.token).toBeDefined();
+    });
+  });
+
+  describe('Password reset routes', () => {
+    it('returns a generic success response for an unknown email', async () => {
+      (query as any).mockResolvedValue({ rows: [] });
+
+      const response = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'missing@example.com' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toContain('If an account exists');
+      expect(emailService.sendEmail).not.toHaveBeenCalled();
+    });
+
+    it('sends a reset link for an academy account', async () => {
+      (query as any).mockResolvedValueOnce({ rows: [{ id: 'academy-id' }] });
+
+      const response = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'Academy@Example.com' });
+
+      expect(response.status).toBe(200);
+      expect(emailService.sendEmail).toHaveBeenCalledWith(expect.objectContaining({
+        to: 'academy@example.com',
+        subject: expect.stringContaining('Reset')
+      }));
+      const email = (emailService.sendEmail as any).mock.calls[0][0];
+      expect(email.html).toContain('/reset-password?token=');
+    });
+
+    it('rejects an invalid reset token with JSON', async () => {
+      const response = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token: 'invalid-token', password: 'new-password-123' });
+
+      expect(response.status).toBe(400);
+      expect(response.body).toEqual({
+        success: false,
+        message: 'Invalid or expired password reset link.'
+      });
+    });
+
+    it('hashes and updates an academy password for a valid token', async () => {
+      (query as any).mockResolvedValueOnce({ rows: [{ id: 'academy-id' }] });
+      const forgotResponse = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'academy@example.com' });
+      expect(forgotResponse.status).toBe(200);
+
+      const email = (emailService.sendEmail as any).mock.calls[0][0];
+      const token = new URL(email.html.match(/href="([^"]+)"/)[1]).searchParams.get('token');
+      (query as any)
+        .mockResolvedValueOnce({ rows: [{ id: 'academy-id' }] })
+        .mockResolvedValueOnce({ rows: [] });
+
+      const response = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token, password: 'new-password-123' });
+
+      expect(response.status).toBe(200);
+      expect(hashPassword).toHaveBeenCalledWith('new-password-123');
+      expect(query).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE academies'),
+        ['hashed_password', 'academy@example.com']
+      );
     });
   });
 });
