@@ -268,7 +268,7 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
                 ip.created_at::date as "registrationDate",
                 ip.created_at as "createdAt",
                 pp.age as "estimatedAge",
-                NULL as "playerCardId"
+                NULL::text as "playerCardId"
          FROM individual_players ip
          LEFT JOIN player_profiles pp ON ip.id = pp.player_id
          WHERE ip.academy_id = $1
