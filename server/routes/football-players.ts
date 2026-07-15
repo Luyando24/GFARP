@@ -441,16 +441,40 @@ export const handleSearchPlayers: RequestHandler = async (req, res) => {
 
     // Search in encrypted first_name and last_name fields
     // Note: This is a simplified search - in production you'd want more sophisticated search
-    const searchQuery = `
-      SELECT id, player_card_id, first_name_cipher, last_name_cipher, 
-             position, current_club_cipher, created_at, updated_at
-      FROM players
-      WHERE ${agencyId ? 'agency_id' : 'academy_id'} = $1
-      ORDER BY created_at DESC
-      LIMIT $2
-    `;
+    let searchQuery = '';
+    const params: any[] = [];
 
-    const params = [agencyId || academyId, limit];
+    if (agencyId) {
+      searchQuery = `
+        SELECT id, player_card_id, first_name_cipher, last_name_cipher, 
+               position, current_club_cipher, created_at, updated_at
+        FROM players
+        WHERE agency_id = $1
+        ORDER BY created_at DESC
+        LIMIT $2
+      `;
+      params.push(agencyId, limit);
+    } else {
+      searchQuery = `
+        SELECT * FROM (
+          SELECT id, player_card_id, first_name_cipher, last_name_cipher, 
+                 position, current_club_cipher, created_at, updated_at
+          FROM players
+          WHERE academy_id = $1
+          UNION ALL
+          SELECT ip.id, NULL as player_card_id,
+                 ip.first_name::bytea as first_name_cipher, ip.last_name::bytea as last_name_cipher,
+                 pp.position, pp.current_club::bytea as current_club_cipher, ip.created_at, ip.updated_at
+          FROM individual_players ip
+          LEFT JOIN player_profiles pp ON ip.id = pp.player_id
+          WHERE ip.academy_id = $1
+        ) combined_players
+        ORDER BY created_at DESC
+        LIMIT $2
+      `;
+      params.push(academyId, limit);
+    }
+
     const { rows } = await query(searchQuery, params);
 
     // Filter results by decrypted names (client-side filtering for encrypted data)

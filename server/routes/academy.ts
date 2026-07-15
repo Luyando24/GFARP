@@ -154,7 +154,8 @@ const handleGetAcademies: RequestHandler = async (req, res) => {
 
     const academiesResult = await query(
       `SELECT *, 
-        (SELECT COUNT(*) FROM players p WHERE p.academy_id = academies.id) as player_count,
+        ((SELECT COUNT(*)::int FROM players p WHERE p.academy_id = academies.id) + 
+         (SELECT COUNT(*)::int FROM individual_players ip WHERE ip.academy_id = academies.id)) as player_count,
         CASE WHEN status = 'active' THEN true ELSE false END as "isActive",
         COUNT(*) OVER() as total_count
       FROM academies ${whereClause} ORDER BY created_at DESC LIMIT $${paramIndex} OFFSET $${paramIndex + 1}`,
@@ -225,25 +226,54 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
 
     const academy = academyResult.rows[0];
 
-    // Get academy players - using encrypted columns and decrypting them
+    // Get academy players - using encrypted columns and decrypting them (combines standard players and self-registered individual players)
     const playersResult = await query(
       `SELECT id, 
               first_name_cipher,
               last_name_cipher,
               position, 
               nationality, 
-              COALESCE(is_active, true) as "isActive",
-              jersey_number as "jerseyNumber",
-              registration_date as "registrationDate",
-              created_at as "createdAt",
-              -- Calculate age from registration date (approximate)
-              CASE 
-                WHEN registration_date IS NOT NULL THEN 
-                  EXTRACT(YEAR FROM AGE(CURRENT_DATE, registration_date + INTERVAL '16 years'))
-                ELSE NULL
-              END as "estimatedAge",
-              player_card_id as "playerCardId"
-       FROM players WHERE academy_id = $1 ORDER BY created_at DESC`,
+              "isActive",
+              "jerseyNumber",
+              "registrationDate",
+              "createdAt",
+              "estimatedAge",
+              "playerCardId"
+       FROM (
+         SELECT id, 
+                first_name_cipher,
+                last_name_cipher,
+                position, 
+                nationality, 
+                COALESCE(is_active, true) as "isActive",
+                jersey_number as "jerseyNumber",
+                registration_date as "registrationDate",
+                created_at as "createdAt",
+                CASE 
+                  WHEN registration_date IS NOT NULL THEN 
+                    EXTRACT(YEAR FROM AGE(CURRENT_DATE, registration_date + INTERVAL '16 years'))
+                  ELSE NULL
+                END as "estimatedAge",
+                player_card_id as "playerCardId"
+         FROM players 
+         WHERE academy_id = $1
+         UNION ALL
+         SELECT ip.id,
+                ip.first_name::bytea as first_name_cipher,
+                ip.last_name::bytea as last_name_cipher,
+                pp.position,
+                pp.nationality,
+                true as "isActive",
+                NULL::int as "jerseyNumber",
+                ip.created_at::date as "registrationDate",
+                ip.created_at as "createdAt",
+                pp.age as "estimatedAge",
+                NULL as "playerCardId"
+         FROM individual_players ip
+         LEFT JOIN player_profiles pp ON ip.id = pp.player_id
+         WHERE ip.academy_id = $1
+       ) combined_players
+       ORDER BY "createdAt" DESC`,
       [id]
     );
 

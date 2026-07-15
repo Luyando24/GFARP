@@ -35,12 +35,24 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
       });
     }
 
-    // Get total players count for the organization
-    const totalPlayersResult = await query(
-      `SELECT COUNT(*) as count FROM players WHERE ${idColumn} = $1`,
-      [orgId as any]
-    );
-    const totalPlayers = parseInt(totalPlayersResult.rows[0].count) || 0;
+    // Get total players count for the organization (including self-registered players for academies)
+    let totalPlayers = 0;
+    if (isAgency) {
+      const totalPlayersResult = await query(
+        `SELECT COUNT(*) as count FROM players WHERE agency_id = $1`,
+        [orgId as any]
+      );
+      totalPlayers = parseInt(totalPlayersResult.rows[0].count) || 0;
+    } else {
+      const totalPlayersResult = await query(
+        `SELECT (
+          (SELECT COUNT(*)::int FROM players WHERE academy_id = $1) +
+          (SELECT COUNT(*)::int FROM individual_players WHERE academy_id = $1)
+        ) as count`,
+        [orgId as any]
+      );
+      totalPlayers = parseInt(totalPlayersResult.rows[0].count) || 0;
+    }
 
     // Get active transfers count (pending, approved, or in-progress transfers)
     const activeTransfersResult = await query(

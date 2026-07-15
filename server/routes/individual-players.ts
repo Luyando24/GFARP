@@ -507,13 +507,16 @@ router.get('/profile', authenticateToken, async (req, res) => {
 
     const result = await query(
       `SELECT p.*, ip.email, ip.first_name, ip.last_name,
-       COALESCE(
-         (SELECT 'pro' FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile'),
-         (SELECT plan_type FROM player_purchases 
-          WHERE player_id = $1 AND status = 'completed'
-          ORDER BY created_at DESC LIMIT 1),
-         'free'
-       ) as active_plan
+       CASE 
+         WHEN ip.academy_id IS NOT NULL THEN 'pro'
+         ELSE COALESCE(
+           (SELECT 'pro' FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile'),
+           (SELECT plan_type FROM player_purchases 
+            WHERE player_id = $1 AND status = 'completed'
+            ORDER BY created_at DESC LIMIT 1),
+           'free'
+         )
+       END as active_plan
        FROM player_profiles p
        JOIN individual_players ip ON p.player_id = ip.id
        WHERE p.player_id = $1`,
@@ -596,13 +599,16 @@ router.put('/profile', authenticateToken, async (req, res) => {
     // Fetch user's active plan features
     const userProfile = await query(
       `SELECT ip.email, 
-       COALESCE(
-         (SELECT 'pro' FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile'),
-         (SELECT plan_type FROM player_purchases 
-          WHERE player_id = $1 AND status = 'completed'
-          ORDER BY created_at DESC LIMIT 1),
-         'free'
-       ) as active_plan
+       CASE 
+         WHEN ip.academy_id IS NOT NULL THEN 'pro'
+         ELSE COALESCE(
+           (SELECT 'pro' FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile'),
+           (SELECT plan_type FROM player_purchases 
+            WHERE player_id = $1 AND status = 'completed'
+            ORDER BY created_at DESC LIMIT 1),
+           'free'
+         )
+       END as active_plan
        FROM individual_players ip WHERE ip.id = $1`,
       [userId]
     );
@@ -1021,13 +1027,16 @@ router.get('/admin-list', async (req, res) => {
         ip.last_name,
         ip.created_at,
         pp.slug,
-        COALESCE(
-          (SELECT 'pro' FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile'),
-          (SELECT plan_type FROM player_purchases 
-           WHERE player_id = ip.id AND status = 'completed' AND plan_type = 'pro'
-           ORDER BY created_at DESC LIMIT 1),
-          'free'
-        ) as current_plan,
+        CASE 
+          WHEN ip.academy_id IS NOT NULL THEN 'pro'
+          ELSE COALESCE(
+            (SELECT 'pro' FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile'),
+            (SELECT plan_type FROM player_purchases 
+             WHERE player_id = ip.id AND status = 'completed' AND plan_type = 'pro'
+             ORDER BY created_at DESC LIMIT 1),
+            'free'
+          )
+        END as current_plan,
         EXISTS (SELECT 1 FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile') as is_exempted,
         (SELECT SUM(amount) FROM player_purchases 
          WHERE player_id = ip.id AND status = 'completed') as total_spent
@@ -1100,13 +1109,16 @@ router.get('/:id', async (req, res) => {
         pp.whatsapp_number,
         pp.social_links,
         pp.slug,
-        COALESCE(
-          (SELECT 'pro' FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile'),
-          (SELECT plan_type FROM player_purchases 
-           WHERE player_id = ip.id AND status = 'completed' AND plan_type = 'pro'
-           ORDER BY created_at DESC LIMIT 1),
-          'free'
-        ) as current_plan,
+        CASE 
+          WHEN ip.academy_id IS NOT NULL THEN 'pro'
+          ELSE COALESCE(
+            (SELECT 'pro' FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile'),
+            (SELECT plan_type FROM player_purchases 
+             WHERE player_id = ip.id AND status = 'completed' AND plan_type = 'pro'
+             ORDER BY created_at DESC LIMIT 1),
+            'free'
+          )
+        END as current_plan,
         EXISTS (SELECT 1 FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile') as is_exempted,
         (SELECT json_agg(json_build_object(
            'id', pur.id,
