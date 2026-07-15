@@ -342,7 +342,7 @@ export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
           UNION ALL
           SELECT ip.id, NULL::text as player_card_id, 
                  ip.first_name::bytea as first_name_cipher, ip.last_name::bytea as last_name_cipher, 
-                 ((EXTRACT(YEAR FROM NOW()) - COALESCE(pp.age, 16))::text || '-01-01')::bytea as dob_cipher,
+                 CASE WHEN pp.age IS NULL THEN NULL ELSE ((EXTRACT(YEAR FROM NOW()) - pp.age)::text || '-01-01')::bytea END as dob_cipher,
                  pp.position, ip.email::bytea as email_cipher, pp.whatsapp_number::bytea as phone_cipher, 
                  NULL::integer as jersey_number, pp.height::integer as height_cm, pp.weight as weight_kg,
                  pp.preferred_foot, ip.created_at, ip.updated_at, true as is_self_registered

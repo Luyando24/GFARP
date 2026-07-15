@@ -119,13 +119,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 const profileArrayOrObj = player.player_profiles;
                 const profile = Array.isArray(profileArrayOrObj) ? profileArrayOrObj[0] : profileArrayOrObj;
                 const pAge = profile?.age;
-                const estimatedDob = pAge ? `${new Date().getFullYear() - pAge}-01-01` : '2010-01-01';
+                const estimatedDob = pAge ? `${new Date().getFullYear() - pAge}-01-01` : '';
                 return {
                     id: player.id,
                     firstName: player.first_name,
                     lastName: player.last_name,
                     position: profile?.position || null,
-                    age: pAge || 16,
+                    age: pAge || null,
                     isActive: true,
                     isSelfRegistered: true
                 };

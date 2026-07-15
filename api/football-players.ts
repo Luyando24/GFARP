@@ -153,7 +153,7 @@ export default async function handler(
                 const profileArrayOrObj = player.player_profiles;
                 const profile = Array.isArray(profileArrayOrObj) ? profileArrayOrObj[0] : profileArrayOrObj;
                 const pAge = profile?.age;
-                const estimatedDob = pAge ? `${new Date().getFullYear() - pAge}-01-01` : '2010-01-01';
+                const estimatedDob = pAge ? `${new Date().getFullYear() - pAge}-01-01` : '';
 
                 return {
                     id: player.id,
@@ -161,7 +161,7 @@ export default async function handler(
                     firstName: player.first_name,
                     lastName: player.last_name,
                     dateOfBirth: estimatedDob,
-                    age: pAge || 16,
+                    age: pAge || null,
                     position: profile?.position || null,
                     email: player.email,
                     phone: profile?.whatsapp_number || '',
