@@ -26,6 +26,7 @@ vi.mock('../../lib/email-service.js', () => ({
     sendAcademyVerificationEmail: vi.fn(),
     sendAdminNotificationEmail: vi.fn(),
     sendEmail: vi.fn().mockResolvedValue({ success: true }),
+    sendPlayerRegistrationVerificationEmail: vi.fn().mockResolvedValue(true),
   }
 }));
 

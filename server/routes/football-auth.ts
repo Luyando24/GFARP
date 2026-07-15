@@ -672,7 +672,8 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
         academy: {
           id: result.academy.id,
           name: result.academy.name,
-          email: result.academy.email
+          email: result.academy.email,
+          code: result.academy.code
         },
         subscription: result.subscription ? {
           id: result.subscription.id,
@@ -723,7 +724,7 @@ export const handleAcademyLogin: RequestHandler = async (req, res) => {
 
     // Find academy by email (allow any status for now to give better error)
     const academyResult = await query(`
-      SELECT id, name, email, address, district, province, phone, director_name, password_hash, status
+      SELECT id, name, code, email, address, district, province, phone, director_name, password_hash, status
       FROM academies
       WHERE email = $1
       LIMIT 1
@@ -781,6 +782,7 @@ export const handleAcademyLogin: RequestHandler = async (req, res) => {
         academy: {
           id: academy.id,
           name: academy.name,
+          code: academy.code,
           email: academy.email,
           contactPerson: academy.director_name,
           phone: academy.phone,

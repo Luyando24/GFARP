@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlayerApi } from "@/lib/api";
 import { saveSession } from "@/lib/auth";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { User, ArrowLeft, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
 import { usePageTitle } from "@/hooks/usePageTitle";
@@ -21,6 +21,8 @@ export default function PlayerRegister() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const academyCode = searchParams.get("academyCode") || "";
   const { toast } = useToast();
   const { t, dir } = useTranslation();
 
@@ -39,6 +41,7 @@ export default function PlayerRegister() {
         lastName,
         email,
         password,
+        academyCode: academyCode || undefined,
       });
 
       if (res.requireVerification) {
@@ -107,6 +110,14 @@ export default function PlayerRegister() {
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="space-y-4">
+            {academyCode && (
+              <div className="p-3 bg-blue-50 text-blue-800 text-sm rounded-md border border-blue-200 flex items-center justify-between">
+                <div>
+                  <span className="font-semibold">Academy Invite:</span> {academyCode}
+                </div>
+                <span className="text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">Active</span>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Input

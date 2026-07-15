@@ -327,23 +327,51 @@ export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
 
     const offset = (page - 1) * limit;
 
-    const baseSelect = `
-      SELECT id, player_card_id, first_name_cipher, last_name_cipher, dob_cipher, 
-             position, email_cipher, phone_cipher, jersey_number, height_cm, weight_kg,
-             preferred_foot, created_at, updated_at
-      FROM players
-    `;
-    const countSelect = `SELECT COUNT(*)::int as count FROM players`;
-
-    let whereClause = '';
+    let baseQuery = '';
+    let countQuery = '';
     const params: any[] = [];
 
     if (academyId) {
-      whereClause = ' WHERE academy_id = $1';
-      params.push(academyId);
+      baseQuery = `
+        SELECT * FROM (
+          SELECT id, player_card_id, first_name_cipher, last_name_cipher, dob_cipher, 
+                 position, email_cipher, phone_cipher, jersey_number, height_cm, weight_kg,
+                 preferred_foot, created_at, updated_at, false as is_self_registered
+          FROM players
+          WHERE academy_id = $1
+          UNION ALL
+          SELECT ip.id, NULL as player_card_id, 
+                 ip.first_name::bytea as first_name_cipher, ip.last_name::bytea as last_name_cipher, 
+                 ((EXTRACT(YEAR FROM NOW()) - COALESCE(pp.age, 16)) || '-01-01')::bytea as dob_cipher,
+                 pp.position, ip.email::bytea as email_cipher, pp.whatsapp_number::bytea as phone_cipher, 
+                 NULL as jersey_number, pp.height::int as height_cm, pp.weight as weight_kg,
+                 pp.preferred_foot, ip.created_at, ip.updated_at, true as is_self_registered
+          FROM individual_players ip
+          LEFT JOIN player_profiles pp ON ip.id = pp.player_id
+          WHERE ip.academy_id = $1
+        ) combined_players
+        ORDER BY created_at DESC LIMIT $2 OFFSET $3
+      `;
+      params.push(academyId, limit, offset);
+
+      countQuery = `
+        SELECT (
+          (SELECT COUNT(*)::int FROM players WHERE academy_id = $1) +
+          (SELECT COUNT(*)::int FROM individual_players WHERE academy_id = $1)
+        ) as count
+      `;
     } else if (agencyId) {
-      whereClause = ' WHERE agency_id = $1';
-      params.push(agencyId);
+      baseQuery = `
+        SELECT id, player_card_id, first_name_cipher, last_name_cipher, dob_cipher, 
+               position, email_cipher, phone_cipher, jersey_number, height_cm, weight_kg,
+               preferred_foot, created_at, updated_at, false as is_self_registered
+        FROM players
+        WHERE agency_id = $1
+        ORDER BY created_at DESC LIMIT $2 OFFSET $3
+      `;
+      params.push(agencyId, limit, offset);
+
+      countQuery = `SELECT COUNT(*)::int as count FROM players WHERE agency_id = $1`;
     } else {
       // Security: If no ID provided, return empty list
       return res.json({
@@ -355,16 +383,8 @@ export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
       });
     }
 
-    const orderLimitClause = ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
-
-    const baseQuery = baseSelect + whereClause + orderLimitClause;
-    const finalParams = [...params, limit, offset];
-
-    const countQuery = countSelect + whereClause;
-    const countParams = [...params];
-
-    const { rows } = await query(baseQuery, finalParams);
-    const countRes = await query(countQuery, countParams);
+    const { rows } = await query(baseQuery, params);
+    const countRes = await query(countQuery, [academyId || agencyId]);
     const total = countRes.rows[0]?.count || 0;
 
     const mapped = rows.map((p: any) => ({
@@ -381,6 +401,7 @@ export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
       weight: p.weight_kg ?? null,
       preferredFoot: p.preferred_foot ?? null,
       isActive: true,
+      isSelfRegistered: p.is_self_registered,
       createdAt: p.created_at ? new Date(p.created_at).toISOString() : null,
       updatedAt: p.updated_at ? new Date(p.updated_at).toISOString() : null,
     }));
@@ -501,10 +522,85 @@ export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
     const playerResult = await query(playerQuery, [playerId]);
 
     if (playerResult.rows.length === 0) {
-      console.log(`[GetPlayerDetails] Player not found: ${playerId}`);
-      return res.status(404).json({
-        success: false,
-        message: 'Player not found'
+      console.log(`[GetPlayerDetails] Player not found in players table: ${playerId}. Checking individual_players...`);
+      const individualQuery = `
+        SELECT ip.id, ip.first_name, ip.last_name, ip.email,
+               pp.position, pp.age, pp.nationality, pp.height, pp.weight, pp.preferred_foot,
+               pp.bio, pp.career_history, pp.honours, pp.education, pp.video_links,
+               pp.transfermarket_link, pp.gallery_images, pp.cover_image_url,
+               pp.contact_email, pp.whatsapp_number, pp.social_links, pp.slug, pp.display_name, pp.profile_image_url,
+               pp.current_club, ip.created_at, ip.updated_at
+        FROM individual_players ip
+        LEFT JOIN player_profiles pp ON ip.id = pp.player_id
+        WHERE ip.id = $1
+      `;
+      const individualResult = await query(individualQuery, [playerId]);
+      
+      if (individualResult.rows.length === 0) {
+        return res.status(404).json({
+          success: false,
+          message: 'Player not found'
+        });
+      }
+      
+      const p = individualResult.rows[0];
+      const estimatedDob = p.age ? `${new Date().getFullYear() - p.age}-01-01` : '';
+      
+      return res.json({
+        success: true,
+        data: {
+          id: p.id,
+          playerCardId: null,
+          firstName: p.first_name || '',
+          lastName: p.last_name || '',
+          dateOfBirth: estimatedDob,
+          position: p.position || '',
+          email: p.email || '',
+          phone: p.whatsapp_number || '',
+          address: '',
+          gender: '',
+          guardianName: '',
+          guardianPhone: '',
+          guardianEmail: '',
+          guardianInfo: '',
+          medicalInfo: '',
+          emergencyContact: '',
+          playingHistory: '',
+          height: p.height || null,
+          weight: p.weight || null,
+          preferredFoot: p.preferred_foot ? p.preferred_foot.charAt(0).toUpperCase() + p.preferred_foot.slice(1) : '',
+          jerseyNumber: null,
+          registrationDate: p.created_at ? new Date(p.created_at).toISOString().split('T')[0] : null,
+          nationality: p.nationality || '',
+          trainingStartDate: null,
+          trainingEndDate: null,
+          emergencyPhone: '',
+          internalNotes: '',
+          notes: '',
+          currentClub: p.current_club || '',
+          city: '',
+          country: '',
+          cardId: '',
+          cardQrSignature: '',
+          bio: p.bio || '',
+          career_history: p.career_history || '',
+          honours: p.honours || '',
+          education: p.education || '',
+          video_links: p.video_links || [],
+          transfermarket_link: p.transfermarket_link || '',
+          gallery_images: p.gallery_images || [],
+          cover_image_url: p.cover_image_url || '',
+          contact_email: p.contact_email || '',
+          whatsapp_number: p.whatsapp_number || '',
+          social_links: p.social_links || {},
+          slug: p.slug || '',
+          display_name: p.display_name || '',
+          profile_image_url: p.profile_image_url || '',
+          isActive: true,
+          isSelfRegistered: true,
+          createdAt: p.created_at.toISOString(),
+          updatedAt: p.updated_at.toISOString()
+        }
       });
     }
 
@@ -587,7 +683,212 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
     const existingResult = await query(checkQuery, [playerId]);
 
     if (existingResult.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Player not found' });
+      console.log(`[UpdatePlayer] Player not found in players table: ${playerId}. Checking individual_players...`);
+      // Check if it's a self-registered individual player
+      const individualCheck = await query('SELECT * FROM individual_players WHERE id = $1', [playerId]);
+      if (individualCheck.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Player not found' });
+      }
+      
+      // Update individual_players table
+      const ipUpdates: string[] = [];
+      const ipValues: any[] = [];
+      let ipParamCount = 1;
+      
+      if (updateData.firstName !== undefined) {
+        ipUpdates.push(`first_name = $${ipParamCount++}`);
+        ipValues.push(updateData.firstName);
+      }
+      if (updateData.lastName !== undefined) {
+        ipUpdates.push(`last_name = $${ipParamCount++}`);
+        ipValues.push(updateData.lastName);
+      }
+      if (updateData.email !== undefined) {
+        ipUpdates.push(`email = $${ipParamCount++}`);
+        ipValues.push(updateData.email || '');
+      }
+      
+      if (ipUpdates.length > 0) {
+        ipValues.push(playerId);
+        await query(`UPDATE individual_players SET ${ipUpdates.join(', ')}, updated_at = NOW() WHERE id = $${ipParamCount}`, ipValues);
+      }
+      
+      // Update player_profiles table
+      const ppUpdates: string[] = [];
+      const ppValues: any[] = [];
+      let ppParamCount = 1;
+      
+      if (updateData.position !== undefined) {
+        ppUpdates.push(`position = $${ppParamCount++}`);
+        ppValues.push(updateData.position);
+      }
+      if (updateData.height !== undefined) {
+        ppUpdates.push(`height = $${ppParamCount++}`);
+        ppValues.push(updateData.height ? parseFloat(updateData.height) : null);
+      }
+      if (updateData.weight !== undefined) {
+        ppUpdates.push(`weight = $${ppParamCount++}`);
+        ppValues.push(updateData.weight ? parseFloat(updateData.weight) : null);
+      }
+      if (updateData.preferredFoot !== undefined) {
+        ppUpdates.push(`preferred_foot = $${ppParamCount++}`);
+        ppValues.push(updateData.preferredFoot ? updateData.preferredFoot.toLowerCase() : null);
+      }
+      if (updateData.bio !== undefined) {
+        ppUpdates.push(`bio = $${ppParamCount++}`);
+        ppValues.push(updateData.bio);
+      }
+      if (updateData.career_history !== undefined) {
+        ppUpdates.push(`career_history = $${ppParamCount++}`);
+        ppValues.push(updateData.career_history);
+      }
+      if (updateData.honours !== undefined) {
+        ppUpdates.push(`honours = $${ppParamCount++}`);
+        ppValues.push(updateData.honours);
+      }
+      if (updateData.education !== undefined) {
+        ppUpdates.push(`education = $${ppParamCount++}`);
+        ppValues.push(updateData.education);
+      }
+      if (updateData.video_links !== undefined) {
+        ppUpdates.push(`video_links = $${ppParamCount++}`);
+        ppValues.push(Array.isArray(updateData.video_links) ? updateData.video_links : []);
+      }
+      if (updateData.transfermarket_link !== undefined) {
+        ppUpdates.push(`transfermarket_link = $${ppParamCount++}`);
+        ppValues.push(updateData.transfermarket_link);
+      }
+      if (updateData.gallery_images !== undefined) {
+        ppUpdates.push(`gallery_images = $${ppParamCount++}`);
+        ppValues.push(Array.isArray(updateData.gallery_images) ? updateData.gallery_images : []);
+      }
+      if (updateData.cover_image_url !== undefined) {
+        ppUpdates.push(`cover_image_url = $${ppParamCount++}`);
+        ppValues.push(updateData.cover_image_url);
+      }
+      if (updateData.contact_email !== undefined) {
+        ppUpdates.push(`contact_email = $${ppParamCount++}`);
+        ppValues.push(updateData.contact_email);
+      }
+      if (updateData.whatsapp_number !== undefined) {
+        ppUpdates.push(`whatsapp_number = $${ppParamCount++}`);
+        ppValues.push(updateData.whatsapp_number);
+      }
+      if (updateData.social_links !== undefined) {
+        ppUpdates.push(`social_links = $${ppParamCount++}`);
+        ppValues.push(typeof updateData.social_links === 'string' ? updateData.social_links : JSON.stringify(updateData.social_links || {}));
+      }
+      if (updateData.slug !== undefined) {
+        ppUpdates.push(`slug = $${ppParamCount++}`);
+        ppValues.push(updateData.slug && updateData.slug.trim() !== '' ? updateData.slug.trim() : null);
+      }
+      if (updateData.display_name !== undefined) {
+        ppUpdates.push(`display_name = $${ppParamCount++}`);
+        ppValues.push(updateData.display_name);
+      }
+      if (updateData.profile_image_url !== undefined) {
+        ppUpdates.push(`profile_image_url = $${ppParamCount++}`);
+        ppValues.push(updateData.profile_image_url);
+      }
+      if (updateData.nationality !== undefined) {
+        ppUpdates.push(`nationality = $${ppParamCount++}`);
+        ppValues.push(updateData.nationality || null);
+      }
+      if (updateData.currentClub !== undefined) {
+        ppUpdates.push(`current_club = $${ppParamCount++}`);
+        ppValues.push(updateData.currentClub || null);
+      }
+      if (updateData.dateOfBirth !== undefined && updateData.dateOfBirth) {
+        const birthDate = new Date(updateData.dateOfBirth);
+        const today = new Date();
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const m = today.getMonth() - birthDate.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+          age--;
+        }
+        ppUpdates.push(`age = $${ppParamCount++}`);
+        ppValues.push(age);
+      }
+      
+      if (ppUpdates.length > 0) {
+        ppValues.push(playerId);
+        await query(`UPDATE player_profiles SET ${ppUpdates.join(', ')}, updated_at = NOW() WHERE player_id = $${ppParamCount}`, ppValues);
+      }
+      
+      // Fetch the updated profile and return it in standard player response shape
+      const updatedRes = await query(
+        `SELECT ip.id, ip.first_name, ip.last_name, ip.email,
+                pp.position, pp.age, pp.nationality, pp.height, pp.weight, pp.preferred_foot,
+                pp.bio, pp.career_history, pp.honours, pp.education, pp.video_links,
+                pp.transfermarket_link, pp.gallery_images, pp.cover_image_url,
+                pp.contact_email, pp.whatsapp_number, pp.social_links, pp.slug, pp.display_name, pp.profile_image_url,
+                pp.current_club, ip.created_at, ip.updated_at
+         FROM individual_players ip
+         LEFT JOIN player_profiles pp ON ip.id = pp.player_id
+         WHERE ip.id = $1`,
+        [playerId]
+      );
+      
+      const p = updatedRes.rows[0];
+      const estimatedDob = p.age ? `${new Date().getFullYear() - p.age}-01-01` : '';
+      
+      return res.json({
+        success: true,
+        message: 'Player updated successfully',
+        data: {
+          id: p.id,
+          playerCardId: null,
+          firstName: p.first_name || '',
+          lastName: p.last_name || '',
+          dateOfBirth: estimatedDob,
+          position: p.position || '',
+          email: p.email || '',
+          phone: p.whatsapp_number || '',
+          address: '',
+          gender: '',
+          guardianName: '',
+          guardianPhone: '',
+          guardianEmail: '',
+          guardianInfo: '',
+          medicalInfo: '',
+          emergencyContact: '',
+          playingHistory: '',
+          height: p.height || null,
+          weight: p.weight || null,
+          preferredFoot: p.preferred_foot ? p.preferred_foot.charAt(0).toUpperCase() + p.preferred_foot.slice(1) : '',
+          jerseyNumber: null,
+          registrationDate: p.created_at ? new Date(p.created_at).toISOString().split('T')[0] : null,
+          nationality: p.nationality || '',
+          trainingStartDate: null,
+          trainingEndDate: null,
+          emergencyPhone: '',
+          internalNotes: '',
+          notes: '',
+          currentClub: p.current_club || '',
+          city: '',
+          country: '',
+          cardId: '',
+          cardQrSignature: '',
+          bio: p.bio || '',
+          career_history: p.career_history || '',
+          honours: p.honours || '',
+          education: p.education || '',
+          video_links: p.video_links || [],
+          transfermarket_link: p.transfermarket_link || '',
+          gallery_images: p.gallery_images || [],
+          cover_image_url: p.cover_image_url || '',
+          contact_email: p.contact_email || '',
+          whatsapp_number: p.whatsapp_number || '',
+          social_links: p.social_links || {},
+          slug: p.slug || '',
+          display_name: p.display_name || '',
+          profile_image_url: p.profile_image_url || '',
+          isActive: true,
+          isSelfRegistered: true,
+          createdAt: p.created_at.toISOString(),
+          updatedAt: p.updated_at.toISOString()
+        }
+      });
     }
 
     const existing = existingResult.rows[0];
@@ -900,11 +1201,33 @@ export const handleDeletePlayer: RequestHandler = async (req, res) => {
     const checkQuery = 'SELECT id, first_name_cipher, last_name_cipher FROM players WHERE id = $1';
     const existingResult = await query(checkQuery, [playerId]);
 
+    let existingPlayer;
     if (existingResult.rows.length === 0) {
-      return res.status(404).json({ success: false, message: 'Player not found' });
+      console.log(`[DeletePlayer] Player not found in players table: ${playerId}. Checking individual_players...`);
+      const individualCheck = await query('SELECT id, first_name, last_name FROM individual_players WHERE id = $1', [playerId]);
+      if (individualCheck.rows.length === 0) {
+        return res.status(404).json({ success: false, message: 'Player not found' });
+      }
+      
+      // Unlink self-registered player from academy instead of full delete
+      await query('UPDATE individual_players SET academy_id = NULL WHERE id = $1', [playerId]);
+      
+      const firstName = individualCheck.rows[0].first_name || 'Unknown';
+      const lastName = individualCheck.rows[0].last_name || 'Player';
+      
+      return res.json({
+        success: true,
+        message: 'Player unlinked successfully',
+        data: {
+          id: playerId,
+          firstName,
+          lastName,
+          deleted: true,
+        },
+      });
     }
 
-    const existingPlayer = existingResult.rows[0];
+    existingPlayer = existingResult.rows[0];
 
     // For now, implement hard delete since is_active column doesn't exist
     // In production, you might want to add the is_active column first

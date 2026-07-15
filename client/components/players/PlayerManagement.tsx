@@ -34,7 +34,8 @@ import {
   Clock,
   Target,
   BarChart3,
-  Loader2
+  Loader2,
+  Share2
 } from "lucide-react";
 import SubscriptionNotice from "../ui/SubscriptionNotice";
 
@@ -51,6 +52,7 @@ interface Player {
   weight?: number;
   preferredFoot?: string;
   isActive: boolean;
+  isSelfRegistered?: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -81,6 +83,22 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
   const [showSubscriptionNotice, setShowSubscriptionNotice] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState<string>("");
+  const [copied, setCopied] = useState(false);
+
+  const academyData = JSON.parse(localStorage.getItem("academy_data") || "{}");
+  const code = academyData?.code;
+
+  const handleCopyInviteLink = () => {
+    if (!code) return;
+    const inviteUrl = `${window.location.origin}/player/register?academyCode=${code}`;
+    navigator.clipboard.writeText(inviteUrl);
+    setCopied(true);
+    toast({
+      title: "Link Copied",
+      description: "Invite link copied to clipboard!",
+    });
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   // Fetch players on component mount
   useEffect(() => {
@@ -345,10 +363,18 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
 
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Player Management</h2>
-        <Button onClick={openAddPlayerDialog}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Player
-        </Button>
+        <div className="flex items-center gap-2">
+          {code && (
+            <Button variant="outline" onClick={handleCopyInviteLink} className="border-green-600 text-green-600 hover:bg-green-50 dark:border-green-500 dark:text-green-500 dark:hover:bg-slate-800">
+              <Share2 className="h-4 w-4 mr-2" />
+              {copied ? "Copied!" : "Copy Invite Link"}
+            </Button>
+          )}
+          <Button onClick={openAddPlayerDialog}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Player
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -391,7 +417,14 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
                 {filteredPlayers.map((player) => {
                   return (
                     <TableRow key={player.id}>
-                      <TableCell className="font-medium">{player.firstName} {player.lastName}</TableCell>
+                      <TableCell className="font-medium">
+                        {player.firstName} {player.lastName}
+                        {player.isSelfRegistered && (
+                          <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200 dark:bg-slate-800 dark:text-blue-400">
+                            Self-Registered
+                          </Badge>
+                        )}
+                      </TableCell>
                       <TableCell>{calculateAge(player.dateOfBirth)}</TableCell>
                       <TableCell>{player.position}</TableCell>
                       <TableCell>

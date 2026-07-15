@@ -105,6 +105,27 @@ const setupTables = async (req: any, res: any) => {
 
       UPDATE individual_players SET email_verified = TRUE WHERE email_verified IS NOT TRUE;
 
+      -- Determine academies.id type dynamically and add academy_id referencing academies(id)
+      DO $$
+      DECLARE
+        acad_id_type text;
+      BEGIN
+        SELECT data_type INTO acad_id_type
+        FROM information_schema.columns
+        WHERE table_name = 'academies' AND column_name = 'id';
+        
+        IF acad_id_type IS NULL THEN
+          acad_id_type := 'UUID';
+        END IF;
+
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'individual_players' AND column_name = 'academy_id'
+        ) THEN
+          EXECUTE 'ALTER TABLE individual_players ADD COLUMN academy_id ' || acad_id_type || ' REFERENCES academies(id) ON DELETE SET NULL';
+        END IF;
+      END $$;
+
       -- Create exempted_emails table
       CREATE TABLE IF NOT EXISTS exempted_emails (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

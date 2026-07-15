@@ -1304,6 +1304,7 @@ export interface IndividualPlayer {
   first_name: string;
   last_name: string;
   role: string;
+  academy_id?: string;
 }
 
 export interface PlayerProfile {

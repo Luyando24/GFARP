@@ -251,11 +251,21 @@ router.post('/verify-payment', authenticateToken, async (req, res) => {
 router.post('/register', async (req, res) => {
   try {
     await ensureEmailVerificationSchema();
-    const { email, password, firstName, lastName } = req.body;
+    const { email, password, firstName, lastName, academyCode } = req.body;
     const normalizedEmail = String(email || '').toLowerCase().trim();
 
     if (!normalizedEmail || !password || !firstName || !lastName) {
       return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    let academyId = null;
+    if (academyCode) {
+      const acadRes = await query('SELECT id FROM academies WHERE code = $1', [academyCode]);
+      if (acadRes.rows.length > 0) {
+        academyId = acadRes.rows[0].id;
+      } else {
+        return res.status(400).json({ error: 'Invalid academy invite code' });
+      }
     }
 
     const existingUser = await query(
@@ -279,9 +289,9 @@ router.post('/register', async (req, res) => {
     await query(
       `INSERT INTO individual_players (
          id, email, password_hash, first_name, last_name,
-         email_verified, verification_token
-       ) VALUES ($1, $2, $3, $4, $5, false, $6)`,
-      [playerId, normalizedEmail, hashedPassword, firstName, lastName, verificationToken]
+         email_verified, verification_token, academy_id
+       ) VALUES ($1, $2, $3, $4, $5, false, $6, $7)`,
+      [playerId, normalizedEmail, hashedPassword, firstName, lastName, verificationToken, academyId]
     );
 
     await query(
