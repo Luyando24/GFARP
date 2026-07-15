@@ -67,6 +67,7 @@ export default async function handler(
             // In a real production app with encryption, you might need a better search strategy
             // like a separate search index or blind indexing. For now, we fetch and filter.
             
+            // Fetch standard players
             let queryBuilder = supabase
                 .from('players')
                 .select('*');
@@ -75,35 +76,74 @@ export default async function handler(
                 queryBuilder = queryBuilder.eq('academy_id', academyId);
             }
             
-            const { data: players, error } = await queryBuilder;
+            const { data: stdPlayers, error: stdError } = await queryBuilder;
 
-            if (error) {
-                console.error('[VERCEL] Error searching players:', error);
+            if (stdError) {
+                console.error('[VERCEL] Error searching standard players:', stdError);
                 return res.status(500).json({
                     success: false,
-                    message: 'Failed to search players',
-                    error: error.message
+                    message: 'Failed to search standard players',
+                    error: stdError.message
+                });
+            }
+
+            // Fetch self-registered players
+            let indQueryBuilder = supabase
+                .from('individual_players')
+                .select('*, player_profiles(*)');
+
+            if (academyId) {
+                indQueryBuilder = indQueryBuilder.eq('academy_id', academyId);
+            }
+
+            const { data: indPlayers, error: indError } = await indQueryBuilder;
+
+            if (indError) {
+                console.error('[VERCEL] Error searching self-registered players:', indError);
+                return res.status(500).json({
+                    success: false,
+                    message: 'Failed to search self-registered players',
+                    error: indError.message
                 });
             }
 
             // Filter and map results
-            const searchResults = players
-                .map(player => {
-                    const firstName = decrypt(player.first_name_cipher);
-                    const lastName = decrypt(player.last_name_cipher);
-                    const fullName = `${firstName} ${lastName}`.trim();
-                    const currentClub = decrypt(player.current_club_cipher);
+            const mappedStd = (stdPlayers || []).map(player => {
+                const firstName = decrypt(player.first_name_cipher);
+                const lastName = decrypt(player.last_name_cipher);
+                const fullName = `${firstName} ${lastName}`.trim();
+                const currentClub = decrypt(player.current_club_cipher);
 
-                    return {
-                        id: player.id,
-                        name: fullName,
-                        firstName,
-                        lastName,
-                        position: player.position,
-                        currentClub: currentClub,
-                        imageUrl: player.photo_url // Assuming photo_url is stored directly or needs retrieval
-                    };
-                })
+                return {
+                    id: player.id,
+                    name: fullName,
+                    firstName,
+                    lastName,
+                    position: player.position,
+                    currentClub: currentClub,
+                    imageUrl: player.photo_url,
+                    isSelfRegistered: false
+                };
+            });
+
+            const mappedInd = (indPlayers || []).map(player => {
+                const profileArrayOrObj = player.player_profiles;
+                const profile = Array.isArray(profileArrayOrObj) ? profileArrayOrObj[0] : profileArrayOrObj;
+                const fullName = `${player.first_name} ${player.last_name}`.trim();
+
+                return {
+                    id: player.id,
+                    name: fullName,
+                    firstName: player.first_name,
+                    lastName: player.last_name,
+                    position: profile?.position || null,
+                    currentClub: profile?.current_club || '',
+                    imageUrl: profile?.profile_image_url || null,
+                    isSelfRegistered: true
+                };
+            });
+
+            const searchResults = [...mappedStd, ...mappedInd]
                 .filter(player => 
                     player.name.toLowerCase().includes(query.toLowerCase())
                 )

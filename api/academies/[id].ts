@@ -53,15 +53,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 throw new Error(error.message);
             }
 
-            // Fetch players
-            const { data: playersData, error: playersError } = await supabase
+            // Fetch standard players
+            const { data: stdPlayers, error: stdError } = await supabase
                 .from('players')
                 .select('*')
                 .eq('academy_id', id);
 
-            if (playersError) {
-                console.error('[VERCEL] Players fetch error:', playersError);
-                // Don't fail the whole request if players fetch fails, just log it
+            if (stdError) {
+                console.error('[VERCEL] Standard players fetch error:', stdError);
+            }
+
+            // Fetch self-registered players
+            const { data: indPlayers, error: indError } = await supabase
+                .from('individual_players')
+                .select('*, player_profiles(*)')
+                .eq('academy_id', id);
+
+            if (indError) {
+                console.error('[VERCEL] Individual players fetch error:', indError);
             }
 
             // Decrypt function (matches the simple encryption we're using)
@@ -91,8 +100,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return age;
             };
 
-            // Transform players data
-            const players = (playersData || []).map((player: any) => {
+            // Transform standard players
+            const mappedStd = (stdPlayers || []).map((player: any) => {
                 const dob = decrypt(player.dob_cipher);
                 return {
                     id: player.id,
@@ -100,9 +109,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     lastName: decrypt(player.last_name_cipher),
                     position: player.position,
                     age: calculateAge(dob),
-                    isActive: player.is_active !== false
+                    isActive: player.is_active !== false,
+                    isSelfRegistered: false
                 };
             });
+
+            // Transform self-registered players
+            const mappedInd = (indPlayers || []).map((player: any) => {
+                const profileArrayOrObj = player.player_profiles;
+                const profile = Array.isArray(profileArrayOrObj) ? profileArrayOrObj[0] : profileArrayOrObj;
+                const pAge = profile?.age;
+                const estimatedDob = pAge ? `${new Date().getFullYear() - pAge}-01-01` : '2010-01-01';
+                return {
+                    id: player.id,
+                    firstName: player.first_name,
+                    lastName: player.last_name,
+                    position: profile?.position || null,
+                    age: pAge || 16,
+                    isActive: true,
+                    isSelfRegistered: true
+                };
+            });
+
+            const players = [...mappedStd, ...mappedInd];
 
             // Fetch compliance documents
             const { data: complianceDocs, error: complianceError } = await supabase

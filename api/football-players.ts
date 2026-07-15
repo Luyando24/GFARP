@@ -48,35 +48,33 @@ export default async function handler(
                 });
             }
 
-            // Get total count
-            const { count, error: countError } = await supabase
+            // Fetch standard players
+            const { data: stdPlayers, error: stdError } = await supabase
                 .from('players')
-                .select('*', { count: 'exact', head: true })
+                .select('*')
                 .eq('academy_id', academyId);
 
-            if (countError) {
-                console.error('[VERCEL] Error counting players:', countError);
+            if (stdError) {
+                console.error('[VERCEL] Error fetching standard players:', stdError);
                 return res.status(500).json({
                     success: false,
-                    message: 'Failed to count players',
-                    error: countError.message
+                    message: 'Failed to fetch standard players',
+                    error: stdError.message
                 });
             }
 
-            // Get paginated players
-            const { data: players, error } = await supabase
-                .from('players')
-                .select('*')
-                .eq('academy_id', academyId)
-                .order('created_at', { ascending: false })
-                .range(offset, offset + limit - 1);
+            // Fetch self-registered players with profiles
+            const { data: indPlayers, error: indError } = await supabase
+                .from('individual_players')
+                .select('*, player_profiles(*)')
+                .eq('academy_id', academyId);
 
-            if (error) {
-                console.error('[VERCEL] Error fetching players:', error);
+            if (indError) {
+                console.error('[VERCEL] Error fetching self-registered players:', indError);
                 return res.status(500).json({
                     success: false,
-                    message: 'Failed to fetch players',
-                    error: error.message
+                    message: 'Failed to fetch self-registered players',
+                    error: indError.message
                 });
             }
 
@@ -119,8 +117,8 @@ export default async function handler(
                 return age;
             };
 
-            // Transform players data to frontend format
-            const transformedPlayers = (players || []).map((player: any) => ({
+            // Transform standard players data to frontend format
+            const mappedStd = (stdPlayers || []).map((player: any) => ({
                 id: player.id,
                 playerCardId: player.player_card_id,
                 firstName: decrypt(player.first_name_cipher),
@@ -145,15 +143,62 @@ export default async function handler(
                 playingHistory: decrypt(player.playing_history_cipher),
                 currentClub: decrypt(player.current_club_cipher),
                 isActive: player.is_active !== false,
+                isSelfRegistered: false,
                 createdAt: player.created_at,
                 updatedAt: player.updated_at
             }));
 
+            // Transform self-registered players data to frontend format
+            const mappedInd = (indPlayers || []).map((player: any) => {
+                const profileArrayOrObj = player.player_profiles;
+                const profile = Array.isArray(profileArrayOrObj) ? profileArrayOrObj[0] : profileArrayOrObj;
+                const pAge = profile?.age;
+                const estimatedDob = pAge ? `${new Date().getFullYear() - pAge}-01-01` : '2010-01-01';
+
+                return {
+                    id: player.id,
+                    playerCardId: null,
+                    firstName: player.first_name,
+                    lastName: player.last_name,
+                    dateOfBirth: estimatedDob,
+                    age: pAge || 16,
+                    position: profile?.position || null,
+                    email: player.email,
+                    phone: profile?.whatsapp_number || '',
+                    address: '',
+                    city: '',
+                    country: '',
+                    nationality: profile?.nationality || null,
+                    height: profile?.height ? parseFloat(profile.height) : null,
+                    weight: profile?.weight ? parseFloat(profile.weight) : null,
+                    jerseyNumber: null,
+                    preferredFoot: profile?.preferred_foot || null,
+                    guardianName: '',
+                    guardianPhone: '',
+                    medicalInfo: '',
+                    emergencyContact: '',
+                    playingHistory: profile?.career_history || '',
+                    currentClub: profile?.current_club || '',
+                    isActive: true,
+                    isSelfRegistered: true,
+                    createdAt: player.created_at,
+                    updatedAt: player.updated_at
+                };
+            });
+
+            // Combine and sort by createdAt DESC
+            const allPlayers = [...mappedStd, ...mappedInd].sort((a, b) => 
+                new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+            );
+
+            // Apply pagination on the combined array
+            const paginatedPlayers = allPlayers.slice(offset, offset + limit);
+
             return res.status(200).json({
                 success: true,
                 data: {
-                    players: transformedPlayers,
-                    total: count || 0,
+                    players: paginatedPlayers,
+                    total: allPlayers.length,
                     page,
                     limit
                 }
