@@ -1237,6 +1237,9 @@ router.delete('/:id', async (req, res) => {
       // Delete documents first (if any)
       await client.query('DELETE FROM player_documents WHERE player_id = $1', [id]);
 
+      // Delete transfers (if any)
+      await client.query('DELETE FROM transfers WHERE player_id = $1', [id]);
+
       // Delete profile
       await client.query('DELETE FROM player_profiles WHERE player_id = $1', [id]);
 

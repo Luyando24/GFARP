@@ -323,6 +323,39 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleDeletePlayer = async (playerId: string) => {
+    if (!confirm('Are you sure you want to permanently delete this player? All associated profiles, purchases, transfers, and documents will be lost.')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/individual-players/${playerId}`, {
+        method: 'DELETE',
+      });
+      const result = await response.json();
+      if (result.success || response.ok) {
+        toast({
+          title: "Success",
+          description: "Player deleted successfully",
+        });
+        fetchIndividualPlayers();
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to delete player",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting player:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete player",
+        variant: "destructive"
+      });
+    }
+  };
+
   useEffect(() => {
     if (activeTab === 'players') {
       fetchIndividualPlayers();
@@ -1802,14 +1835,25 @@ export default function AdminDashboard() {
                               <TableCell>${player.total_spent ? parseFloat(player.total_spent).toFixed(2) : '0.00'}</TableCell>
                               <TableCell>{new Date(player.created_at).toLocaleDateString()}</TableCell>
                               <TableCell className="text-center">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  title="Manage Player"
-                                  onClick={() => navigate(`/admin/individual-player-details/${player.id}`)}
-                                >
-                                  <Eye className="h-4 w-4" />
-                                </Button>
+                                <div className="flex items-center justify-center gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    title="Manage Player"
+                                    onClick={() => navigate(`/admin/individual-player-details/${player.id}`)}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    title="Delete Player"
+                                    className="hover:text-red-600 hover:bg-red-50"
+                                    onClick={() => handleDeletePlayer(player.id)}
+                                  >
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))}
