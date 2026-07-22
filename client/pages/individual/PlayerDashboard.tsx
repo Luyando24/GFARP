@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PlayerApi, PlayerProfile } from "@/lib/api";
-import { NetworkError } from "@/lib/errors";
+import { getProfileSaveErrorMessage } from "@/lib/profile-save-error";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import PlayerPaymentMethodSelector from "@/components/PlayerPaymentMethodSelector";
@@ -104,6 +104,7 @@ const getBase64ImageFromURL = (url: string): Promise<string> => {
 export default function PlayerDashboard() {
   const { session, logout } = useAuth();
   const { t, dir } = useTranslation();
+  const navigate = useNavigate();
   usePageTitle(t('dash.portal.player'));
   const [searchParams, setSearchParams] = useSearchParams();
   const [profile, setProfile] = useState<PlayerProfile | null>(null);
@@ -305,23 +306,27 @@ export default function PlayerDashboard() {
       setIsEditing(false);
       localStorage.removeItem('player_profile_draft');
       toast.success("Profile updated successfully");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to update profile", error);
-      
-      // Handle Network Errors specifically
-      if (error instanceof NetworkError || error.message === 'Unable to connect to server' || error.message?.includes('fetch')) {
-        toast.error("Network Error: Unable to save changes. Please check your internet connection and try again.");
-        return;
-      }
 
       // If server still returns a slug error (e.g. race condition), handle it
-      if (error.message && error.message.includes("Link Name")) {
+      if (error instanceof Error && error.message.includes("Link Name")) {
         setSlugAvailable(false);
         setSlugMessage(error.message);
-        toast.error(error.message);
-      } else {
-        toast.error("Failed to update profile. Please try again.");
       }
+
+      const feedback = getProfileSaveErrorMessage(error);
+      const action = feedback.action === "retry"
+        ? { label: "Retry", onClick: () => void handleSaveProfile() }
+        : feedback.action === "sign-in"
+          ? { label: "Sign in", onClick: () => navigate("/login") }
+          : undefined;
+
+      toast.error(feedback.title, {
+        description: feedback.description,
+        action,
+        duration: action ? 10_000 : 7_000,
+      });
     } finally {
       setSaving(false);
     }

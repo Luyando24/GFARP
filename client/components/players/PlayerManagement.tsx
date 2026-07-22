@@ -242,13 +242,22 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
       }
 
       // Check current subscription and player count
-      const result = await Api.get<any>(`/subscriptions/current?academyId=${academyId}`);
+      const result = await Api.get<any>('/subscriptions/current');
 
       if (result.success && result.data) {
-        const { playerCount, playerLimit } = result.data;
+        if (!result.data.subscription) {
+          setSubscriptionError(
+            'No active subscription was found for this academy. Choose a plan before adding players.'
+          );
+          setShowSubscriptionNotice(true);
+          return;
+        }
+
+        const playerCount = result.data.usage?.playerCount || 0;
+        const playerLimit = result.data.limits?.playerLimit;
 
         // Check if limit is reached
-        if ((playerCount || 0) >= playerLimit) {
+        if (typeof playerLimit === 'number' && playerLimit !== -1 && playerCount >= playerLimit) {
           setSubscriptionError(
             `Player limit reached. Your current plan allows ${playerLimit} player${playerLimit !== 1 ? 's' : ''}. Please upgrade your subscription to add more players.`
           );

@@ -39,22 +39,30 @@ export const handleGetSubscription: RequestHandler = async (req, res) => {
 
     const result = await query(subscriptionQuery, [orgId]);
 
+    const playerCountQuery = `SELECT COUNT(*) as player_count FROM players WHERE ${orgIdColumn} = $1 AND is_active = true`;
+    const playerResult = await query(playerCountQuery, [orgId]);
+    const playerCount = parseInt(playerResult.rows[0].player_count);
+
+    // Having no subscription is a valid account state, not a missing API resource.
     if (result.rows.length === 0) {
-      return res.status(404).json({
-        success: false,
-        message: 'No active subscription found'
+      return res.json({
+        success: true,
+        data: {
+          subscription: null,
+          limits: { playerLimit: 0 },
+          usage: { playerCount, playerUsagePercentage: 0 }
+        }
       });
     }
 
     const subscription = result.rows[0];
 
     // Calculate usage statistics
-    const playerCountQuery = `SELECT COUNT(*) as player_count FROM players WHERE ${orgIdColumn} = $1 AND is_active = true`;
-    const playerResult = await query(playerCountQuery, [orgId]);
-    const playerCount = parseInt(playerResult.rows[0].player_count);
 
     const daysRemaining = Math.ceil((new Date(subscription.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-    const playerUsagePercentage = (playerCount / subscription.player_limit) * 100;
+    const playerUsagePercentage = subscription.player_limit > 0
+      ? (playerCount / subscription.player_limit) * 100
+      : 0;
 
     res.json({
       success: true,

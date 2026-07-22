@@ -457,7 +457,7 @@ export default function AcademyDashboard() {
         }
       }
 
-      if (data) {
+      if (data?.subscription) {
         // Normalize data to ensure consistent banner behavior
         if (data.address === undefined) data.address = '';
         if (data.phone === undefined) data.phone = '';
@@ -614,28 +614,7 @@ export default function AcademyDashboard() {
           })
         });
       } else {
-        // Handle case when no subscription is found
-        console.log("No active subscription found - using default pro plan");
-        // Set default pro plan data
-        setSubscriptionData({
-          id: "pro-default",
-          status: "active",
-          planName: t('plans.pro.name'),
-          price: 49.99,
-          billingCycle: 'month',
-          startDate: new Date().toISOString(),
-          endDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
-          autoRenew: true,
-          daysRemaining: 365,
-          playerLimit: 500,
-          playerCount: 0,
-          playerUsagePercentage: 0,
-          features: [
-            t('plans.feature.playerCount', { count: 500 }),
-            t('plans.feature.advancedAnalytics'),
-            t('plans.feature.prioritySupport')
-          ]
-        });
+        setSubscriptionData(null);
       }
     } catch (error) {
       console.error('Error loading subscription data:', error);
@@ -1580,7 +1559,7 @@ export default function AcademyDashboard() {
                               {isLoadingSubscription ? (
                                 <Loader2 className="h-5 w-5 animate-spin" />
                               ) : (
-                                subscriptionData?.planName || "Pro Plan"
+                                subscriptionData?.planName || "No active plan"
                               )}
                             </p>
                             <Button
@@ -2727,13 +2706,14 @@ export default function AcademyDashboard() {
                       </Card>
                     </div>
                   ) : (
-                    <div className="text-center py-8">
-                      <div className="text-slate-500 mb-4">No subscription data available</div>
+                    <div className="text-center py-10 border rounded-lg bg-slate-50 dark:bg-slate-900">
+                      <CreditCard className="h-10 w-10 mx-auto mb-3 text-slate-400" />
+                      <div className="font-semibold text-slate-900 dark:text-white mb-1">No active subscription</div>
+                      <div className="text-sm text-slate-500 mb-4">Choose a plan to activate subscription features for this academy.</div>
                       <Button
-                        onClick={loadSubscriptionData}
-                        variant="outline"
+                        onClick={() => navigate('/shop')}
                       >
-                        Retry Loading
+                        Choose a plan
                       </Button>
                     </div>
                   )}

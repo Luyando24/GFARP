@@ -72,6 +72,37 @@ describe('Academy player fee management', () => {
     expect(mocks.query).not.toHaveBeenCalled();
   });
 
+  it('returns a successful nullable subscription response when no plan is active', async () => {
+    mocks.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ player_count: '3' }] });
+
+    const response = await request(createServer())
+      .get(`/api/subscriptions/current?academyId=${otherAcademyId}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({
+      success: true,
+      data: {
+        subscription: null,
+        limits: { playerLimit: 0 },
+        usage: { playerCount: 3, playerUsagePercentage: 0 },
+      },
+    });
+    expect(mocks.query.mock.calls[0][1]).toEqual([academyId]);
+    expect(mocks.query.mock.calls[1][1]).toEqual([academyId]);
+  });
+
+  it('requires authentication for the current subscription endpoint', async () => {
+    const response = await request(createServer())
+      .get(`/api/subscriptions/current?academyId=${academyId}`);
+
+    expect(response.status).toBe(401);
+    expect(response.body.message).toBe('Access token required');
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
   it('records an external player fee and creates its recurring schedule atomically', async () => {
     const playerId = '33333333-3333-4333-8333-333333333333';
     const subscriptionId = '44444444-4444-4444-8444-444444444444';

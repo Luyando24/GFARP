@@ -1478,29 +1478,12 @@ export interface RegisterPersonnelResponse {
 // Get current academy subscription
 export async function getCurrentSubscription(academyId?: string): Promise<SubscriptionData | null> {
   try {
-    const url = academyId
-      ? `${BASE_URL}/subscriptions/current?academyId=${academyId}`
-      : `${BASE_URL}/subscriptions/current`;
-
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${getAuthToken()}`,
-      },
-    });
-
-    const result = await response.json();
-
-    // Handle 404 - No active subscription found
-    if (response.status === 404) {
-      return null;
-    }
-
-    if (!response.ok) {
-      throw new Error(result.message || 'Failed to get subscription details');
-    }
-
+    // Academy/agency identity is derived from the signed JWT on the server.
+    // Keep the optional argument for existing callers, but never send it as authority.
+    void academyId;
+    const result = await Api.get<{ success: boolean; data: SubscriptionData }>(
+      '/subscriptions/current',
+    );
     return result.data;
   } catch (error) {
     console.error('Error getting current subscription:', error);

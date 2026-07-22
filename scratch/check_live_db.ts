@@ -2,15 +2,13 @@ import pg from 'pg';
 const { Pool } = pg;
 
 async function checkLiveDb() {
-  const pool = new Pool({ 
-    user: 'postgres.lpsujzvospfaomgkrcew',
-    host: 'aws-1-us-east-1.pooler.supabase.com',
-    database: 'postgres',
-    password: 'ZLUmqmSuFaKrTJ9f',
-    port: 5432,
-    ssl: {
-      rejectUnauthorized: false
-    }
+  if (!process.env.DATABASE_URL) {
+    throw new Error('DATABASE_URL must be set before running this diagnostic.');
+  }
+
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
   });
   try {
     console.log('Connecting to live DB with config object...');

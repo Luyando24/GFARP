@@ -3,13 +3,42 @@ import type { AuthSession } from "@shared/api";
 
 const KEY = "ipims_auth_session";
 
+export function getAccessTokenExpiration(token: string): number | null {
+  const parts = token.split(".");
+  if (parts.length !== 3) return null;
+
+  try {
+    const normalizedPayload = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const paddedPayload = normalizedPayload.padEnd(
+      normalizedPayload.length + ((4 - normalizedPayload.length % 4) % 4),
+      "=",
+    );
+    const payload = JSON.parse(atob(paddedPayload));
+    return typeof payload.exp === "number" ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+export function isAccessTokenExpired(token: string, now = Date.now()): boolean {
+  const expiresAt = getAccessTokenExpiration(token);
+  return expiresAt !== null && expiresAt <= now;
+}
+
+function removeStoredSession() {
+  localStorage.removeItem(KEY);
+  localStorage.removeItem("academy_data");
+  localStorage.removeItem("agency_data");
+  localStorage.removeItem("subscription_data");
+}
+
 export function saveSession(s: AuthSession) {
   localStorage.setItem(KEY, JSON.stringify(s));
   window.dispatchEvent(new CustomEvent("auth:changed"));
 }
 
 export function clearSession() {
-  localStorage.removeItem(KEY);
+  removeStoredSession();
   window.dispatchEvent(new CustomEvent("auth:changed"));
   // Redirect to portal after logout
   window.location.href = "/portal";
@@ -19,8 +48,15 @@ export function getSession(): AuthSession | null {
   const raw = localStorage.getItem(KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as AuthSession;
+    const session = JSON.parse(raw) as AuthSession;
+    const token = session.tokens?.accessToken;
+    if (!token || isAccessTokenExpired(token)) {
+      removeStoredSession();
+      return null;
+    }
+    return session;
   } catch {
+    removeStoredSession();
     return null;
   }
 }
