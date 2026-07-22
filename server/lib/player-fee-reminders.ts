@@ -38,7 +38,11 @@ async function recordDelivery(
     INSERT INTO player_fee_reminder_deliveries (
       subscription_id, renewal_date, recipient_type, recipient_email,
       status, error_message, sent_at, updated_at
-    ) VALUES ($1, $2, $3, $4, $5, $6, CASE WHEN $5 = 'sent' THEN NOW() ELSE NULL END, NOW())
+    ) VALUES (
+      $1, $2, $3, $4, $5::VARCHAR(20), $6,
+      CASE WHEN $5::VARCHAR(20) = 'sent' THEN NOW() ELSE NULL END,
+      NOW()
+    )
     ON CONFLICT (subscription_id, renewal_date, recipient_type)
     DO UPDATE SET
       recipient_email = EXCLUDED.recipient_email,

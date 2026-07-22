@@ -54,6 +54,15 @@ describe('player fee renewal reminders', () => {
     expect(mocks.sendEmail).toHaveBeenNthCalledWith(2, expect.objectContaining({
       to: 'alex@example.test',
     }));
+
+    const deliveryQueries = mocks.query.mock.calls.filter(([sql]) =>
+      String(sql).includes('INSERT INTO player_fee_reminder_deliveries')
+      && String(sql).includes('sent_at'),
+    );
+    expect(deliveryQueries).toHaveLength(2);
+    deliveryQueries.forEach(([sql]) => {
+      expect(String(sql).match(/\$5::VARCHAR\(20\)/g)).toHaveLength(2);
+    });
   });
 
   it('does not resend recipients already marked sent for the renewal date', async () => {
