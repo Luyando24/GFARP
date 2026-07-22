@@ -9,11 +9,15 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Textarea } from "../ui/textarea";
 import { Progress } from "../ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../ui/table";
 import { useToast } from "@/components/ui/use-toast";
 import { getSession } from "@/lib/auth";
-import { Api } from "@/lib/api";
+import { Api, getPlayerFeeSubscriptions, type PlayerFeeSubscription } from "@/lib/api";
+import {
+  filterPlayersByRecurringFees,
+  type PlayerFeeFilter,
+} from "@/lib/player-fee-filters";
 import {
   Plus,
   Search,
@@ -88,9 +92,14 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
   const [pageSize, setPageSize] = useState(10);
   const [totalPlayers, setTotalPlayers] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [feeFilter, setFeeFilter] = useState<PlayerFeeFilter>("all");
+  const [feeRoster, setFeeRoster] = useState<Player[] | null>(null);
+  const [feeSubscriptions, setFeeSubscriptions] = useState<PlayerFeeSubscription[]>([]);
 
   const academyData = JSON.parse(localStorage.getItem("academy_data") || "{}");
   const code = academyData?.code;
+  const authSession = getSession() as any;
+  const supportsAcademyFeeFilters = Boolean(authSession?.schoolId || authSession?.academyId);
 
   const handleCopyInviteLink = () => {
     if (!code) return;
@@ -104,10 +113,17 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Fetch the selected page whenever pagination changes.
+  // Fetch the selected server page whenever regular pagination changes.
   useEffect(() => {
-    fetchPlayers();
-  }, [currentPage, pageSize]);
+    if (feeFilter === "all") fetchPlayers();
+  }, [currentPage, pageSize, feeFilter]);
+
+  // Fee filters need the complete roster so players on later server pages are included.
+  useEffect(() => {
+    if (feeFilter !== "all" && feeRoster === null) {
+      fetchRecurringFeeRoster();
+    }
+  }, [feeFilter, feeRoster]);
 
   // Fetch players from API
   const fetchPlayers = async () => {
@@ -143,10 +159,64 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
     }
   };
 
+  const fetchRecurringFeeRoster = async () => {
+    try {
+      setLoading(true);
+      const session = JSON.parse(localStorage.getItem("ipims_auth_session") || "{}");
+      const academyId = session?.schoolId || session?.academyId;
+
+      if (!academyId) {
+        setFeeRoster([]);
+        setFeeSubscriptions([]);
+        return;
+      }
+
+      const [firstPage, subscriptions] = await Promise.all([
+        Api.getPlayers(academyId, undefined, 1, 100),
+        getPlayerFeeSubscriptions(academyId),
+      ]);
+
+      if (!firstPage.success || !Array.isArray(firstPage.data?.players)) {
+        throw new Error(firstPage.message || "Failed to fetch academy players");
+      }
+
+      const remainingPages = Array.from(
+        { length: Math.max(0, firstPage.data.pagination.totalPages - 1) },
+        (_, index) => index + 2,
+      );
+      const remainingResponses = await Promise.all(
+        remainingPages.map((page) => Api.getPlayers(academyId, undefined, page, 100)),
+      );
+      const completeRoster = [
+        ...(firstPage.data.players as Player[]),
+        ...remainingResponses.flatMap((response) =>
+          response.success && Array.isArray(response.data?.players)
+            ? response.data.players as Player[]
+            : [],
+        ),
+      ];
+
+      setFeeRoster(completeRoster);
+      setFeeSubscriptions(subscriptions);
+    } catch (error) {
+      console.error("Error fetching recurring player fees:", error);
+      setFeeRoster([]);
+      setFeeSubscriptions([]);
+      toast({
+        title: "Unable to filter player fees",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Calculate age from date of birth
   const calculateAge = (dateOfBirth: string) => {
     const today = new Date();
     const birthDate = new Date(dateOfBirth);
+    if (!dateOfBirth || Number.isNaN(birthDate.getTime())) return null;
     let age = today.getFullYear() - birthDate.getFullYear();
     const m = today.getMonth() - birthDate.getMonth();
     if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
@@ -279,7 +349,8 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
 
         // Refresh the player list after a short delay
         setTimeout(() => {
-          fetchPlayers();
+          if (feeFilter === "all") fetchPlayers();
+          else setFeeRoster(null);
         }, 500); // 500ms delay
         setIsAddPlayerOpen(false);
       } else {
@@ -318,7 +389,8 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
           title: "Success",
           description: "Player deleted successfully"
         });
-        fetchPlayers();
+        if (feeFilter === "all") fetchPlayers();
+        else setFeeRoster(null);
       } else {
         toast({
           title: "Error",
@@ -340,8 +412,23 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
 
 
 
-  // Filter players based on search query
-  const filteredPlayers = players.filter(player => {
+  const recurringFeePlayers = feeFilter === "all"
+    ? []
+    : filterPlayersByRecurringFees(
+        feeRoster || [],
+        feeSubscriptions,
+        feeFilter,
+      );
+  const displayedTotalPlayers = feeFilter === "all" ? totalPlayers : recurringFeePlayers.length;
+  const displayedTotalPages = feeFilter === "all"
+    ? totalPages
+    : Math.ceil(displayedTotalPlayers / pageSize);
+  const displayedPlayers = feeFilter === "all"
+    ? players
+    : recurringFeePlayers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  // Filter the currently displayed page based on the dashboard search query.
+  const filteredPlayers = displayedPlayers.filter(player => {
     if (!searchQuery.trim()) return true;
 
     const query = searchQuery.toLowerCase();
@@ -353,6 +440,19 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
       position.includes(query) ||
       email.includes(query);
   });
+
+  const feeFilterDescription = feeFilter === "active"
+    ? `${displayedTotalPlayers} player${displayedTotalPlayers === 1 ? "" : "s"} with active recurring academy fees`
+    : feeFilter === "expiring"
+      ? `${displayedTotalPlayers} player${displayedTotalPlayers === 1 ? "" : "s"} with recurring fees due within their reminder window`
+      : `Manage all ${displayedTotalPlayers} academy player${displayedTotalPlayers === 1 ? "" : "s"} and their information`;
+
+  const handleFeeFilterChange = (value: string) => {
+    const nextFilter = value as PlayerFeeFilter;
+    if (feeFilter === "all" && nextFilter !== "all") setFeeRoster(null);
+    setFeeFilter(nextFilter);
+    setCurrentPage(1);
+  };
 
   return (
     <>
@@ -391,25 +491,39 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
         <CardHeader>
           <CardTitle>Registered Players</CardTitle>
           <CardDescription>
-            Manage all {totalPlayers} academy player{totalPlayers === 1 ? "" : "s"} and their information
+            {feeFilterDescription}
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {supportsAcademyFeeFilters && (
+            <Tabs value={feeFilter} onValueChange={handleFeeFilterChange} className="mb-6">
+              <TabsList className="grid h-auto w-full max-w-2xl grid-cols-3">
+                <TabsTrigger value="all" className="py-2.5">All players</TabsTrigger>
+                <TabsTrigger value="active" className="py-2.5">Active academy fees</TabsTrigger>
+                <TabsTrigger value="expiring" className="py-2.5">Fees expiring soon</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          )}
+
           {loading && (
             <div className="flex justify-center items-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           )}
 
-          {!loading && filteredPlayers.length === 0 && players.length > 0 && (
+          {!loading && filteredPlayers.length === 0 && displayedPlayers.length > 0 && (
             <div className="text-center py-8 text-slate-500">
               No players found matching your search criteria.
             </div>
           )}
 
-          {!loading && players.length === 0 && (
+          {!loading && displayedPlayers.length === 0 && (
             <div className="text-center py-8 text-slate-500">
-              No players found. Add your first player to get started.
+              {feeFilter === "active"
+                ? "No players have active recurring academy fees."
+                : feeFilter === "expiring"
+                  ? "No recurring academy fees are expiring soon."
+                  : "No players found. Add your first player to get started."}
             </div>
           )}
 
@@ -437,7 +551,7 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
                           </Badge>
                         )}
                       </TableCell>
-                      <TableCell>{calculateAge(player.dateOfBirth)}</TableCell>
+                      <TableCell>{calculateAge(player.dateOfBirth) ?? "—"}</TableCell>
                       <TableCell>{player.position}</TableCell>
                       <TableCell>
                         <Badge variant={player.isActive ? 'default' : 'destructive'}>
@@ -464,7 +578,7 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
             </Table>
           )}
 
-          {!loading && totalPlayers > 0 && (
+          {!loading && displayedTotalPlayers > 0 && (
             <div className="mt-4 flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                 <span>Rows per page</span>
@@ -485,9 +599,9 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
                   </SelectContent>
                 </Select>
                 <span>
-                  {totalPlayers === 0
+                  {displayedTotalPlayers === 0
                     ? "0 players"
-                    : `${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, totalPlayers)} of ${totalPlayers}`}
+                    : `${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, displayedTotalPlayers)} of ${displayedTotalPlayers}`}
                 </span>
               </div>
 
@@ -501,13 +615,13 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
                   Previous
                 </Button>
                 <span className="min-w-[100px] text-center text-sm text-slate-600 dark:text-slate-400">
-                  Page {currentPage} of {Math.max(totalPages, 1)}
+                  Page {currentPage} of {Math.max(displayedTotalPages, 1)}
                 </span>
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((page) => Math.min(displayedTotalPages, page + 1))}
+                  disabled={currentPage >= displayedTotalPages}
                 >
                   Next
                 </Button>

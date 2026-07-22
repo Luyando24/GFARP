@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Api } from '@/lib/api';
 import { useLanguage } from '@/lib/i18n';
+import { useToast } from '@/components/ui/use-toast';
 import { 
   Plus, 
   Search, 
@@ -12,7 +13,6 @@ import {
   TrendingUp,
   TrendingDown,
   X,
-  AlertCircle,
   Bell,
   Repeat2,
   Settings2,
@@ -48,11 +48,9 @@ interface FinancialTransactionsManagerProps {
 
 const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> = ({ academyId, academyDetails }) => {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [players, setPlayers] = useState<any[]>([]);
   const [feeSubscriptions, setFeeSubscriptions] = useState<PlayerFeeSubscription[]>([]);
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
@@ -60,16 +58,20 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   const [remindersEnabled, setRemindersEnabled] = useState(true);
   const [defaultReminderDays, setDefaultReminderDays] = useState(7);
   const [savingSettings, setSavingSettings] = useState(false);
-  
-  // Clear success message after 3 seconds
-  useEffect(() => {
-    if (successMessage) {
-      const timer = setTimeout(() => {
-        setSuccessMessage(null);
-      }, 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [successMessage]);
+  const financialRequestId = useRef(0);
+
+  const showSuccess = (message: string) => toast({
+    title: 'Success',
+    description: message,
+    duration: 4000,
+  });
+
+  const showError = (message: string) => toast({
+    title: 'Action failed',
+    description: message,
+    variant: 'destructive',
+    duration: 6000,
+  });
   
   // Pagination and filtering
   const [currentPage, setCurrentPage] = useState(1);
@@ -197,23 +199,26 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       setPlayers(allPlayers);
     } catch (err) {
       console.error('Error fetching player fee management data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load player fee management data');
+      showError(err instanceof Error ? err.message : 'Failed to load player fee management data');
     }
   };
 
   useEffect(() => {
-    if (academyId) loadFeeManagementData();
-  }, [academyId]);
+    if (academyId && (activeTab === 'player-fees' || activeTab === 'subscriptions')) {
+      // Keep the current UI visible while fresh player-fee data is loaded.
+      loadFeeManagementData();
+    }
+  }, [academyId, activeTab]);
 
   useEffect(() => {
     fetchData();
   }, [academyId, currentPage, searchTerm, filterType, filterCategory, filterStatus, dateFrom, dateTo, activeTab, defaultCurrency]);
 
   const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+    const requestId = ++financialRequestId.current;
+    const requestedTab = activeTab;
 
+    try {
       const [transactionsRes, summaryRes, budgetRes] = await Promise.all([
         getFinancialTransactions(academyId, {
           page: currentPage,
@@ -225,11 +230,14 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
           dateTo: dateTo || undefined,
           search: searchTerm || undefined,
           currency: defaultCurrency,
-          playerFeesOnly: activeTab === 'player-fees',
+          playerFeesOnly: requestedTab === 'player-fees',
         }),
         getFinancialSummary(academyId, { currency: defaultCurrency }),
         getBudgetCategories(academyId)
       ]);
+
+      // Ignore a slower response from a tab/filter selection that is no longer current.
+      if (requestId !== financialRequestId.current) return;
 
       setTransactions(transactionsRes.data?.transactions || []);
       setTotalPages(transactionsRes.data?.pagination?.totalPages || 1);
@@ -242,25 +250,24 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       });
       setBudgetCategories(budgetRes.data || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('common.error'));
+      if (requestId !== financialRequestId.current) return;
+      showError(err instanceof Error ? err.message : t('common.error'));
       console.error("Error fetching financial data:", err);
-    } finally {
-      setLoading(false);
     }
   };
 
   const handleCreateTransaction = async () => {
     try {
       if (!transactionForm.category || !transactionForm.amount || !transactionForm.description) {
-        setError('Please fill in all required fields');
+        showError('Please fill in all required fields');
         return;
       }
       if (transactionForm.category === 'Academy Fees' && !transactionForm.player_id) {
-        setError('Select the player who paid this fee');
+        showError('Select the player who paid this fee');
         return;
       }
       if (transactionForm.is_recurring && !transactionForm.next_renewal_date) {
-        setError('Choose the next renewal date for this recurring fee');
+        showError('Choose the next renewal date for this recurring fee');
         return;
       }
 
@@ -273,9 +280,9 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       setShowTransactionModal(false);
       setTransactionForm(emptyTransactionForm(activeTab === 'player-fees'));
       await Promise.all([fetchData(), loadFeeManagementData()]);
-      setSuccessMessage('Transaction created successfully');
+      showSuccess('Transaction created successfully');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create transaction');
+      showError(err instanceof Error ? err.message : 'Failed to create transaction');
     }
   };
 
@@ -288,9 +295,9 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       setEditingTransaction(null);
       setTransactionForm(emptyTransactionForm(activeTab === 'player-fees'));
       fetchData();
-      setSuccessMessage('Transaction updated successfully');
+      showSuccess('Transaction updated successfully');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update transaction');
+      showError(err instanceof Error ? err.message : 'Failed to update transaction');
     }
   };
 
@@ -301,10 +308,10 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     try {
       await deleteFinancialTransaction(id);
       fetchData();
-      setSuccessMessage('Transaction deleted successfully');
+      showSuccess('Transaction deleted successfully');
     } catch (err) {
       console.error('Delete transaction error:', err);
-      setError(err instanceof Error ? err.message : 'Failed to delete transaction');
+      showError(err instanceof Error ? err.message : 'Failed to delete transaction');
     }
   };
 
@@ -363,9 +370,9 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       });
       setDefaultCurrency(settings.default_currency);
       setCurrencyDraft(settings.default_currency);
-      setSuccessMessage('Financial settings saved');
+      showSuccess('Financial settings saved');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save financial settings');
+      showError(err instanceof Error ? err.message : 'Failed to save financial settings');
     } finally {
       setSavingSettings(false);
     }
@@ -375,9 +382,9 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     try {
       await updatePlayerFeeSubscription(subscription.id, { status });
       await loadFeeManagementData();
-      setSuccessMessage(`Recurring fee ${status}`);
+      showSuccess(`Recurring fee ${status}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update recurring fee');
+      showError(err instanceof Error ? err.message : 'Failed to update recurring fee');
     }
   };
 
@@ -385,9 +392,9 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     try {
       const result = await processPlayerFeeReminders(academyId);
       await loadFeeManagementData();
-      setSuccessMessage(`Reminder run complete: ${result.emailsSent} sent, ${result.emailsFailed} failed`);
+      showSuccess(`Reminder run complete: ${result.emailsSent} sent, ${result.emailsFailed} failed`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send renewal reminders');
+      showError(err instanceof Error ? err.message : 'Failed to send renewal reminders');
     }
   };
 
@@ -395,23 +402,23 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   const handleCreateBudgetCategory = async () => {
     try {
       if (!academyId) {
-        setError('Academy ID is missing. Please refresh the page.');
+        showError('Academy ID is missing. Please refresh the page.');
         return;
       }
 
       // Enhanced validation
       if (!budgetForm.category_name?.trim()) {
-        setError('Category name is required');
+        showError('Category name is required');
         return;
       }
       
       if (!budgetForm.budgeted_amount || Number(budgetForm.budgeted_amount) <= 0) {
-        setError('Budgeted amount must be greater than 0');
+        showError('Budgeted amount must be greater than 0');
         return;
       }
 
       if (!budgetForm.fiscal_year || budgetForm.fiscal_year < 2020 || budgetForm.fiscal_year > 2030) {
-        setError('Please enter a valid fiscal year between 2020 and 2030');
+        showError('Please enter a valid fiscal year between 2020 and 2030');
         return;
       }
 
@@ -420,7 +427,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         cat => cat.category_name.toLowerCase() === budgetForm.category_name?.trim().toLowerCase()
       );
       if (existingCategory) {
-        setError('A budget category with this name already exists');
+        showError('A budget category with this name already exists');
         return;
       }
 
@@ -438,10 +445,9 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         is_active: true
       });
       fetchData();
-      setError(''); // Clear any previous errors
-      setSuccessMessage('Budget category created successfully');
+      showSuccess('Budget category created successfully');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to create budget category');
+      showError(err instanceof Error ? err.message : 'Failed to create budget category');
     }
   };
 
@@ -451,17 +457,17 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
 
       // Enhanced validation
       if (!budgetForm.category_name?.trim()) {
-        setError('Category name is required');
+        showError('Category name is required');
         return;
       }
       
       if (!budgetForm.budgeted_amount || Number(budgetForm.budgeted_amount) <= 0) {
-        setError('Budgeted amount must be greater than 0');
+        showError('Budgeted amount must be greater than 0');
         return;
       }
 
       if (!budgetForm.fiscal_year || budgetForm.fiscal_year < 2020 || budgetForm.fiscal_year > 2030) {
-        setError('Please enter a valid fiscal year between 2020 and 2030');
+        showError('Please enter a valid fiscal year between 2020 and 2030');
         return;
       }
 
@@ -471,7 +477,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                cat.category_name.toLowerCase() === budgetForm.category_name?.trim().toLowerCase()
       );
       if (existingCategory) {
-        setError('A budget category with this name already exists');
+        showError('A budget category with this name already exists');
         return;
       }
 
@@ -490,10 +496,9 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         is_active: true
       });
       fetchData();
-      setError(''); // Clear any previous errors
-      setSuccessMessage('Budget category updated successfully');
+      showSuccess('Budget category updated successfully');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update budget category');
+      showError(err instanceof Error ? err.message : 'Failed to update budget category');
     }
   };
 
@@ -503,10 +508,9 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     try {
       await deleteBudgetCategory(id);
       fetchData();
-      setError(''); // Clear any previous errors
-      setSuccessMessage('Budget category deleted successfully');
+      showSuccess('Budget category deleted successfully');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete budget category');
+      showError(err instanceof Error ? err.message : 'Failed to delete budget category');
     }
   };
 
@@ -524,7 +528,6 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       });
     }
     setShowBudgetModal(true);
-    setError(''); // Clear any previous errors when opening modal
   };
 
   const formatCurrency = (amount: number) => {
@@ -799,7 +802,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     if (activeTab === 'invoices') {
       fetchInvoices();
     }
-  }, [activeTab]);
+  }, [academyId, activeTab]);
 
   const handleEditInvoice = (invoice: any) => {
     setEditingInvoice(invoice);
@@ -821,50 +824,17 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         setEditingInvoice(null);
         if (activeTab === 'invoices') fetchInvoices();
         fetchData(); // This will refresh the financial summary since the backend creates a transaction
+        showSuccess(editingInvoice ? 'Invoice updated successfully' : 'Invoice created successfully');
       } else {
         throw new Error(result.error || 'Failed to save invoice');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save invoice transaction');
+      showError(err instanceof Error ? err.message : 'Failed to save invoice transaction');
     }
   };
 
-  if (loading && transactions.length === 0) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
-      {/* Success Alert */}
-      {successMessage && (
-        <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center space-x-2">
-          <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <span className="text-green-700">{successMessage}</span>
-          <button onClick={() => setSuccessMessage(null)} className="ml-auto text-green-500 hover:text-green-700">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-
-      {/* Error Alert */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-2">
-          <AlertCircle className="h-5 w-5 text-red-500" />
-          <span className="text-red-700">{error}</span>
-          <button onClick={() => setError(null)} className="ml-auto text-red-500 hover:text-red-700">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      )}
-
       <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
