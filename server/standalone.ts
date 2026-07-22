@@ -1,4 +1,5 @@
 import { createServer } from './index.js';
+import { startPlayerFeeReminderScheduler } from './lib/player-fee-reminders.js';
 
 console.log('Starting standalone server...');
 
@@ -10,6 +11,7 @@ try {
         console.log(`Standalone server listening on port ${port}`);
         console.log(`Test URL: http://localhost:${port}/api/subscriptions/plans`);
     });
+    startPlayerFeeReminderScheduler();
 
     server.on('error', (err) => {
         console.error('Server error:', err);

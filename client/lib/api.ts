@@ -50,7 +50,10 @@ export interface Player {
   height?: number;
   weight?: number;
   isActive?: boolean;
-  jerseyNumber?: string;
+  jerseyNumber?: string | number;
+  isSelfRegistered?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 // Transfer types
@@ -179,6 +182,42 @@ export interface PlayersListResponse {
   };
 }
 
+interface RawPlayersListResponse {
+  success: boolean;
+  message?: string;
+  data?: {
+    players?: Player[];
+    pagination?: Partial<PlayersListResponse["data"]["pagination"]>;
+    total?: number;
+    page?: number;
+    limit?: number;
+  };
+}
+
+export function normalizePlayersListResponse(
+  response: RawPlayersListResponse,
+  requestedPage: string | number = 1,
+  requestedLimit: string | number = 10,
+): PlayersListResponse {
+  const players = Array.isArray(response.data?.players) ? response.data.players : [];
+  const page = Math.max(1, Number(response.data?.pagination?.page ?? response.data?.page ?? requestedPage) || 1);
+  const limit = Math.max(1, Number(response.data?.pagination?.limit ?? response.data?.limit ?? requestedLimit) || 10);
+  const total = Math.max(0, Number(response.data?.pagination?.total ?? response.data?.total ?? players.length) || 0);
+  const totalPages = Math.max(
+    0,
+    Number(response.data?.pagination?.totalPages ?? Math.ceil(total / limit)) || 0,
+  );
+
+  return {
+    success: response.success,
+    message: response.message,
+    data: {
+      players,
+      pagination: { page, limit, total, totalPages },
+    },
+  };
+}
+
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     const finalPath = path.startsWith('/') ? path.substring(1) : path;
@@ -299,7 +338,8 @@ export const Api = {
   async getPlayers(academyId?: string, agencyId?: string | number, page: string | number = 1, limit: string | number = 10): Promise<PlayersListResponse> {
     const academyParam = academyId ? `&academyId=${academyId}` : '';
     const agencyParam = agencyId ? `&agencyId=${agencyId}` : '';
-    return http<PlayersListResponse>(`/football-players?page=${page}&limit=${limit}${academyParam}${agencyParam}`);
+    const response = await http<RawPlayersListResponse>(`/football-players?page=${page}&limit=${limit}${academyParam}${agencyParam}`);
+    return normalizePlayersListResponse(response, page, limit);
   },
 
   async getPlayer(playerId: string): Promise<PlayerResponse> {
@@ -1030,6 +1070,46 @@ export interface FinancialTransaction {
   created_at?: string;
   updated_at?: string;
   source_type?: 'transaction' | 'transfer';
+  currency?: string;
+  player_id?: string;
+  player_source?: 'academy' | 'individual';
+  player_name?: string;
+  player_email?: string;
+  payment_type?: 'monthly' | 'yearly' | 'custom';
+  custom_payment_type?: string;
+  is_external_payment?: boolean;
+  fee_subscription_id?: string;
+  is_recurring?: boolean;
+  next_renewal_date?: string;
+  reminder_days_before?: number;
+}
+
+export interface AcademyFinancialSettings {
+  academy_id: string;
+  default_currency: string;
+  renewal_reminders_enabled: boolean;
+  default_reminder_days: number;
+}
+
+export interface PlayerFeeSubscription {
+  id: string;
+  academy_id: string;
+  player_id: string;
+  player_source: 'academy' | 'individual';
+  player_name: string;
+  player_email: string;
+  fee_name: string;
+  amount: number;
+  currency: string;
+  billing_cycle: 'monthly' | 'yearly' | 'custom';
+  custom_billing_label?: string;
+  next_renewal_date: string;
+  reminder_days_before: number;
+  status: 'active' | 'paused' | 'cancelled' | 'completed';
+  notes?: string;
+  last_reminder_sent_for?: string;
+  last_reminder_sent_at?: string;
+  reminder_delivery?: Record<'academy' | 'player', { status: 'processing' | 'sent' | 'failed'; sentAt?: string; error?: string }>;
 }
 
 export interface BudgetCategory {
@@ -1083,6 +1163,8 @@ export async function getFinancialTransactions(
     dateFrom?: string;
     dateTo?: string;
     search?: string;
+    currency?: string;
+    playerFeesOnly?: boolean;
   } = {}
 ): Promise<FinancialTransactionsResponse> {
   try {
@@ -1096,15 +1178,10 @@ export async function getFinancialTransactions(
     if (options.dateFrom) params.append('dateFrom', options.dateFrom);
     if (options.dateTo) params.append('dateTo', options.dateTo);
     if (options.search) params.append('search', options.search);
+    if (options.currency) params.append('currency', options.currency);
+    if (options.playerFeesOnly) params.append('playerFeesOnly', 'true');
 
-    const response = await fetch(`${BASE_URL}/financial-transactions/${academyId}?${params}`);
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to fetch financial transactions');
-    }
-
-    return result;
+    return Api.get<FinancialTransactionsResponse>(`/financial-transactions/${academyId}?${params}`);
   } catch (error) {
     console.error('Error fetching financial transactions:', error);
     throw error;
@@ -1113,21 +1190,7 @@ export async function getFinancialTransactions(
 
 export async function createFinancialTransaction(transaction: Omit<FinancialTransaction, 'id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; data: FinancialTransaction }> {
   try {
-    const response = await fetch(`${BASE_URL}/financial-transactions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(transaction),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to create financial transaction');
-    }
-
-    return result;
+    return Api.post<{ success: boolean; data: FinancialTransaction }>('/financial-transactions', transaction);
   } catch (error) {
     console.error('Error creating financial transaction:', error);
     throw error;
@@ -1136,21 +1199,7 @@ export async function createFinancialTransaction(transaction: Omit<FinancialTran
 
 export async function updateFinancialTransaction(id: string | number, transaction: Partial<FinancialTransaction>): Promise<{ success: boolean; data: FinancialTransaction }> {
   try {
-    const response = await fetch(`${BASE_URL}/financial-transactions/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(transaction),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to update financial transaction');
-    }
-
-    return result;
+    return Api.put<{ success: boolean; data: FinancialTransaction }>(`/financial-transactions/${id}`, transaction);
   } catch (error) {
     console.error('Error updating financial transaction:', error);
     throw error;
@@ -1159,24 +1208,14 @@ export async function updateFinancialTransaction(id: string | number, transactio
 
 export async function deleteFinancialTransaction(id: string | number): Promise<{ success: boolean; message: string }> {
   try {
-    const response = await fetch(`${BASE_URL}/financial-transactions/${id}`, {
-      method: 'DELETE',
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to delete financial transaction');
-    }
-
-    return result;
+    return Api.delete<{ success: boolean; message: string }>(`/financial-transactions/${id}`);
   } catch (error) {
     console.error('Error deleting financial transaction:', error);
     throw error;
   }
 }
 
-export async function getFinancialSummary(academyId: string, options: { period?: string; year?: number } = {}): Promise<{
+export async function getFinancialSummary(academyId: string, options: { period?: string; year?: number; currency?: string } = {}): Promise<{
   success: boolean;
   data: {
     summary: FinancialSummary;
@@ -1191,21 +1230,16 @@ export async function getFinancialSummary(academyId: string, options: { period?:
       transaction_type: string;
       total_amount: string;
     }>;
+    currency?: string;
   };
 }> {
   try {
     const params = new URLSearchParams();
     if (options.period) params.append('period', options.period);
     if (options.year) params.append('year', options.year.toString());
+    if (options.currency) params.append('currency', options.currency);
 
-    const response = await fetch(`${BASE_URL}/financial-transactions/${academyId}/summary?${params}`);
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to fetch financial summary');
-    }
-
-    return result;
+    return Api.get(`/financial-transactions/${academyId}/summary?${params}`);
   } catch (error) {
     console.error('Error fetching financial summary:', error);
     throw error;
@@ -1217,14 +1251,7 @@ export async function getBudgetCategories(academyId: string, year?: number): Pro
     const params = new URLSearchParams();
     if (year) params.append('year', year.toString());
 
-    const response = await fetch(`${BASE_URL}/financial-transactions/${academyId}/budget-categories?${params}`);
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to fetch budget categories');
-    }
-
-    return result;
+    return Api.get(`/financial-transactions/${academyId}/budget-categories?${params}`);
   } catch (error) {
     console.error('Error fetching budget categories:', error);
     throw error;
@@ -1234,23 +1261,7 @@ export async function getBudgetCategories(academyId: string, year?: number): Pro
 export async function createBudgetCategory(academyId: string, category: Omit<BudgetCategory, 'id' | 'academy_id' | 'created_at' | 'updated_at'>): Promise<{ success: boolean; data: BudgetCategory }> {
   try {
     const payload = { ...category, academy_id: academyId };
-    const response = await fetch(`${BASE_URL}/financial-transactions/${academyId}/budget-categories`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      console.error('Create Budget Failed. Response:', result); // Debug log
-      const errorMsg = result.error || result.message || (typeof result === 'string' ? result : JSON.stringify(result)) || 'Failed to create budget category';
-      throw new Error(errorMsg);
-    }
-
-    return result;
+    return Api.post(`/financial-transactions/${academyId}/budget-categories`, payload);
   } catch (error) {
     console.error('Error creating budget category:', error);
     throw error;
@@ -1259,21 +1270,7 @@ export async function createBudgetCategory(academyId: string, category: Omit<Bud
 
 export async function updateBudgetCategory(id: number, category: Partial<BudgetCategory>): Promise<{ success: boolean; data: BudgetCategory }> {
   try {
-    const response = await fetch(`${BASE_URL}/financial-transactions/budget-categories/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(category),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to update budget category');
-    }
-
-    return result;
+    return Api.put(`/financial-transactions/budget-categories/${id}`, category);
   } catch (error) {
     console.error('Error updating budget category:', error);
     throw error;
@@ -1282,21 +1279,59 @@ export async function updateBudgetCategory(id: number, category: Partial<BudgetC
 
 export async function deleteBudgetCategory(id: number): Promise<{ success: boolean; message: string }> {
   try {
-    const response = await fetch(`${BASE_URL}/financial-transactions/budget-categories/${id}`, {
-      method: 'DELETE',
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to delete budget category');
-    }
-
-    return result;
+    return Api.delete(`/financial-transactions/budget-categories/${id}`);
   } catch (error) {
     console.error('Error deleting budget category:', error);
     throw error;
   }
+}
+
+export async function getAcademyFinancialSettings(academyId: string): Promise<AcademyFinancialSettings> {
+  const result = await Api.get<{ success: boolean; data: AcademyFinancialSettings }>(
+    `/financial-transactions/${academyId}/settings`,
+  );
+  return result.data;
+}
+
+export async function updateAcademyFinancialSettings(
+  academyId: string,
+  settings: Partial<AcademyFinancialSettings>,
+): Promise<AcademyFinancialSettings> {
+  const result = await Api.put<{ success: boolean; data: AcademyFinancialSettings }>(
+    `/financial-transactions/${academyId}/settings`,
+    settings,
+  );
+  return result.data;
+}
+
+export async function getPlayerFeeSubscriptions(academyId: string): Promise<PlayerFeeSubscription[]> {
+  const result = await Api.get<{ success: boolean; data: PlayerFeeSubscription[] }>(
+    `/financial-transactions/${academyId}/player-fee-subscriptions`,
+  );
+  return result.data;
+}
+
+export async function updatePlayerFeeSubscription(
+  id: string,
+  updates: Partial<PlayerFeeSubscription>,
+): Promise<PlayerFeeSubscription> {
+  const result = await Api.put<{ success: boolean; data: PlayerFeeSubscription }>(
+    `/financial-transactions/player-fee-subscriptions/${id}`,
+    updates,
+  );
+  return result.data;
+}
+
+export async function processPlayerFeeReminders(academyId: string): Promise<{
+  subscriptionsChecked: number;
+  emailsSent: number;
+  emailsFailed: number;
+}> {
+  const result = await Api.post<{
+    success: boolean;
+    data: { subscriptionsChecked: number; emailsSent: number; emailsFailed: number };
+  }>(`/financial-transactions/${academyId}/player-fee-reminders/process`);
+  return result.data;
 }
 
 // ===== INDIVIDUAL PLAYERS API =====

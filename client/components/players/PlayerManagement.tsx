@@ -47,14 +47,14 @@ interface Player {
   position: string;
   email?: string;
   phone?: string;
-  jerseyNumber?: number;
+  jerseyNumber?: number | string;
   height?: number;
   weight?: number;
   preferredFoot?: string;
-  isActive: boolean;
+  isActive?: boolean;
   isSelfRegistered?: boolean;
-  createdAt: string;
-  updatedAt: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 import AddPlayerStepForm from './AddPlayerStepForm';

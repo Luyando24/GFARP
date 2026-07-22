@@ -12,13 +12,18 @@ import {
   TrendingUp,
   TrendingDown,
   X,
-  AlertCircle
+  AlertCircle,
+  Bell,
+  Repeat2,
+  Settings2,
+  UserRound
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 import InvoiceGenerator from './InvoiceGenerator';
 import { 
   FinancialTransaction,
+  PlayerFeeSubscription,
   BudgetCategory,
   getFinancialTransactions,
   createFinancialTransaction,
@@ -28,7 +33,12 @@ import {
   getBudgetCategories,
   createBudgetCategory,
   updateBudgetCategory,
-  deleteBudgetCategory
+  deleteBudgetCategory,
+  getAcademyFinancialSettings,
+  updateAcademyFinancialSettings,
+  getPlayerFeeSubscriptions,
+  updatePlayerFeeSubscription,
+  processPlayerFeeReminders
 } from '../lib/api';
 
 interface FinancialTransactionsManagerProps {
@@ -43,6 +53,13 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [players, setPlayers] = useState<any[]>([]);
+  const [feeSubscriptions, setFeeSubscriptions] = useState<PlayerFeeSubscription[]>([]);
+  const [defaultCurrency, setDefaultCurrency] = useState('USD');
+  const [currencyDraft, setCurrencyDraft] = useState('USD');
+  const [remindersEnabled, setRemindersEnabled] = useState(true);
+  const [defaultReminderDays, setDefaultReminderDays] = useState(7);
+  const [savingSettings, setSavingSettings] = useState(false);
   
   // Clear success message after 3 seconds
   useEffect(() => {
@@ -73,15 +90,20 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   const [editingBudget, setEditingBudget] = useState<BudgetCategory | null>(null);
   
   // Invoice state
-  const [activeTab, setActiveTab] = useState<'transactions' | 'budgets' | 'invoices'>('transactions');
+  const [activeTab, setActiveTab] = useState<'player-fees' | 'subscriptions' | 'transactions' | 'budgets' | 'invoices'>('player-fees');
   const [invoices, setInvoices] = useState<any[]>([]);
   const [editingInvoice, setEditingInvoice] = useState<any>(null);
 
   // Form states
   const [transactionForm, setTransactionForm] = useState<Partial<FinancialTransaction>>({
     transaction_type: 'income',
+    category: 'Academy Fees',
     status: 'completed',
-    transaction_date: new Date().toISOString().split('T')[0]
+    transaction_date: new Date().toISOString().split('T')[0],
+    currency: 'USD',
+    payment_type: 'monthly',
+    is_external_payment: true,
+    reminder_days_before: 7,
   });
   
   const [budgetForm, setBudgetForm] = useState<Partial<BudgetCategory>>({
@@ -140,9 +162,52 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     { value: 'refunded', label: t('dash.finance.status.refunded'), color: 'bg-blue-100 text-blue-800' }
   ];
 
+  const emptyTransactionForm = (playerFee = true): Partial<FinancialTransaction> => ({
+    transaction_type: 'income',
+    category: playerFee ? 'Academy Fees' : undefined,
+    status: 'completed',
+    transaction_date: new Date().toISOString().split('T')[0],
+    currency: defaultCurrency,
+    payment_type: playerFee ? 'monthly' : undefined,
+    is_external_payment: playerFee,
+    reminder_days_before: defaultReminderDays,
+  });
+
+  const loadFeeManagementData = async () => {
+    try {
+      const [settings, subscriptions] = await Promise.all([
+        getAcademyFinancialSettings(academyId),
+        getPlayerFeeSubscriptions(academyId),
+      ]);
+      setDefaultCurrency(settings.default_currency || 'USD');
+      setCurrencyDraft(settings.default_currency || 'USD');
+      setRemindersEnabled(settings.renewal_reminders_enabled !== false);
+      setDefaultReminderDays(settings.default_reminder_days ?? 7);
+      setFeeSubscriptions(subscriptions || []);
+
+      const allPlayers: any[] = [];
+      let page = 1;
+      let totalPages = 1;
+      do {
+        const response = await Api.getPlayers(academyId, undefined, page, 100);
+        allPlayers.push(...(response.data?.players || []));
+        totalPages = response.data?.pagination?.totalPages || 1;
+        page += 1;
+      } while (page <= totalPages);
+      setPlayers(allPlayers);
+    } catch (err) {
+      console.error('Error fetching player fee management data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load player fee management data');
+    }
+  };
+
+  useEffect(() => {
+    if (academyId) loadFeeManagementData();
+  }, [academyId]);
+
   useEffect(() => {
     fetchData();
-  }, [academyId, currentPage, searchTerm, filterType, filterCategory, filterStatus, dateFrom, dateTo]);
+  }, [academyId, currentPage, searchTerm, filterType, filterCategory, filterStatus, dateFrom, dateTo, activeTab, defaultCurrency]);
 
   const fetchData = async () => {
     try {
@@ -158,9 +223,11 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
           status: filterStatus || undefined,
           dateFrom: dateFrom || undefined,
           dateTo: dateTo || undefined,
-          search: searchTerm || undefined
+          search: searchTerm || undefined,
+          currency: defaultCurrency,
+          playerFeesOnly: activeTab === 'player-fees',
         }),
-        getFinancialSummary(academyId),
+        getFinancialSummary(academyId, { currency: defaultCurrency }),
         getBudgetCategories(academyId)
       ]);
 
@@ -188,6 +255,14 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         setError('Please fill in all required fields');
         return;
       }
+      if (transactionForm.category === 'Academy Fees' && !transactionForm.player_id) {
+        setError('Select the player who paid this fee');
+        return;
+      }
+      if (transactionForm.is_recurring && !transactionForm.next_renewal_date) {
+        setError('Choose the next renewal date for this recurring fee');
+        return;
+      }
 
       await createFinancialTransaction({
         ...transactionForm,
@@ -196,12 +271,8 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       } as FinancialTransaction);
 
       setShowTransactionModal(false);
-      setTransactionForm({
-        transaction_type: 'income',
-        status: 'completed',
-        transaction_date: new Date().toISOString().split('T')[0]
-      });
-      fetchData();
+      setTransactionForm(emptyTransactionForm(activeTab === 'player-fees'));
+      await Promise.all([fetchData(), loadFeeManagementData()]);
       setSuccessMessage('Transaction created successfully');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create transaction');
@@ -215,11 +286,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       await updateFinancialTransaction(editingTransaction.id, transactionForm);
       setShowTransactionModal(false);
       setEditingTransaction(null);
-      setTransactionForm({
-        transaction_type: 'income',
-        status: 'completed',
-        transaction_date: new Date().toISOString().split('T')[0]
-      });
+      setTransactionForm(emptyTransactionForm(activeTab === 'player-fees'));
       fetchData();
       setSuccessMessage('Transaction updated successfully');
     } catch (err) {
@@ -241,7 +308,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     }
   };
 
-  const openTransactionModal = (transaction?: FinancialTransaction) => {
+  const openTransactionModal = (transaction?: FinancialTransaction, playerFee = activeTab === 'player-fees') => {
     console.debug('Edit button clicked:', { transactionId: transaction?.id, rawDate: transaction?.transaction_date });
     if (transaction) {
       setEditingTransaction(transaction);
@@ -257,13 +324,71 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       });
     } else {
       setEditingTransaction(null);
-      setTransactionForm({
-        transaction_type: 'income',
-        status: 'completed',
-        transaction_date: new Date().toISOString().split('T')[0]
-      });
+      setTransactionForm(emptyTransactionForm(playerFee));
     }
     setShowTransactionModal(true);
+  };
+
+  const openSubscriptionPayment = (subscription: PlayerFeeSubscription) => {
+    setEditingTransaction(null);
+    setTransactionForm({
+      ...emptyTransactionForm(true),
+      player_id: subscription.player_id,
+      fee_subscription_id: subscription.id,
+      description: subscription.fee_name,
+      amount: Number(subscription.amount),
+      currency: subscription.currency,
+      payment_type: subscription.billing_cycle,
+      custom_payment_type: subscription.custom_billing_label,
+      next_renewal_date: subscription.billing_cycle === 'custom' ? '' : subscription.next_renewal_date,
+    });
+    setShowTransactionModal(true);
+  };
+
+  const openRecurringFee = () => {
+    setEditingTransaction(null);
+    setTransactionForm({ ...emptyTransactionForm(true), is_recurring: true });
+    setShowTransactionModal(true);
+  };
+
+  const saveFinancialSettings = async () => {
+    try {
+      setSavingSettings(true);
+      const currency = currencyDraft.trim().toUpperCase();
+      if (!/^[A-Z]{3}$/.test(currency)) throw new Error('Enter a valid three-letter ISO currency code');
+      const settings = await updateAcademyFinancialSettings(academyId, {
+        default_currency: currency,
+        renewal_reminders_enabled: remindersEnabled,
+        default_reminder_days: defaultReminderDays,
+      });
+      setDefaultCurrency(settings.default_currency);
+      setCurrencyDraft(settings.default_currency);
+      setSuccessMessage('Financial settings saved');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save financial settings');
+    } finally {
+      setSavingSettings(false);
+    }
+  };
+
+  const changeSubscriptionStatus = async (subscription: PlayerFeeSubscription, status: PlayerFeeSubscription['status']) => {
+    try {
+      await updatePlayerFeeSubscription(subscription.id, { status });
+      await loadFeeManagementData();
+      setSuccessMessage(`Recurring fee ${status}`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to update recurring fee');
+    }
+  };
+
+  const sendRenewalReminders = async () => {
+    try {
+      const result = await processPlayerFeeReminders(academyId);
+      await loadFeeManagementData();
+      setSuccessMessage(`Reminder run complete: ${result.emailsSent} sent, ${result.emailsFailed} failed`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send renewal reminders');
+    }
   };
 
   // Budget Management Handlers
@@ -403,10 +528,14 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   };
 
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
+    try {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: defaultCurrency
+      }).format(amount);
+    } catch {
+      return `${defaultCurrency} ${Number(amount).toFixed(2)}`;
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -435,7 +564,32 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   };
 
   // Export Functions
-  const exportToPDF = () => {
+  const getAllTransactionsForReport = async () => {
+    const reportTransactions: FinancialTransaction[] = [];
+    let page = 1;
+    let pages = 1;
+    do {
+      const response = await getFinancialTransactions(academyId, {
+        page,
+        limit: 200,
+        type: filterType === 'all' ? undefined : filterType,
+        category: filterCategory || undefined,
+        status: filterStatus || undefined,
+        dateFrom: dateFrom || undefined,
+        dateTo: dateTo || undefined,
+        search: searchTerm || undefined,
+        currency: defaultCurrency,
+        playerFeesOnly: activeTab === 'player-fees',
+      });
+      reportTransactions.push(...(response.data.transactions || []));
+      pages = response.data.pagination.totalPages || 1;
+      page += 1;
+    } while (page <= pages);
+    return reportTransactions;
+  };
+
+  const exportToPDF = async () => {
+    const reportTransactions = await getAllTransactionsForReport();
     const doc = new jsPDF();
     
     // Add title
@@ -470,7 +624,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     doc.line(20, yPosition - 5, 200, yPosition - 5);
     
     // Add transaction data
-    transactions.forEach((transaction, index) => {
+    reportTransactions.forEach((transaction) => {
       if (yPosition > 270) { // Start new page if needed
         doc.addPage();
         yPosition = 20;
@@ -490,7 +644,8 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     setShowExportModal(false);
   };
 
-  const exportToExcel = () => {
+  const exportToExcel = async () => {
+    const reportTransactions = await getAllTransactionsForReport();
     // Prepare data for Excel export
     const exportData = [
       // Summary data
@@ -505,18 +660,21 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       [''],
       ['Transactions'],
       // Headers
-      ['Date', 'Type', 'Category', 'Subcategory', 'Description', 'Amount', 'Status', 'Payment Method', 'Reference Number', 'Notes'],
+      ['Date', 'Type', 'Player', 'Category', 'Payment Type', 'Description', 'Amount', 'Currency', 'Status', 'Payment Method', 'Reference Number', 'External Payment', 'Notes'],
       // Transaction data
-      ...transactions.map(transaction => [
+      ...reportTransactions.map(transaction => [
         formatDate(transaction.transaction_date),
         transaction.transaction_type === 'income' ? 'Income' : 'Expense',
+        transaction.player_name || '',
         transaction.category,
-        transaction.subcategory || '',
+        transaction.payment_type === 'custom' ? transaction.custom_payment_type : transaction.payment_type || '',
         transaction.description,
         transaction.amount,
+        transaction.currency || defaultCurrency,
         transaction.status,
         transaction.payment_method || '',
         transaction.reference_number || '',
+        transaction.is_external_payment ? 'Yes' : 'No',
         transaction.notes || ''
       ])
     ];
@@ -542,6 +700,22 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     
     // Add worksheet to workbook
     XLSX.utils.book_append_sheet(wb, ws, 'Financial Transactions');
+
+    const subscriptionSheet = XLSX.utils.json_to_sheet(feeSubscriptions.map(subscription => ({
+      Player: subscription.player_name,
+      Email: subscription.player_email,
+      Fee: subscription.fee_name,
+      Amount: Number(subscription.amount),
+      Currency: subscription.currency,
+      'Billing Cycle': subscription.billing_cycle === 'custom'
+        ? subscription.custom_billing_label
+        : subscription.billing_cycle,
+      'Next Renewal': subscription.next_renewal_date,
+      'Reminder Days': subscription.reminder_days_before,
+      Status: subscription.status,
+      'Last Reminder': subscription.last_reminder_sent_at || '',
+    })));
+    XLSX.utils.book_append_sheet(wb, subscriptionSheet, 'Recurring Player Fees');
     
     // Save the Excel file
     XLSX.writeFile(wb, `financial-transactions-${new Date().toISOString().split('T')[0]}.xlsx`);
@@ -691,6 +865,59 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         </div>
       )}
 
+      <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <Settings2 className="h-5 w-5 text-slate-600" />
+              <h3 className="font-semibold text-slate-900">Player fee settings</h3>
+            </div>
+            <p className="mt-1 text-sm text-slate-500">
+              Fee entries record payments collected directly by your academy outside Soccer Circular.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-4 sm:items-end">
+            <label className="text-sm text-slate-700">
+              Default currency
+              <input
+                value={currencyDraft}
+                onChange={(event) => setCurrencyDraft(event.target.value.toUpperCase().slice(0, 3))}
+                maxLength={3}
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 uppercase"
+                placeholder="USD"
+                aria-label="Default currency code"
+              />
+            </label>
+            <label className="text-sm text-slate-700">
+              Reminder lead days
+              <input
+                type="number"
+                min={0}
+                max={90}
+                value={defaultReminderDays}
+                onChange={(event) => setDefaultReminderDays(Number(event.target.value))}
+                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2"
+              />
+            </label>
+            <label className="flex h-10 items-center gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                checked={remindersEnabled}
+                onChange={(event) => setRemindersEnabled(event.target.checked)}
+              />
+              Email reminders
+            </label>
+            <button
+              onClick={saveFinancialSettings}
+              disabled={savingSettings}
+              className="h-10 rounded-md bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+            >
+              {savingSettings ? 'Saving…' : 'Save settings'}
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow p-6">
@@ -743,7 +970,27 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         <div className="border-b px-6">
           <div className="flex -mb-px space-x-8">
             <button
-              onClick={() => setActiveTab('transactions')}
+              onClick={() => { setActiveTab('player-fees'); setCurrentPage(1); }}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'player-fees'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Player Fees
+            </button>
+            <button
+              onClick={() => setActiveTab('subscriptions')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'subscriptions'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              Recurring Fees
+            </button>
+            <button
+              onClick={() => { setActiveTab('transactions'); setCurrentPage(1); }}
               className={`py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'transactions'
                   ? 'border-blue-500 text-blue-600'
@@ -776,7 +1023,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         </div>
       </div>
 
-      {activeTab === 'transactions' && (
+      {(activeTab === 'player-fees' || activeTab === 'transactions') && (
       <>
       {/* Controls */}
       <div className="bg-white rounded-lg shadow p-6">
@@ -787,7 +1034,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
               className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <Plus className="h-4 w-4 mr-2" />
-              {t('dash.finance.manager.add')}
+              {activeTab === 'player-fees' ? 'Record Player Fee' : t('dash.finance.manager.add')}
             </button>
             
             <button
@@ -903,12 +1150,22 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('dash.transfers.date')}
                 </th>
+                {activeTab === 'player-fees' && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Player
+                  </th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('common.type')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('dash.finance.category')}
                 </th>
+                {activeTab === 'player-fees' && (
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Payment Type
+                  </th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   {t('dash.finance.description')}
                 </th>
@@ -933,6 +1190,12 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {formatDate(transaction.transaction_date)}
                     </td>
+                    {activeTab === 'player-fees' && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <div className="font-medium">{transaction.player_name || 'Unassigned'}</div>
+                        <div className="text-xs text-gray-500">{transaction.player_email || ''}</div>
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         transaction.transaction_type === 'income' 
@@ -945,6 +1208,16 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {categoryLabel}
                     </td>
+                    {activeTab === 'player-fees' && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm capitalize text-gray-900">
+                        {transaction.payment_type === 'custom'
+                          ? transaction.custom_payment_type || 'Custom'
+                          : transaction.payment_type || 'One-time'}
+                        {transaction.fee_subscription_id && (
+                          <span className="ml-2 inline-flex rounded-full bg-purple-100 px-2 py-0.5 text-xs text-purple-700">Recurring</span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
                       {transaction.description}
                     </td>
@@ -1030,6 +1303,111 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         )}
       </div>
       </>
+      )}
+
+      {activeTab === 'subscriptions' && (
+        <div className="space-y-4">
+          <div className="flex flex-col gap-3 rounded-lg bg-white p-6 shadow sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="flex items-center gap-2 text-lg font-semibold text-gray-900">
+                <Repeat2 className="h-5 w-5 text-purple-600" /> Recurring player fees
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Renewal reminders go to both the academy and player email and are logged per due date.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={openRecurringFee}
+                className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+              >
+                <Plus className="mr-2 h-4 w-4" /> New recurring fee
+              </button>
+              <button
+                onClick={sendRenewalReminders}
+                disabled={!remindersEnabled}
+                className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <Bell className="mr-2 h-4 w-4" /> Send due reminders
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-lg bg-white shadow">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    {['Player', 'Fee', 'Amount', 'Billing', 'Next renewal', 'Reminder status', 'Status', 'Actions'].map((heading) => (
+                      <th key={heading} className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{heading}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 bg-white">
+                  {feeSubscriptions.map((subscription) => {
+                    const academyDelivery = subscription.reminder_delivery?.academy;
+                    const playerDelivery = subscription.reminder_delivery?.player;
+                    const cycleLabel = subscription.billing_cycle === 'custom'
+                      ? subscription.custom_billing_label || 'Custom'
+                      : subscription.billing_cycle;
+                    return (
+                      <tr key={subscription.id} className="hover:bg-gray-50">
+                        <td className="px-5 py-4 text-sm">
+                          <div className="font-medium text-gray-900">{subscription.player_name}</div>
+                          <div className="text-xs text-gray-500">{subscription.player_email}</div>
+                        </td>
+                        <td className="px-5 py-4 text-sm text-gray-900">{subscription.fee_name}</td>
+                        <td className="px-5 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                          {new Intl.NumberFormat('en-US', { style: 'currency', currency: subscription.currency }).format(Number(subscription.amount))}
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap text-sm capitalize text-gray-700">{cycleLabel}</td>
+                        <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-700">
+                          {formatDate(subscription.next_renewal_date)}
+                          <div className="text-xs text-gray-500">{subscription.reminder_days_before} days before</div>
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap text-xs">
+                          <div className={academyDelivery?.status === 'sent' ? 'text-green-700' : academyDelivery?.status === 'failed' ? 'text-red-700' : 'text-gray-500'}>
+                            Academy: {academyDelivery?.status || 'Pending'}
+                          </div>
+                          <div className={playerDelivery?.status === 'sent' ? 'text-green-700' : playerDelivery?.status === 'failed' ? 'text-red-700' : 'text-gray-500'}>
+                            Player: {playerDelivery?.status || 'Pending'}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
+                            subscription.status === 'active' ? 'bg-green-100 text-green-800' :
+                            subscription.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-gray-100 text-gray-700'
+                          }`}>{subscription.status}</span>
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap text-sm">
+                          <div className="flex items-center gap-2">
+                            <button onClick={() => openSubscriptionPayment(subscription)} className="text-blue-600 hover:text-blue-800">Record payment</button>
+                            {subscription.status === 'active' ? (
+                              <button onClick={() => changeSubscriptionStatus(subscription, 'paused')} className="text-amber-600 hover:text-amber-800">Pause</button>
+                            ) : subscription.status === 'paused' ? (
+                              <button onClick={() => changeSubscriptionStatus(subscription, 'active')} className="text-green-600 hover:text-green-800">Resume</button>
+                            ) : null}
+                            {!['cancelled', 'completed'].includes(subscription.status) && (
+                              <button onClick={() => changeSubscriptionStatus(subscription, 'cancelled')} className="text-red-600 hover:text-red-800">Cancel</button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {feeSubscriptions.length === 0 && (
+                    <tr>
+                      <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                        No recurring player fees yet. Record a player fee and enable recurring reminders to create one.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       )}
 
       {activeTab === 'invoices' && (
@@ -1245,6 +1623,34 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
               </div>
 
               <div className="space-y-4">
+                {(transactionForm.category === 'Academy Fees' || transactionForm.player_id) && (
+                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                    <div className="mb-3 flex items-start gap-2 text-sm text-blue-800">
+                      <UserRound className="mt-0.5 h-4 w-4 shrink-0" />
+                      <span>This records a fee collected externally by the academy. Soccer Circular will not process or charge this payment.</span>
+                    </div>
+                    <label className="block text-sm font-medium text-gray-700">
+                      Player *
+                      <select
+                        value={transactionForm.player_id || ''}
+                        onChange={(event) => setTransactionForm({
+                          ...transactionForm,
+                          player_id: event.target.value || undefined,
+                          is_external_payment: true,
+                        })}
+                        className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Select player</option>
+                        {players.map((player) => (
+                          <option key={player.id} value={player.id}>
+                            {player.firstName} {player.lastName}{player.email ? ` — ${player.email}` : ' — no email'}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1271,7 +1677,9 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                       value={transactionForm.category}
                       onChange={(e) => setTransactionForm({
                         ...transactionForm,
-                        category: e.target.value
+                        category: e.target.value,
+                        transaction_type: e.target.value === 'Academy Fees' ? 'income' : transactionForm.transaction_type,
+                        is_external_payment: e.target.value === 'Academy Fees' ? true : transactionForm.is_external_payment,
                       })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
@@ -1299,7 +1707,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Amount *
@@ -1319,6 +1727,22 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Currency *
+                    </label>
+                    <input
+                      value={transactionForm.currency || defaultCurrency}
+                      onChange={(e) => setTransactionForm({
+                        ...transactionForm,
+                        currency: e.target.value.toUpperCase().slice(0, 3)
+                      })}
+                      maxLength={3}
+                      className="w-full rounded-lg border border-gray-300 px-3 py-2 uppercase focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                      placeholder="USD"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Transaction Date *
                     </label>
                     <input
@@ -1332,6 +1756,82 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                     />
                   </div>
                 </div>
+
+                {(transactionForm.category === 'Academy Fees' || transactionForm.player_id) && (
+                  <div className="space-y-4 rounded-lg border border-gray-200 p-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="mb-1 block text-sm font-medium text-gray-700">Payment type *</label>
+                        <select
+                          value={transactionForm.payment_type || 'monthly'}
+                          onChange={(event) => setTransactionForm({
+                            ...transactionForm,
+                            payment_type: event.target.value as 'monthly' | 'yearly' | 'custom',
+                            custom_payment_type: event.target.value === 'custom' ? transactionForm.custom_payment_type : undefined,
+                          })}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="monthly">Monthly</option>
+                          <option value="yearly">Yearly</option>
+                          <option value="custom">Custom</option>
+                        </select>
+                      </div>
+                      {transactionForm.payment_type === 'custom' && (
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-gray-700">Custom payment type *</label>
+                          <input
+                            value={transactionForm.custom_payment_type || ''}
+                            onChange={(event) => setTransactionForm({ ...transactionForm, custom_payment_type: event.target.value })}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                            placeholder="e.g. Term fee, 6-week program"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {!transactionForm.fee_subscription_id && (
+                      <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(transactionForm.is_recurring)}
+                          onChange={(event) => setTransactionForm({ ...transactionForm, is_recurring: event.target.checked })}
+                        />
+                        Create a recurring fee schedule and send renewal reminders
+                      </label>
+                    )}
+
+                    {(transactionForm.is_recurring || transactionForm.fee_subscription_id) && (
+                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                          <label className="mb-1 block text-sm font-medium text-gray-700">
+                            {transactionForm.fee_subscription_id && transactionForm.payment_type === 'custom'
+                              ? 'Next renewal after this payment *'
+                              : 'Next renewal date *'}
+                          </label>
+                          <input
+                            type="date"
+                            value={transactionForm.next_renewal_date || ''}
+                            onChange={(event) => setTransactionForm({ ...transactionForm, next_renewal_date: event.target.value })}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                        {!transactionForm.fee_subscription_id && (
+                          <div>
+                            <label className="mb-1 block text-sm font-medium text-gray-700">Remind days before renewal</label>
+                            <input
+                              type="number"
+                              min={0}
+                              max={90}
+                              value={transactionForm.reminder_days_before ?? defaultReminderDays}
+                              onChange={(event) => setTransactionForm({ ...transactionForm, reminder_days_before: Number(event.target.value) })}
+                              className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">

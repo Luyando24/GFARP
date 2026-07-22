@@ -2,6 +2,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createServer } from "./index.js";
 import * as express from "express";
+import { startPlayerFeeReminderScheduler } from "./lib/player-fee-reminders.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,6 +25,8 @@ app.listen(port, () => {
   console.log(`📱 Frontend: ${process.env.VITE_APP_URL || `http://localhost:${port}`}`);
   console.log(`🔧 API: ${process.env.VITE_APP_URL || `http://localhost:${port}`}/api`);
 });
+
+startPlayerFeeReminderScheduler();
 
 // Graceful shutdown
 process.on("SIGTERM", () => {

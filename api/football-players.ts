@@ -37,8 +37,8 @@ export default async function handler(
     if (req.method === 'GET') {
         try {
             const academyId = req.query.academyId as string;
-            const page = parseInt(req.query.page as string) || 1;
-            const limit = parseInt(req.query.limit as string) || 10;
+            const page = Math.max(1, parseInt(req.query.page as string, 10) || 1);
+            const limit = Math.min(100, Math.max(1, parseInt(req.query.limit as string, 10) || 10));
             const offset = (page - 1) * limit;
 
             if (!academyId) {
@@ -193,12 +193,21 @@ export default async function handler(
 
             // Apply pagination on the combined array
             const paginatedPlayers = allPlayers.slice(offset, offset + limit);
+            const total = allPlayers.length;
+            const totalPages = Math.ceil(total / limit);
 
             return res.status(200).json({
                 success: true,
                 data: {
                     players: paginatedPlayers,
-                    total: allPlayers.length,
+                    pagination: {
+                        page,
+                        limit,
+                        total,
+                        totalPages
+                    },
+                    // Retain the former fields temporarily for older deployed clients.
+                    total,
                     page,
                     limit
                 }
