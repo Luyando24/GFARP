@@ -958,16 +958,27 @@ export default function AcademyDashboard() {
       }
 
       // Update local storage with new data (merging with existing structure)
+      const savedData = result.data || {};
+      const directorName = savedData.directorName || savedData.director_name || settingsFormData.directorName;
+      const directorEmail = savedData.directorEmail || savedData.director_email || settingsFormData.directorEmail;
+      const directorPhone = savedData.directorPhone || savedData.director_phone || settingsFormData.directorPhone;
       const updatedAcademyData = {
         ...academyInfo,
-        ...result.data,
-        // Ensure frontend specific fields are maintained if needed
-        location: result.data.address,
-        established: result.data.foundedYear,
+        ...savedData,
+        name: savedData.name || settingsFormData.name,
+        address: savedData.address || settingsFormData.location,
+        location: savedData.address || settingsFormData.location,
+        phone: savedData.phone || settingsFormData.phone,
+        directorName,
+        directorEmail,
+        directorPhone,
+        foundedYear: savedData.foundedYear || savedData.founded_year || settingsFormData.established,
+        established: savedData.foundedYear || savedData.founded_year || settingsFormData.established,
+        profileComplete: true,
         director: {
-          name: result.data.directorName,
-          email: result.data.directorEmail,
-          phone: result.data.directorPhone
+          name: directorName,
+          email: directorEmail,
+          phone: directorPhone
         }
       };
 

@@ -1,6 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Handle CORS
@@ -35,10 +38,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         const supabase = createClient(supabaseUrl, supabaseKey);
 
         // 1. Find user by email
+        const normalizedEmail = String(email).toLowerCase().trim();
         const { data: user, error: userError } = await supabase
             .from('staff_users')
             .select('*')
-            .eq('email', email)
+            .eq('email', normalizedEmail)
             .single();
 
         if (userError || !user) {
@@ -84,6 +88,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             storageLimit: 100
         };
 
+        // This token is consumed by the Express API authentication middleware.
+        // Its signature and claims must match the tokens issued by the main auth route.
+        const token = jwt.sign(
+            {
+                id: academy.id,
+                academyId: academy.id,
+                email: academy.email,
+                role: 'ACADEMY_ADMIN'
+            },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
+
         // 5. Return Success
         return res.status(200).json({
             success: true,
@@ -94,7 +111,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                     role: user.role
                 },
                 subscription: mockSubscription,
-                token: `mock_jwt_${user.id}` // In real app, generate JWT here
+                token
             }
         });
 

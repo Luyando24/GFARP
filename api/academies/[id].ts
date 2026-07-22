@@ -248,10 +248,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 throw new Error(error.message);
             }
 
+            const transformedData = {
+                id: data.id,
+                name: data.name,
+                email: data.email,
+                phone: data.phone,
+                address: data.address,
+                city: data.district,
+                country: data.province,
+                directorName: data.director_name,
+                directorEmail: data.director_email,
+                directorPhone: data.director_phone,
+                foundedYear: data.founded_year,
+                website: data.website,
+                description: data.description,
+                isActive: data.status === 'active',
+                updatedAt: data.updated_at
+            };
+
             return res.status(200).json({
                 success: true,
                 message: 'Academy updated successfully',
-                data: data
+                data: transformedData
             });
         }
 

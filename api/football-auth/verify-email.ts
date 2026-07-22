@@ -1,5 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
+import jwt from 'jsonwebtoken';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Handle CORS
@@ -58,15 +61,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             return res.status(500).json({ success: false, message: 'Failed to verify account' });
         }
 
-        // 3. Return success + token (auto login)
-        // In a real app, we would generate a proper JWT here.
-        // For now, we return a mock token compatible with the existing auth flow.
+        // 3. Return success + a token accepted by the Express API middleware.
+        const accessToken = jwt.sign(
+            {
+                id: user.academy_id,
+                academyId: user.academy_id,
+                email: user.email,
+                role: 'ACADEMY_ADMIN'
+            },
+            JWT_SECRET,
+            { expiresIn: '7d' }
+        );
         
         return res.status(200).json({
             success: true,
             message: 'Email verified successfully',
             data: {
-                token: `mock_jwt_${user.id}`,
+                token: accessToken,
                 user: {
                     id: user.id,
                     email: user.email,
