@@ -167,12 +167,15 @@ export interface PlayerResponse {
 
 export interface PlayersListResponse {
   success: boolean;
-  message: string;
+  message?: string;
   data: {
     players: Player[];
-    total: number;
-    page: number;
-    limit: number;
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
   };
 }
 

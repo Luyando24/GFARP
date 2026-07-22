@@ -84,6 +84,10 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
   const [showSubscriptionNotice, setShowSubscriptionNotice] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState<string>("");
   const [copied, setCopied] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [totalPlayers, setTotalPlayers] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   const academyData = JSON.parse(localStorage.getItem("academy_data") || "{}");
   const code = academyData?.code;
@@ -100,10 +104,10 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Fetch players on component mount
+  // Fetch the selected page whenever pagination changes.
   useEffect(() => {
     fetchPlayers();
-  }, []);
+  }, [currentPage, pageSize]);
 
   // Fetch players from API
   const fetchPlayers = async () => {
@@ -113,21 +117,27 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
       const session = JSON.parse(localStorage.getItem("ipims_auth_session") || "{}");
       const academyId = session?.schoolId || session?.academyId;
       const agencyId = session?.agencyId;
-      const response = await Api.getPlayers(academyId, agencyId);
-      if (response.success && response.data && Array.isArray((response as any).data.players)) {
-        // Server returns { data: { players: [...] } }
-        setPlayers((response as any).data.players);
-      } else if (response.success && Array.isArray((response as any).data)) {
-        // Fallback: server returns a plain array
-        setPlayers((response as any).data);
+      const response = await Api.getPlayers(academyId, agencyId, currentPage, pageSize);
+      if (response.success && response.data && Array.isArray(response.data.players)) {
+        setPlayers(response.data.players as Player[]);
+        setTotalPlayers(response.data.pagination.total);
+        setTotalPages(response.data.pagination.totalPages);
+
+        // A deletion can leave the current page beyond the new last page.
+        if (response.data.pagination.totalPages > 0 && currentPage > response.data.pagination.totalPages) {
+          setCurrentPage(response.data.pagination.totalPages);
+        }
       } else {
-        // If API fails or unexpected shape, start with empty array
         setPlayers([]);
+        setTotalPlayers(0);
+        setTotalPages(0);
       }
     } catch (error) {
       console.error("Error fetching players:", error);
       // If API fails, start with empty array instead of mock data
       setPlayers([]);
+      setTotalPlayers(0);
+      setTotalPages(0);
     } finally {
       setLoading(false);
     }
@@ -380,7 +390,9 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
       <Card>
         <CardHeader>
           <CardTitle>Registered Players</CardTitle>
-          <CardDescription>Manage your academy players and their information</CardDescription>
+          <CardDescription>
+            Manage all {totalPlayers} academy player{totalPlayers === 1 ? "" : "s"} and their information
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {loading && (
@@ -450,6 +462,57 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
                 })}
               </TableBody>
             </Table>
+          )}
+
+          {!loading && totalPlayers > 0 && (
+            <div className="mt-4 flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+                <span>Rows per page</span>
+                <Select
+                  value={String(pageSize)}
+                  onValueChange={(value) => {
+                    setPageSize(Number(value));
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-9 w-[72px]" aria-label="Rows per page">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span>
+                  {totalPlayers === 0
+                    ? "0 players"
+                    : `${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, totalPlayers)} of ${totalPlayers}`}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                  disabled={currentPage <= 1}
+                >
+                  Previous
+                </Button>
+                <span className="min-w-[100px] text-center text-sm text-slate-600 dark:text-slate-400">
+                  Page {currentPage} of {Math.max(totalPages, 1)}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                  disabled={currentPage >= totalPages}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -320,8 +320,12 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
 // Get Academy Players
 export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
   try {
-    const page = parseInt(req.query.page as string) || 1;
-    const limit = parseInt(req.query.limit as string) || 10;
+    const requestedPage = Number.parseInt(req.query.page as string, 10);
+    const requestedLimit = Number.parseInt(req.query.limit as string, 10);
+    const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    const limit = Number.isFinite(requestedLimit) && requestedLimit > 0
+      ? Math.min(requestedLimit, 100)
+      : 10;
     const academyId = (req.query.academyId as string) || undefined;
     const agencyId = (req.query.agencyId as string) || undefined;
 
@@ -350,7 +354,7 @@ export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
           LEFT JOIN player_profiles pp ON ip.id = pp.player_id
           WHERE ip.academy_id = $1
         ) combined_players
-        ORDER BY created_at DESC LIMIT $2 OFFSET $3
+        ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3
       `;
       params.push(academyId, limit, offset);
 
@@ -367,7 +371,7 @@ export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
                preferred_foot, created_at, updated_at, false as is_self_registered
         FROM players
         WHERE agency_id = $1
-        ORDER BY created_at DESC LIMIT $2 OFFSET $3
+        ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3
       `;
       params.push(agencyId, limit, offset);
 

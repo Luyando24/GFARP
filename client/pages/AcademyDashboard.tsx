@@ -529,7 +529,7 @@ export default function AcademyDashboard() {
       if (statsResult.success) {
         setDashboardStats(prev => ({
           ...statsResult.data,
-          totalPlayers: playersResult.success ? (playersResult.data?.total || 0) : (statsResult.data?.totalPlayers || 0),
+          totalPlayers: playersResult.success ? (playersResult.data?.pagination.total || 0) : (statsResult.data?.totalPlayers || 0),
           activeTransfers: activeTransfers,
           monthlyRevenue: financialSummary.totalRevenue || 0,
           recentTransfers: recentTransfers,
@@ -539,7 +539,7 @@ export default function AcademyDashboard() {
         // Fallback if stats endpoint fails
         setDashboardStats(prev => ({
           ...prev,
-          totalPlayers: playersResult.success ? (playersResult.data?.total || 0) : 0,
+          totalPlayers: playersResult.success ? (playersResult.data?.pagination.total || 0) : 0,
           activeTransfers: activeTransfers,
           monthlyRevenue: financialSummary.totalRevenue || 0,
           recentTransfers: recentTransfers,
