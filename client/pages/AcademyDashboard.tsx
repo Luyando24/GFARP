@@ -77,6 +77,7 @@ import AcademyComplianceTab from '@/components/academy/AcademyComplianceTab';
 import ComplianceDocuments from './ComplianceDocuments';
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { Player, Transfer, getTransfers, createTransfer, updateTransfer, deleteTransfer, getAcademyDashboardStats, Api } from '@/lib/api';
+import { getDashboardPlayerTotal, hasCurrentSubscription, normalizeAcademyDashboardProfile } from '@/lib/academy-dashboard-data';
 
 // Mock data removed
 // Player positions for dropdown
@@ -427,53 +428,53 @@ export default function AcademyDashboard() {
         }
       }
 
-      // If data is missing or missing ID, try to recover from session/API
-      if (!data || !data.id) {
-        try {
-          const sessionRaw = localStorage.getItem("ipims_auth_session");
-          if (sessionRaw) {
-            const session = JSON.parse(sessionRaw);
-            const academyId = session.schoolId || session.academyId || session.agencyId;
-            const token = session.tokens?.accessToken || session.access_token || session.token;
-
-            if (academyId && token) {
-              try {
-                const endpoint = (session.role === 'agency_admin' || session.agencyId) ? `/api/agencies/${academyId}` : `/api/academies/${academyId}`;
-                const response = await fetch(endpoint, {
-                  headers: { 'Authorization': `Bearer ${token}` }
-                });
-                const result = await response.json();
-                if (result.success && result.data) {
-                  data = result.data;
-                  localStorage.setItem('academy_data', JSON.stringify(data));
-                }
-              } catch (err) {
-                console.error("Failed to fetch academy profile", err);
-              }
-            }
-          }
-        } catch (e) {
-          console.error("Error recovering session", e);
-        }
+      // Render cached identity immediately, then always refresh the complete profile.
+      const cachedProfile = normalizeAcademyDashboardProfile(data);
+      if (cachedProfile) {
+        setAcademyInfo(cachedProfile);
       }
 
-      if (data?.subscription) {
-        // Normalize data to ensure consistent banner behavior
-        if (data.address === undefined) data.address = '';
-        if (data.phone === undefined) data.phone = '';
-        if (data.directorName === undefined) data.directorName = '';
+      try {
+        const currentSession = session as any;
+        const organizationId = data?.id
+          || currentSession?.schoolId
+          || currentSession?.academyId
+          || currentSession?.agencyId;
+        const token = currentSession?.tokens?.accessToken
+          || currentSession?.access_token
+          || currentSession?.token;
 
-        // Ensure directorName is populated from contactPerson if missing
-        if (!data.directorName && data.contactPerson) {
-          data.directorName = data.contactPerson;
+        if (organizationId && token) {
+          const isAgencySession = currentSession?.role === 'agency_admin' || currentSession?.agencyId;
+          const endpoint = isAgencySession
+            ? `/api/agencies/${organizationId}`
+            : `/api/academies/${organizationId}`;
+          const response = await fetch(endpoint, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          const result = await response.json();
+
+          if (!response.ok || !result.success || !result.data) {
+            throw new Error(result.error || result.message || 'Failed to load academy profile');
+          }
+
+          const refreshedProfile = normalizeAcademyDashboardProfile({
+            ...data,
+            ...result.data,
+          });
+          if (refreshedProfile) {
+            data = refreshedProfile;
+            localStorage.setItem(isAgencySession ? 'agency_data' : 'academy_data', JSON.stringify(data));
+            setAcademyInfo(data);
+          }
         }
-
-        setAcademyInfo(data);
+      } catch (error) {
+        console.error("Failed to refresh academy profile", error);
       }
     };
 
     loadAcademyData();
-  }, []);
+  }, [session?.userId, session?.tokens?.accessToken]);
 
   // Load transfers from database
   const loadTransfers = async () => {
@@ -511,10 +512,24 @@ export default function AcademyDashboard() {
     try {
       // Parallel fetch for all stats
       const [statsResult, playersResult, transfersResult, financialResult] = await Promise.all([
-        getAcademyDashboardStats(academyInfo.id),
-        Api.getPlayers(academyInfo.id, undefined, 1, 1),
-        Api.getTransfers(academyInfo.id),
-        fetch(`/api/financial/summary?academyId=${academyInfo.id}&period=monthly`).then(res => res.json())
+        getAcademyDashboardStats(academyInfo.id).catch(error => {
+          console.error('Failed to load aggregate dashboard stats:', error);
+          return { success: false, data: {} } as any;
+        }),
+        Api.getPlayers(academyInfo.id, undefined, 1, 1).catch(error => {
+          console.error('Failed to load dashboard player count:', error);
+          return { success: false, data: { players: [], pagination: { total: 0 } } } as any;
+        }),
+        Api.getTransfers(academyInfo.id).catch(error => {
+          console.error('Failed to load dashboard transfers:', error);
+          return { success: false, data: [] } as any;
+        }),
+        fetch(`/api/financial/summary?academyId=${academyInfo.id}&period=monthly`)
+          .then(async response => response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`)))
+          .catch(error => {
+            console.error('Failed to load dashboard financial summary:', error);
+            return { success: false, data: {} };
+          })
       ]);
 
       // Calculate active transfers
@@ -539,7 +554,7 @@ export default function AcademyDashboard() {
       if (statsResult.success) {
         setDashboardStats(prev => ({
           ...statsResult.data,
-          totalPlayers: playersResult.success ? (playersResult.data?.pagination.total || 0) : (statsResult.data?.totalPlayers || 0),
+          totalPlayers: getDashboardPlayerTotal(playersResult, statsResult),
           activeTransfers: activeTransfers,
           monthlyRevenue: financialSummary.totalRevenue || 0,
           recentTransfers: recentTransfers,
@@ -549,7 +564,7 @@ export default function AcademyDashboard() {
         // Fallback if stats endpoint fails
         setDashboardStats(prev => ({
           ...prev,
-          totalPlayers: playersResult.success ? (playersResult.data?.pagination.total || 0) : 0,
+          totalPlayers: getDashboardPlayerTotal(playersResult, statsResult),
           activeTransfers: activeTransfers,
           monthlyRevenue: financialSummary.totalRevenue || 0,
           recentTransfers: recentTransfers,
@@ -576,7 +591,7 @@ export default function AcademyDashboard() {
     try {
       // Import the API function at the top of the file
       const data = await getCurrentSubscription(academyInfo.id);
-      if (data) {
+      if (hasCurrentSubscription(data)) {
         // Map the API response to the UI model
         const planKey = data.subscription?.planName?.toLowerCase().includes('starter') ? 'starter' : 
                         data.subscription?.planName?.toLowerCase().includes('pro') ? 'pro' : 
