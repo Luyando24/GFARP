@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import AdminSidebar from './AdminSidebar';
 import Breadcrumb from './Breadcrumb';
 import ThemeToggle from '@/components/navigation/ThemeToggle';
+import { useTranslation } from '@/lib/i18n';
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -33,8 +34,10 @@ export default function DashboardLayout({
   isAdmin = false
 }: DashboardLayoutProps) {
   const { session } = useAuth();
+  const { dir } = useTranslation();
   const navigate = useNavigate();
   const [sidebarCollapsed, setSidebarCollapsed] = React.useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = React.useState(false);
   const [searchQuery, setSearchQuery] = React.useState('');
 
   const handleLogout = () => {
@@ -49,26 +52,27 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen overflow-x-hidden bg-background" dir={dir}>
       {/* Enhanced Top Navigation */}
       <div className="sticky top-0 z-50 border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 shadow-sm">
-        <div className="flex items-center justify-between px-6 py-3">
+        <div className="flex items-center justify-between gap-2 px-2 py-3 sm:px-6">
           {/* Left Section - Brand & Breadcrumbs */}
-          <div className="flex items-center gap-6">
-            <div className="flex items-center gap-3">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-6">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-3">
               <Button
                 variant="ghost"
                 size="icon"
                 className="lg:hidden"
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                aria-label={mobileSidebarOpen ? 'Close navigation' : 'Open navigation'}
+                onClick={() => setMobileSidebarOpen((open) => !open)}
               >
-                {sidebarCollapsed ? <Menu className="h-5 w-5" /> : <X className="h-5 w-5" />}
+                {mobileSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
               </Button>
               <div className="flex items-center gap-3">
                 <div className="flex items-center justify-center w-10 h-10 bg-primary rounded-lg">
                   <GraduationCap className="h-6 w-6 text-primary-foreground" />
                 </div>
-                <div>
+                <div className="hidden sm:block">
                   <h1 className="text-xl font-bold text-gray-900">Soccer Circular</h1>
                   <p className="text-xs text-gray-500 leading-tight">
                     Professional Academy Management
@@ -104,7 +108,7 @@ export default function DashboardLayout({
           </div>
 
           {/* Right Section - Actions & User */}
-          <div className="flex items-center gap-3">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-3">
             {/* Mobile Search Button */}
             <Button variant="ghost" size="icon" className="md:hidden">
               <Search className="h-5 w-5" />
@@ -133,7 +137,7 @@ export default function DashboardLayout({
             </DropdownMenu>
 
             {/* Quick Settings */}
-            <Button variant="ghost" size="icon">
+            <Button variant="ghost" size="icon" className="hidden sm:inline-flex">
               <Settings className="h-5 w-5" />
             </Button>
 
@@ -150,7 +154,7 @@ export default function DashboardLayout({
             {/* User Profile Dropdown */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="flex items-center gap-2 px-3">
+                <Button variant="ghost" className="flex items-center gap-2 px-1 sm:px-3">
                   <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center">
                     <User className="h-4 w-4 text-primary-foreground" />
                   </div>
@@ -193,7 +197,7 @@ export default function DashboardLayout({
         </div>
 
         {/* Mobile Breadcrumbs */}
-        <div className="md:hidden px-6 pb-3">
+        <div className="px-4 pb-3 md:hidden sm:px-6">
           <Breadcrumb />
         </div>
       </div>
@@ -205,12 +209,23 @@ export default function DashboardLayout({
           <AdminSidebar
             collapsed={sidebarCollapsed}
             onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+            mobileOpen={mobileSidebarOpen}
+            onMobileClose={() => setMobileSidebarOpen(false)}
+          />
+        )}
+
+        {isAdmin && mobileSidebarOpen && (
+          <button
+            type="button"
+            aria-label="Close navigation"
+            className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+            onClick={() => setMobileSidebarOpen(false)}
           />
         )}
 
         {/* Main Content Area */}
-        <div className="flex-1 overflow-auto">
-          <div className="p-6">
+        <div className="min-w-0 flex-1 overflow-auto">
+          <div className="p-4 sm:p-6">
             {children}
           </div>
         </div>

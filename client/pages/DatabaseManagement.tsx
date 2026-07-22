@@ -126,6 +126,7 @@ const DatabaseManagement = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // Database data
   const [databaseStats, setDatabaseStats] = useState<DatabaseStats | null>(null);
@@ -279,37 +280,49 @@ const DatabaseManagement = () => {
   }
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen min-w-0 overflow-hidden bg-background">
       <AdminSidebar
         collapsed={sidebarCollapsed}
         onToggle={() => setSidebarCollapsed(!sidebarCollapsed)}
+        mobileOpen={mobileSidebarOpen}
+        onMobileClose={() => setMobileSidebarOpen(false)}
       />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
+      {mobileSidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close navigation"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setMobileSidebarOpen(false)}
+        />
+      )}
+
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Header */}
-        <header className="bg-card border-b px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-4">
+        <header className="flex items-center justify-between gap-2 border-b bg-card px-4 py-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-4">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              aria-label={mobileSidebarOpen ? 'Close navigation' : 'Open navigation'}
+              onClick={() => setMobileSidebarOpen((open) => !open)}
               className="lg:hidden"
             >
               <Menu className="h-4 w-4" />
             </Button>
-            <div>
+            <div className="min-w-0">
               <h1 className="text-2xl font-bold">Database Management</h1>
-              <p className="text-muted-foreground">Monitor and manage your database</p>
+              <p className="hidden text-muted-foreground sm:block">Monitor and manage your database</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-4">
             <ThemeToggle />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="sm">
+                <Button variant="ghost" size="sm" className="px-2">
                   <Users className="h-4 w-4 mr-2" />
-                  {user?.email}
+                  <span className="hidden sm:inline">{user?.email}</span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -325,15 +338,17 @@ const DatabaseManagement = () => {
         </header>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-auto p-6">
+        <div className="min-w-0 flex-1 overflow-auto p-4 sm:p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-            <TabsList className="grid w-full grid-cols-5">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="tables">Tables</TabsTrigger>
-              <TabsTrigger value="backups">Backups</TabsTrigger>
-              <TabsTrigger value="performance">Performance</TabsTrigger>
-              <TabsTrigger value="maintenance">Maintenance</TabsTrigger>
-            </TabsList>
+            <div className="overflow-x-auto">
+              <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-1">
+                <TabsTrigger value="overview" className="shrink-0">Overview</TabsTrigger>
+                <TabsTrigger value="tables" className="shrink-0">Tables</TabsTrigger>
+                <TabsTrigger value="backups" className="shrink-0">Backups</TabsTrigger>
+                <TabsTrigger value="performance" className="shrink-0">Performance</TabsTrigger>
+                <TabsTrigger value="maintenance" className="shrink-0">Maintenance</TabsTrigger>
+              </TabsList>
+            </div>
 
             {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-6">

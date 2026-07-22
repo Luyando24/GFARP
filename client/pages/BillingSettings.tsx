@@ -96,7 +96,7 @@ export default function BillingSettings() {
 
   return (
     <div className="container mx-auto p-4 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3 sm:items-center">
         <h1 className="text-2xl font-semibold">Billing & Stripe Settings</h1>
         <ThemeToggle />
       </div>
@@ -124,7 +124,7 @@ export default function BillingSettings() {
                   <Input id="webhookSecret" type="password" placeholder="whsec_..." value={webhookSecret} onChange={(e) => setWebhookSecret(e.target.value)} />
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center">
                 <Button onClick={saveKeys} disabled={loading}>Save</Button>
                 <span className="text-sm text-muted-foreground">Current mode: {settings.mode ?? 'unset'}; Secret set: {settings.secret_key_set ? 'yes' : 'no'}</span>
               </div>

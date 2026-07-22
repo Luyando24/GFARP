@@ -471,9 +471,9 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Player Management</h2>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:justify-end">
           {code && (
             <Button variant="outline" onClick={handleCopyInviteLink} className="border-green-600 text-green-600 hover:bg-green-50 dark:border-green-500 dark:text-green-500 dark:hover:bg-slate-800">
               <Share2 className="h-4 w-4 mr-2" />
@@ -496,12 +496,14 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
         </CardHeader>
         <CardContent>
           {supportsAcademyFeeFilters && (
-            <Tabs value={feeFilter} onValueChange={handleFeeFilterChange} className="mb-6">
-              <TabsList className="grid h-auto w-full max-w-2xl grid-cols-3">
-                <TabsTrigger value="all" className="py-2.5">All players</TabsTrigger>
-                <TabsTrigger value="active" className="py-2.5">Active academy fees</TabsTrigger>
-                <TabsTrigger value="expiring" className="py-2.5">Fees expiring soon</TabsTrigger>
-              </TabsList>
+            <Tabs value={feeFilter} onValueChange={handleFeeFilterChange} className="mb-6 min-w-0">
+              <div className="overflow-x-auto">
+                <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-1 sm:max-w-2xl">
+                  <TabsTrigger value="all" className="shrink-0 py-2.5">All players</TabsTrigger>
+                  <TabsTrigger value="active" className="shrink-0 py-2.5">Active academy fees</TabsTrigger>
+                  <TabsTrigger value="expiring" className="shrink-0 py-2.5">Fees expiring soon</TabsTrigger>
+                </TabsList>
+              </div>
             </Tabs>
           )}
 
@@ -605,7 +607,7 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
                 </span>
               </div>
 
-              <div className="flex items-center justify-end gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
                 <Button
                   variant="outline"
                   size="sm"
@@ -614,7 +616,7 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
                 >
                   Previous
                 </Button>
-                <span className="min-w-[100px] text-center text-sm text-slate-600 dark:text-slate-400">
+                <span className="min-w-[84px] text-center text-sm text-slate-600 dark:text-slate-400">
                   Page {currentPage} of {Math.max(displayedTotalPages, 1)}
                 </span>
                 <Button

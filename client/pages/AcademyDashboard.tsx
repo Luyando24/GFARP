@@ -103,9 +103,19 @@ const financialData: any = {};
 
 
 export default function AcademyDashboard() {
-  const { t } = useTranslation();
+  const { t, dir, language } = useTranslation();
   const { session } = useAuth();
   const isAgency = session?.role === 'agency_admin';
+  const navigationLabels = {
+    en: { open: 'Open menu', close: 'Close menu', logout: 'Sign out' },
+    es: { open: 'Abrir menú', close: 'Cerrar menú', logout: 'Cerrar sesión' },
+    fr: { open: 'Ouvrir le menu', close: 'Fermer le menu', logout: 'Se déconnecter' },
+    pt: { open: 'Abrir menu', close: 'Fechar menu', logout: 'Terminar sessão' },
+    de: { open: 'Menü öffnen', close: 'Menü schließen', logout: 'Abmelden' },
+    it: { open: 'Apri menu', close: 'Chiudi menu', logout: 'Esci' },
+    ar: { open: 'فتح القائمة', close: 'إغلاق القائمة', logout: 'تسجيل الخروج' },
+    zh: { open: '打开菜单', close: '关闭菜单', logout: '退出登录' },
+  }[language];
   usePageTitle("Academy Dashboard");
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -1254,17 +1264,18 @@ export default function AcademyDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen overflow-x-hidden bg-slate-50 dark:bg-slate-900" dir={dir}>
       {/* Header */}
       <header className="bg-white dark:bg-slate-900 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
-        <div className="px-4 sm:px-6 lg:px-8">
+        <div className="px-2 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo and Academy Name */}
-            <div className="flex items-center gap-4">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-4">
               <Button
                 variant="ghost"
                 size="sm"
-                className="lg:hidden"
+                className="shrink-0 lg:hidden"
+                aria-label={isSidebarOpen ? navigationLabels.close : navigationLabels.open}
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               >
                 {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -1278,8 +1289,8 @@ export default function AcademyDashboard() {
                     <Star className="h-2 w-2 text-white" />
                   </div>
                 </div>
-                <div>
-                  <h1 className="text-lg font-bold text-slate-900 dark:text-white">
+                <div className="hidden min-w-0 sm:block">
+                  <h1 className="truncate text-lg font-bold text-slate-900 dark:text-white">
                     {displayAcademyName}
                   </h1>
                   <p className="text-sm text-slate-600 dark:text-slate-400">{isAgency ? 'Agency Dashboard' : 'Academy Dashboard'}</p>
@@ -1302,11 +1313,11 @@ export default function AcademyDashboard() {
             </div>
 
             {/* User Menu */}
-            <div className="flex items-center gap-4">
+            <div className="flex shrink-0 items-center gap-1 sm:gap-3 lg:gap-4">
               <NotificationsPopover />
               <LanguageToggle />
               <ThemeToggle />
-              <div className="flex items-center gap-3">
+              <div className="hidden items-center gap-3 md:flex">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src={academyInfo?.logo} />
                   <AvatarFallback className="bg-blue-600 text-white font-bold">{getInitials(displayName)}</AvatarFallback>
@@ -1320,7 +1331,13 @@ export default function AcademyDashboard() {
                   </p>
                 </div>
               </div>
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="hidden md:inline-flex"
+                aria-label={navigationLabels.logout}
+                onClick={handleLogout}
+              >
                 <LogOut className="h-5 w-5" />
               </Button>
             </div>
@@ -1330,8 +1347,14 @@ export default function AcademyDashboard() {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:sticky lg:top-16 z-40 w-64 bg-gradient-to-b from-[#005391] to-[#0066b3] border-r-4 border-yellow-400 transition-transform duration-300 ease-in-out h-[calc(100vh-64px)] overflow-y-auto`}>
-          <div className="flex flex-col h-full pt-16 lg:pt-0">
+        <aside className={`${isSidebarOpen
+          ? 'translate-x-0'
+          : dir === 'rtl' ? 'translate-x-full' : '-translate-x-full'
+          } ${dir === 'rtl'
+            ? 'right-0 border-l-4 lg:right-auto'
+            : 'left-0 border-r-4 lg:left-auto'
+          } fixed top-16 z-50 h-[calc(100dvh-4rem)] w-64 overflow-y-auto border-yellow-400 bg-gradient-to-b from-[#005391] to-[#0066b3] transition-transform duration-300 ease-in-out lg:sticky lg:top-16 lg:translate-x-0`}>
+          <div className="flex h-full flex-col">
             <nav className="flex-1 px-4 py-6 space-y-2">
               {sidebarItems.map((item) => {
                 const Icon = item.icon;
@@ -1339,9 +1362,9 @@ export default function AcademyDashboard() {
                   <Button
                     key={item.id}
                     variant="ghost"
-                    className={`w-full justify-start text-white hover:bg-white/20 transition-all duration-300 ${activeTab === item.id
-                      ? 'bg-white/20 border-l-4 border-yellow-400 shadow-lg'
-                      : 'border-l-4 border-transparent hover:border-yellow-400/50'
+                    className={`w-full text-white hover:bg-white/20 transition-all duration-300 ${dir === 'rtl' ? 'justify-end text-right' : 'justify-start text-left'} ${activeTab === item.id
+                      ? `${dir === 'rtl' ? 'border-r-4' : 'border-l-4'} bg-white/20 border-yellow-400 shadow-lg`
+                      : `${dir === 'rtl' ? 'border-r-4' : 'border-l-4'} border-transparent hover:border-yellow-400/50`
                       }`}
                     onClick={() => {
                       setActiveTab(item.id);
@@ -1349,12 +1372,32 @@ export default function AcademyDashboard() {
                       setIsSidebarOpen(false);
                     }}
                   >
-                    <Icon className="h-5 w-5 mr-3" />
+                    <Icon className={`h-5 w-5 shrink-0 ${dir === 'rtl' ? 'ml-3' : 'mr-3'}`} />
                     {item.label}
                   </Button>
                 );
               })}
             </nav>
+            <div className="border-t border-white/20 p-4 md:hidden">
+              <div className="mb-3 flex items-center gap-3 text-white">
+                <Avatar className="h-9 w-9">
+                  <AvatarImage src={academyInfo?.logo} />
+                  <AvatarFallback className="bg-white/20 font-bold text-white">{getInitials(displayName)}</AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{displayName}</p>
+                  <p className="text-xs text-white/70">{t('dash.role')}</p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                className="w-full justify-start text-white hover:bg-white/20 hover:text-white"
+                onClick={handleLogout}
+              >
+                <LogOut className={`h-5 w-5 ${dir === 'rtl' ? 'ml-3' : 'mr-3'}`} />
+                {navigationLabels.logout}
+              </Button>
+            </div>
           </div>
         </aside>
 
@@ -1367,7 +1410,7 @@ export default function AcademyDashboard() {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 flex flex-col relative overflow-visible">
+        <main className="relative flex min-w-0 flex-1 flex-col overflow-visible">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
             {/* Sticky Navigation Section */}
             <div className="sticky top-16 z-40 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 shadow-sm">
@@ -1404,15 +1447,15 @@ export default function AcademyDashboard() {
                 )}
 
               {/* Tabs Navigation */}
-              <div className="px-6 py-2 max-w-7xl mx-auto w-full">
-                <TabsList className="grid w-full grid-cols-7">
-                  <TabsTrigger value="dashboard">{t('dash.menu.dashboard')}</TabsTrigger>
-                  <TabsTrigger value="players">{t('dash.menu.players')}</TabsTrigger>
-                  <TabsTrigger value="transfers">{t('dash.menu.transfers')}</TabsTrigger>
-                  <TabsTrigger value="finances">{t('dash.menu.finances')}</TabsTrigger>
-                  <TabsTrigger value="fifa-compliance">{t('dash.menu.compliance')}</TabsTrigger>
-                  <TabsTrigger value="subscription">{t('dash.stats.subscription')}</TabsTrigger>
-                  <TabsTrigger value="settings">{t('dash.menu.settings')}</TabsTrigger>
+              <div className="mx-auto w-full max-w-7xl overflow-x-auto px-4 py-2 sm:px-6">
+                <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-1 lg:grid lg:w-full lg:grid-cols-7">
+                  <TabsTrigger className="shrink-0 px-3 py-2" value="dashboard">{t('dash.menu.dashboard')}</TabsTrigger>
+                  <TabsTrigger className="shrink-0 px-3 py-2" value="players">{t('dash.menu.players')}</TabsTrigger>
+                  <TabsTrigger className="shrink-0 px-3 py-2" value="transfers">{t('dash.menu.transfers')}</TabsTrigger>
+                  <TabsTrigger className="shrink-0 px-3 py-2" value="finances">{t('dash.menu.finances')}</TabsTrigger>
+                  <TabsTrigger className="shrink-0 px-3 py-2" value="fifa-compliance">{t('dash.menu.compliance')}</TabsTrigger>
+                  <TabsTrigger className="shrink-0 px-3 py-2" value="subscription">{t('dash.stats.subscription')}</TabsTrigger>
+                  <TabsTrigger className="shrink-0 px-3 py-2" value="settings">{t('dash.menu.settings')}</TabsTrigger>
                 </TabsList>
               </div>
 
@@ -1448,7 +1491,7 @@ export default function AcademyDashboard() {
               )}
             </div>
 
-            <div className="flex-1 p-6">
+            <div className="flex-1 p-4 sm:p-6">
               {activeView === 'compliance-documents' ? (
                 <ComplianceDocuments onBack={() => setActiveView('main')} />
               ) : (

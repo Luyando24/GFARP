@@ -224,13 +224,13 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyD
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-xl">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6 border-b pb-4">
-            <div className="flex items-center gap-2">
+        <div className="p-4 sm:p-6">
+          <div className="mb-6 flex items-start justify-between gap-3 border-b pb-4 sm:items-center">
+            <div className="flex min-w-0 items-center gap-2">
               <div className="bg-blue-100 p-2 rounded-lg">
                 <FileText className="h-6 w-6 text-blue-600" />
               </div>
-              <h2 className="text-xl font-bold text-gray-900">Create New Invoice</h2>
+              <h2 className="text-xl font-bold leading-tight text-gray-900">Create New Invoice</h2>
             </div>
             <button
               onClick={onClose}
@@ -244,7 +244,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyD
             {/* Invoice Details */}
             <div className="space-y-4">
               <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Invoice Details</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Number</label>
                   <input
@@ -291,7 +291,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyD
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                   <input
@@ -319,7 +319,8 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyD
           {/* Items Table */}
           <div className="mb-8">
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Items</h3>
-            <div className="bg-gray-50 rounded-lg p-4">
+            <div className="overflow-x-auto rounded-lg bg-gray-50">
+              <div className="min-w-[640px] p-4">
               <div className="grid grid-cols-12 gap-4 mb-2 text-sm font-medium text-gray-500">
                 <div className="col-span-6">Description</div>
                 <div className="col-span-2">Quantity</div>
@@ -379,6 +380,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyD
                 <Plus className="h-4 w-4 mr-1" />
                 Add Item
               </button>
+              </div>
             </div>
           </div>
 
@@ -407,7 +409,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyD
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <button
                   onClick={handleSave}
                   className="flex-1 flex items-center justify-center px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm"

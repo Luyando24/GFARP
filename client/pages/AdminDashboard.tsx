@@ -135,6 +135,7 @@ import DiscountManager from '@/components/admin/DiscountManager';
 import ExemptionManager from '@/components/admin/ExemptionManager';
 import PlanManagement from '@/components/admin/PlanManagement';
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { useTranslation } from "@/lib/i18n";
 
 // Real admin data will be fetched from API
 
@@ -219,6 +220,7 @@ interface ComplianceRecord {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const { dir } = useTranslation();
   usePageTitle("Admin Panel");
   const { session } = useAuth();
   const { toast } = useToast();
@@ -1319,17 +1321,18 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen overflow-x-hidden bg-slate-50 dark:bg-slate-900" dir={dir}>
       {/* Header */}
       <header className="bg-white dark:bg-slate-900 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
-        <div className="px-4 sm:px-6 lg:px-8">
+        <div className="px-2 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo and Admin Panel Name */}
-            <div className="flex items-center gap-4">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-4">
               <Button
                 variant="ghost"
                 size="sm"
                 className="lg:hidden"
+                aria-label={isSidebarOpen ? 'Close navigation' : 'Open navigation'}
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               >
                 {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -1343,7 +1346,7 @@ export default function AdminDashboard() {
                     <Star className="h-2 w-2 text-white" />
                   </div>
                 </div>
-                <div>
+                <div className="hidden sm:block">
                   <h1 className="text-lg font-bold text-slate-900 dark:text-white">
                     Soccer Circular Admin
                   </h1>
@@ -1365,11 +1368,11 @@ export default function AdminDashboard() {
             </div>
 
             {/* Admin Menu */}
-            <div className="flex items-center gap-4">
+            <div className="flex shrink-0 items-center gap-1 sm:gap-3 lg:gap-4">
               <NotificationsPopover />
               <LanguageToggle />
               <ThemeToggle />
-              <div className="flex items-center gap-3">
+              <div className="hidden items-center gap-3 md:flex">
                 <Avatar className="h-8 w-8">
                   <AvatarImage src="/default-admin-avatar.png" />
                   <AvatarFallback className="bg-blue-600 text-white font-bold">AD</AvatarFallback>
@@ -1383,7 +1386,7 @@ export default function AdminDashboard() {
                   </p>
                 </div>
               </div>
-              <Button variant="ghost" size="sm" onClick={handleLogout}>
+              <Button variant="ghost" size="sm" onClick={handleLogout} className="hidden sm:inline-flex" aria-label="Sign out">
                 <LogOut className="h-5 w-5" />
               </Button>
             </div>
@@ -1393,8 +1396,8 @@ export default function AdminDashboard() {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:sticky lg:top-16 z-40 w-64 bg-gradient-to-b from-[#005391] to-[#0066b3] border-r-4 border-yellow-400 transition-transform duration-300 ease-in-out h-[calc(100vh-64px)] overflow-y-auto`}>
-          <div className="flex flex-col h-full pt-16 lg:pt-0">
+        <aside className={`${isSidebarOpen ? 'translate-x-0' : dir === 'rtl' ? 'translate-x-full' : '-translate-x-full'} ${dir === 'rtl' ? 'right-0 border-l-4' : 'left-0 border-r-4'} fixed top-16 z-40 h-[calc(100dvh-4rem)] w-64 overflow-y-auto border-yellow-400 bg-gradient-to-b from-[#005391] to-[#0066b3] transition-transform duration-300 ease-in-out lg:sticky lg:top-16 lg:translate-x-0`}>
+          <div className="flex h-full flex-col">
             <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto">
               {sidebarGroups.map((group) => (
                 <div key={group.title} className="space-y-2">
@@ -1408,9 +1411,9 @@ export default function AdminDashboard() {
                         <Button
                           key={item.id}
                           variant="ghost"
-                          className={`w-full justify-start text-white hover:bg-white/20 transition-all duration-300 ${activeTab === item.id
-                            ? 'bg-white/20 border-l-4 border-yellow-400 shadow-lg'
-                            : 'border-l-4 border-transparent hover:border-yellow-400/50'
+                          className={`w-full text-white hover:bg-white/20 transition-all duration-300 ${dir === 'rtl' ? 'justify-end' : 'justify-start'} ${activeTab === item.id
+                            ? `bg-white/20 ${dir === 'rtl' ? 'border-r-4' : 'border-l-4'} border-yellow-400 shadow-lg`
+                            : `${dir === 'rtl' ? 'border-r-4' : 'border-l-4'} border-transparent hover:border-yellow-400/50`
                             }`}
                           onClick={() => {
                             if (item.id === 'super-admins') {
@@ -1421,7 +1424,7 @@ export default function AdminDashboard() {
                             setIsSidebarOpen(false);
                           }}
                         >
-                          <Icon className="h-5 w-5 mr-3" />
+                          <Icon className={`h-5 w-5 ${dir === 'rtl' ? 'ml-3' : 'mr-3'}`} />
                           {item.label}
                         </Button>
                       );
@@ -1442,7 +1445,7 @@ export default function AdminDashboard() {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 p-6">
+        <main className="min-w-0 flex-1 p-4 sm:p-6">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
 
             <TabsContent value="sales" className="space-y-6">

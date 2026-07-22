@@ -834,7 +834,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   };
 
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -936,12 +936,12 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-white rounded-lg shadow mb-6">
-        <div className="border-b px-6">
-          <div className="flex -mb-px space-x-8">
+      <div className="mb-6 overflow-hidden rounded-lg bg-white shadow">
+        <div className="overflow-x-auto border-b px-4 sm:px-6">
+          <div className="-mb-px flex w-max min-w-full gap-6 sm:gap-8">
             <button
               onClick={() => { setActiveTab('player-fees'); setCurrentPage(1); }}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`shrink-0 py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'player-fees'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -951,7 +951,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
             </button>
             <button
               onClick={() => setActiveTab('subscriptions')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`shrink-0 py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'subscriptions'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -961,7 +961,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
             </button>
             <button
               onClick={() => { setActiveTab('transactions'); setCurrentPage(1); }}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`shrink-0 py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'transactions'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -971,7 +971,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
             </button>
             <button
               onClick={() => setActiveTab('budgets')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`shrink-0 py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'budgets'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -981,7 +981,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
             </button>
             <button
               onClick={() => setActiveTab('invoices')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm ${
+              className={`shrink-0 py-4 px-1 border-b-2 font-medium text-sm ${
                 activeTab === 'invoices'
                   ? 'border-blue-500 text-blue-600'
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -1286,7 +1286,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                 Renewal reminders go to both the academy and player email and are logged per due date.
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <button
                 onClick={openRecurringFee}
                 className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
@@ -1383,7 +1383,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       {activeTab === 'invoices' && (
         <div className="bg-white rounded-lg shadow overflow-hidden">
           {/* ... (rest of invoices content) */}
-          <div className="p-6 border-b flex justify-between items-center">
+          <div className="flex flex-col gap-3 border-b p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
             <h3 className="text-lg font-medium text-gray-900">Invoices</h3>
             <button
               onClick={() => {
@@ -1477,7 +1477,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
 
       {activeTab === 'budgets' && (
         <div className="space-y-6">
-          <div className="flex justify-between items-center">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <h3 className="text-lg font-medium text-gray-900">Budget Management</h3>
             <button
               onClick={() => openBudgetModal()}
@@ -1913,8 +1913,8 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       {/* Budget Modal */}
       {showBudgetModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full">
-            <div className="p-6">
+          <div className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-lg bg-white">
+            <div className="p-4 sm:p-6">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-medium text-gray-900">
                   {editingBudget ? 'Edit Budget Category' : 'Add Budget Category'}

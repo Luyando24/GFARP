@@ -659,17 +659,18 @@ export default function PlayerDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900" dir={dir}>
+    <div className="min-h-screen overflow-x-hidden bg-slate-50 dark:bg-slate-900" dir={dir}>
       {/* Header */}
       <header className="bg-white dark:bg-slate-900 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
-        <div className="px-4 sm:px-6 lg:px-8">
+        <div className="px-2 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo and Academy Name */}
-            <div className="flex items-center gap-4">
+            <div className="flex min-w-0 items-center gap-2 sm:gap-4">
               <Button
                 variant="ghost"
                 size="sm"
                 className="lg:hidden"
+                aria-label={isSidebarOpen ? 'Close navigation' : 'Open navigation'}
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
               >
                 {isSidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -683,7 +684,7 @@ export default function PlayerDashboard() {
                     <Star className="h-2 w-2 text-white" />
                   </div>
                 </div>
-                <div>
+                <div className="hidden sm:block">
                   <h1 className="text-lg font-bold text-slate-900 dark:text-white">
                     Soccer Circular
                   </h1>
@@ -707,10 +708,10 @@ export default function PlayerDashboard() {
             </div>
 
             {/* User Menu */}
-            <div className="flex items-center gap-4">
+            <div className="flex shrink-0 items-center gap-1 sm:gap-3 lg:gap-4">
               <LanguageToggle />
               <ThemeToggle />
-              <div className="flex items-center gap-3">
+              <div className="hidden items-center gap-3 md:flex">
                 <Avatar className="h-8 w-8">
                   <AvatarFallback className="bg-blue-600 text-white font-bold">
                     {getInitials(profile?.display_name || session?.email || '')}
@@ -725,7 +726,7 @@ export default function PlayerDashboard() {
                   </p>
                 </div>
               </div>
-              <Button variant="ghost" size="sm" onClick={logout}>
+              <Button variant="ghost" size="sm" onClick={logout} className="hidden sm:inline-flex" aria-label="Sign out">
                 <LogOut className="h-5 w-5" />
               </Button>
             </div>
@@ -735,7 +736,7 @@ export default function PlayerDashboard() {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:sticky lg:top-16 z-40 w-64 bg-gradient-to-b from-[#005391] to-[#0066b3] border-r-4 border-yellow-400 transition-transform duration-300 ease-in-out h-[calc(100vh-64px)] overflow-y-auto`}>
+        <aside className={`${isSidebarOpen ? 'translate-x-0' : dir === 'rtl' ? 'translate-x-full' : '-translate-x-full'} ${dir === 'rtl' ? 'right-0 border-l-4' : 'left-0 border-r-4'} fixed top-16 z-40 h-[calc(100dvh-4rem)] w-64 overflow-y-auto border-yellow-400 bg-gradient-to-b from-[#005391] to-[#0066b3] transition-transform duration-300 ease-in-out lg:sticky lg:top-16 lg:translate-x-0`}>
           <div className="flex flex-col h-full pt-4 lg:pt-0">
             <nav className="flex-1 px-4 py-6 space-y-2">
               {sidebarItems.map((item) => {
@@ -744,16 +745,16 @@ export default function PlayerDashboard() {
                   <Button
                     key={item.id}
                     variant="ghost"
-                    className={`w-full justify-start text-white hover:bg-white/20 transition-all duration-300 ${activeTab === item.id
-                      ? 'bg-white/20 border-l-4 border-yellow-400 shadow-lg'
-                      : 'border-l-4 border-transparent hover:border-yellow-400/50'
+                    className={`w-full text-white hover:bg-white/20 transition-all duration-300 ${dir === 'rtl' ? 'justify-end' : 'justify-start'} ${activeTab === item.id
+                      ? `bg-white/20 ${dir === 'rtl' ? 'border-r-4' : 'border-l-4'} border-yellow-400 shadow-lg`
+                      : `${dir === 'rtl' ? 'border-r-4' : 'border-l-4'} border-transparent hover:border-yellow-400/50`
                       }`}
                     onClick={() => {
                       setActiveTab(item.id);
                       setIsSidebarOpen(false);
                     }}
                   >
-                    <Icon className="h-5 w-5 mr-3" />
+                    <Icon className={`h-5 w-5 ${dir === 'rtl' ? 'ml-3' : 'mr-3'}`} />
                     {item.label}
                   </Button>
                 );
@@ -771,7 +772,7 @@ export default function PlayerDashboard() {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 p-6 overflow-auto min-h-[calc(100vh-64px)]">
+        <main className="min-h-[calc(100vh-64px)] min-w-0 flex-1 overflow-auto p-4 sm:p-6">
           <div className="max-w-6xl mx-auto">
             {/* Overview Tab */}
             {activeTab === 'overview' && (
@@ -1080,7 +1081,7 @@ export default function PlayerDashboard() {
                           />
                         </div>
 
-                        <div className="grid grid-cols-3 gap-4 md:col-span-1">
+                        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 md:col-span-1">
                           <div className="space-y-2">
                             <Label htmlFor="height">{t('dash.player.height')}</Label>
                             <Input
@@ -1262,7 +1263,7 @@ export default function PlayerDashboard() {
 
                       {/* Gallery Images Section */}
                       <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-slate-700 relative">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
                           <Label className="text-lg font-semibold">{t('dash.player.galleryMax')}</Label>
                           {!hasFeature('Video highlights') && (
                             <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200 uppercase font-black">{t('dash.player.proFeature')}</Badge>
@@ -1330,7 +1331,7 @@ export default function PlayerDashboard() {
                       </div>
 
                       <div className="space-y-2 relative">
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
                           <Label>{t('dash.player.videoLinks')}</Label>
                           {!hasFeature('Video highlights') && (
                             <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-700 border-blue-200">{t('dash.player.proFeature')}</Badge>

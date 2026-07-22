@@ -456,12 +456,14 @@ export default function PlanManagement() {
       </div>
 
       <Tabs defaultValue="academy" className="w-full">
-        <TabsList className="grid w-full grid-cols-4 lg:w-[500px]">
-          <TabsTrigger value="academy">Academies</TabsTrigger>
-          <TabsTrigger value="agency">Agencies</TabsTrigger>
-          <TabsTrigger value="players">Players</TabsTrigger>
-          <TabsTrigger value="settings">Stripe Settings</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto">
+          <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-1 lg:w-[500px] lg:min-w-0">
+            <TabsTrigger value="academy" className="shrink-0">Academies</TabsTrigger>
+            <TabsTrigger value="agency" className="shrink-0">Agencies</TabsTrigger>
+            <TabsTrigger value="players" className="shrink-0">Players</TabsTrigger>
+            <TabsTrigger value="settings" className="shrink-0">Stripe Settings</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="academy" className="mt-4">
           <Card>
