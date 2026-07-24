@@ -18,6 +18,7 @@ import {
   filterPlayersByRecurringFees,
   type PlayerFeeFilter,
 } from "@/lib/player-fee-filters";
+import { filterPlayersBySearch } from "@/lib/player-search";
 import {
   Plus,
   Search,
@@ -79,9 +80,18 @@ const playerPositions = [
 
 import { uploadPlayerDocument } from "../../lib/document-upload";
 
-const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
+interface PlayerManagementProps {
+  searchQuery?: string;
+  onSearchQueryChange?: (query: string) => void;
+}
+
+const PlayerManagement = ({
+  searchQuery = "",
+  onSearchQueryChange,
+}: PlayerManagementProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [internalSearchQuery, setInternalSearchQuery] = useState(searchQuery);
   const [players, setPlayers] = useState<Player[]>([]);
   const [loading, setLoading] = useState(false);
   const [isAddPlayerOpen, setIsAddPlayerOpen] = useState(false);
@@ -100,6 +110,12 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
   const code = academyData?.code;
   const authSession = getSession() as any;
   const supportsAcademyFeeFilters = Boolean(authSession?.schoolId || authSession?.academyId);
+  const effectiveSearchQuery = onSearchQueryChange ? searchQuery : internalSearchQuery;
+  const normalizedSearchQuery = effectiveSearchQuery.trim();
+
+  useEffect(() => {
+    if (!onSearchQueryChange) setInternalSearchQuery(searchQuery);
+  }, [searchQuery, onSearchQueryChange]);
 
   const handleCopyInviteLink = () => {
     if (!code) return;
@@ -118,12 +134,16 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
     if (feeFilter === "all") fetchPlayers();
   }, [currentPage, pageSize, feeFilter]);
 
-  // Fee filters need the complete roster so players on later server pages are included.
+  // Fee filters and player search need the complete roster so later pages are included.
   useEffect(() => {
-    if (feeFilter !== "all" && feeRoster === null) {
+    if ((feeFilter !== "all" || normalizedSearchQuery) && feeRoster === null) {
       fetchRecurringFeeRoster();
     }
-  }, [feeFilter, feeRoster]);
+  }, [feeFilter, feeRoster, normalizedSearchQuery]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [normalizedSearchQuery]);
 
   // Fetch players from API
   const fetchPlayers = async () => {
@@ -358,8 +378,8 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
 
         // Refresh the player list after a short delay
         setTimeout(() => {
+          setFeeRoster(null);
           if (feeFilter === "all") fetchPlayers();
-          else setFeeRoster(null);
         }, 500); // 500ms delay
         setIsAddPlayerOpen(false);
       } else {
@@ -398,8 +418,8 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
           title: "Success",
           description: "Player deleted successfully"
         });
+        setFeeRoster(null);
         if (feeFilter === "all") fetchPlayers();
-        else setFeeRoster(null);
       } else {
         toast({
           title: "Error",
@@ -428,33 +448,31 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
         feeSubscriptions,
         feeFilter,
       );
-  const displayedTotalPlayers = feeFilter === "all" ? totalPlayers : recurringFeePlayers.length;
-  const displayedTotalPages = feeFilter === "all"
-    ? totalPages
-    : Math.ceil(displayedTotalPlayers / pageSize);
-  const displayedPlayers = feeFilter === "all"
-    ? players
-    : recurringFeePlayers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const rosterForSearch = feeFilter === "all"
+    ? (normalizedSearchQuery ? feeRoster || [] : players)
+    : recurringFeePlayers;
+  const matchingPlayers = filterPlayersBySearch(rosterForSearch, normalizedSearchQuery);
+  const usesClientPagination = feeFilter !== "all" || Boolean(normalizedSearchQuery);
+  const displayedTotalPlayers = usesClientPagination ? matchingPlayers.length : totalPlayers;
+  const displayedTotalPages = usesClientPagination
+    ? Math.ceil(displayedTotalPlayers / pageSize)
+    : totalPages;
+  const filteredPlayers = usesClientPagination
+    ? matchingPlayers.slice((currentPage - 1) * pageSize, currentPage * pageSize)
+    : players;
 
-  // Filter the currently displayed page based on the dashboard search query.
-  const filteredPlayers = displayedPlayers.filter(player => {
-    if (!searchQuery.trim()) return true;
+  const feeFilterDescription = normalizedSearchQuery
+    ? `${displayedTotalPlayers} player${displayedTotalPlayers === 1 ? "" : "s"} found`
+    : feeFilter === "active"
+      ? `${displayedTotalPlayers} player${displayedTotalPlayers === 1 ? "" : "s"} with active recurring academy fees`
+      : feeFilter === "expiring"
+        ? `${displayedTotalPlayers} player${displayedTotalPlayers === 1 ? "" : "s"} with recurring fees due within their reminder window`
+        : `Manage all ${displayedTotalPlayers} academy player${displayedTotalPlayers === 1 ? "" : "s"} and their information`;
 
-    const query = searchQuery.toLowerCase();
-    const fullName = `${player.firstName} ${player.lastName}`.toLowerCase();
-    const position = player.position?.toLowerCase() || '';
-    const email = player.email?.toLowerCase() || '';
-
-    return fullName.includes(query) ||
-      position.includes(query) ||
-      email.includes(query);
-  });
-
-  const feeFilterDescription = feeFilter === "active"
-    ? `${displayedTotalPlayers} player${displayedTotalPlayers === 1 ? "" : "s"} with active recurring academy fees`
-    : feeFilter === "expiring"
-      ? `${displayedTotalPlayers} player${displayedTotalPlayers === 1 ? "" : "s"} with recurring fees due within their reminder window`
-      : `Manage all ${displayedTotalPlayers} academy player${displayedTotalPlayers === 1 ? "" : "s"} and their information`;
+  const handlePlayerSearchChange = (query: string) => {
+    if (onSearchQueryChange) onSearchQueryChange(query);
+    else setInternalSearchQuery(query);
+  };
 
   const handleFeeFilterChange = (value: string) => {
     const nextFilter = value as PlayerFeeFilter;
@@ -504,6 +522,24 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
           </CardDescription>
         </CardHeader>
         <CardContent>
+          <div className="mb-6">
+            <Label htmlFor="academy-player-search" className="sr-only">
+              Search academy players
+            </Label>
+            <div className="relative max-w-xl">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <Input
+                id="academy-player-search"
+                type="search"
+                value={effectiveSearchQuery}
+                onChange={(event) => handlePlayerSearchChange(event.target.value)}
+                placeholder="Search players by name, email or position"
+                className="pl-10"
+                autoComplete="off"
+              />
+            </div>
+          </div>
+
           {supportsAcademyFeeFilters && (
             <Tabs value={feeFilter} onValueChange={handleFeeFilterChange} className="mb-6 min-w-0">
               <div className="overflow-x-auto">
@@ -522,13 +558,13 @@ const PlayerManagement = ({ searchQuery = "" }: { searchQuery?: string }) => {
             </div>
           )}
 
-          {!loading && filteredPlayers.length === 0 && displayedPlayers.length > 0 && (
+          {!loading && normalizedSearchQuery && filteredPlayers.length === 0 && (
             <div className="text-center py-8 text-slate-500">
-              No players found matching your search criteria.
+              No players found for “{effectiveSearchQuery.trim()}”.
             </div>
           )}
 
-          {!loading && displayedPlayers.length === 0 && (
+          {!loading && !normalizedSearchQuery && filteredPlayers.length === 0 && (
             <div className="text-center py-8 text-slate-500">
               {feeFilter === "active"
                 ? "No players have active recurring academy fees."

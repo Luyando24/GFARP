@@ -1748,7 +1748,10 @@ export default function AcademyDashboard() {
 
                 {/* Players Tab */}
                 <TabsContent value="players" className="space-y-6">
-                  <PlayerManagement searchQuery={searchQuery} />
+                  <PlayerManagement
+                    searchQuery={searchQuery}
+                    onSearchQueryChange={setSearchQuery}
+                  />
                 </TabsContent>
 
                 {/* Other tabs would be implemented similarly */}
