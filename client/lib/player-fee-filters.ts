@@ -1,6 +1,7 @@
 import type { PlayerFeeSubscription } from "./api";
 
 export type PlayerFeeFilter = "all" | "active" | "expiring";
+export type PlayerFeePaymentState = "paid" | "due" | "inactive";
 
 export interface FeeFilterPlayer {
   id: string;
@@ -13,18 +14,40 @@ function playerSubscriptionKey(playerId: string, source: "academy" | "individual
   return `${source}:${playerId}`;
 }
 
+function renewalDateAtUtcMidnight(subscription: PlayerFeeSubscription): number | null {
+  if (!subscription.next_renewal_date) return null;
+
+  const renewalDate = new Date(`${subscription.next_renewal_date.slice(0, 10)}T00:00:00Z`);
+  return Number.isNaN(renewalDate.getTime()) ? null : renewalDate.getTime();
+}
+
+function todayAtUtcMidnight(today: Date): number {
+  return Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+}
+
+export function getPlayerFeePaymentState(
+  subscription: PlayerFeeSubscription,
+  today = new Date(),
+): PlayerFeePaymentState {
+  if (subscription.status !== "active") return "inactive";
+
+  const renewalTime = renewalDateAtUtcMidnight(subscription);
+  if (renewalTime === null) return "due";
+
+  return renewalTime <= todayAtUtcMidnight(today) ? "due" : "paid";
+}
+
 export function isRecurringFeeExpiringSoon(
   subscription: PlayerFeeSubscription,
   today = new Date(),
 ): boolean {
   if (subscription.status !== "active" || !subscription.next_renewal_date) return false;
 
-  const renewalDate = new Date(`${subscription.next_renewal_date.slice(0, 10)}T00:00:00Z`);
-  if (Number.isNaN(renewalDate.getTime())) return false;
+  const renewalTime = renewalDateAtUtcMidnight(subscription);
+  if (renewalTime === null) return false;
 
-  const todayUtc = Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate());
+  const todayUtc = todayAtUtcMidnight(today);
   const reminderDays = Math.max(0, Number(subscription.reminder_days_before) || 0);
-  const renewalTime = renewalDate.getTime();
 
   return renewalTime >= todayUtc && renewalTime <= todayUtc + reminderDays * DAY_IN_MS;
 }

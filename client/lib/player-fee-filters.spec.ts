@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { PlayerFeeSubscription } from "./api";
 import {
   filterPlayersByRecurringFees,
+  getPlayerFeePaymentState,
   isRecurringFeeExpiringSoon,
 } from "./player-fee-filters";
 
@@ -47,5 +48,23 @@ describe("recurring player fee filters", () => {
     expect(filterPlayersByRecurringFees(players, [subscription()], "active", today)).toEqual([
       players[0],
     ]);
+  });
+
+  it("marks fees covered through a future renewal date as paid", () => {
+    expect(getPlayerFeePaymentState(subscription(), today)).toBe("paid");
+  });
+
+  it("marks fees due today or overdue as payment due", () => {
+    expect(
+      getPlayerFeePaymentState(subscription({ next_renewal_date: "2026-07-22" }), today),
+    ).toBe("due");
+    expect(
+      getPlayerFeePaymentState(subscription({ next_renewal_date: "2026-07-21" }), today),
+    ).toBe("due");
+  });
+
+  it("keeps paused and cancelled fee schedules neutral", () => {
+    expect(getPlayerFeePaymentState(subscription({ status: "paused" }), today)).toBe("inactive");
+    expect(getPlayerFeePaymentState(subscription({ status: "cancelled" }), today)).toBe("inactive");
   });
 });

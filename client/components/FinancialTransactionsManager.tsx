@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Api } from '@/lib/api';
 import { useLanguage } from '@/lib/i18n';
 import { useToast } from '@/components/ui/use-toast';
-import { 
+import {
   Plus, 
   Search, 
   Edit, 
@@ -18,6 +18,7 @@ import {
   Settings2,
   UserRound
 } from 'lucide-react';
+import { getPlayerFeePaymentState } from '@/lib/player-fee-filters';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 import InvoiceGenerator from './InvoiceGenerator';
@@ -1286,20 +1287,30 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                 Renewal reminders go to both the academy and player email and are logged per due date.
               </p>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <button
-                onClick={openRecurringFee}
-                className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
-              >
-                <Plus className="mr-2 h-4 w-4" /> New recurring fee
-              </button>
-              <button
-                onClick={sendRenewalReminders}
-                disabled={!remindersEnabled}
-                className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-              >
-                <Bell className="mr-2 h-4 w-4" /> Send due reminders
-              </button>
+            <div className="flex flex-col gap-3 sm:items-end">
+              <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-green-800">
+                  <span className="h-2 w-2 rounded-full bg-green-600" /> Paid
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-1 text-red-800">
+                  <span className="h-2 w-2 rounded-full bg-red-600" /> Payment due
+                </span>
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button
+                  onClick={openRecurringFee}
+                  className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  <Plus className="mr-2 h-4 w-4" /> New recurring fee
+                </button>
+                <button
+                  onClick={sendRenewalReminders}
+                  disabled={!remindersEnabled}
+                  className="inline-flex items-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <Bell className="mr-2 h-4 w-4" /> Send due reminders
+                </button>
+              </div>
             </div>
           </div>
 
@@ -1308,7 +1319,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    {['Player', 'Fee', 'Amount', 'Billing', 'Next renewal', 'Reminder status', 'Status', 'Actions'].map((heading) => (
+                    {['Player', 'Fee', 'Amount', 'Billing', 'Next renewal', 'Payment', 'Reminder status', 'Fee status', 'Actions'].map((heading) => (
                       <th key={heading} className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">{heading}</th>
                     ))}
                   </tr>
@@ -1320,10 +1331,24 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                     const cycleLabel = subscription.billing_cycle === 'custom'
                       ? subscription.custom_billing_label || 'Custom'
                       : subscription.billing_cycle;
+                    const paymentState = getPlayerFeePaymentState(subscription);
+                    const isPaid = paymentState === 'paid';
+                    const isDue = paymentState === 'due';
                     return (
-                      <tr key={subscription.id} className="hover:bg-gray-50">
+                      <tr
+                        key={subscription.id}
+                        className={
+                          isPaid
+                            ? 'bg-green-50/70 hover:bg-green-100/70'
+                            : isDue
+                              ? 'bg-red-50/70 hover:bg-red-100/70'
+                              : 'hover:bg-gray-50'
+                        }
+                      >
                         <td className="px-5 py-4 text-sm">
-                          <div className="font-medium text-gray-900">{subscription.player_name}</div>
+                          <div className={`font-semibold ${
+                            isPaid ? 'text-green-900' : isDue ? 'text-red-900' : 'text-gray-900'
+                          }`}>{subscription.player_name}</div>
                           <div className="text-xs text-gray-500">{subscription.player_email}</div>
                         </td>
                         <td className="px-5 py-4 text-sm text-gray-900">{subscription.fee_name}</td>
@@ -1334,6 +1359,20 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                         <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-700">
                           {formatDate(subscription.next_renewal_date)}
                           <div className="text-xs text-gray-500">{subscription.reminder_days_before} days before</div>
+                        </td>
+                        <td className="px-5 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                            isPaid
+                              ? 'bg-green-100 text-green-800 ring-1 ring-inset ring-green-200'
+                              : isDue
+                                ? 'bg-red-100 text-red-800 ring-1 ring-inset ring-red-200'
+                                : 'bg-gray-100 text-gray-700 ring-1 ring-inset ring-gray-200'
+                          }`}>
+                            <span className={`h-2 w-2 rounded-full ${
+                              isPaid ? 'bg-green-600' : isDue ? 'bg-red-600' : 'bg-gray-500'
+                            }`} />
+                            {isPaid ? 'Paid' : isDue ? 'Payment due' : 'Not active'}
+                          </span>
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-xs">
                           <div className={academyDelivery?.status === 'sent' ? 'text-green-700' : academyDelivery?.status === 'failed' ? 'text-red-700' : 'text-gray-500'}>
@@ -1368,7 +1407,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                   })}
                   {feeSubscriptions.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan={9} className="px-6 py-12 text-center text-gray-500">
                         No recurring player fees yet. Record a player fee and enable recurring reminders to create one.
                       </td>
                     </tr>
