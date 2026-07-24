@@ -16,6 +16,7 @@ import { getSession } from "@/lib/auth";
 import { Api, getPlayerFeeSubscriptions, type PlayerFeeSubscription } from "@/lib/api";
 import {
   filterPlayersByRecurringFees,
+  getPlayerPaymentStateForPlayer,
   type PlayerFeeFilter,
 } from "@/lib/player-fee-filters";
 import { filterPlayersBySearch } from "@/lib/player-search";
@@ -105,6 +106,7 @@ const PlayerManagement = ({
   const [feeFilter, setFeeFilter] = useState<PlayerFeeFilter>("all");
   const [feeRoster, setFeeRoster] = useState<Player[] | null>(null);
   const [feeSubscriptions, setFeeSubscriptions] = useState<PlayerFeeSubscription[]>([]);
+  const [feeSubscriptionsLoaded, setFeeSubscriptionsLoaded] = useState(false);
 
   const academyData = JSON.parse(localStorage.getItem("academy_data") || "{}");
   const code = academyData?.code;
@@ -133,6 +135,10 @@ const PlayerManagement = ({
   useEffect(() => {
     if (feeFilter === "all") fetchPlayers();
   }, [currentPage, pageSize, feeFilter]);
+
+  useEffect(() => {
+    if (supportsAcademyFeeFilters) fetchPlayerFeeStatuses();
+  }, [supportsAcademyFeeFilters]);
 
   // Fee filters and player search need the complete roster so later pages are included.
   useEffect(() => {
@@ -218,10 +224,12 @@ const PlayerManagement = ({
 
       setFeeRoster(completeRoster);
       setFeeSubscriptions(subscriptions);
+      setFeeSubscriptionsLoaded(true);
     } catch (error) {
       console.error("Error fetching recurring player fees:", error);
       setFeeRoster([]);
       setFeeSubscriptions([]);
+      setFeeSubscriptionsLoaded(true);
       toast({
         title: "Unable to filter player fees",
         description: error instanceof Error ? error.message : "Please try again.",
@@ -229,6 +237,24 @@ const PlayerManagement = ({
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchPlayerFeeStatuses = async () => {
+    try {
+      const session = JSON.parse(localStorage.getItem("ipims_auth_session") || "{}");
+      const academyId = session?.schoolId || session?.academyId;
+      if (!academyId) {
+        setFeeSubscriptions([]);
+        return;
+      }
+
+      setFeeSubscriptions(await getPlayerFeeSubscriptions(academyId));
+    } catch (error) {
+      console.error("Error fetching player fee statuses:", error);
+      setFeeSubscriptions([]);
+    } finally {
+      setFeeSubscriptionsLoaded(true);
     }
   };
 
@@ -522,11 +548,11 @@ const PlayerManagement = ({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-6">
+          <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <Label htmlFor="academy-player-search" className="sr-only">
               Search academy players
             </Label>
-            <div className="relative max-w-xl">
+            <div className="relative w-full max-w-xl">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input
                 id="academy-player-search"
@@ -538,6 +564,16 @@ const PlayerManagement = ({
                 autoComplete="off"
               />
             </div>
+            {supportsAcademyFeeFilters && (
+              <div className="flex shrink-0 flex-wrap items-center gap-2 text-xs font-medium">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-green-100 px-2.5 py-1 text-green-800">
+                  <span className="h-2 w-2 rounded-full bg-green-600" /> Paid
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-1 text-red-800">
+                  <span className="h-2 w-2 rounded-full bg-red-600" /> Payment due
+                </span>
+              </div>
+            )}
           </div>
 
           {supportsAcademyFeeFilters && (
@@ -581,17 +617,33 @@ const PlayerManagement = ({
                   <TableHead>Name</TableHead>
                   <TableHead>Age</TableHead>
                   <TableHead>Position</TableHead>
-
+                  {supportsAcademyFeeFilters && <TableHead>Payment</TableHead>}
                   <TableHead>Status</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredPlayers.map((player) => {
+                  const paymentState = getPlayerPaymentStateForPlayer(player, feeSubscriptions);
+                  const isPaid = feeSubscriptionsLoaded && paymentState === "paid";
+                  const isDue = feeSubscriptionsLoaded && paymentState === "due";
                   return (
-                    <TableRow key={player.id}>
+                    <TableRow
+                      key={player.id}
+                      className={
+                        isPaid
+                          ? "bg-green-50/70 hover:bg-green-100/70"
+                          : isDue
+                            ? "bg-red-50/70 hover:bg-red-100/70"
+                            : undefined
+                      }
+                    >
                       <TableCell className="font-medium">
-                        {player.firstName} {player.lastName}
+                        <span className={
+                          isPaid ? "font-semibold text-green-900" : isDue ? "font-semibold text-red-900" : undefined
+                        }>
+                          {player.firstName} {player.lastName}
+                        </span>
                         {player.isSelfRegistered && (
                           <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200 dark:bg-slate-800 dark:text-blue-400">
                             Self-Registered
@@ -600,6 +652,26 @@ const PlayerManagement = ({
                       </TableCell>
                       <TableCell>{calculateAge(player.dateOfBirth) ?? "—"}</TableCell>
                       <TableCell>{player.position}</TableCell>
+                      {supportsAcademyFeeFilters && (
+                        <TableCell>
+                          {!feeSubscriptionsLoaded ? (
+                            <span className="text-xs text-slate-400">Loading…</span>
+                          ) : (
+                            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                              isPaid
+                                ? "bg-green-100 text-green-800 ring-1 ring-inset ring-green-200"
+                                : isDue
+                                  ? "bg-red-100 text-red-800 ring-1 ring-inset ring-red-200"
+                                  : "bg-slate-100 text-slate-600 ring-1 ring-inset ring-slate-200"
+                            }`}>
+                              <span className={`h-2 w-2 rounded-full ${
+                                isPaid ? "bg-green-600" : isDue ? "bg-red-600" : "bg-slate-400"
+                              }`} />
+                              {isPaid ? "Paid" : isDue ? "Payment due" : "No active fee"}
+                            </span>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell>
                         <Badge variant={player.isActive ? 'default' : 'destructive'}>
                           {player.isActive ? 'active' : 'inactive'}

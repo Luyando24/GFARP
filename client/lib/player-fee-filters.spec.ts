@@ -3,6 +3,7 @@ import type { PlayerFeeSubscription } from "./api";
 import {
   filterPlayersByRecurringFees,
   getPlayerFeePaymentState,
+  getPlayerPaymentStateForPlayer,
   isRecurringFeeExpiringSoon,
 } from "./player-fee-filters";
 
@@ -66,5 +67,23 @@ describe("recurring player fee filters", () => {
   it("keeps paused and cancelled fee schedules neutral", () => {
     expect(getPlayerFeePaymentState(subscription({ status: "paused" }), today)).toBe("inactive");
     expect(getPlayerFeePaymentState(subscription({ status: "cancelled" }), today)).toBe("inactive");
+  });
+
+  it("shows the payment state for the matching player and registration source", () => {
+    const academyPlayer = { id: "player-1", isSelfRegistered: false };
+    const individualPlayer = { id: "player-1", isSelfRegistered: true };
+
+    expect(getPlayerPaymentStateForPlayer(academyPlayer, [subscription()], today)).toBe("paid");
+    expect(getPlayerPaymentStateForPlayer(individualPlayer, [subscription()], today)).toBe("inactive");
+  });
+
+  it("prioritizes a due fee when a player has multiple recurring fees", () => {
+    const player = { id: "player-1", isSelfRegistered: false };
+    const fees = [
+      subscription(),
+      subscription({ id: "fee-2", next_renewal_date: "2026-07-21" }),
+    ];
+
+    expect(getPlayerPaymentStateForPlayer(player, fees, today)).toBe("due");
   });
 });

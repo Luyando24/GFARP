@@ -37,6 +37,26 @@ export function getPlayerFeePaymentState(
   return renewalTime <= todayAtUtcMidnight(today) ? "due" : "paid";
 }
 
+export function getPlayerPaymentStateForPlayer(
+  player: FeeFilterPlayer,
+  subscriptions: PlayerFeeSubscription[],
+  today = new Date(),
+): PlayerFeePaymentState {
+  const playerKey = playerSubscriptionKey(
+    player.id,
+    player.isSelfRegistered ? "individual" : "academy",
+  );
+  const paymentStates = subscriptions
+    .filter((subscription) =>
+      playerSubscriptionKey(subscription.player_id, subscription.player_source) === playerKey,
+    )
+    .map((subscription) => getPlayerFeePaymentState(subscription, today));
+
+  if (paymentStates.includes("due")) return "due";
+  if (paymentStates.includes("paid")) return "paid";
+  return "inactive";
+}
+
 export function isRecurringFeeExpiringSoon(
   subscription: PlayerFeeSubscription,
   today = new Date(),
