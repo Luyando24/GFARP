@@ -1254,8 +1254,13 @@ export default function AcademyDashboard() {
     { id: "transfers", label: t('dash.menu.transfers'), icon: TrendingUp },
     { id: "finances", label: t('dash.menu.finances'), icon: DollarSign },
     { id: "fifa-compliance", label: t('dash.menu.compliance'), icon: Shield },
+    { id: "subscription", label: t('dash.stats.subscription'), icon: CreditCard },
     { id: "settings", label: t('dash.menu.settings'), icon: Settings }
   ];
+  const mobileBottomItems = sidebarItems.filter((item) =>
+    ["dashboard", "players", "transfers", "finances"].includes(item.id),
+  );
+  const isMobileMoreActive = !mobileBottomItems.some((item) => item.id === activeTab);
 
   return (
     <div className="min-h-screen overflow-x-hidden bg-slate-50 dark:bg-slate-900" dir={dir}>
@@ -1404,7 +1409,7 @@ export default function AcademyDashboard() {
         )}
 
         {/* Main Content */}
-        <main className="relative flex min-w-0 flex-1 flex-col overflow-visible">
+        <main className="relative flex min-w-0 flex-1 flex-col overflow-visible pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-0">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col">
             {/* Sticky Navigation Section */}
             <div className="sticky top-16 z-40 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 shadow-sm">
@@ -1441,7 +1446,7 @@ export default function AcademyDashboard() {
                 )}
 
               {/* Tabs Navigation */}
-              <div className="mx-auto w-full max-w-7xl overflow-x-auto px-4 py-2 sm:px-6">
+              <div className="mx-auto hidden w-full max-w-7xl overflow-x-auto px-4 py-2 sm:px-6 lg:block">
                 <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-1 lg:grid lg:w-full lg:grid-cols-7">
                   <TabsTrigger className="shrink-0 px-3 py-2" value="dashboard">{t('dash.menu.dashboard')}</TabsTrigger>
                   <TabsTrigger className="shrink-0 px-3 py-2" value="players">{t('dash.menu.players')}</TabsTrigger>
@@ -3017,6 +3022,60 @@ export default function AcademyDashboard() {
             </footer>
           </main>
       </div>
+      {!isSidebarOpen && (
+        <nav
+          aria-label="Academy dashboard mobile navigation"
+          className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-200 bg-white/95 shadow-[0_-10px_30px_rgba(15,23,42,0.12)] backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/95 lg:hidden"
+        >
+          <div className="grid h-16 grid-cols-5 px-1">
+            {mobileBottomItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-current={isActive ? "page" : undefined}
+                  aria-label={item.label}
+                  onClick={() => {
+                    setActiveTab(item.id);
+                    setActiveView("main");
+                  }}
+                  className={`relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${
+                    isActive
+                      ? "text-[#005391] dark:text-blue-400"
+                      : "text-slate-500 hover:text-[#005391] dark:text-slate-400 dark:hover:text-blue-400"
+                  }`}
+                >
+                  {isActive && (
+                    <span className="absolute top-0 h-1 w-8 rounded-b-full bg-yellow-400" />
+                  )}
+                  <Icon className={`h-5 w-5 ${isActive ? "stroke-[2.5]" : ""}`} />
+                  <span className="max-w-full truncate">{item.label}</span>
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              aria-label="More academy navigation"
+              aria-expanded={isSidebarOpen}
+              onClick={() => setIsSidebarOpen(true)}
+              className={`relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1 text-[10px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500 ${
+                isMobileMoreActive
+                  ? "text-[#005391] dark:text-blue-400"
+                  : "text-slate-500 hover:text-[#005391] dark:text-slate-400 dark:hover:text-blue-400"
+              }`}
+            >
+              {isMobileMoreActive && (
+                <span className="absolute top-0 h-1 w-8 rounded-b-full bg-yellow-400" />
+              )}
+              <Menu className={`h-5 w-5 ${isMobileMoreActive ? "stroke-[2.5]" : ""}`} />
+              <span>More</span>
+            </button>
+          </div>
+          <div className="h-[env(safe-area-inset-bottom)] bg-white/95 dark:bg-slate-900/95" />
+        </nav>
+      )}
     </div >
   );
 }
