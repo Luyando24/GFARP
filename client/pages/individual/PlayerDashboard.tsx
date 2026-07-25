@@ -1655,9 +1655,9 @@ export default function PlayerDashboard() {
                         <div className="flex gap-2">
                           <Button
                             className="flex-1 h-12 text-md font-semibold bg-green-600 hover:bg-green-700 shadow-md"
-                            onClick={currentPlan === 'pro' ? copyPublicLink : () => setActiveTab('subscription')}
+                            onClick={currentPlan && currentPlan !== 'free' ? copyPublicLink : () => setActiveTab('subscription')}
                           >
-                            {currentPlan === 'pro' ? (
+                            {currentPlan && currentPlan !== 'free' ? (
                               <>
                                 <Share2 className="mr-2 h-5 w-5" />
                                 {t('dash.share.copyLink')}
@@ -1672,10 +1672,10 @@ export default function PlayerDashboard() {
                           <Button
                             variant="outline"
                             className="h-12 w-12 p-0 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900"
-                            asChild={currentPlan === 'pro'}
-                            onClick={currentPlan !== 'pro' ? () => setActiveTab('subscription') : undefined}
+                            asChild={!!(currentPlan && currentPlan !== 'free')}
+                            onClick={!(currentPlan && currentPlan !== 'free') ? () => setActiveTab('subscription') : undefined}
                           >
-                            {currentPlan === 'pro' ? (
+                            {currentPlan && currentPlan !== 'free' ? (
                               <a href={getPublicUrl()} target="_blank" rel="noopener noreferrer">
                                 <Eye className="h-5 w-5 text-slate-600 dark:text-slate-400" />
                               </a>
@@ -1693,27 +1693,27 @@ export default function PlayerDashboard() {
                             <Button
                               variant="outline"
                               size="sm"
-                              disabled={currentPlan !== 'pro'}
+                              disabled={!(currentPlan && currentPlan !== 'free')}
                               className="flex-1 gap-2 border-slate-100 dark:border-slate-800 hover:bg-green-50 dark:hover:bg-green-900/10"
                               onClick={() => {
                                 const url = getPublicUrl();
                                 window.open(`https://wa.me/?text=Check out my professional football profile: ${url}`, '_blank');
                               }}
                             >
-                              {currentPlan === 'pro' ? <MessageCircle className="h-4 w-4 text-[#25D366]" /> : <Lock className="h-3 w-3" />}
+                              {currentPlan && currentPlan !== 'free' ? <MessageCircle className="h-4 w-4 text-[#25D366]" /> : <Lock className="h-3 w-3" />}
                               <span className="text-xs">WhatsApp</span>
                             </Button>
                             <Button
                               variant="outline"
                               size="sm"
-                              disabled={currentPlan !== 'pro'}
+                              disabled={!(currentPlan && currentPlan !== 'free')}
                               className="flex-1 gap-2 border-slate-100 dark:border-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/10"
                               onClick={() => {
                                 const url = getPublicUrl();
                                 window.open(`https://twitter.com/intent/tweet?text=Check out my football profile on Soccer Circular: ${url}`, '_blank');
                               }}
                             >
-                              {currentPlan === 'pro' ? <Twitter className="h-4 w-4 text-[#1DA1F2]" /> : <Lock className="h-3 w-3" />}
+                              {currentPlan && currentPlan !== 'free' ? <Twitter className="h-4 w-4 text-[#1DA1F2]" /> : <Lock className="h-3 w-3" />}
                               <span className="text-xs">Twitter</span>
                             </Button>
                           </div>
