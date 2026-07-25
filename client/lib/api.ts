@@ -1454,6 +1454,10 @@ export const PlayerApi = {
 
   async purchasePlan(data: { planType: string; amount: number }) {
     return Api.post<{ success: boolean; message: string }>('/individual-players/purchase', data);
+  },
+
+  async deleteAccount(data?: { password?: string }) {
+    return Api.delete<{ success: boolean; message: string }>('/individual-players/account');
   }
 };
 

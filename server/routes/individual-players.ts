@@ -1228,6 +1228,56 @@ router.put('/:id', async (req, res) => {
   }
 });
 
+// Delete own player account and all associated data
+router.delete('/account', authenticateToken, async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return res.status(401).json({ success: false, message: 'Unauthorized' });
+    }
+
+    const { password } = req.body || {};
+
+    const userRes = await query('SELECT id, password_hash FROM individual_players WHERE id = $1', [userId]);
+    if (userRes.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Player account not found' });
+    }
+
+    if (password) {
+      const valid = await verifyPassword(password, userRes.rows[0].password_hash);
+      if (!valid) {
+        return res.status(400).json({ success: false, message: 'Incorrect password' });
+      }
+    }
+
+    await transaction(async (client) => {
+      // Delete player documents
+      await client.query('DELETE FROM player_documents WHERE player_id = $1', [userId]);
+
+      // Delete transfers
+      await client.query('DELETE FROM transfers WHERE player_id = $1', [userId]);
+
+      // Delete player profile
+      await client.query('DELETE FROM player_profiles WHERE player_id = $1', [userId]);
+
+      // Delete player purchases
+      await client.query('DELETE FROM player_purchases WHERE player_id = $1', [userId]);
+
+      // Delete player record from individual_players
+      const result = await client.query('DELETE FROM individual_players WHERE id = $1', [userId]);
+
+      if (result.rowCount === 0) {
+        throw new Error('Player account not found');
+      }
+    });
+
+    res.json({ success: true, message: 'Account and all associated data deleted permanently' });
+  } catch (error: any) {
+    console.error('Delete individual player account error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Internal server error' });
+  }
+});
+
 // Delete an individual player (Admin only)
 router.delete('/:id', async (req, res) => {
   try {

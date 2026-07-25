@@ -47,7 +47,8 @@ import {
   AlertCircle,
   Pencil,
   Zap,
-  Copy
+  Copy,
+  Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -142,6 +143,11 @@ export default function PlayerDashboard() {
   const [inlineSlugAvailable, setInlineSlugAvailable] = useState<boolean | null>(null);
   const [inlineSlugMessage, setInlineSlugMessage] = useState('');
   const [slugSaving, setSlugSaving] = useState(false);
+
+  // Account Deletion State
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     const initializeDashboard = async () => {
@@ -334,6 +340,23 @@ export default function PlayerDashboard() {
       toast.error('Failed to save link. Please try again.');
     } finally {
       setSlugSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') return;
+    setIsDeletingAccount(true);
+    try {
+      await PlayerApi.deleteAccount();
+      toast.success('Your account and all associated data have been permanently deleted.');
+      logout();
+      navigate('/');
+    } catch (error: any) {
+      console.error('Failed to delete account:', error);
+      toast.error(error?.message || 'Failed to delete account. Please try again.');
+    } finally {
+      setIsDeletingAccount(false);
+      setIsDeleteModalOpen(false);
     }
   };
 
@@ -1440,6 +1463,35 @@ export default function PlayerDashboard() {
                     </Button>
                   </CardFooter>
                 </Card>
+
+                {/* Danger Zone: Permanent Account Deletion */}
+                <Card className="border-red-200 dark:border-red-950 bg-red-50/40 dark:bg-red-950/20 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="text-lg font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
+                      <AlertCircle className="h-5 w-5" />
+                      Danger Zone
+                    </CardTitle>
+                    <CardDescription className="text-slate-600 dark:text-slate-400">
+                      Permanently delete your player account and remove all your data from Soccer Circular.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+                      Once deleted, your profile, custom link, uploaded images, video links, and transaction history will be permanently erased. This action cannot be undone.
+                    </p>
+                    <Button
+                      variant="destructive"
+                      onClick={() => {
+                        setDeleteConfirmText('');
+                        setIsDeleteModalOpen(true);
+                      }}
+                      className="bg-red-600 hover:bg-red-700 text-white font-semibold text-sm shadow-sm"
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Delete Account Permanently
+                    </Button>
+                  </CardContent>
+                </Card>
               </div>
             )}
 
@@ -1862,6 +1914,71 @@ export default function PlayerDashboard() {
           </div>
         </main>
       </div >
+
+      {/* Delete Account Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+              <div className="h-10 w-10 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center shrink-0">
+                <Trash2 className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg text-slate-900 dark:text-white">Delete Account</h3>
+                <p className="text-xs text-red-600 dark:text-red-400 font-medium">This action cannot be undone</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+              Are you sure you want to permanently delete your player account? All profile details, stats, media, and subscription records will be permanently erased.
+            </p>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Type <span className="font-mono font-bold text-red-600 dark:text-red-400 select-all">DELETE</span> to confirm:
+              </Label>
+              <Input
+                type="text"
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="DELETE"
+                className="font-mono text-sm uppercase border-slate-300 dark:border-slate-700"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsDeleteModalOpen(false);
+                  setDeleteConfirmText('');
+                }}
+                disabled={isDeletingAccount}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                disabled={deleteConfirmText.trim().toUpperCase() !== 'DELETE' || isDeletingAccount}
+                onClick={handleDeleteAccount}
+                className="bg-red-600 hover:bg-red-700 text-white font-semibold"
+              >
+                {isDeletingAccount ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete Permanently
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <PlayerPaymentMethodSelector
         isOpen={isPaymentModalOpen}
