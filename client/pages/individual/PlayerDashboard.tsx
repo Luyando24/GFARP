@@ -664,7 +664,7 @@ export default function PlayerDashboard() {
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-slate-50 dark:bg-slate-900" dir={dir}>
+    <div className="min-h-screen overflow-x-clip bg-slate-50 dark:bg-slate-900" dir={dir}>
       {/* Header */}
       <header className="bg-white dark:bg-slate-900 shadow-sm border-b border-slate-200 dark:border-slate-700 sticky top-0 z-50">
         <div className="px-2 sm:px-6 lg:px-8">
@@ -739,9 +739,9 @@ export default function PlayerDashboard() {
         </div>
       </header>
 
-      <div className="flex">
+      <div className="flex items-start">
         {/* Sidebar */}
-        <aside className={`${isSidebarOpen ? 'translate-x-0' : dir === 'rtl' ? 'translate-x-full' : '-translate-x-full'} ${dir === 'rtl' ? 'right-0 border-l-4' : 'left-0 border-r-4'} fixed top-16 z-40 h-[calc(100dvh-4rem)] w-64 overflow-y-auto border-yellow-400 bg-gradient-to-b from-[#005391] to-[#0066b3] transition-transform duration-300 ease-in-out lg:sticky lg:top-16 lg:translate-x-0`}>
+        <aside className={`${isSidebarOpen ? 'translate-x-0' : dir === 'rtl' ? 'translate-x-full' : '-translate-x-full'} ${dir === 'rtl' ? 'right-0 border-l-4' : 'left-0 border-r-4'} fixed top-16 z-40 h-[calc(100dvh-4rem)] w-64 overflow-y-auto border-yellow-400 bg-gradient-to-b from-[#005391] to-[#0066b3] transition-transform duration-300 ease-in-out lg:sticky lg:top-16 lg:translate-x-0 lg:self-start shrink-0`}>
           <div className="flex flex-col h-full pt-4 lg:pt-0">
             <nav className="flex-1 px-4 py-6 space-y-2">
               {sidebarItems.map((item) => {

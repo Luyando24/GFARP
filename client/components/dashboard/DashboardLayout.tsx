@@ -52,7 +52,7 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-background" dir={dir}>
+    <div className="min-h-screen overflow-x-clip bg-background" dir={dir}>
       {/* Enhanced Top Navigation */}
       <div className="sticky top-0 z-50 border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 shadow-sm">
         <div className="flex items-center justify-between gap-2 px-2 py-3 sm:px-6">
@@ -203,7 +203,7 @@ export default function DashboardLayout({
       </div>
 
       {/* Main Layout with Sidebar */}
-      <div className="flex h-[calc(100vh-73px)]">
+      <div className="flex items-start min-h-[calc(100vh-73px)]">
         {/* Sidebar */}
         {isAdmin && (
           <AdminSidebar
@@ -224,7 +224,7 @@ export default function DashboardLayout({
         )}
 
         {/* Main Content Area */}
-        <div className="min-w-0 flex-1 overflow-auto">
+        <div className="min-w-0 flex-1">
           <div className="p-4 sm:p-6">
             {children}
           </div>

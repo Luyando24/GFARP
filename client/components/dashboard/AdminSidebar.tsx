@@ -91,7 +91,7 @@ export default function AdminSidebar({ collapsed = false, onToggle, mobileOpen =
 
   return (
     <div className={cn(
-      "fixed inset-y-0 z-50 flex h-[100dvh] w-64 flex-col bg-card transition-transform duration-300 lg:static lg:z-auto lg:h-full lg:translate-x-0",
+      "fixed top-0 z-50 flex h-[100dvh] w-64 flex-col bg-card transition-transform duration-300 lg:sticky lg:top-[73px] lg:z-auto lg:h-[calc(100vh-73px)] lg:self-start shrink-0 lg:translate-x-0",
       dir === 'rtl' ? "right-0 border-l" : "left-0 border-r",
       mobileOpen ? "translate-x-0" : dir === 'rtl' ? "translate-x-full" : "-translate-x-full",
       collapsed ? "lg:w-16" : "lg:w-64"
