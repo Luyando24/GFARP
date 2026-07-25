@@ -261,7 +261,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
 
   const handleCreateTransaction = async () => {
     try {
-      if (!transactionForm.category || !transactionForm.amount || !transactionForm.description) {
+      if (!transactionForm.category || !transactionForm.amount) {
         showError('Please fill in all required fields');
         return;
       }
@@ -274,8 +274,11 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         return;
       }
 
+      const descriptionValue = transactionForm.description || transactionForm.category || 'Transaction';
+
       await createFinancialTransaction({
         ...transactionForm,
+        description: descriptionValue,
         academy_id: academyId,
         amount: Number(transactionForm.amount)
       } as FinancialTransaction);
@@ -1809,21 +1812,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Subcategory
-                  </label>
-                  <input
-                    type="text"
-                    value={transactionForm.subcategory || ''}
-                    onChange={(e) => setTransactionForm({
-                      ...transactionForm,
-                      subcategory: e.target.value
-                    })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Optional subcategory"
-                  />
-                </div>
+
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
@@ -1951,21 +1940,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                   </div>
                 )}
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Description *
-                  </label>
-                  <textarea
-                    value={transactionForm.description || ''}
-                    onChange={(e) => setTransactionForm({
-                      ...transactionForm,
-                      description: e.target.value
-                    })}
-                    rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Enter transaction description"
-                  />
-                </div>
+
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
