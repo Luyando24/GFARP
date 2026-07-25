@@ -91,6 +91,8 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   const [showExportModal, setShowExportModal] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<FinancialTransaction | null>(null);
   const [editingBudget, setEditingBudget] = useState<BudgetCategory | null>(null);
+  const [modalPlayerSearchQuery, setModalPlayerSearchQuery] = useState('');
+  const [isModalPlayerDropdownOpen, setIsModalPlayerDropdownOpen] = useState(false);
   
   // Invoice state
   const [activeTab, setActiveTab] = useState<'player-fees' | 'subscriptions' | 'transactions' | 'budgets' | 'invoices'>('player-fees');
@@ -1632,33 +1634,140 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
               </div>
 
               <div className="space-y-4">
-                {(transactionForm.category === 'Academy Fees' || transactionForm.player_id) && (
-                  <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                    <div className="mb-3 flex items-start gap-2 text-sm text-blue-800">
-                      <UserRound className="mt-0.5 h-4 w-4 shrink-0" />
-                      <span>This records a fee collected externally by the academy. Soccer Circular will not process or charge this payment.</span>
+                {(transactionForm.category === 'Academy Fees' || transactionForm.player_id) && (() => {
+                  const selectedPlayer = players.find((p) => p.id === transactionForm.player_id);
+                  const filteredModalPlayers = players.filter((player) => {
+                    if (!modalPlayerSearchQuery.trim()) return true;
+                    const q = modalPlayerSearchQuery.toLowerCase().trim();
+                    const fullName = `${player.firstName || ''} ${player.lastName || ''}`.toLowerCase();
+                    const email = (player.email || '').toLowerCase();
+                    return fullName.includes(q) || email.includes(q);
+                  });
+
+                  return (
+                    <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                      <div className="mb-3 flex items-start gap-2 text-sm text-blue-800">
+                        <UserRound className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>This records a fee collected externally by the academy. Soccer Circular will not process or charge this payment.</span>
+                      </div>
+
+                      <div className="block text-sm font-medium text-gray-700">
+                        <span className="mb-1 block font-medium text-gray-700">Player *</span>
+                        <div className="relative">
+                          {/* Search Input Box */}
+                          <div className="relative flex items-center">
+                            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                            <input
+                              type="text"
+                              placeholder={selectedPlayer ? `${selectedPlayer.firstName} ${selectedPlayer.lastName}${selectedPlayer.email ? ` (${selectedPlayer.email})` : ''}` : "Search player by name or email..."}
+                              value={modalPlayerSearchQuery}
+                              onFocus={() => setIsModalPlayerDropdownOpen(true)}
+                              onChange={(e) => {
+                                setModalPlayerSearchQuery(e.target.value);
+                                setIsModalPlayerDropdownOpen(true);
+                              }}
+                              className="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-10 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
+                            />
+                            {(modalPlayerSearchQuery || transactionForm.player_id) && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setModalPlayerSearchQuery('');
+                                  setTransactionForm({
+                                    ...transactionForm,
+                                    player_id: undefined,
+                                  });
+                                  setIsModalPlayerDropdownOpen(true);
+                                }}
+                                className="absolute right-3 p-1 text-gray-400 hover:text-gray-600 rounded-full hover:bg-gray-100"
+                                title="Clear player selection"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            )}
+                          </div>
+
+                          {/* Selected player tag */}
+                          {selectedPlayer && !modalPlayerSearchQuery && (
+                            <div className="mt-2 flex items-center justify-between rounded-md bg-blue-100/90 px-3 py-1.5 text-xs text-blue-900 border border-blue-200">
+                              <span className="font-semibold truncate">
+                                Selected: {selectedPlayer.firstName} {selectedPlayer.lastName} {selectedPlayer.email ? `(${selectedPlayer.email})` : ''}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setTransactionForm({ ...transactionForm, player_id: undefined });
+                                  setModalPlayerSearchQuery('');
+                                  setIsModalPlayerDropdownOpen(true);
+                                }}
+                                className="ml-2 text-blue-700 hover:text-blue-900 underline font-medium shrink-0"
+                              >
+                                Change
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Dropdown Options List */}
+                          {isModalPlayerDropdownOpen && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-10"
+                                onClick={() => setIsModalPlayerDropdownOpen(false)}
+                              />
+                              <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-60 overflow-y-auto rounded-lg border border-gray-200 bg-white p-1 shadow-xl">
+                                <div className="px-2 py-1.5 text-[11px] font-semibold text-gray-500 uppercase tracking-wider border-b border-gray-100 flex justify-between items-center bg-gray-50/50 rounded-t-md">
+                                  <span>Select Player ({filteredModalPlayers.length} available)</span>
+                                  {modalPlayerSearchQuery && (
+                                    <span className="normal-case font-normal text-blue-600">Filter: "{modalPlayerSearchQuery}"</span>
+                                  )}
+                                </div>
+                                {filteredModalPlayers.length === 0 ? (
+                                  <div className="p-4 text-center text-sm text-gray-500">
+                                    No players found matching "{modalPlayerSearchQuery}"
+                                  </div>
+                                ) : (
+                                  filteredModalPlayers.map((player) => {
+                                    const isSelected = transactionForm.player_id === player.id;
+                                    return (
+                                      <button
+                                        key={player.id}
+                                        type="button"
+                                        onClick={() => {
+                                          setTransactionForm({
+                                            ...transactionForm,
+                                            player_id: player.id,
+                                            is_external_payment: true,
+                                          });
+                                          setModalPlayerSearchQuery('');
+                                          setIsModalPlayerDropdownOpen(false);
+                                        }}
+                                        className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors flex items-center justify-between my-0.5 ${
+                                          isSelected
+                                            ? 'bg-blue-50 text-blue-900 font-semibold border border-blue-200'
+                                            : 'hover:bg-gray-100 text-gray-800'
+                                        }`}
+                                      >
+                                        <div className="truncate">
+                                          <span className="font-semibold text-gray-900">{player.firstName} {player.lastName}</span>
+                                          {player.email && (
+                                            <span className="ml-2 text-xs text-gray-500">({player.email})</span>
+                                          )}
+                                        </div>
+                                        {isSelected && (
+                                          <span className="text-xs font-bold text-blue-600 shrink-0 ml-2">✓ Selected</span>
+                                        )}
+                                      </button>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </div>
                     </div>
-                    <label className="block text-sm font-medium text-gray-700">
-                      Player *
-                      <select
-                        value={transactionForm.player_id || ''}
-                        onChange={(event) => setTransactionForm({
-                          ...transactionForm,
-                          player_id: event.target.value || undefined,
-                          is_external_payment: true,
-                        })}
-                        className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Select player</option>
-                        {players.map((player) => (
-                          <option key={player.id} value={player.id}>
-                            {player.firstName} {player.lastName}{player.email ? ` — ${player.email}` : ' — no email'}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-                  </div>
-                )}
+                  );
+                })()}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
