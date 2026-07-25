@@ -167,16 +167,37 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     { value: 'refunded', label: t('dash.finance.status.refunded'), color: 'bg-blue-100 text-blue-800' }
   ];
 
-  const emptyTransactionForm = (playerFee = true): Partial<FinancialTransaction> => ({
-    transaction_type: 'income',
-    category: playerFee ? 'Academy Fees' : undefined,
-    status: 'completed',
-    transaction_date: new Date().toISOString().split('T')[0],
-    currency: defaultCurrency,
-    payment_type: playerFee ? 'monthly' : undefined,
-    is_external_payment: playerFee,
-    reminder_days_before: defaultReminderDays,
-  });
+  const calculateNextRenewalDate = (baseDateStr?: string, paymentType?: string): string => {
+    const baseDate = baseDateStr ? new Date(baseDateStr) : new Date();
+    if (isNaN(baseDate.getTime())) return '';
+
+    const nextDate = new Date(baseDate);
+
+    if (paymentType === 'yearly') {
+      nextDate.setFullYear(nextDate.getFullYear() + 1);
+    } else {
+      nextDate.setMonth(nextDate.getMonth() + 1);
+    }
+
+    return nextDate.toISOString().split('T')[0];
+  };
+
+  const emptyTransactionForm = (playerFee = true): Partial<FinancialTransaction> => {
+    const today = new Date().toISOString().split('T')[0];
+    const initialPaymentType = playerFee ? 'monthly' : undefined;
+    return {
+      transaction_type: 'income',
+      category: playerFee ? 'Academy Fees' : undefined,
+      status: 'completed',
+      transaction_date: today,
+      currency: defaultCurrency,
+      payment_type: initialPaymentType,
+      is_external_payment: playerFee,
+      is_recurring: playerFee,
+      next_renewal_date: playerFee ? calculateNextRenewalDate(today, initialPaymentType) : undefined,
+      reminder_days_before: defaultReminderDays,
+    };
+  };
 
   const loadFeeManagementData = async () => {
     try {
@@ -1855,10 +1876,15 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                     <input
                       type="date"
                       value={transactionForm.transaction_date}
-                      onChange={(e) => setTransactionForm({
-                        ...transactionForm,
-                        transaction_date: e.target.value
-                      })}
+                      onChange={(e) => {
+                        const newTxDate = e.target.value;
+                        const newRenewal = calculateNextRenewalDate(newTxDate, transactionForm.payment_type || 'monthly');
+                        setTransactionForm({
+                          ...transactionForm,
+                          transaction_date: newTxDate,
+                          next_renewal_date: (transactionForm.is_recurring || transactionForm.fee_subscription_id) ? newRenewal : transactionForm.next_renewal_date,
+                        });
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     />
                   </div>
@@ -1871,11 +1897,16 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                         <label className="mb-1 block text-sm font-medium text-gray-700">Payment type *</label>
                         <select
                           value={transactionForm.payment_type || 'monthly'}
-                          onChange={(event) => setTransactionForm({
-                            ...transactionForm,
-                            payment_type: event.target.value as 'monthly' | 'yearly' | 'custom',
-                            custom_payment_type: event.target.value === 'custom' ? transactionForm.custom_payment_type : undefined,
-                          })}
+                          onChange={(event) => {
+                            const newType = event.target.value as 'monthly' | 'yearly' | 'custom';
+                            const newRenewal = calculateNextRenewalDate(transactionForm.transaction_date, newType);
+                            setTransactionForm({
+                              ...transactionForm,
+                              payment_type: newType,
+                              custom_payment_type: newType === 'custom' ? transactionForm.custom_payment_type : undefined,
+                              next_renewal_date: newRenewal || transactionForm.next_renewal_date,
+                            });
+                          }}
                           className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                         >
                           <option value="monthly">Monthly</option>
@@ -1901,7 +1932,15 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                         <input
                           type="checkbox"
                           checked={Boolean(transactionForm.is_recurring)}
-                          onChange={(event) => setTransactionForm({ ...transactionForm, is_recurring: event.target.checked })}
+                          onChange={(event) => {
+                            const isChecked = event.target.checked;
+                            const autoDate = calculateNextRenewalDate(transactionForm.transaction_date, transactionForm.payment_type || 'monthly');
+                            setTransactionForm({
+                              ...transactionForm,
+                              is_recurring: isChecked,
+                              next_renewal_date: isChecked ? (transactionForm.next_renewal_date || autoDate) : transactionForm.next_renewal_date,
+                            });
+                          }}
                         />
                         Create a recurring fee schedule and send renewal reminders
                       </label>
