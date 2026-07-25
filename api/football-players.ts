@@ -49,33 +49,57 @@ export default async function handler(
             }
 
             // Fetch standard players
-            const { data: stdPlayers, error: stdError } = await supabase
-                .from('players')
-                .select('*')
-                .eq('academy_id', academyId);
+            let stdPlayers: any[] = [];
+            try {
+                const { data: stdData, error: stdError } = await supabase
+                    .from('players')
+                    .select('*')
+                    .eq('academy_id', academyId);
 
-            if (stdError) {
-                console.error('[VERCEL] Error fetching standard players:', stdError);
-                return res.status(500).json({
-                    success: false,
-                    message: 'Failed to fetch standard players',
-                    error: stdError.message
-                });
+                if (stdError) {
+                    console.error('[VERCEL] Error fetching standard players:', stdError);
+                } else if (stdData) {
+                    stdPlayers = stdData;
+                }
+            } catch (err) {
+                console.error('[VERCEL] Exception fetching standard players:', err);
             }
 
             // Fetch self-registered players with profiles
-            const { data: indPlayers, error: indError } = await supabase
-                .from('individual_players')
-                .select('*, player_profiles(*)')
-                .eq('academy_id', academyId);
+            let indPlayers: any[] = [];
+            try {
+                const { data: indData, error: indError } = await supabase
+                    .from('individual_players')
+                    .select('*, player_profiles(*)')
+                    .eq('academy_id', academyId);
 
-            if (indError) {
-                console.error('[VERCEL] Error fetching self-registered players:', indError);
-                return res.status(500).json({
-                    success: false,
-                    message: 'Failed to fetch self-registered players',
-                    error: indError.message
-                });
+                if (indError) {
+                    console.warn('[VERCEL] Join fetch error, attempting direct fetch:', indError.message);
+                    const { data: fallbackInd } = await supabase
+                        .from('individual_players')
+                        .select('*')
+                        .eq('academy_id', academyId);
+
+                    if (fallbackInd && fallbackInd.length > 0) {
+                        const playerIds = fallbackInd.map((p: any) => p.id);
+                        const { data: profiles } = await supabase
+                            .from('player_profiles')
+                            .select('*')
+                            .in('player_id', playerIds);
+
+                        const profileMap = new Map();
+                        (profiles || []).forEach((prof: any) => profileMap.set(prof.player_id, prof));
+
+                        indPlayers = fallbackInd.map((p: any) => ({
+                            ...p,
+                            player_profiles: profileMap.get(p.id) || null
+                        }));
+                    }
+                } else if (indData) {
+                    indPlayers = indData;
+                }
+            } catch (err) {
+                console.error('[VERCEL] Exception fetching individual players:', err);
             }
 
             // Decrypt function (matches the simple encryption we're using)

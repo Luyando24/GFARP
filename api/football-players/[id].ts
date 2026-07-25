@@ -71,13 +71,37 @@ export default async function handler(
 
             if (error || !player) {
                 // Try fetching from individual_players
-                const { data: indPlayer, error: indError } = await supabase
+                let indPlayer: any = null;
+                const { data: indData, error: indError } = await supabase
                     .from('individual_players')
                     .select('*, player_profiles(*)')
                     .eq('id', id)
                     .single();
 
-                if (indError || !indPlayer) {
+                if (indError || !indData) {
+                    const { data: fallbackInd } = await supabase
+                        .from('individual_players')
+                        .select('*')
+                        .eq('id', id)
+                        .single();
+
+                    if (fallbackInd) {
+                        const { data: profile } = await supabase
+                            .from('player_profiles')
+                            .select('*')
+                            .eq('player_id', id)
+                            .maybeSingle();
+
+                        indPlayer = {
+                            ...fallbackInd,
+                            player_profiles: profile || null
+                        };
+                    }
+                } else {
+                    indPlayer = indData;
+                }
+
+                if (!indPlayer) {
                     console.error('[VERCEL] Error fetching player details:', error || indError);
                     return res.status(404).json({
                         success: false,

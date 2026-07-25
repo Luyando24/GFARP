@@ -88,23 +88,29 @@ export default async function handler(
             }
 
             // Fetch self-registered players
-            let indQueryBuilder = supabase
-                .from('individual_players')
-                .select('*, player_profiles(*)');
+            let indPlayers: any[] = [];
+            try {
+                let indQueryBuilder = supabase
+                    .from('individual_players')
+                    .select('*, player_profiles(*)');
 
-            if (academyId) {
-                indQueryBuilder = indQueryBuilder.eq('academy_id', academyId);
-            }
+                if (academyId) {
+                    indQueryBuilder = indQueryBuilder.eq('academy_id', academyId);
+                }
 
-            const { data: indPlayers, error: indError } = await indQueryBuilder;
+                const { data: indData, error: indError } = await indQueryBuilder;
 
-            if (indError) {
-                console.error('[VERCEL] Error searching self-registered players:', indError);
-                return res.status(500).json({
-                    success: false,
-                    message: 'Failed to search self-registered players',
-                    error: indError.message
-                });
+                if (indError) {
+                    console.warn('[VERCEL] Error searching self-registered players with join, fallback:', indError.message);
+                    let fallbackBuilder = supabase.from('individual_players').select('*');
+                    if (academyId) fallbackBuilder = fallbackBuilder.eq('academy_id', academyId);
+                    const { data: fallbackData } = await fallbackBuilder;
+                    if (fallbackData) indPlayers = fallbackData;
+                } else if (indData) {
+                    indPlayers = indData;
+                }
+            } catch (err) {
+                console.error('[VERCEL] Exception searching self-registered players:', err);
             }
 
             // Filter and map results
