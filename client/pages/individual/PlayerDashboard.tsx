@@ -1503,151 +1503,49 @@ export default function PlayerDashboard() {
                   <p className="text-slate-600 dark:text-slate-400">{t('dash.plan.chooseBest')}</p>
                 </div>
 
-                {(!currentPlan || currentPlan === 'free') && (
-                  <div className={`grid grid-cols-1 ${plans.length > 1 ? 'md:grid-cols-2 lg:grid-cols-3' : 'max-w-md mx-auto'} gap-8 mb-8`}>
-                    {plans.length > 0 ? (
-                      [...plans]
-                        .sort((a, b) => parseFloat(a.price) - parseFloat(b.price))
-                        .map((plan) => {
-                          const isMostExpensive = parseFloat(plan.price) === Math.max(...plans.map(p => parseFloat(p.price)));
-                          
-                          const planKey = plan.name.toLowerCase().includes('starter') ? 'starter' : 
-                                          plan.name.toLowerCase().includes('pro') ? 'pro' : 
-                                          plan.name.toLowerCase().includes('elite') ? 'elite' : 
-                                          plan.name.toLowerCase().includes('agency') ? 'elite' : 
-                                          plan.name.toLowerCase().includes('basic') ? 'starter' : 'starter';
-
-                          const translatedFeatures = (plan.features || []).map((f: string) => {
-                            const lowerF = f.toLowerCase();
-                            
-                            // Specific Individual Features first to avoid broad matches
-                            if (lowerF.includes('verified') && lowerF.includes('badge')) return t('plans.feature.verifiedBadge');
-                            if (lowerF.includes('unlimited') && lowerF.includes('update')) return t('plans.feature.unlimitedUpdates');
-                            if (lowerF.includes('unlimited') && lowerF.includes('player')) return t('plans.feature.unlimitedPlayers');
-                            if (lowerF.includes('video highlight')) return t('plans.feature.videoReels');
-                            if (lowerF.includes('scout messaging')) return t('plans.feature.scoutMessaging');
-                            
-                            // Map dynamic features to translations
-                            if (lowerF.includes('player') && (lowerF.includes('up to') || f.match(/\d+/))) {
-                              const count = f.match(/\d+/)?.[0] || plan.player_limit;
-                              return t('plans.feature.playerCount', { count });
-                            }
-                            if (lowerF.includes('analytics')) return t('plans.feature.analytics');
-                            if (lowerF.includes('priority support')) return t('plans.feature.prioritySupport');
-                            if (lowerF.includes('email support')) return t('plans.feature.emailSupport');
-                            if (lowerF.includes('registration')) return t('plans.feature.registration');
-                            if (lowerF.includes('training')) return t('plans.feature.trainingTracking');
-                            if (lowerF.includes('solidarity')) return t('plans.feature.solidarity');
-                            if (lowerF.includes('compliance')) return t('plans.feature.fullCompliance');
-                            if (lowerF.includes('24/7')) return t('plans.feature.247Support');
-                            if (lowerF.includes('dedicated manager')) return t('plans.feature.dedicatedManager');
-                            if (lowerF.includes('white-label')) return t('plans.feature.whiteLabel');
-                            if (lowerF.includes('api access')) return t('plans.feature.advancedApi');
-                            if (lowerF.includes('financial tools')) return t('plans.feature.financialTools');
-                            if (lowerF.includes('standard support')) return t('plans.feature.standardSupport');
-                            if (lowerF.includes('profile placement')) return t('plans.feature.profilePlacement');
-                            if (lowerF.includes('legal')) return t('plans.feature.legalGuidance');
-                            if (lowerF.includes('trial notifications')) return t('plans.feature.trialNotifications');
-                            if (lowerF.includes('digital resume')) return t('plans.feature.digitalResume');
-                            if (lowerF.includes('public profile')) return t('plans.feature.publicProfile');
-                            if (lowerF.includes('stats tracking')) return t('plans.feature.statsTracking');
-                            if (lowerF.includes('api integration')) return t('plans.feature.apiIntegrations');
-                            if (lowerF.includes('account team')) return t('plans.feature.accountTeam');
-                            if (lowerF.includes('scouting filter')) return t('plans.feature.scoutingFilters');
-                            if (lowerF.includes('commission tracking')) return t('plans.feature.commissionTracking');
-                            if (lowerF.includes('sub-agent management')) return t('plans.feature.subAgentMgmt');
-                            if (lowerF.includes('premium support')) return t('plans.feature.premiumSupport');
-                            if (lowerF.includes('transfer tracking')) return t('plans.feature.transferTracking');
-                            if (lowerF.includes('document cloud')) return t('plans.feature.documentCloud');
-                            if (lowerF.includes('scouting tools')) return t('plans.feature.scoutingTools');
-                            return f;
-                          });
-
-                          return (
-                            <Card key={plan.id} className={`cursor-pointer transition-all hover:border-blue-500 hover:shadow-2xl flex flex-col relative overflow-hidden border-2 ${isMostExpensive ? 'border-blue-600 dark:border-blue-400 shadow-xl scale-105 z-10' : 'border-slate-100 dark:border-slate-800 shadow-sm'}`}>
-                              {isMostExpensive && (
-                                <div className="absolute top-0 right-0 bg-blue-600 text-white text-[10px] px-4 py-1.5 font-black uppercase tracking-widest rounded-bl-lg shadow-lg">{t('dash.plan.recommended')}</div>
-                              )}
-                              <CardHeader className="text-center pb-4 pt-8 bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
-                                <CardTitle className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight">{t(`plans.${planKey}.name` as any) || plan.name}</CardTitle>
-                                <div className="flex items-center justify-center gap-1 mt-4">
-                                  <span className="text-2xl font-bold text-blue-600">$</span>
-                                  <span className="text-5xl font-black text-blue-600 tracking-tighter">{plan.price}</span>
-                                </div>
-                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">
-                                  {plan.billingCycle === 'one-time' || !plan.billingCycle 
-                                    ? t('dash.plan.lifetimeBilling') 
-                                    : t('dash.plan.billingPeriod', { period: plan.billingCycle.toLowerCase() })
-                                  }
-                                </p>
-                              </CardHeader>
-                              <CardContent className="flex-1 pt-8 px-6">
-                                <div className="space-y-4 mb-8">
-                                  {Array.isArray(plan.features) ? (
-                                    translatedFeatures.map((feature: string, fIdx: number) => (
-                                      <div key={fIdx} className="flex items-start gap-3">
-                                        <div className="mt-0.5 h-5 w-5 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
-                                          <Check className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                                        </div>
-                                        <span className="text-sm font-bold text-slate-700 dark:text-slate-300 leading-tight">{feature}</span>
-                                      </div>
-                                    ))
-                                  ) : (
-                                    <p className="text-sm text-slate-500 italic">{t('dash.plan.noFeatures')}</p>
-                                  )}
-                                </div>
-                              </CardContent>
-                              <CardFooter className="pb-8 px-6 pt-2">
-                                <Button 
-                                  className={`w-full h-14 text-sm font-black uppercase tracking-widest transition-all duration-300 shadow-xl ${isMostExpensive ? 'bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white hover:scale-[1.02]' : 'bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800'}`}
-                                  onClick={() => openPaymentModal(plan)}
-                                >
-                                  {parseFloat(plan.price) === 0 
-                                    ? t('dash.plan.getStarted') 
-                                    : t('dash.plan.getName', { name: t(`plans.${planKey}.name` as any) || plan.name })
-                                  }
-                                </Button>
-                              </CardFooter>
-                            </Card>
-                          );
-                        })
-                    ) : (
-                      <div className="col-span-full py-12 text-center">
-                        <Loader2 className="h-10 w-10 animate-spin text-blue-600 mx-auto mb-4" />
-                        <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">{t('dash.plan.loading')}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-
+                {/* Active Subscription Banner */}
                 {currentPlan && currentPlan !== 'free' && (
-                  <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-lg relative overflow-hidden">
+                  <Card className="bg-gradient-to-br from-green-50 to-emerald-50 border-green-200 shadow-lg relative overflow-hidden mb-6">
                     <div className="absolute top-0 right-0 p-2 opacity-10">
                       <Shield className="h-20 w-20 text-green-600" />
                     </div>
                     <CardContent className="pt-8 pb-8">
-                      <div className="flex items-center gap-6">
-                        <div className="h-16 w-16 rounded-2xl bg-green-500 flex items-center justify-center shadow-lg shadow-green-200">
-                          <Check className="h-8 w-8 text-white" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge className="bg-green-600 hover:bg-green-600 text-white font-black uppercase tracking-widest text-[10px]">{t('dash.plan.activeSubBadge')}</Badge>
+                      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+                        <div className="flex items-center gap-6">
+                          <div className="h-16 w-16 rounded-2xl bg-green-500 flex items-center justify-center shadow-lg shadow-green-200 shrink-0">
+                            <Check className="h-8 w-8 text-white" />
                           </div>
-                          <h3 className="text-2xl font-black text-slate-900 uppercase italic tracking-tight">
-                            {t('dash.plan.planLabel', { name: plans.find(p => p.id === currentPlan)?.name || 'PREMIUM' })}
-                          </h3>
-                          <p className="text-green-700 font-medium">
-                            {t('dash.plan.activeDesc')}
-                          </p>
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <Badge className="bg-green-600 hover:bg-green-600 text-white font-black uppercase tracking-widest text-[10px]">{t('dash.plan.activeSubBadge')}</Badge>
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-900 uppercase italic tracking-tight">
+                              {t('dash.plan.planLabel', { name: plans.find(p => p.id === currentPlan || p.name.toLowerCase() === currentPlan?.toLowerCase())?.name || (currentPlan === 'pro' ? 'PRO' : currentPlan) })}
+                            </h3>
+                            <p className="text-green-700 font-medium text-sm mt-0.5">
+                              {t('dash.plan.activeDesc')}
+                            </p>
+                          </div>
                         </div>
+                        {parseFloat(plans.find(p => p.id === currentPlan)?.price || '0') < Math.max(...plans.map(p => parseFloat(p.price) || 0)) && (
+                          <Button
+                            onClick={() => {
+                              const element = document.getElementById('available-plans-grid');
+                              element?.scrollIntoView({ behavior: 'smooth' });
+                            }}
+                            className="bg-green-700 hover:bg-green-800 text-white font-bold text-sm shadow-md shrink-0"
+                          >
+                            <Zap className="mr-2 h-4 w-4" />
+                            Upgrade Plan
+                          </Button>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
                 )}
 
                 {currentPlan === 'free' && (
-                  <Card className="bg-slate-50 border-slate-200 border-dashed">
+                  <Card className="bg-slate-50 border-slate-200 border-dashed mb-6">
                     <CardContent className="pt-6 pb-6">
                       <div className="flex items-center gap-4">
                         <div className="h-12 w-12 rounded-xl bg-slate-200 flex items-center justify-center">
@@ -1663,6 +1561,159 @@ export default function PlayerDashboard() {
                     </CardContent>
                   </Card>
                 )}
+
+                {/* Section header for upgrade options */}
+                {currentPlan && currentPlan !== 'free' && (
+                  <div className="pt-2">
+                    <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <Zap className="h-5 w-5 text-amber-500" />
+                      Upgrade & Available Plans
+                    </h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                      Select a plan below to upgrade your profile features, verified badges, and scouting tools.
+                    </p>
+                  </div>
+                )}
+
+                {/* Available Plans Grid */}
+                <div id="available-plans-grid" className={`grid grid-cols-1 ${plans.length > 1 ? 'md:grid-cols-2 lg:grid-cols-3' : 'max-w-md mx-auto'} gap-8 mb-8`}>
+                  {plans.length > 0 ? (
+                    [...plans]
+                      .sort((a, b) => parseFloat(a.price) - parseFloat(b.price))
+                      .map((plan) => {
+                        const currentPlanObj = plans.find(p => p.id === currentPlan || p.name.toLowerCase() === currentPlan?.toLowerCase());
+                        const currentPrice = currentPlanObj ? parseFloat(currentPlanObj.price) : (currentPlan === 'pro' ? 49.99 : 0);
+                        const planPrice = parseFloat(plan.price);
+                        const isCurrentPlan = currentPlan === plan.id || currentPlanObj?.id === plan.id;
+                        const isUpgrade = !isCurrentPlan && planPrice > currentPrice;
+                        const isMostExpensive = planPrice === Math.max(...plans.map(p => parseFloat(p.price)));
+                        
+                        const planKey = plan.name.toLowerCase().includes('starter') ? 'starter' : 
+                                        plan.name.toLowerCase().includes('pro') ? 'pro' : 
+                                        plan.name.toLowerCase().includes('elite') ? 'elite' : 
+                                        plan.name.toLowerCase().includes('agency') ? 'elite' : 
+                                        plan.name.toLowerCase().includes('basic') ? 'starter' : 'starter';
+
+                        const translatedFeatures = (plan.features || []).map((f: string) => {
+                          const lowerF = f.toLowerCase();
+                          
+                          // Specific Individual Features first to avoid broad matches
+                          if (lowerF.includes('verified') && lowerF.includes('badge')) return t('plans.feature.verifiedBadge');
+                          if (lowerF.includes('unlimited') && lowerF.includes('update')) return t('plans.feature.unlimitedUpdates');
+                          if (lowerF.includes('unlimited') && lowerF.includes('player')) return t('plans.feature.unlimitedPlayers');
+                          if (lowerF.includes('video highlight')) return t('plans.feature.videoReels');
+                          if (lowerF.includes('scout messaging')) return t('plans.feature.scoutMessaging');
+                          
+                          // Map dynamic features to translations
+                          if (lowerF.includes('player') && (lowerF.includes('up to') || f.match(/\d+/))) {
+                            const count = f.match(/\d+/)?.[0] || plan.player_limit;
+                            return t('plans.feature.playerCount', { count });
+                          }
+                          if (lowerF.includes('analytics')) return t('plans.feature.analytics');
+                          if (lowerF.includes('priority support')) return t('plans.feature.prioritySupport');
+                          if (lowerF.includes('email support')) return t('plans.feature.emailSupport');
+                          if (lowerF.includes('registration')) return t('plans.feature.registration');
+                          if (lowerF.includes('training')) return t('plans.feature.trainingTracking');
+                          if (lowerF.includes('solidarity')) return t('plans.feature.solidarity');
+                          if (lowerF.includes('compliance')) return t('plans.feature.fullCompliance');
+                          if (lowerF.includes('24/7')) return t('plans.feature.247Support');
+                          if (lowerF.includes('dedicated manager')) return t('plans.feature.dedicatedManager');
+                          if (lowerF.includes('white-label')) return t('plans.feature.whiteLabel');
+                          if (lowerF.includes('api access')) return t('plans.feature.advancedApi');
+                          if (lowerF.includes('financial tools')) return t('plans.feature.financialTools');
+                          if (lowerF.includes('standard support')) return t('plans.feature.standardSupport');
+                          if (lowerF.includes('profile placement')) return t('plans.feature.profilePlacement');
+                          if (lowerF.includes('legal')) return t('plans.feature.legalGuidance');
+                          if (lowerF.includes('trial notifications')) return t('plans.feature.trialNotifications');
+                          if (lowerF.includes('digital resume')) return t('plans.feature.digitalResume');
+                          if (lowerF.includes('public profile')) return t('plans.feature.publicProfile');
+                          if (lowerF.includes('stats tracking')) return t('plans.feature.statsTracking');
+                          if (lowerF.includes('api integration')) return t('plans.feature.apiIntegrations');
+                          if (lowerF.includes('account team')) return t('plans.feature.accountTeam');
+                          if (lowerF.includes('scouting filter')) return t('plans.feature.scoutingFilters');
+                          if (lowerF.includes('commission tracking')) return t('plans.feature.commissionTracking');
+                          if (lowerF.includes('sub-agent management')) return t('plans.feature.subAgentMgmt');
+                          if (lowerF.includes('premium support')) return t('plans.feature.premiumSupport');
+                          if (lowerF.includes('transfer tracking')) return t('plans.feature.transferTracking');
+                          if (lowerF.includes('document cloud')) return t('plans.feature.documentCloud');
+                          if (lowerF.includes('scouting tools')) return t('plans.feature.scoutingTools');
+                          return f;
+                        });
+
+                        return (
+                          <Card key={plan.id} className={`cursor-pointer transition-all hover:border-blue-500 hover:shadow-2xl flex flex-col relative overflow-hidden border-2 ${isCurrentPlan ? 'border-green-500 bg-green-50/10 dark:bg-green-950/10' : isMostExpensive ? 'border-blue-600 dark:border-blue-400 shadow-xl scale-105 z-10' : 'border-slate-100 dark:border-slate-800 shadow-sm'}`}>
+                            {isCurrentPlan ? (
+                              <div className="absolute top-0 right-0 bg-green-600 text-white text-[10px] px-4 py-1.5 font-black uppercase tracking-widest rounded-bl-lg shadow-lg">Current Active Plan</div>
+                            ) : isMostExpensive ? (
+                              <div className="absolute top-0 right-0 bg-blue-600 text-white text-[10px] px-4 py-1.5 font-black uppercase tracking-widest rounded-bl-lg shadow-lg">{t('dash.plan.recommended')}</div>
+                            ) : null}
+                            <CardHeader className="text-center pb-4 pt-8 bg-slate-50/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800">
+                              <CardTitle className="text-2xl font-black text-slate-900 dark:text-white uppercase italic tracking-tight">{t(`plans.${planKey}.name` as any) || plan.name}</CardTitle>
+                              <div className="flex items-center justify-center gap-1 mt-4">
+                                <span className="text-2xl font-bold text-blue-600">$</span>
+                                <span className="text-5xl font-black text-blue-600 tracking-tighter">{plan.price}</span>
+                              </div>
+                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mt-2">
+                                {plan.billingCycle === 'one-time' || !plan.billingCycle 
+                                  ? t('dash.plan.lifetimeBilling') 
+                                  : t('dash.plan.billingPeriod', { period: plan.billingCycle.toLowerCase() })
+                                }
+                              </p>
+                            </CardHeader>
+                            <CardContent className="flex-1 pt-8 px-6">
+                              <div className="space-y-4 mb-8">
+                                {Array.isArray(plan.features) ? (
+                                  translatedFeatures.map((feature: string, fIdx: number) => (
+                                    <div key={fIdx} className="flex items-start gap-3">
+                                      <div className="mt-0.5 h-5 w-5 rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center flex-shrink-0">
+                                        <Check className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                                      </div>
+                                      <span className="text-sm font-bold text-slate-700 dark:text-slate-300 leading-tight">{feature}</span>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <p className="text-sm text-slate-500 italic">{t('dash.plan.noFeatures')}</p>
+                                )}
+                              </div>
+                            </CardContent>
+                            <CardFooter className="pb-8 px-6 pt-2">
+                              {isCurrentPlan ? (
+                                <Button 
+                                  disabled
+                                  variant="outline"
+                                  className="w-full h-14 text-sm font-black uppercase tracking-widest border-green-500 text-green-700 bg-green-50/50 cursor-default opacity-90"
+                                >
+                                  <Check className="mr-2 h-4 w-4 text-green-600" />
+                                  Current Active Plan
+                                </Button>
+                              ) : (
+                                <Button 
+                                  className={`w-full h-14 text-sm font-black uppercase tracking-widest transition-all duration-300 shadow-xl ${isUpgrade ? 'bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 text-white hover:scale-[1.02]' : 'bg-slate-900 dark:bg-slate-700 text-white hover:bg-slate-800'}`}
+                                  onClick={() => openPaymentModal(plan)}
+                                >
+                                  {isUpgrade ? (
+                                    <>
+                                      <Zap className="mr-2 h-4 w-4 text-yellow-300" />
+                                      Upgrade to {plan.name}
+                                    </>
+                                  ) : planPrice === 0 ? (
+                                    t('dash.plan.getStarted')
+                                  ) : (
+                                    t('dash.plan.getName', { name: t(`plans.${planKey}.name` as any) || plan.name })
+                                  )}
+                                </Button>
+                              )}
+                            </CardFooter>
+                          </Card>
+                        );
+                      })
+                  ) : (
+                    <div className="col-span-full py-12 text-center">
+                      <Loader2 className="h-10 w-10 animate-spin text-blue-600 mx-auto mb-4" />
+                      <p className="text-slate-500 font-bold uppercase tracking-widest text-sm">{t('dash.plan.loading')}</p>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
