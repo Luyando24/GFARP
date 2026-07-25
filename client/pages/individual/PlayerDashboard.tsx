@@ -190,16 +190,12 @@ export default function PlayerDashboard() {
 
   // Helper to check if current plan has a feature
   const hasFeature = (featureName: string) => {
-    if (currentPlan === 'pro') return true; // Legacy/Exempted
-    if (!currentPlan || currentPlan === 'free') {
-       // Default free features
-       const freeFeatures = ["Basic player profile", "Public profile link", "Document storage (500MB)"];
-       return freeFeatures.some(f => f.toLowerCase().includes(featureName.toLowerCase()));
-    }
-    const plan = plans.find(p => p.id === currentPlan);
-    if (!plan) return false;
-    const features = Array.isArray(plan.features) ? plan.features : [];
-    return features.some((f: string) => f.toLowerCase().includes(featureName.toLowerCase()));
+    // If the player has any active non-free subscription plan, unlock all pro features
+    if (currentPlan && currentPlan !== 'free') return true;
+
+    // Default free features
+    const freeFeatures = ["Basic player profile", "Public profile link", "Document storage (500MB)"];
+    return freeFeatures.some(f => f.toLowerCase().includes(featureName.toLowerCase()));
   };
 
   const checkPaymentStatus = async () => {
@@ -927,14 +923,14 @@ export default function PlayerDashboard() {
                       </CardHeader>
                       <CardContent>
                         <div className="text-2xl font-bold">
-                          {currentPlan === 'pro' ? t('dash.player.subActive') : t('dash.player.subFree')}
+                          {currentPlan && currentPlan !== 'free' ? t('dash.player.subActive') : t('dash.player.subFree')}
                         </div>
                         <p className="text-xs text-muted-foreground mt-1 mb-4">
-                          {currentPlan === 'pro' 
+                          {currentPlan && currentPlan !== 'free' 
                             ? t('dash.player.subActiveDesc') 
                             : t('dash.player.subFreeDesc')}
                         </p>
-                        {currentPlan !== 'pro' && (
+                        {(!currentPlan || currentPlan === 'free') && (
                           <Button 
                             onClick={() => setActiveTab('subscription')} 
                             className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white"
