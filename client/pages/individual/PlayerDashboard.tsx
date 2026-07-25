@@ -42,7 +42,12 @@ import {
   Globe,
   Lock,
   Shield,
-  Clock
+  Clock,
+  ChevronRight,
+  AlertCircle,
+  Pencil,
+  Zap,
+  Copy
 } from "lucide-react";
 import { toast } from "sonner";
 import jsPDF from "jspdf";
@@ -130,6 +135,13 @@ export default function PlayerDashboard() {
   const [plans, setPlans] = useState<any[]>([]);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedPlanForPurchase, setSelectedPlanForPurchase] = useState<any | null>(null);
+
+  // Inline slug setup state (Share tab)
+  const [inlineSlug, setInlineSlug] = useState('');
+  const [isCheckingInlineSlug, setIsCheckingInlineSlug] = useState(false);
+  const [inlineSlugAvailable, setInlineSlugAvailable] = useState<boolean | null>(null);
+  const [inlineSlugMessage, setInlineSlugMessage] = useState('');
+  const [slugSaving, setSlugSaving] = useState(false);
 
   useEffect(() => {
     const initializeDashboard = async () => {
@@ -285,6 +297,44 @@ export default function PlayerDashboard() {
         [name]: value
       }
     }));
+  };
+
+  // Inline slug check + save from the Share tab
+  const handleInlineSlugChange = async (value: string) => {
+    const normalized = value.toLowerCase().replace(/[^a-z0-9-]/g, '-').replace(/--+/g, '-');
+    setInlineSlug(normalized);
+    setInlineSlugAvailable(null);
+    setInlineSlugMessage('');
+    if (!normalized || normalized.length < 3) return;
+    setIsCheckingInlineSlug(true);
+    try {
+      const response = await PlayerApi.checkSlugAvailability(normalized);
+      setInlineSlugAvailable(response.available);
+      setInlineSlugMessage(response.message);
+    } catch {
+      setInlineSlugAvailable(null);
+    } finally {
+      setIsCheckingInlineSlug(false);
+    }
+  };
+
+  const handleSaveSlugInline = async () => {
+    if (!inlineSlug || inlineSlugAvailable !== true) return;
+    setSlugSaving(true);
+    try {
+      const updated = { ...formData, slug: inlineSlug };
+      await PlayerApi.updateProfile(updated);
+      setProfile(prev => prev ? { ...prev, slug: inlineSlug } : prev);
+      setFormData(prev => ({ ...prev, slug: inlineSlug }));
+      setInlineSlug('');
+      setInlineSlugAvailable(null);
+      setInlineSlugMessage('');
+      toast.success('Profile link set! You can now share it.');
+    } catch {
+      toast.error('Failed to save link. Please try again.');
+    } finally {
+      setSlugSaving(false);
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -1627,9 +1677,69 @@ export default function PlayerDashboard() {
                       </CardTitle>
                       <CardDescription>{t('dash.share.digitalDesc')}</CardDescription>
                     </CardHeader>
-                    <CardContent className="flex-1">
+                    <CardContent className="flex-1 space-y-4">
+
+                      {/* === NO SLUG: Setup panel === */}
+                      {!(profile?.slug) && (currentPlan && currentPlan !== 'free') && (
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 p-4 space-y-3">
+                          <div className="flex items-start gap-3">
+                            <div className="mt-0.5 h-8 w-8 shrink-0 rounded-full bg-amber-100 dark:bg-amber-900/60 flex items-center justify-center">
+                              <Zap className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                            </div>
+                            <div>
+                              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Set your profile link to start sharing</p>
+                              <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">Choose a unique handle. This becomes your public URL.</p>
+                            </div>
+                          </div>
+
+                          {/* Inline slug input */}
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-1.5 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 px-3 py-2 focus-within:ring-2 focus-within:ring-amber-400 focus-within:ring-offset-1 transition-shadow">
+                              <span className="text-xs text-slate-400 font-mono shrink-0 select-none">soccercircular.com/</span>
+                              <input
+                                type="text"
+                                value={inlineSlug}
+                                onChange={(e) => handleInlineSlugChange(e.target.value)}
+                                placeholder="your-name"
+                                maxLength={40}
+                                className="flex-1 min-w-0 text-sm font-mono bg-transparent outline-none text-slate-900 dark:text-white placeholder-slate-400"
+                              />
+                              <div className="shrink-0 w-4">
+                                {isCheckingInlineSlug ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
+                                ) : inlineSlugAvailable === true ? (
+                                  <Check className="h-3.5 w-3.5 text-green-500" />
+                                ) : inlineSlugAvailable === false ? (
+                                  <X className="h-3.5 w-3.5 text-red-500" />
+                                ) : null}
+                              </div>
+                            </div>
+                            {inlineSlugMessage && (
+                              <p className={`text-xs ${inlineSlugAvailable === false ? 'text-red-500' : 'text-green-600 dark:text-green-400'}`}>
+                                {inlineSlugMessage}
+                              </p>
+                            )}
+                            {!inlineSlugMessage && inlineSlug && inlineSlug.length < 3 && (
+                              <p className="text-xs text-amber-500">Must be at least 3 characters</p>
+                            )}
+                          </div>
+
+                          <Button
+                            className="w-full h-9 bg-amber-500 hover:bg-amber-600 text-white font-semibold text-sm shadow-sm disabled:opacity-50"
+                            disabled={inlineSlugAvailable !== true || slugSaving}
+                            onClick={handleSaveSlugInline}
+                          >
+                            {slugSaving ? (
+                              <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Saving…</>
+                            ) : (
+                              <><Check className="mr-2 h-4 w-4" />Save My Profile Link</>
+                            )}
+                          </Button>
+                        </div>
+                      )}
+
                       {/* Preview Card */}
-                      <div className="mb-6 p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 relative group">
+                      <div className="p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 relative group">
                         <div className="absolute top-2 right-2">
                           <Badge variant="outline" className="bg-white/80 dark:bg-slate-800/80">{t('dash.share.preview')}</Badge>
                         </div>
@@ -1638,86 +1748,111 @@ export default function PlayerDashboard() {
                             <AvatarImage src={profile?.profile_image_url} />
                             <AvatarFallback>{getInitials(profile?.display_name || "")}</AvatarFallback>
                           </Avatar>
-                          <div className="overflow-hidden">
+                          <div className="overflow-hidden flex-1">
                             <h4 className="font-bold text-slate-900 dark:text-white capitalize truncate">
                               {profile?.display_name || t('dash.share.newPlayer')}
                             </h4>
                             <p className="text-sm text-slate-500 dark:text-slate-400">{profile?.position || t('dash.share.noPosition')}</p>
-                            <div className="flex gap-1 mt-1">
+                            <div className="flex gap-1 mt-1 flex-wrap">
                               <Badge variant="secondary" className="text-[10px] py-0">{profile?.nationality || t('dash.share.global')}</Badge>
                               <Badge variant="secondary" className="text-[10px] py-0">{profile?.age ? `${profile.age}y` : t('dash.share.ageLabel')}</Badge>
                             </div>
                           </div>
                         </div>
+
+                        {/* URL chip */}
+                        <div className="mt-3 flex items-center gap-2 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5">
+                          <Globe className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+                          {profile?.slug ? (
+                            <span className="text-xs font-mono text-slate-600 dark:text-slate-300 truncate">
+                              {getPublicUrl().replace(/^https?:\/\//, '')}
+                            </span>
+                          ) : (
+                            <span className="text-xs font-mono text-slate-400 italic truncate">
+                              soccercircular.com/<span className="text-amber-500">your-name</span>
+                            </span>
+                          )}
+                          {profile?.slug && (
+                            <button
+                              onClick={copyPublicLink}
+                              className="ml-auto shrink-0 text-slate-400 hover:text-green-600 transition-colors"
+                              title="Copy link"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="space-y-4">
-                        <div className="flex gap-2">
-                          <Button
-                            className="flex-1 h-12 text-md font-semibold bg-green-600 hover:bg-green-700 shadow-md"
-                            onClick={currentPlan && currentPlan !== 'free' ? copyPublicLink : () => setActiveTab('subscription')}
-                          >
-                            {currentPlan && currentPlan !== 'free' ? (
-                              <>
+                      <div className="space-y-3">
+                        {/* === HAS SLUG + HAS PLAN: Full share buttons === */}
+                        {profile?.slug && (currentPlan && currentPlan !== 'free') ? (
+                          <>
+                            <div className="flex gap-2">
+                              <Button
+                                className="flex-1 h-11 text-md font-semibold bg-green-600 hover:bg-green-700 shadow-md"
+                                onClick={copyPublicLink}
+                              >
                                 <Share2 className="mr-2 h-5 w-5" />
                                 {t('dash.share.copyLink')}
-                              </>
-                            ) : (
-                              <>
-                                <Lock className="mr-2 h-5 w-5" />
-                                {t('dash.share.unlockLink')}
-                              </>
-                            )}
+                              </Button>
+                              <Button
+                                variant="outline"
+                                className="h-11 w-11 p-0 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900"
+                                asChild
+                              >
+                                <a href={getPublicUrl()} target="_blank" rel="noopener noreferrer">
+                                  <Eye className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                                </a>
+                              </Button>
+                            </div>
+
+                            <div>
+                              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-2">{t('dash.share.quickShare')}</p>
+                              <div className="flex gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1 gap-2 border-slate-100 dark:border-slate-800 hover:bg-green-50 dark:hover:bg-green-900/10"
+                                  onClick={() => window.open(`https://wa.me/?text=Check out my professional football profile: ${getPublicUrl()}`, '_blank')}
+                                >
+                                  <MessageCircle className="h-4 w-4 text-[#25D366]" />
+                                  <span className="text-xs">WhatsApp</span>
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="flex-1 gap-2 border-slate-100 dark:border-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/10"
+                                  onClick={() => window.open(`https://twitter.com/intent/tweet?text=Check out my football profile on Soccer Circular: ${getPublicUrl()}`, '_blank')}
+                                >
+                                  <Twitter className="h-4 w-4 text-[#1DA1F2]" />
+                                  <span className="text-xs">Twitter</span>
+                                </Button>
+                              </div>
+                            </div>
+                          </>
+                        ) : !(currentPlan && currentPlan !== 'free') ? (
+                          /* === NO PLAN: Upgrade CTA === */
+                          <Button
+                            className="w-full h-11 font-semibold bg-slate-800 hover:bg-slate-900 dark:bg-slate-100 dark:hover:bg-white dark:text-slate-900 shadow-md"
+                            onClick={() => setActiveTab('subscription')}
+                          >
+                            <Lock className="mr-2 h-5 w-5" />
+                            {t('dash.share.unlockLink')}
+                            <ChevronRight className="ml-auto h-4 w-4" />
                           </Button>
+                        ) : (
+                          /* === HAS PLAN, NO SLUG YET: point to setup panel above === */
                           <Button
                             variant="outline"
-                            className="h-12 w-12 p-0 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900"
-                            asChild={!!(currentPlan && currentPlan !== 'free')}
-                            onClick={!(currentPlan && currentPlan !== 'free') ? () => setActiveTab('subscription') : undefined}
+                            className="w-full h-11 font-semibold border-amber-300 text-amber-700 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/40"
+                            onClick={() => setActiveTab('profile')}
                           >
-                            {currentPlan && currentPlan !== 'free' ? (
-                              <a href={getPublicUrl()} target="_blank" rel="noopener noreferrer">
-                                <Eye className="h-5 w-5 text-slate-600 dark:text-slate-400" />
-                              </a>
-                            ) : (
-                              <div className="cursor-pointer flex items-center justify-center w-full h-full">
-                                <Lock className="h-5 w-5 text-slate-400" />
-                              </div>
-                            )}
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Set a profile link to share
+                            <ChevronRight className="ml-auto h-4 w-4" />
                           </Button>
-                        </div>
-
-                        <div className="pt-2">
-                          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3">{t('dash.share.quickShare')}</p>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={!(currentPlan && currentPlan !== 'free')}
-                              className="flex-1 gap-2 border-slate-100 dark:border-slate-800 hover:bg-green-50 dark:hover:bg-green-900/10"
-                              onClick={() => {
-                                const url = getPublicUrl();
-                                window.open(`https://wa.me/?text=Check out my professional football profile: ${url}`, '_blank');
-                              }}
-                            >
-                              {currentPlan && currentPlan !== 'free' ? <MessageCircle className="h-4 w-4 text-[#25D366]" /> : <Lock className="h-3 w-3" />}
-                              <span className="text-xs">WhatsApp</span>
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              disabled={!(currentPlan && currentPlan !== 'free')}
-                              className="flex-1 gap-2 border-slate-100 dark:border-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/10"
-                              onClick={() => {
-                                const url = getPublicUrl();
-                                window.open(`https://twitter.com/intent/tweet?text=Check out my football profile on Soccer Circular: ${url}`, '_blank');
-                              }}
-                            >
-                              {currentPlan && currentPlan !== 'free' ? <Twitter className="h-4 w-4 text-[#1DA1F2]" /> : <Lock className="h-3 w-3" />}
-                              <span className="text-xs">Twitter</span>
-                            </Button>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
