@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
 
 export const config = {
-    maxDuration: 10,
+    maxDuration: 60,
 };
 
 export default async function handler(
@@ -65,12 +65,13 @@ export default async function handler(
                 console.error('[VERCEL] Exception fetching standard players:', err);
             }
 
-            // Fetch self-registered players with profiles
+            // Fetch self-registered players with profiles (exclude heavy base64 image fields for list speed)
+            const profileFields = 'id, player_id, age, position, nationality, height, weight, preferred_foot, current_club, career_history, whatsapp_number';
             let indPlayers: any[] = [];
             try {
                 const { data: indData, error: indError } = await supabase
                     .from('individual_players')
-                    .select('*, player_profiles(*)')
+                    .select(`*, player_profiles(${profileFields})`)
                     .eq('academy_id', academyId);
 
                 if (indError) {
@@ -84,7 +85,7 @@ export default async function handler(
                         const playerIds = fallbackInd.map((p: any) => p.id);
                         const { data: profiles } = await supabase
                             .from('player_profiles')
-                            .select('*')
+                            .select(profileFields)
                             .in('player_id', playerIds);
 
                         const profileMap = new Map();

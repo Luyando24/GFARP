@@ -116,6 +116,9 @@
     }
   ],
   "functions": {
+    "api/football-players.ts": {
+      "maxDuration": 60
+    },
     "api/server/index.ts": {
       "maxDuration": 60
     }
