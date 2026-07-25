@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,6 +10,8 @@ import { useToast } from "@/components/ui/use-toast";
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const returnUrl = (location.state as { from?: string })?.from || "/login";
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -60,7 +62,7 @@ export default function ForgotPassword() {
 
       {/* Back to Login Button */}
       <Link 
-        to="/login" 
+        to={returnUrl} 
         className="absolute top-6 left-6 flex items-center gap-2 text-white hover:text-yellow-300 transition-colors duration-200 z-10"
       >
         <ArrowLeft className="h-5 w-5" />
@@ -89,7 +91,7 @@ export default function ForgotPassword() {
                 <p className="text-sm mt-1">We've sent a password reset link to <strong>{email}</strong></p>
               </div>
               <Button 
-                onClick={() => navigate('/login')}
+                onClick={() => navigate(returnUrl)}
                 className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white"
               >
                 Return to Login

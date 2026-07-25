@@ -99,7 +99,17 @@ export default function PlayerLogin() {
               />
             </div>
             
-            <div className="space-y-2">
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-gray-700">{t('auth.password')}</span>
+                <Link
+                  to="/forgot-password"
+                  state={{ from: '/player/login' }}
+                  className="text-xs text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                >
+                  {t('auth.forgotPassword')}
+                </Link>
+              </div>
               <Input
                 type="password"
                 placeholder={t('auth.login.passwordPlaceholder')}

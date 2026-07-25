@@ -201,5 +201,33 @@ describe('Football Auth Routes', () => {
         ['hashed_password', 'academy@example.com']
       );
     });
+
+    it('sends a reset link and updates password for an individual player account', async () => {
+      (query as any)
+        .mockResolvedValueOnce({ rows: [] }) // academies check
+        .mockResolvedValueOnce({ rows: [] }) // agencies check
+        .mockResolvedValueOnce({ rows: [{ id: 'player-id' }] }); // individual_players check
+
+      const forgotResponse = await request(app)
+        .post('/api/auth/forgot-password')
+        .send({ email: 'player@example.com' });
+      expect(forgotResponse.status).toBe(200);
+
+      const emailCall = (emailService.sendEmail as any).mock.calls[(emailService.sendEmail as any).mock.calls.length - 1][0];
+      const token = new URL(emailCall.html.match(/href="([^"]+)"/)[1]).searchParams.get('token');
+
+      (query as any).mockResolvedValueOnce({ rows: [{ id: 'player-id' }] });
+
+      const response = await request(app)
+        .post('/api/auth/reset-password')
+        .send({ token, password: 'new-player-password-123' });
+
+      expect(response.status).toBe(200);
+      expect(response.body.success).toBe(true);
+      expect(query).toHaveBeenCalledWith(
+        expect.stringContaining('UPDATE individual_players'),
+        ['hashed_password', 'player@example.com']
+      );
+    });
   });
 });

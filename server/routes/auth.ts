@@ -18,7 +18,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 // Create router
 const router = Router();
 
-type ResetAccountType = "academy" | "agency" | "admin";
+type ResetAccountType = "academy" | "agency" | "admin" | "individual_player";
 
 const PASSWORD_RESET_RESPONSE = {
   success: true,
@@ -43,8 +43,13 @@ router.post('/auth/forgot-password', async (req, res) => {
       if (agency.rows.length) {
         accountType = 'agency';
       } else {
-        const admin = await query('SELECT id FROM "Admin" WHERE LOWER(email) = $1 LIMIT 1', [email]);
-        if (admin.rows.length) accountType = 'admin';
+        const player = await query('SELECT id FROM individual_players WHERE LOWER(email) = $1 LIMIT 1', [email]);
+        if (player.rows.length) {
+          accountType = 'individual_player';
+        } else {
+          const admin = await query('SELECT id FROM "Admin" WHERE LOWER(email) = $1 LIMIT 1', [email]);
+          if (admin.rows.length) accountType = 'admin';
+        }
       }
     }
 
@@ -101,6 +106,8 @@ router.post('/auth/reset-password', async (req, res) => {
       await query('UPDATE staff_users SET password_hash = $1, updated_at = NOW() WHERE LOWER(email) = $2', [passwordHash, payload.email]);
     } else if (payload.accountType === 'agency') {
       result = await query('UPDATE agencies SET password_hash = $1, updated_at = NOW() WHERE LOWER(email) = $2 RETURNING id', [passwordHash, payload.email]);
+    } else if (payload.accountType === 'individual_player') {
+      result = await query('UPDATE individual_players SET password_hash = $1, updated_at = NOW() WHERE LOWER(email) = $2 RETURNING id', [passwordHash, payload.email]);
     } else {
       result = await query('UPDATE "Admin" SET password_hash = $1, updated_at = NOW() WHERE LOWER(email) = $2 RETURNING id', [passwordHash, payload.email]);
     }
