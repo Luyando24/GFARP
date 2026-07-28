@@ -102,11 +102,13 @@ describe('Individual Players Routes', () => {
           password: 'Password123!',
           firstName: 'John',
           lastName: 'Doe',
+          gender: 'male',
           academyCode: 'ACAD123'
         });
 
       expect(response.status).toBe(201);
       expect(response.body.success).toBe(true);
+      expect(response.body.user.gender).toBe('male');
       // Verify query mock calls
       expect(query).toHaveBeenCalledWith(
         expect.stringContaining('SELECT id FROM academies WHERE code = $1'),
@@ -114,7 +116,7 @@ describe('Individual Players Routes', () => {
       );
       expect(query).toHaveBeenCalledWith(
         expect.stringContaining('INSERT INTO individual_players'),
-        expect.arrayContaining(['academy-uuid-123'])
+        expect.arrayContaining(['male', 'academy-uuid-123'])
       );
     });
 
@@ -133,11 +135,39 @@ describe('Individual Players Routes', () => {
           password: 'Password123!',
           firstName: 'John',
           lastName: 'Doe',
+          gender: 'female',
           academyCode: 'INVALID'
         });
 
       expect(response.status).toBe(400);
       expect(response.body.error).toBe('Invalid academy invite code');
+    });
+
+    it('should reject a missing or unsupported gender', async () => {
+      const missingGender = await request(app)
+        .post('/api/individual-players/register')
+        .send({
+          email: 'newplayer@test.com',
+          password: 'Password123!',
+          firstName: 'John',
+          lastName: 'Doe',
+        });
+
+      expect(missingGender.status).toBe(400);
+      expect(missingGender.body.error).toBe('All fields are required');
+
+      const unsupportedGender = await request(app)
+        .post('/api/individual-players/register')
+        .send({
+          email: 'newplayer@test.com',
+          password: 'Password123!',
+          firstName: 'John',
+          lastName: 'Doe',
+          gender: 'other',
+        });
+
+      expect(unsupportedGender.status).toBe(400);
+      expect(unsupportedGender.body.error).toBe('Gender must be male or female');
     });
   });
 });

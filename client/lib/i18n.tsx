@@ -168,6 +168,7 @@ export type TranslationKey =
   | 'auth.register.player' | 'auth.register.playerSubtitle' | 'auth.register.agency' | 'auth.register.agencySubtitle'
   | 'auth.firstName' | 'auth.lastName' | 'auth.agencyName' | 'auth.register.title' | 'auth.register.createAccount' | 'auth.register.subtitle'
   | 'auth.email' | 'auth.password' | 'auth.confirmPassword' | 'auth.label.referralCode' | 'auth.placeholder.referralCode'
+  | 'auth.gender' | 'auth.gender.male' | 'auth.gender.female' | 'auth.gender.placeholder' | 'auth.error.genderRequired'
   | 'auth.registering' | 'auth.createAccount' | 'auth.alreadyHaveAccount' | 'auth.loginLink' | 'auth.footer.approved'
   | 'auth.success.title' | 'auth.success.agencyDesc' | 'auth.error.agencyNameRequired' | 'common.backHome'
   | 'landing.faq.q7' | 'landing.faq.a7'
@@ -219,6 +220,11 @@ export type TranslationKey =
 // Translations dictionary
 const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>> = {
   en: {
+    'auth.gender': 'Gender',
+    'auth.gender.male': 'Male',
+    'auth.gender.female': 'Female',
+    'auth.gender.placeholder': 'Select gender',
+    'auth.error.genderRequired': 'Please select your gender',
     'contact.title': 'Get in touch with our team',
     'contact.subtitle': 'Get in touch with our team',
     'contact.form.title': 'Send us a Message',
@@ -912,6 +918,11 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.faq.a17': 'Clubs generally have up to five years from the date when the compensation obligation was triggered to file a claim. Waiting too long may forfeit eligibility.',
   },
   es: {
+    'auth.gender': 'Género',
+    'auth.gender.male': 'Masculino',
+    'auth.gender.female': 'Femenino',
+    'auth.gender.placeholder': 'Seleccione el género',
+    'auth.error.genderRequired': 'Seleccione su género',
     'nav.about': 'SOBRE NOSOTROS',
     'nav.support': 'SOPORTE',
     'nav.blog': 'BLOG',
@@ -1484,6 +1495,11 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
       'blog.linkCopied': '¡Enlace copiado al portapapeles!',
   },
   fr: {
+    'auth.gender': 'Genre',
+    'auth.gender.male': 'Homme',
+    'auth.gender.female': 'Femme',
+    'auth.gender.placeholder': 'Sélectionnez le genre',
+    'auth.error.genderRequired': 'Veuillez sélectionner votre genre',
     'nav.about': 'À PROPOS',
     'nav.support': 'SUPPORT',
     'nav.blog': 'BLOG',
@@ -1971,6 +1987,11 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
       'tasks.delete': 'Supprimer',
   },
   pt: {
+    'auth.gender': 'Gênero',
+    'auth.gender.male': 'Masculino',
+    'auth.gender.female': 'Feminino',
+    'auth.gender.placeholder': 'Selecione o gênero',
+    'auth.error.genderRequired': 'Selecione seu gênero',
     'nav.about': 'SOBRE NÓS',
     'nav.support': 'SUPORTE',
     'nav.blog': 'BLOG',
@@ -2483,6 +2504,11 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
       'tasks.delete': 'Excluir',
   },
   de: {
+    'auth.gender': 'Geschlecht',
+    'auth.gender.male': 'Männlich',
+    'auth.gender.female': 'Weiblich',
+    'auth.gender.placeholder': 'Geschlecht auswählen',
+    'auth.error.genderRequired': 'Bitte wählen Sie Ihr Geschlecht',
     'nav.about': 'ÜBER UNS',
     'nav.support': 'SUPPORT',
     'nav.blog': 'BLOG',
@@ -2876,6 +2902,11 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'landing.faq.a17': 'Vereine haben im Allgemeinen bis zu fünf Jahre ab dem Datum, an dem die Entschädigungsverpflichtung ausgelöst wurde, um einen Anspruch geltend zu machen. Zu langes Warten kann zum Verlust der Berechtigung führen.',
   },
   it: {
+    'auth.gender': 'Genere',
+    'auth.gender.male': 'Maschio',
+    'auth.gender.female': 'Femmina',
+    'auth.gender.placeholder': 'Seleziona il genere',
+    'auth.error.genderRequired': 'Seleziona il tuo genere',
     'nav.about': 'CHI SIAMO',
     'nav.support': 'SUPORTO',
     'nav.blog': 'BLOG',
@@ -3271,6 +3302,11 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'tasks.delete': 'Elimina',
   },
   ar: {
+    'auth.gender': 'الجنس',
+    'auth.gender.male': 'ذكر',
+    'auth.gender.female': 'أنثى',
+    'auth.gender.placeholder': 'اختر الجنس',
+    'auth.error.genderRequired': 'يرجى اختيار الجنس',
     'nav.about': 'معلومات عنا',
     'nav.support': 'الدعم',
     'nav.blog': 'المدونة',
@@ -3808,6 +3844,11 @@ const translations: Record<LanguageCode, Partial<Record<TranslationKey, string>>
     'tasks.delete': 'حذف',
   },
   zh: {
+    'auth.gender': '性别',
+    'auth.gender.male': '男',
+    'auth.gender.female': '女',
+    'auth.gender.placeholder': '选择性别',
+    'auth.error.genderRequired': '请选择性别',
     'nav.about': '关于我们',
     'nav.support': '支持',
     'nav.blog': '博客',

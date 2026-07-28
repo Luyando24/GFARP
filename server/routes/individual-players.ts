@@ -253,9 +253,13 @@ router.post('/register', async (req, res) => {
     await ensureEmailVerificationSchema();
     const { email, password, firstName, lastName, academyCode } = req.body;
     const normalizedEmail = String(email || '').toLowerCase().trim();
+    const normalizedGender = String(req.body.gender || '').toLowerCase().trim();
 
-    if (!normalizedEmail || !password || !firstName || !lastName) {
+    if (!normalizedEmail || !password || !firstName || !lastName || !normalizedGender) {
       return res.status(400).json({ error: 'All fields are required' });
+    }
+    if (!['male', 'female'].includes(normalizedGender)) {
+      return res.status(400).json({ error: 'Gender must be male or female' });
     }
 
     let academyId = null;
@@ -288,10 +292,19 @@ router.post('/register', async (req, res) => {
 
     await query(
       `INSERT INTO individual_players (
-         id, email, password_hash, first_name, last_name,
+         id, email, password_hash, first_name, last_name, gender,
          email_verified, verification_token, academy_id
-       ) VALUES ($1, $2, $3, $4, $5, false, $6, $7)`,
-      [playerId, normalizedEmail, hashedPassword, firstName, lastName, verificationToken, academyId]
+       ) VALUES ($1, $2, $3, $4, $5, $6, false, $7, $8)`,
+      [
+        playerId,
+        normalizedEmail,
+        hashedPassword,
+        firstName,
+        lastName,
+        normalizedGender,
+        verificationToken,
+        academyId,
+      ]
     );
 
     await query(
@@ -315,6 +328,7 @@ router.post('/register', async (req, res) => {
         email: normalizedEmail,
         firstName,
         lastName,
+        gender: normalizedGender,
         role: 'individual_player'
       }
     });
@@ -506,7 +520,7 @@ router.get('/profile', authenticateToken, async (req, res) => {
     const userId = (req as any).user.id;
 
     const result = await query(
-      `SELECT p.*, ip.email, ip.first_name, ip.last_name,
+      `SELECT p.*, ip.email, ip.first_name, ip.last_name, ip.gender,
        CASE 
          WHEN ip.academy_id IS NOT NULL THEN 'pro'
          ELSE COALESCE(

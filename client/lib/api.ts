@@ -1537,6 +1537,7 @@ export interface IndividualPlayer {
   email: string;
   first_name: string;
   last_name: string;
+  gender?: 'male' | 'female';
   role: string;
   academy_id?: string;
 }
@@ -1572,6 +1573,7 @@ export interface PlayerProfile {
   email?: string; // joined fields
   first_name?: string; // joined fields
   last_name?: string; // joined fields
+  gender?: 'male' | 'female';
   active_plan?: string;
   slug?: string;
 }

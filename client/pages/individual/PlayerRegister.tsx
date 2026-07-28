@@ -2,6 +2,14 @@ import React, { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { PlayerApi } from "@/lib/api";
 import { saveSession } from "@/lib/auth";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
@@ -16,6 +24,7 @@ export default function PlayerRegister() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [gender, setGender] = useState<"" | "male" | "female">("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -35,11 +44,15 @@ export default function PlayerRegister() {
       if (password !== confirmPassword) {
         throw new Error("Passwords do not match");
       }
+      if (!gender) {
+        throw new Error(t("auth.error.genderRequired"));
+      }
 
       const res = await PlayerApi.register({
         firstName,
         lastName,
         email,
+        gender,
         password,
         academyCode: academyCode || undefined,
       });
@@ -135,6 +148,24 @@ export default function PlayerRegister() {
                   required
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="player-gender">{t("auth.gender")}</Label>
+              <Select
+                value={gender}
+                onValueChange={(value) =>
+                  setGender(value as "male" | "female")
+                }
+              >
+                <SelectTrigger id="player-gender" aria-required="true">
+                  <SelectValue placeholder={t("auth.gender.placeholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male">{t("auth.gender.male")}</SelectItem>
+                  <SelectItem value="female">{t("auth.gender.female")}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
