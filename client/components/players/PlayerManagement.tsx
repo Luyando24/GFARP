@@ -19,7 +19,12 @@ import {
   getPlayerPaymentStateForPlayer,
   type PlayerFeeFilter,
 } from "@/lib/player-fee-filters";
-import { filterPlayersBySearch } from "@/lib/player-search";
+import {
+  filterPlayersByAdvancedFilters,
+  filterPlayersBySearch,
+  type PlayerPaymentStatusFilter,
+  type PlayerSourceFilter,
+} from "@/lib/player-search";
 import {
   Plus,
   Search,
@@ -107,6 +112,13 @@ const PlayerManagement = ({
   const [feeRoster, setFeeRoster] = useState<Player[] | null>(null);
   const [feeSubscriptions, setFeeSubscriptions] = useState<PlayerFeeSubscription[]>([]);
   const [feeSubscriptionsLoaded, setFeeSubscriptionsLoaded] = useState(false);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [birthYearFilter, setBirthYearFilter] = useState("");
+  const [positionFilter, setPositionFilter] = useState("all");
+  const [paymentStatusFilter, setPaymentStatusFilter] =
+    useState<PlayerPaymentStatusFilter>("all");
+  const [playerSourceFilter, setPlayerSourceFilter] =
+    useState<PlayerSourceFilter>("all");
 
   const academyData = JSON.parse(localStorage.getItem("academy_data") || "{}");
   const code = academyData?.code;
@@ -114,6 +126,18 @@ const PlayerManagement = ({
   const supportsAcademyFeeFilters = Boolean(authSession?.schoolId || authSession?.academyId);
   const effectiveSearchQuery = onSearchQueryChange ? searchQuery : internalSearchQuery;
   const normalizedSearchQuery = effectiveSearchQuery.trim();
+  const hasAdvancedFilters = Boolean(
+    birthYearFilter.trim() ||
+      positionFilter !== "all" ||
+      paymentStatusFilter !== "all" ||
+      playerSourceFilter !== "all",
+  );
+  const activeAdvancedFilterCount = [
+    Boolean(birthYearFilter.trim()),
+    positionFilter !== "all",
+    paymentStatusFilter !== "all",
+    playerSourceFilter !== "all",
+  ].filter(Boolean).length;
 
   useEffect(() => {
     if (!onSearchQueryChange) setInternalSearchQuery(searchQuery);
@@ -140,16 +164,25 @@ const PlayerManagement = ({
     if (supportsAcademyFeeFilters) fetchPlayerFeeStatuses();
   }, [supportsAcademyFeeFilters]);
 
-  // Fee filters and player search need the complete roster so later pages are included.
+  // Fee filters and advanced search need the complete roster so later pages are included.
   useEffect(() => {
-    if ((feeFilter !== "all" || normalizedSearchQuery) && feeRoster === null) {
+    if (
+      (feeFilter !== "all" || normalizedSearchQuery || hasAdvancedFilters) &&
+      feeRoster === null
+    ) {
       fetchRecurringFeeRoster();
     }
-  }, [feeFilter, feeRoster, normalizedSearchQuery]);
+  }, [feeFilter, feeRoster, normalizedSearchQuery, hasAdvancedFilters]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [normalizedSearchQuery]);
+  }, [
+    normalizedSearchQuery,
+    birthYearFilter,
+    positionFilter,
+    paymentStatusFilter,
+    playerSourceFilter,
+  ]);
 
   // Fetch players from API
   const fetchPlayers = async () => {
@@ -190,16 +223,19 @@ const PlayerManagement = ({
       setLoading(true);
       const session = JSON.parse(localStorage.getItem("ipims_auth_session") || "{}");
       const academyId = session?.schoolId || session?.academyId;
+      const agencyId = session?.agencyId;
 
-      if (!academyId) {
+      if (!academyId && !agencyId) {
         setFeeRoster([]);
         setFeeSubscriptions([]);
         return;
       }
 
       const [firstPage, subscriptions] = await Promise.all([
-        Api.getPlayers(academyId, undefined, 1, 100),
-        getPlayerFeeSubscriptions(academyId),
+        Api.getPlayers(academyId, agencyId, 1, 100),
+        academyId
+          ? getPlayerFeeSubscriptions(academyId)
+          : Promise.resolve([] as PlayerFeeSubscription[]),
       ]);
 
       if (!firstPage.success || !Array.isArray(firstPage.data?.players)) {
@@ -211,7 +247,9 @@ const PlayerManagement = ({
         (_, index) => index + 2,
       );
       const remainingResponses = await Promise.all(
-        remainingPages.map((page) => Api.getPlayers(academyId, undefined, page, 100)),
+        remainingPages.map((page) =>
+          Api.getPlayers(academyId, agencyId, page, 100),
+        ),
       );
       const completeRoster = [
         ...(firstPage.data.players as Player[]),
@@ -475,10 +513,26 @@ const PlayerManagement = ({
         feeFilter,
       );
   const rosterForSearch = feeFilter === "all"
-    ? (normalizedSearchQuery ? feeRoster || [] : players)
+    ? (normalizedSearchQuery || hasAdvancedFilters ? feeRoster || [] : players)
     : recurringFeePlayers;
-  const matchingPlayers = filterPlayersBySearch(rosterForSearch, normalizedSearchQuery);
-  const usesClientPagination = feeFilter !== "all" || Boolean(normalizedSearchQuery);
+  const textMatchingPlayers = filterPlayersBySearch(
+    rosterForSearch,
+    normalizedSearchQuery,
+  );
+  const matchingPlayers = filterPlayersByAdvancedFilters(
+    textMatchingPlayers,
+    {
+      birthYear: birthYearFilter,
+      position: positionFilter,
+      paymentStatus: paymentStatusFilter,
+      source: playerSourceFilter,
+    },
+    (player) => getPlayerPaymentStateForPlayer(player, feeSubscriptions),
+  );
+  const usesClientPagination =
+    feeFilter !== "all" ||
+    Boolean(normalizedSearchQuery) ||
+    hasAdvancedFilters;
   const displayedTotalPlayers = usesClientPagination ? matchingPlayers.length : totalPlayers;
   const displayedTotalPages = usesClientPagination
     ? Math.ceil(displayedTotalPlayers / pageSize)
@@ -487,7 +541,7 @@ const PlayerManagement = ({
     ? matchingPlayers.slice((currentPage - 1) * pageSize, currentPage * pageSize)
     : players;
 
-  const feeFilterDescription = normalizedSearchQuery
+  const feeFilterDescription = normalizedSearchQuery || hasAdvancedFilters
     ? `${displayedTotalPlayers} player${displayedTotalPlayers === 1 ? "" : "s"} found`
     : feeFilter === "active"
       ? `${displayedTotalPlayers} player${displayedTotalPlayers === 1 ? "" : "s"} with active recurring academy fees`
@@ -506,6 +560,32 @@ const PlayerManagement = ({
     setFeeFilter(nextFilter);
     setCurrentPage(1);
   };
+
+  const handlePaymentStatusFilterChange = (value: string) => {
+    const nextFilter = value as PlayerPaymentStatusFilter;
+    setPaymentStatusFilter(nextFilter);
+    if (nextFilter !== "all") {
+      setFeeSubscriptionsLoaded(false);
+      if (feeRoster !== null) void fetchPlayerFeeStatuses();
+    }
+    setCurrentPage(1);
+  };
+
+  const clearAllPlayerFilters = () => {
+    handlePlayerSearchChange("");
+    setFeeFilter("all");
+    setBirthYearFilter("");
+    setPositionFilter("all");
+    setPaymentStatusFilter("all");
+    setPlayerSourceFilter("all");
+    setCurrentPage(1);
+  };
+
+  const hasAnyPlayerFilters = Boolean(
+    normalizedSearchQuery ||
+      hasAdvancedFilters ||
+      feeFilter !== "all",
+  );
 
   return (
     <>
@@ -552,17 +632,35 @@ const PlayerManagement = ({
             <Label htmlFor="academy-player-search" className="sr-only">
               Search academy players
             </Label>
-            <div className="relative w-full max-w-xl">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <Input
-                id="academy-player-search"
-                type="search"
-                value={effectiveSearchQuery}
-                onChange={(event) => handlePlayerSearchChange(event.target.value)}
-                placeholder="Search players by name, email or position"
-                className="pl-10"
-                autoComplete="off"
-              />
+            <div className="flex w-full min-w-0 flex-col gap-2 sm:max-w-2xl sm:flex-row">
+              <div className="relative min-w-0 flex-1">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <Input
+                  id="academy-player-search"
+                  type="search"
+                  value={effectiveSearchQuery}
+                  onChange={(event) => handlePlayerSearchChange(event.target.value)}
+                  placeholder="Search by name, email or position"
+                  className="pl-10"
+                  autoComplete="off"
+                />
+              </div>
+              <Button
+                type="button"
+                variant={showAdvancedFilters ? "secondary" : "outline"}
+                className="shrink-0"
+                aria-expanded={showAdvancedFilters}
+                aria-controls="academy-player-advanced-filters"
+                onClick={() => setShowAdvancedFilters((visible) => !visible)}
+              >
+                <Filter className="mr-2 h-4 w-4" />
+                Filters
+                {activeAdvancedFilterCount > 0 && (
+                  <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1.5 text-[11px] font-bold text-white">
+                    {activeAdvancedFilterCount}
+                  </span>
+                )}
+              </Button>
             </div>
             {supportsAcademyFeeFilters && (
               <div className="flex shrink-0 flex-wrap items-center gap-2 text-xs font-medium">
@@ -575,6 +673,107 @@ const PlayerManagement = ({
               </div>
             )}
           </div>
+
+          {showAdvancedFilters && (
+            <div
+              id="academy-player-advanced-filters"
+              className="mb-6 rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900/60"
+            >
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                    Advanced player filters
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Combine filters to narrow the complete academy roster.
+                  </p>
+                </div>
+                {hasAnyPlayerFilters && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearAllPlayerFilters}
+                  >
+                    Clear all
+                  </Button>
+                )}
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="player-birth-year">Year of birth</Label>
+                  <Input
+                    id="player-birth-year"
+                    type="number"
+                    inputMode="numeric"
+                    min={1950}
+                    max={new Date().getFullYear()}
+                    placeholder="e.g. 2010"
+                    value={birthYearFilter}
+                    onChange={(event) =>
+                      setBirthYearFilter(event.target.value.slice(0, 4))
+                    }
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="player-position-filter">Position</Label>
+                  <Select
+                    value={positionFilter}
+                    onValueChange={setPositionFilter}
+                  >
+                    <SelectTrigger id="player-position-filter">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All positions</SelectItem>
+                      {playerPositions.map((position) => (
+                        <SelectItem key={position} value={position}>
+                          {position}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {supportsAcademyFeeFilters && (
+                  <div className="space-y-1.5">
+                    <Label htmlFor="player-payment-filter">Payment status</Label>
+                    <Select
+                      value={paymentStatusFilter}
+                      onValueChange={handlePaymentStatusFilterChange}
+                    >
+                      <SelectTrigger id="player-payment-filter">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All payment statuses</SelectItem>
+                        <SelectItem value="paid">Paid</SelectItem>
+                        <SelectItem value="due">Payment due</SelectItem>
+                        <SelectItem value="inactive">No active fee</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+                <div className="space-y-1.5">
+                  <Label htmlFor="player-source-filter">Registration source</Label>
+                  <Select
+                    value={playerSourceFilter}
+                    onValueChange={(value) =>
+                      setPlayerSourceFilter(value as PlayerSourceFilter)
+                    }
+                  >
+                    <SelectTrigger id="player-source-filter">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All players</SelectItem>
+                      <SelectItem value="academy">Added by academy</SelectItem>
+                      <SelectItem value="self_registered">Self-registered</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+          )}
 
           {supportsAcademyFeeFilters && (
             <Tabs value={feeFilter} onValueChange={handleFeeFilterChange} className="mb-6 min-w-0">
@@ -594,19 +793,15 @@ const PlayerManagement = ({
             </div>
           )}
 
-          {!loading && normalizedSearchQuery && filteredPlayers.length === 0 && (
+          {!loading && hasAnyPlayerFilters && filteredPlayers.length === 0 && (
             <div className="text-center py-8 text-slate-500">
-              No players found for “{effectiveSearchQuery.trim()}”.
+              No players match the selected search and filters.
             </div>
           )}
 
-          {!loading && !normalizedSearchQuery && filteredPlayers.length === 0 && (
+          {!loading && !hasAnyPlayerFilters && filteredPlayers.length === 0 && (
             <div className="text-center py-8 text-slate-500">
-              {feeFilter === "active"
-                ? "No players have active recurring academy fees."
-                : feeFilter === "expiring"
-                  ? "No recurring academy fees are expiring soon."
-                  : "No players found. Add your first player to get started."}
+              No players found. Add your first player to get started.
             </div>
           )}
 
