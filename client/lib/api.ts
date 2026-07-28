@@ -56,6 +56,83 @@ export interface Player {
   updatedAt?: string;
 }
 
+export type TrainingAttendanceStatus =
+  | 'present'
+  | 'absent'
+  | 'late'
+  | 'excused'
+  | 'injured';
+
+export interface TrainingSession {
+  id: string;
+  sessionNumber: string;
+  title: string;
+  description?: string;
+  sessionDate: string;
+  durationMinutes: number;
+  locationId?: string | null;
+  location: string;
+  intensity: string;
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  markedCount: number;
+  attendedCount: number;
+  absentCount: number;
+  attendanceRate: number;
+  seriesId?: string | null;
+  seriesSequence?: number | null;
+  createdAt: string;
+}
+
+export interface TrainingLocation {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TrainingRosterPlayer {
+  id: string;
+  playerSource: 'academy' | 'individual';
+  firstName: string;
+  lastName: string;
+  email?: string;
+  position?: string;
+  jerseyNumber?: number | null;
+  isSelfRegistered: boolean;
+  attendanceStatus: TrainingAttendanceStatus;
+  attendanceNotes?: string;
+  markedAt?: string | null;
+  isMarked: boolean;
+}
+
+export interface PlayerAttendanceSummary {
+  totalRecordedSessions: number;
+  attendedSessions: number;
+  presentSessions: number;
+  lateSessions: number;
+  absentSessions: number;
+  attendanceRate: number;
+  currentStreak: number;
+  longestStreak: number;
+  points: number;
+  badge: string;
+  nextMilestone: number;
+  milestoneProgress: number;
+  attendedRecentSession: boolean;
+  latestStatus: TrainingAttendanceStatus | null;
+}
+
+export interface PlayerAttendanceHistoryItem {
+  sessionId: string;
+  title: string;
+  sessionDate: string;
+  location: string;
+  status: TrainingAttendanceStatus;
+  notes?: string;
+  markedAt?: string;
+  points: number;
+}
+
 // Transfer types
 export interface Transfer {
   id: string;
@@ -376,6 +453,125 @@ export const Api = {
     return http<PlayerResponse>(`/football-players/${playerId}`, {
       method: 'DELETE',
     });
+  },
+
+  // Academy training sessions and attendance
+  async getTrainingSessions(academyId: string): Promise<{
+    success: boolean;
+    data: {
+      sessions: TrainingSession[];
+      summary: {
+        total: number;
+        upcoming: number;
+        completed: number;
+        averageAttendance: number;
+      };
+    };
+  }> {
+    return http(`/training-attendance/academies/${academyId}/sessions`);
+  },
+
+  async getTrainingLocations(academyId: string): Promise<{
+    success: boolean;
+    data: { locations: TrainingLocation[] };
+  }> {
+    return http(`/training-attendance/academies/${academyId}/locations`);
+  },
+
+  async saveTrainingLocation(
+    academyId: string,
+    name: string,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    data: { location: TrainingLocation };
+  }> {
+    return http(`/training-attendance/academies/${academyId}/locations`, {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+  },
+
+  async createTrainingSession(
+    academyId: string,
+    data: {
+      title: string;
+      sessionDate: string;
+      location: string;
+      locationId?: string | null;
+      saveLocation?: boolean;
+      durationMinutes: number;
+      description?: string;
+      timezoneOffsetMinutes?: number;
+      recurrence?: {
+        frequency: 'daily' | 'weekly';
+        interval: number;
+        weekday?: number;
+        timezoneOffsetMinutes?: number;
+        occurrenceCount: number;
+      };
+    },
+  ): Promise<{
+    success: boolean;
+    message: string;
+    data: {
+      session: TrainingSession;
+      sessions: TrainingSession[];
+      createdCount: number;
+      seriesId: string | null;
+      locationId: string | null;
+    };
+  }> {
+    return http(`/training-attendance/academies/${academyId}/sessions`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  },
+
+  async getTrainingSessionRoster(sessionId: string): Promise<{
+    success: boolean;
+    data: {
+      session: Pick<TrainingSession, 'id' | 'title' | 'sessionDate' | 'location' | 'status'>;
+      players: TrainingRosterPlayer[];
+    };
+  }> {
+    return http(`/training-attendance/sessions/${sessionId}/roster`);
+  },
+
+  async saveTrainingAttendance(
+    sessionId: string,
+    records: Array<{
+      playerId: string;
+      playerSource: 'academy' | 'individual';
+      status: TrainingAttendanceStatus;
+      notes?: string;
+    }>,
+    completeSession = true,
+  ): Promise<{
+    success: boolean;
+    message: string;
+    data: {
+      markedCount: number;
+      attendedCount: number;
+      absentCount: number;
+      attendanceRate: number;
+      status: TrainingSession['status'];
+    };
+  }> {
+    return http(`/training-attendance/sessions/${sessionId}/attendance`, {
+      method: 'PUT',
+      body: JSON.stringify({ records, completeSession }),
+    });
+  },
+
+  async getPlayerAttendanceSummary(playerId: string): Promise<{
+    success: boolean;
+    data: {
+      summary: PlayerAttendanceSummary;
+      history: PlayerAttendanceHistoryItem[];
+    };
+  }> {
+    return http(`/training-attendance/players/${playerId}/summary`);
   },
 
   async checkAcademySlugAvailability(slug: string, playerId?: string): Promise<{ available: boolean; message: string }> {

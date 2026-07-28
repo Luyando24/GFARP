@@ -3,6 +3,7 @@ import { Router, RequestHandler } from 'express';
 import { query, transaction as dbTransaction } from '../lib/db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { processPlayerFeeRenewalReminders } from '../lib/player-fee-reminders.js';
+import { processTrainingSessionReminders } from '../lib/training-session-reminders.js';
 
 const router = Router();
 
@@ -880,17 +881,28 @@ const handleCronReminders: RequestHandler = async (req, res) => {
     return res.status(401).json({ success: false, error: 'Invalid reminder scheduler credentials' });
   }
   try {
-    const result = await processPlayerFeeRenewalReminders();
-    res.json({ success: true, data: result });
+    const [playerFeeReminders, trainingSessionReminders] = await Promise.all([
+      processPlayerFeeRenewalReminders(),
+      processTrainingSessionReminders(),
+    ]);
+    res.json({
+      success: true,
+      data: {
+        ...playerFeeReminders,
+        trainingSessionReminders,
+      },
+    });
   } catch (error) {
-    console.error('Error processing scheduled player fee reminders:', error);
-    res.status(500).json({ success: false, error: 'Failed to process renewal reminders' });
+    console.error('Error processing scheduled reminders:', error);
+    res.status(500).json({ success: false, error: 'Failed to process scheduled reminders' });
   }
 };
 
 // --- Route Definitions ---
 
-// The scheduler endpoint uses a separate secret because it is called without a user session.
+// Vercel invokes cron paths with GET. POST remains available for existing
+// operational tooling that already calls this secured endpoint.
+router.get('/reminders/process', handleCronReminders);
 router.post('/reminders/process', handleCronReminders);
 router.use(authenticateToken);
 

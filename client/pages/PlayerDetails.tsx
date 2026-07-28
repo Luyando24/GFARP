@@ -50,6 +50,7 @@ import { NetworkError } from "@/lib/errors";
 import { uploadPlayerDocument, getPlayerDocuments, deletePlayerDocument, type PlayerDocument } from '@/lib/document-upload';
 import { countryCodes, formatPhoneDisplay, parsePhoneNumber } from '@/lib/countryCodes';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import PlayerAttendanceCard from '@/components/training/PlayerAttendanceCard';
 import jsPDF from 'jspdf';
 
 const playerPositions = [
@@ -1145,9 +1146,10 @@ const PlayerDetails = () => {
           {/* Main Area with Tabs */}
           <div className="lg:col-span-2">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-              <TabsList className="grid grid-cols-3 w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-1 shadow-sm h-12">
+              <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:grid-cols-4">
                 <TabsTrigger value="scouting" className="rounded-lg font-bold tracking-wide text-sm data-[state=active]:bg-slate-100 dark:data-[state=active]:bg-slate-800">Scouting Profile</TabsTrigger>
                 <TabsTrigger value="academy" className="rounded-lg font-bold tracking-wide text-sm data-[state=active]:bg-slate-100 dark:data-[state=active]:bg-slate-800">Academy Details</TabsTrigger>
+                <TabsTrigger value="training" className="rounded-lg font-bold tracking-wide text-sm data-[state=active]:bg-slate-100 dark:data-[state=active]:bg-slate-800">Training</TabsTrigger>
                 <TabsTrigger value="documents" className="rounded-lg font-bold tracking-wide text-sm data-[state=active]:bg-slate-100 dark:data-[state=active]:bg-slate-800">Documents & Notes</TabsTrigger>
               </TabsList>
 
@@ -2464,6 +2466,10 @@ const PlayerDetails = () => {
                   </TabsContent>
                 </>
               )}
+
+              <TabsContent value="training" className="space-y-6 outline-none">
+                <PlayerAttendanceCard playerId={player.id} />
+              </TabsContent>
             </Tabs>
           </div>
         </div>

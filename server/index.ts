@@ -32,6 +32,7 @@ import footballAuthRouter from "./routes/football-auth.js";
 import footballPlayersRouter from "./routes/football-players.js";
 import transfersRouter from "./routes/transfers.js";
 import financialTransactionsRouter from "./routes/financial-transactions.js";
+import trainingAttendanceRouter from "./routes/training-attendance.js";
 import financialRouter from "./routes/financial.js";
 import invoicesRouter from "./routes/invoices.js";
 import fifaComplianceRouter from "./routes/fifa-compliance.js";
@@ -175,6 +176,9 @@ export function createServer() {
 
   // Financial transactions routes
   api.use("/financial-transactions", financialTransactionsRouter);
+
+  // Academy training sessions, attendance, and player streaks
+  api.use("/training-attendance", trainingAttendanceRouter);
 
   // Financial summary/categories routes (for dashboard)
   api.use("/financial", financialRouter);

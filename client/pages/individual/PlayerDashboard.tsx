@@ -57,6 +57,7 @@ import LanguageToggle from "@/components/navigation/LanguageToggle";
 import { useTranslation } from "@/lib/i18n";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { usePageTitle } from "@/hooks/usePageTitle";
+import PlayerAttendanceCard from "@/components/training/PlayerAttendanceCard";
 
 // Helper to convert image URL to Base64 for PDF embedding
 const getBase64ImageFromURL = (url: string): Promise<string> => {
@@ -866,6 +867,11 @@ export default function PlayerDashboard() {
                     </Badge>
                   )}
                 </div>
+
+                <PlayerAttendanceCard
+                  playerId={profile?.player_id || session?.userId}
+                  showHistory
+                />
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                   {/* Left Column: Profile Card */}

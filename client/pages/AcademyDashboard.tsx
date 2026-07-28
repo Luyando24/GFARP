@@ -71,6 +71,7 @@ import { NotificationsPopover } from '@/components/navigation/NotificationsPopov
 import { useTranslation } from '@/lib/i18n';
 
 import PlayerManagement from '@/components/players/PlayerManagement';
+import TrainingAttendanceManager from '@/components/training/TrainingAttendanceManager';
 import FinancialTransactionsManager from '@/components/FinancialTransactionsManager';
 import PaymentMethodSelector from '@/components/PaymentMethodSelector';
 import AcademyComplianceTab from '@/components/academy/AcademyComplianceTab';
@@ -108,14 +109,14 @@ export default function AcademyDashboard() {
   const { session } = useAuth();
   const isAgency = session?.role === 'agency_admin';
   const navigationLabels = {
-    en: { open: 'Open menu', close: 'Close menu', logout: 'Sign out' },
-    es: { open: 'Abrir menú', close: 'Cerrar menú', logout: 'Cerrar sesión' },
-    fr: { open: 'Ouvrir le menu', close: 'Fermer le menu', logout: 'Se déconnecter' },
-    pt: { open: 'Abrir menu', close: 'Fechar menu', logout: 'Terminar sessão' },
-    de: { open: 'Menü öffnen', close: 'Menü schließen', logout: 'Abmelden' },
-    it: { open: 'Apri menu', close: 'Chiudi menu', logout: 'Esci' },
-    ar: { open: 'فتح القائمة', close: 'إغلاق القائمة', logout: 'تسجيل الخروج' },
-    zh: { open: '打开菜单', close: '关闭菜单', logout: '退出登录' },
+    en: { open: 'Open menu', close: 'Close menu', logout: 'Sign out', training: 'Training' },
+    es: { open: 'Abrir menú', close: 'Cerrar menú', logout: 'Cerrar sesión', training: 'Entrenamiento' },
+    fr: { open: 'Ouvrir le menu', close: 'Fermer le menu', logout: 'Se déconnecter', training: 'Entraînement' },
+    pt: { open: 'Abrir menu', close: 'Fechar menu', logout: 'Terminar sessão', training: 'Treino' },
+    de: { open: 'Menü öffnen', close: 'Menü schließen', logout: 'Abmelden', training: 'Training' },
+    it: { open: 'Apri menu', close: 'Chiudi menu', logout: 'Esci', training: 'Allenamento' },
+    ar: { open: 'فتح القائمة', close: 'إغلاق القائمة', logout: 'تسجيل الخروج', training: 'التدريب' },
+    zh: { open: '打开菜单', close: '关闭菜单', logout: '退出登录', training: '训练' },
   }[language];
   usePageTitle("Academy Dashboard");
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -1251,6 +1252,7 @@ export default function AcademyDashboard() {
   const sidebarItems = [
     { id: "dashboard", label: t('dash.menu.dashboard'), icon: Home },
     { id: "players", label: t('dash.menu.players'), icon: Users },
+    { id: "training", label: navigationLabels.training, icon: ClipboardCheck },
     { id: "transfers", label: t('dash.menu.transfers'), icon: TrendingUp },
     { id: "finances", label: t('dash.menu.finances'), icon: DollarSign },
     { id: "fifa-compliance", label: t('dash.menu.compliance'), icon: Shield },
@@ -1447,9 +1449,10 @@ export default function AcademyDashboard() {
 
               {/* Tabs Navigation */}
               <div className="mx-auto hidden w-full max-w-7xl overflow-x-auto px-4 py-2 sm:px-6 lg:block">
-                <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-1 lg:grid lg:w-full lg:grid-cols-7">
+                <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-1 lg:grid lg:w-full lg:grid-cols-8">
                   <TabsTrigger className="shrink-0 px-3 py-2" value="dashboard">{t('dash.menu.dashboard')}</TabsTrigger>
                   <TabsTrigger className="shrink-0 px-3 py-2" value="players">{t('dash.menu.players')}</TabsTrigger>
+                  <TabsTrigger className="shrink-0 px-3 py-2" value="training">{navigationLabels.training}</TabsTrigger>
                   <TabsTrigger className="shrink-0 px-3 py-2" value="transfers">{t('dash.menu.transfers')}</TabsTrigger>
                   <TabsTrigger className="shrink-0 px-3 py-2" value="finances">{t('dash.menu.finances')}</TabsTrigger>
                   <TabsTrigger className="shrink-0 px-3 py-2" value="fifa-compliance">{t('dash.menu.compliance')}</TabsTrigger>
@@ -1757,6 +1760,20 @@ export default function AcademyDashboard() {
                     searchQuery={searchQuery}
                     onSearchQueryChange={setSearchQuery}
                   />
+                </TabsContent>
+
+                {/* Training sessions and player attendance */}
+                <TabsContent value="training" className="space-y-6">
+                  {academyInfo?.id ? (
+                    <TrainingAttendanceManager academyId={academyInfo.id} />
+                  ) : (
+                    <Card>
+                      <CardContent className="flex min-h-48 items-center justify-center gap-2 text-slate-500">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Preparing training…
+                      </CardContent>
+                    </Card>
+                  )}
                 </TabsContent>
 
                 {/* Other tabs would be implemented similarly */}

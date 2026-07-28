@@ -3,6 +3,7 @@ import { fileURLToPath } from "url";
 import { createServer } from "./index.js";
 import * as express from "express";
 import { startPlayerFeeReminderScheduler } from "./lib/player-fee-reminders.js";
+import { startTrainingSessionReminderScheduler } from "./lib/training-session-reminders.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -27,6 +28,7 @@ app.listen(port, () => {
 });
 
 startPlayerFeeReminderScheduler();
+startTrainingSessionReminderScheduler();
 
 // Graceful shutdown
 process.on("SIGTERM", () => {
