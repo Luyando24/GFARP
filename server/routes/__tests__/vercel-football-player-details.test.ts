@@ -32,6 +32,7 @@ function singleResult(result: { data: unknown; error: unknown }) {
         select: vi.fn(() => ({
             eq: vi.fn(() => ({
                 single: vi.fn(async () => result),
+                maybeSingle: vi.fn(async () => result),
             })),
         })),
     };
@@ -46,6 +47,9 @@ describe('GET /api/football-players/:id profile images', () => {
 
     it('returns the saved profile image for an academy-created player', async () => {
         fromMock.mockImplementation((table: string) => {
+            if (table === 'player_profiles') {
+                return singleResult({ data: null, error: null });
+            }
             expect(table).toBe('players');
             return singleResult({
                 data: {

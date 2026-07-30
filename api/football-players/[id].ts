@@ -174,56 +174,66 @@ export default async function handler(
                 });
             }
 
+            // Fetch any linked player_profiles record to fallback missing attributes
+            const { data: linkedProfile } = await supabase
+                .from('player_profiles')
+                .select('*')
+                .eq('player_id', id)
+                .maybeSingle();
+
+            const pAge = linkedProfile?.age;
+            const estimatedDob = pAge ? `${new Date().getFullYear() - pAge}-01-01` : '';
+
             // Map database fields to frontend model
             const mappedPlayer = {
                 id: player.id,
                 playerCardId: player.player_card_id,
                 firstName: decrypt(player.first_name_cipher) || player.first_name || '',
                 lastName: decrypt(player.last_name_cipher) || player.last_name || '',
-                dateOfBirth: decrypt(player.dob_cipher) || (player.date_of_birth ? new Date(player.date_of_birth).toISOString() : '') || '',
-                position: player.position,
+                dateOfBirth: decrypt(player.dob_cipher) || (player.date_of_birth ? new Date(player.date_of_birth).toISOString() : '') || estimatedDob || '',
+                position: player.position || linkedProfile?.position || '',
                 email: decrypt(player.email_cipher) || player.email || '',
-                phone: decrypt(player.phone_cipher) || player.phone || '',
-                address: decrypt(player.address_cipher) || player.address || '',
-                city: decrypt(player.city_cipher) || player.city || '',
-                country: decrypt(player.country_cipher) || player.country || '',
-                nationality: player.nationality,
-                currentClub: decrypt(player.current_club_cipher) || player.current_club || '',
-                height: player.height_cm || player.height || null,
-                weight: player.weight_kg || player.weight || null,
-                preferredFoot: player.preferred_foot,
+                phone: decrypt(player.phone_cipher) || player.phone || linkedProfile?.whatsapp_number || '',
+                address: decrypt(player.address_cipher) || player.address || linkedProfile?.address || '',
+                city: decrypt(player.city_cipher) || player.city || linkedProfile?.city || '',
+                country: decrypt(player.country_cipher) || player.country || linkedProfile?.country || '',
+                nationality: player.nationality || linkedProfile?.nationality || '',
+                currentClub: decrypt(player.current_club_cipher) || player.current_club || linkedProfile?.current_club || '',
+                height: player.height_cm || player.height || (linkedProfile?.height ? parseFloat(linkedProfile.height) : null),
+                weight: player.weight_kg || player.weight || (linkedProfile?.weight ? parseFloat(linkedProfile.weight) : null),
+                preferredFoot: player.preferred_foot || linkedProfile?.preferred_foot || '',
                 jerseyNumber: player.jersey_number,
-                gender: player.gender,
+                gender: player.gender || linkedProfile?.gender || null,
                 
                 // Guardian/Parent info
-                guardianName: decrypt(player.guardian_contact_name_cipher) || player.parent_name || '',
-                guardianPhone: decrypt(player.guardian_contact_phone_cipher) || player.parent_phone || '',
-                guardianEmail: decrypt(player.guardian_contact_email_cipher) || player.parent_email || '',
-                guardianInfo: decrypt(player.guardian_info_cipher) || '',
+                guardianName: decrypt(player.guardian_contact_name_cipher) || player.parent_name || linkedProfile?.guardian_name || '',
+                guardianPhone: decrypt(player.guardian_contact_phone_cipher) || player.parent_phone || linkedProfile?.guardian_phone || '',
+                guardianEmail: decrypt(player.guardian_contact_email_cipher) || player.parent_email || linkedProfile?.guardian_email || '',
+                guardianInfo: decrypt(player.guardian_info_cipher) || linkedProfile?.guardian_info || '',
                 
                 // Medical & Emergency
-                medicalInfo: decrypt(player.medical_info_cipher) || player.medical_info || '',
-                emergencyContact: decrypt(player.emergency_contact_cipher) || player.emergency_contact || '',
-                emergencyPhone: decrypt(player.emergency_phone_cipher) || player.emergency_phone || '',
+                medicalInfo: decrypt(player.medical_info_cipher) || player.medical_info || linkedProfile?.medical_info || '',
+                emergencyContact: decrypt(player.emergency_contact_cipher) || player.emergency_contact || linkedProfile?.emergency_contact || '',
+                emergencyPhone: decrypt(player.emergency_phone_cipher) || player.emergency_phone || linkedProfile?.emergency_phone || '',
                 
                 // Notes & History
-                playingHistory: decrypt(player.playing_history_cipher) || '',
-                internalNotes: decrypt(player.internal_notes_cipher) || '',
-                notes: decrypt(player.notes_cipher) || player.notes || '',
-                bio: player.bio || '',
-                career_history: player.career_history || '',
-                honours: player.honours || '',
-                education: player.education || '',
-                video_links: player.video_links || [],
-                transfermarket_link: player.transfermarket_link || '',
-                gallery_images: player.gallery_images || [],
-                cover_image_url: player.cover_image_url || '',
-                contact_email: player.contact_email || '',
-                whatsapp_number: player.whatsapp_number || '',
-                social_links: player.social_links || {},
-                slug: player.slug || '',
-                display_name: player.display_name || '',
-                profile_image_url: player.profile_image_url || '',
+                playingHistory: decrypt(player.playing_history_cipher) || linkedProfile?.career_history || linkedProfile?.playing_history || '',
+                internalNotes: decrypt(player.internal_notes_cipher) || linkedProfile?.internal_notes || '',
+                notes: decrypt(player.notes_cipher) || player.notes || linkedProfile?.notes || linkedProfile?.bio || '',
+                bio: player.bio || linkedProfile?.bio || '',
+                career_history: player.career_history || linkedProfile?.career_history || '',
+                honours: player.honours || linkedProfile?.honours || '',
+                education: player.education || linkedProfile?.education || '',
+                video_links: (player.video_links && player.video_links.length > 0) ? player.video_links : (linkedProfile?.video_links || []),
+                transfermarket_link: player.transfermarket_link || linkedProfile?.transfermarket_link || '',
+                gallery_images: (player.gallery_images && player.gallery_images.length > 0) ? player.gallery_images : (linkedProfile?.gallery_images || []),
+                cover_image_url: player.cover_image_url || linkedProfile?.cover_image_url || '',
+                contact_email: player.contact_email || linkedProfile?.contact_email || '',
+                whatsapp_number: player.whatsapp_number || linkedProfile?.whatsapp_number || '',
+                social_links: player.social_links || linkedProfile?.social_links || {},
+                slug: player.slug || linkedProfile?.slug || '',
+                display_name: player.display_name || linkedProfile?.display_name || '',
+                profile_image_url: player.profile_image_url || linkedProfile?.profile_image_url || '',
                 
                 // Dates
                 registrationDate: player.registration_date,
