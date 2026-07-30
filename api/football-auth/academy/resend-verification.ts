@@ -1,8 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
 import { v4 as uuidv4 } from 'uuid';
-import nodemailer from 'nodemailer';
-import { getSmtpConfig } from '../../lib/smtp-config.js';
+import { sendResendEmail } from '../../../server/lib/resend-client.js';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('[VERCEL] Resend verification request received');
@@ -77,46 +76,30 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         let emailError = null;
 
         try {
-            const smtpConfig = await getSmtpConfig(supabase, '[VERCEL] Resend Verification');
-
-            if (smtpConfig.isValid && smtpConfig.host && smtpConfig.user && smtpConfig.pass) {
-                const transporter = nodemailer.createTransport({
-                    host: smtpConfig.host,
-                    port: smtpConfig.port,
-                    secure: smtpConfig.secure,
-                    auth: {
-                        user: smtpConfig.user,
-                        pass: smtpConfig.pass,
-                    },
-                });
-
-                // Determine base URL
-                const baseUrl = process.env.VITE_APP_URL || 'https://soccercircular.com';
-                const verificationLink = `${baseUrl}/verify-email?token=${verificationToken}`;
-
-                await transporter.sendMail({
-                    from: `"Soccer Circular Support" <${smtpConfig.from}>`,
-                    to: email,
-                    subject: 'Verify your Soccer Circular Academy Account',
-                    text: `Welcome to Soccer Circular!\n\nPlease verify your email address by clicking the link below:\n\n${verificationLink}\n\nIf you didn't create an account, you can safely ignore this email.`,
-                    html: `
-                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                            <h2 style="color: #005391;">Verify your email</h2>
-                            <p>Please verify your email address to activate your account and access the dashboard.</p>
-                            <div style="text-align: center; margin: 30px 0;">
-                                <a href="${verificationLink}" style="background-color: #005391; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Verify Email Address</a>
-                            </div>
-                            <p>Or click this link: <a href="${verificationLink}">${verificationLink}</a></p>
-                            <p style="color: #666; font-size: 12px;">If you didn't create an account, you can safely ignore this email.</p>
+            const baseUrl = process.env.VITE_APP_URL || 'https://soccercircular.com';
+            const verificationLink = `${baseUrl}/verify-email?token=${verificationToken}`;
+            const emailResult = await sendResendEmail({
+                to: email,
+                fromName: 'Soccer Circular Support',
+                subject: 'Verify your Soccer Circular Academy Account',
+                text: `Welcome to Soccer Circular!\n\nPlease verify your email address by clicking the link below:\n\n${verificationLink}\n\nIf you didn't create an account, you can safely ignore this email.`,
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                        <h2 style="color: #005391;">Verify your email</h2>
+                        <p>Please verify your email address to activate your account and access the dashboard.</p>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${verificationLink}" style="background-color: #005391; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Verify Email Address</a>
                         </div>
-                    `
-                });
+                        <p>Or click this link: <a href="${verificationLink}">${verificationLink}</a></p>
+                        <p style="color: #666; font-size: 12px;">If you didn't create an account, you can safely ignore this email.</p>
+                    </div>
+                `,
+            });
+            if (emailResult.success) {
                 console.log('[VERCEL] Verification email resent to:', email);
                 emailSent = true;
             } else {
-                console.warn('[VERCEL] SMTP configuration invalid or missing, skipping email verification send.');
-                console.log('[DEV] New Verification Token:', verificationToken);
-                emailError = smtpConfig.validationErrors ? smtpConfig.validationErrors.join(', ') : 'Unknown error';
+                emailError = emailResult.error || 'Unknown Resend error';
             }
         } catch (error: any) {
             console.error('[VERCEL] Failed to send verification email:', error);
@@ -126,7 +109,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (!emailSent) {
             return res.status(500).json({
                 success: false,
-                message: 'Failed to send verification email. Please check SMTP configuration.',
+                message: 'Failed to send verification email. Please check Resend configuration.',
                 error: emailError
             });
         }

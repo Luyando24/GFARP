@@ -1,19 +1,14 @@
-import nodemailer from 'nodemailer';
 import { query } from './db.js';
-import { decryptPassword } from './encryption.js';
+import { sendResendEmail } from './resend-client.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
 
 interface EmailConfig {
-  host: string;
-  port: number;
-  secure: boolean;
-  auth: {
-    user: string;
-    pass: string;
-  };
-  from?: string;
+  apiKey: string;
+  fromEmail: string;
+  fromName: string;
+  replyTo?: string;
 }
 
 interface EmailOptions {
@@ -24,120 +19,72 @@ interface EmailOptions {
 }
 
 /**
- * Get SMTP configuration from database, falling back to environment variables
+ * Get non-secret sender settings from the database. The Resend API key is
+ * intentionally read only from the server environment.
  */
-async function getSmtpConfig(): Promise<EmailConfig> {
-  try {
-    // Try to get settings from database
-    const smtpHost = await query('SELECT value FROM system_settings WHERE key = $1', ['email.smtpHost']);
-    const smtpPort = await query('SELECT value FROM system_settings WHERE key = $1', ['email.smtpPort']);
-    const smtpSecure = await query('SELECT value FROM system_settings WHERE key = $1', ['email.smtpSecure']);
-    const smtpUser = await query('SELECT value FROM system_settings WHERE key = $1', ['email.smtpUser']);
-    const smtpPass = await query('SELECT value FROM system_settings WHERE key = $1', ['email.smtpPass']);
-    const smtpFrom = await query('SELECT value FROM system_settings WHERE key = $1', ['email.smtpFrom']);
-
-    // Check if we have database settings configured
-    if (smtpHost.rows.length > 0 && smtpHost.rows[0].value) {
-      const host = smtpHost.rows[0].value;
-      const port = smtpPort.rows.length > 0 ? parseInt(smtpPort.rows[0].value) : 587;
-      let secure = smtpSecure.rows.length > 0 ? smtpSecure.rows[0].value === 'true' : false;
-
-      // Fix Nodemailer secure flag based on standard port configurations
-      // Port 465 is implicit TLS (secure: true)
-      // Port 587 and 25 use STARTTLS (secure: false)
-      if (port === 587 || port === 25) {
-        secure = false;
-      } else if (port === 465) {
-        secure = true;
-      }
-
-      const user = smtpUser.rows.length > 0 ? smtpUser.rows[0].value : '';
-      const encryptedPass = smtpPass.rows.length > 0 ? smtpPass.rows[0].value : '';
-      const from = smtpFrom.rows.length > 0 ? smtpFrom.rows[0].value : '';
-
-      // Decrypt password
-      let pass = '';
-      if (encryptedPass) {
-        pass = decryptPassword(encryptedPass);
-      }
-
-      console.log('[EmailService] Using database SMTP configuration');
-      return {
-        host,
-        port,
-        secure,
-        auth: {
-          user,
-          pass
-        },
-        from: from || user
-      };
-    }
-  } catch (error) {
-    console.warn('[EmailService] Failed to load SMTP settings from database, falling back to environment variables:', error);
-  }
-
-  // Fall back to environment variables
-  console.log('[EmailService] Using environment variable SMTP configuration');
-  return {
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: {
-      user: process.env.SMTP_USER || '',
-      pass: process.env.SMTP_PASS || ''
-    },
-    from: process.env.SMTP_FROM || process.env.SMTP_USER || ''
+async function getResendConfig(): Promise<EmailConfig> {
+  const environmentConfig: EmailConfig = {
+    apiKey: process.env.RESEND_API_KEY || '',
+    fromEmail: process.env.RESEND_FROM_EMAIL || 'notifications@soccercircular.com',
+    fromName: process.env.RESEND_FROM_NAME || 'Soccer Circular',
+    replyTo: process.env.RESEND_REPLY_TO || 'support@soccercircular.com',
   };
+
+  try {
+    const result = await query(
+      `SELECT key, value
+       FROM system_settings
+       WHERE key IN ($1, $2, $3)`,
+      ['email.fromEmail', 'email.fromName', 'email.replyTo'],
+    );
+    const settings = new Map<string, string>(
+      result.rows.map((row: { key: string; value: string }) => [row.key, row.value]),
+    );
+
+    return {
+      ...environmentConfig,
+      fromEmail: settings.get('email.fromEmail') || environmentConfig.fromEmail,
+      fromName: settings.get('email.fromName') || environmentConfig.fromName,
+      replyTo: settings.get('email.replyTo') || environmentConfig.replyTo,
+    };
+  } catch (error) {
+    console.warn('[EmailService] Failed to load Resend sender settings; using environment values:', error);
+    return environmentConfig;
+  }
 }
 
 class EmailService {
-  private transporter: nodemailer.Transporter;
   private config: EmailConfig;
 
   constructor() {
-    // Initialize with environment variables first (synchronous)
-    const envPort = parseInt(process.env.SMTP_PORT || '587');
-    let envSecure = process.env.SMTP_SECURE === 'true';
-    if (envPort === 587 || envPort === 25) envSecure = false;
-    else if (envPort === 465) envSecure = true;
-
     this.config = {
-      host: process.env.SMTP_HOST || 'smtp.gmail.com',
-      port: envPort,
-      secure: envSecure,
-      auth: {
-        user: process.env.SMTP_USER || '',
-        pass: process.env.SMTP_PASS || ''
-      },
-      from: process.env.SMTP_FROM || process.env.SMTP_USER || ''
+      apiKey: process.env.RESEND_API_KEY || '',
+      fromEmail: process.env.RESEND_FROM_EMAIL || 'notifications@soccercircular.com',
+      fromName: process.env.RESEND_FROM_NAME || 'Soccer Circular',
+      replyTo: process.env.RESEND_REPLY_TO || 'support@soccercircular.com',
     };
-    this.transporter = nodemailer.createTransport(this.config);
   }
 
   /**
-   * Initialize SMTP configuration from database
+   * Initialize Resend sender configuration from database
    * Call this after constructing the EmailService instance
    */
   async initializeFromDatabase(): Promise<void> {
     try {
-      this.config = await getSmtpConfig();
-      this.transporter = nodemailer.createTransport(this.config);
+      this.config = await getResendConfig();
     } catch (error) {
       console.error('[EmailService] Failed to initialize from database:', error);
     }
   }
 
   /**
-   * Reload SMTP configuration from database
-   * Call this after updating SMTP settings in the database
+   * Reload Resend sender configuration after settings change.
    */
   async reloadConfiguration(): Promise<void> {
-    console.log('[EmailService] Reloading SMTP configuration...');
+    console.log('[EmailService] Reloading Resend configuration...');
     try {
-      this.config = await getSmtpConfig();
-      this.transporter = nodemailer.createTransport(this.config);
-      console.log('[EmailService] SMTP configuration reloaded successfully');
+      this.config = await getResendConfig();
+      console.log('[EmailService] Resend configuration reloaded successfully');
     } catch (error) {
       console.error('[EmailService] Failed to reload configuration:', error);
     }
@@ -145,19 +92,31 @@ class EmailService {
 
   async sendEmail(options: EmailOptions): Promise<{ success: boolean; error?: string }> {
     try {
-      const mailOptions = {
-        from: `"Soccer Circular" <${this.config.from || this.config.auth.user}>`,
+      if (!this.config.apiKey) {
+        throw new Error('RESEND_API_KEY is not configured');
+      }
+      if (!this.config.fromEmail) {
+        throw new Error('RESEND_FROM_EMAIL is not configured');
+      }
+
+      const result = await sendResendEmail({
         to: options.to,
         subject: options.subject,
         html: options.html,
-        text: options.text || this.stripHtml(options.html)
-      };
+        text: options.text || this.stripHtml(options.html),
+        fromEmail: this.config.fromEmail,
+        fromName: this.config.fromName,
+        replyTo: this.config.replyTo,
+      });
 
-      const result = await this.transporter.sendMail(mailOptions);
-      console.log('Email sent successfully:', result.messageId);
+      if (!result.success) {
+        throw new Error(result.error || 'Resend request failed');
+      }
+
+      console.log('[EmailService] Email sent through Resend:', result.id);
       return { success: true };
     } catch (error: any) {
-      console.error('Failed to send email:', error);
+      console.error('[EmailService] Failed to send email through Resend:', error);
       return { 
         success: false, 
         error: error.message || 'Unknown error occurred while sending email' 
@@ -634,14 +593,7 @@ class EmailService {
   }
 
   async testConnection(): Promise<boolean> {
-    try {
-      await this.transporter.verify();
-      console.log('Email service connection verified successfully');
-      return true;
-    } catch (error) {
-      console.error('Email service connection failed:', error);
-      return false;
-    }
+    return Boolean(this.config.apiKey && this.config.fromEmail);
   }
 }
 

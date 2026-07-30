@@ -1,7 +1,6 @@
 import { Router, RequestHandler } from 'express';
 import { query } from '../lib/db.js';
 import { emailService } from '../lib/email-service.js';
-import { encryptPassword, decryptPassword } from '../lib/encryption.js';
 
 const router = Router();
 
@@ -63,12 +62,9 @@ interface SystemSettingsData {
     analyticsService: string;
   };
   email: {
-    smtpHost: string;
-    smtpPort: number;
-    smtpSecure: boolean;
-    smtpUser: string;
-    smtpPass: string;
-    smtpFrom: string;
+    fromEmail: string;
+    fromName: string;
+    replyTo: string;
     testEmail: string;
   };
 }
@@ -103,7 +99,7 @@ const defaultSettings: SystemSettingsData = {
     adminAlerts: true,
     systemAlerts: true,
     maintenanceAlerts: true,
-    emailProvider: "SendGrid",
+    emailProvider: "Resend",
     smsProvider: "Twilio"
   },
   backup: {
@@ -126,17 +122,14 @@ const defaultSettings: SystemSettingsData = {
     fifaApi: true,
     paymentGateway: "Stripe",
     smsGateway: "Twilio",
-    emailService: "SendGrid",
+    emailService: "Resend",
     cloudStorage: "AWS S3",
     analyticsService: "Google Analytics"
   },
   email: {
-    smtpHost: "",
-    smtpPort: 587,
-    smtpSecure: false,
-    smtpUser: "",
-    smtpPass: "",
-    smtpFrom: "",
+    fromEmail: "notifications@soccercircular.com",
+    fromName: "Soccer Circular",
+    replyTo: "support@soccercircular.com",
     testEmail: ""
   }
 };
@@ -179,23 +172,9 @@ function structureSettings(settings: Record<string, string>): SystemSettingsData
         try {
           // Try to parse as JSON for complex types
           const parsedValue = JSON.parse(value);
-          
-          // Omit SMTP password entirely from GET response to prevent saving masked value
-          if (category === 'email' && field === 'smtpPass') {
-            // Don't include smtpPass in the response
-            return;
-          } else {
-            (structured[category as keyof SystemSettingsData] as any)[field] = parsedValue;
-          }
+          (structured[category as keyof SystemSettingsData] as any)[field] = parsedValue;
         } catch {
           // If not JSON, use as string
-          
-          // Omit SMTP password entirely from GET response to prevent saving masked value
-          if (category === 'email' && field === 'smtpPass') {
-            // Don't include smtpPass in the response
-            return;
-          }
-          
           (structured[category as keyof SystemSettingsData] as any)[field] = value;
         }
       }
@@ -212,18 +191,7 @@ function flattenSettings(settings: SystemSettingsData): Record<string, string> {
   Object.entries(settings).forEach(([category, categorySettings]) => {
     Object.entries(categorySettings).forEach(([key, value]) => {
       const flatKey = `${category}.${key}`;
-      
-      // Skip empty SMTP password to prevent overwriting existing password
-      if (category === 'email' && key === 'smtpPass' && !value) {
-        return;
-      }
-      
-      // Encrypt SMTP password before saving
-      if (category === 'email' && key === 'smtpPass' && value) {
-        flattened[flatKey] = encryptPassword(String(value));
-      } else {
-        flattened[flatKey] = typeof value === 'object' ? JSON.stringify(value) : String(value);
-      }
+      flattened[flatKey] = typeof value === 'object' ? JSON.stringify(value) : String(value);
     });
   });
 
@@ -310,12 +278,6 @@ export const handleGetSystemSettingsByCategory: RequestHandler = async (req, res
     const categorySettings: Record<string, any> = {};
     settings.forEach(setting => {
       const key = setting.key.replace(`${category}.`, '');
-      
-      // Omit SMTP password entirely from GET response to prevent saving masked value
-      if (category === 'email' && key === 'smtpPass') {
-        return;
-      }
-      
       try {
         const parsedValue = JSON.parse(setting.value);
         categorySettings[key] = parsedValue;
@@ -349,24 +311,9 @@ export const handleUpdateSystemSettingsByCategory: RequestHandler = async (req, 
     }
 
     // Update each setting in the category
-    const updatePromises = Object.entries(categoryData)
-      .filter(([key, value]) => {
-        // Skip empty SMTP password to prevent overwriting existing password
-        if (category === 'email' && key === 'smtpPass' && !value) {
-          return false;
-        }
-        return true;
-      })
-      .map(([key, value]) => {
+    const updatePromises = Object.entries(categoryData).map(([key, value]) => {
       const flatKey = `${category}.${key}`;
-      
-      // Encrypt SMTP password before saving
-      let stringValue: string;
-      if (category === 'email' && key === 'smtpPass' && value) {
-        stringValue = encryptPassword(String(value));
-      } else {
-        stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
-      }
+      const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
       
       return setSettingValue(flatKey, stringValue);
     });
@@ -484,30 +431,30 @@ export const handleTestEmail: RequestHandler = async (req, res) => {
     console.log('[TestEmail] Sending test email...');
     const result = await emailService.sendEmail({
       to: toEmail,
-      subject: 'Soccer Circular - SMTP Configuration Test',
+      subject: 'Soccer Circular - Resend Configuration Test',
       html: `
         <!DOCTYPE html>
         <html>
         <head>
           <meta charset="utf-8">
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>SMTP Test</title>
+          <title>Resend Test</title>
         </head>
         <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
           <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 10px 10px 0 0;">
             <h1 style="color: white; margin: 0; font-size: 28px;">Soccer Circular</h1>
-            <p style="color: #f0f0f0; margin: 10px 0 0 0;">SMTP Configuration Test</p>
+            <p style="color: #f0f0f0; margin: 10px 0 0 0;">Resend Configuration Test</p>
           </div>
 
           <div style="background: #ffffff; padding: 30px; border: 1px solid #e0e0e0; border-top: none;">
             <div style="text-align: center; margin-bottom: 30px;">
               <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
-              <h2 style="color: #10b981; margin: 0; font-size: 24px;">SMTP Configuration Successful</h2>
+              <h2 style="color: #10b981; margin: 0; font-size: 24px;">Resend Configuration Successful</h2>
               <p style="color: #666; margin: 5px 0 0 0;">Your email settings are working correctly!</p>
             </div>
 
             <p style="font-size: 16px; margin-bottom: 20px;">
-              This email confirms that your SMTP configuration is working properly. You can now send emails through the Soccer Circular platform.
+              This email confirms that your Resend configuration is working properly. You can now send emails through the Soccer Circular platform.
             </p>
 
             <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">

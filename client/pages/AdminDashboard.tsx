@@ -479,8 +479,6 @@ export default function AdminDashboard() {
   const [transactionsLoading, setTransactionsLoading] = useState(false);
   const [viewingTransaction, setViewingTransaction] = useState<any | null>(null);
   const [isSendingReceipt, setIsSendingReceipt] = useState(false);
-  const [showSmtpPassword, setShowSmtpPassword] = useState(false);
-  const [passwordChanged, setPasswordChanged] = useState(false);
 
   // System settings state
   const [systemSettings, setSystemSettings] = useState({
@@ -540,12 +538,9 @@ export default function AdminDashboard() {
       analyticsService: ""
     },
     email: {
-      smtpHost: "",
-      smtpPort: 587,
-      smtpSecure: false,
-      smtpUser: "",
-      smtpPass: "",
-      smtpFrom: "",
+      fromEmail: "notifications@soccercircular.com",
+      fromName: "Soccer Circular",
+      replyTo: "support@soccercircular.com",
       testEmail: ""
     }
   });
@@ -968,28 +963,16 @@ export default function AdminDashboard() {
 
   const saveSystemSettings = async () => {
     try {
-      // Only include smtpPass if it has been changed by the user
-      const settingsToSave = passwordChanged 
-        ? systemSettings 
-        : {
-            ...systemSettings,
-            email: {
-              ...systemSettings.email,
-              smtpPass: undefined // Don't send password if not changed
-            }
-          };
-
       const res = await fetch('/api/system-settings', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(settingsToSave),
+        body: JSON.stringify(systemSettings),
       });
 
       if (res.ok) {
         console.log('System settings saved successfully');
-        setPasswordChanged(false); // Reset password changed flag
         // You could add a toast notification here
       } else {
         console.error('Failed to save system settings');
@@ -2452,79 +2435,43 @@ export default function AdminDashboard() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Mail className="h-5 w-5" />
-                    SMTP Configuration
+                    Resend Configuration
                   </CardTitle>
                   <CardDescription>
-                    Configure your SMTP server settings for sending emails
+                    Configure the verified sender used by Resend. The API key is stored securely in the server environment.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div>
-                      <Label htmlFor="smtpHost">SMTP Host</Label>
+                      <Label htmlFor="fromName">Sender Name</Label>
                       <Input
-                        id="smtpHost"
-                        placeholder="smtp.gmail.com"
-                        value={systemSettings.email.smtpHost}
-                        onChange={(e) => handleSystemSettingsChange('email', 'smtpHost', e.target.value)}
+                        id="fromName"
+                        placeholder="Soccer Circular"
+                        value={systemSettings.email.fromName}
+                        onChange={(e) => handleSystemSettingsChange('email', 'fromName', e.target.value)}
                         className="mt-1.5"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="smtpPort">SMTP Port</Label>
+                      <Label htmlFor="fromEmail">From Email</Label>
                       <Input
-                        id="smtpPort"
-                        type="number"
-                        placeholder="587"
-                        value={systemSettings.email.smtpPort}
-                        onChange={(e) => handleSystemSettingsChange('email', 'smtpPort', parseInt(e.target.value) || 587)}
+                        id="fromEmail"
+                        type="email"
+                        placeholder="notifications@soccercircular.com"
+                        value={systemSettings.email.fromEmail}
+                        onChange={(e) => handleSystemSettingsChange('email', 'fromEmail', e.target.value)}
                         className="mt-1.5"
                       />
                     </div>
                     <div>
-                      <Label htmlFor="smtpUser">SMTP Username</Label>
+                      <Label htmlFor="replyTo">Reply-To Email</Label>
                       <Input
-                        id="smtpUser"
-                        placeholder="your-email@gmail.com"
-                        value={systemSettings.email.smtpUser}
-                        onChange={(e) => handleSystemSettingsChange('email', 'smtpUser', e.target.value)}
-                        className="mt-1.5"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="smtpPass">SMTP Password</Label>
-                      <div className="relative mt-1.5">
-                        <Input
-                          id="smtpPass"
-                          type={showSmtpPassword ? "text" : "password"}
-                          placeholder="••••••••"
-                          value={systemSettings.email.smtpPass}
-                          onChange={(e) => {
-                            handleSystemSettingsChange('email', 'smtpPass', e.target.value);
-                            setPasswordChanged(true);
-                          }}
-                          className="pr-10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowSmtpPassword(!showSmtpPassword)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        >
-                          {showSmtpPassword ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                    <div>
-                      <Label htmlFor="smtpFrom">From Email</Label>
-                      <Input
-                        id="smtpFrom"
-                        placeholder="noreply@soccercircular.com"
-                        value={systemSettings.email.smtpFrom}
-                        onChange={(e) => handleSystemSettingsChange('email', 'smtpFrom', e.target.value)}
+                        id="replyTo"
+                        type="email"
+                        placeholder="support@soccercircular.com"
+                        value={systemSettings.email.replyTo}
+                        onChange={(e) => handleSystemSettingsChange('email', 'replyTo', e.target.value)}
                         className="mt-1.5"
                       />
                     </div>
@@ -2538,36 +2485,6 @@ export default function AdminDashboard() {
                         onChange={(e) => handleSystemSettingsChange('email', 'testEmail', e.target.value)}
                         className="mt-1.5"
                       />
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t mt-4">
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label className="text-base">Use SSL/TLS</Label>
-                        <p className="text-sm text-muted-foreground">
-                          Enable secure connection for SMTP
-                        </p>
-                      </div>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleSystemSettingsChange('email', 'smtpSecure', !systemSettings.email.smtpSecure)}
-                        className={systemSettings.email.smtpSecure ? "border-green-500 text-green-600" : ""}
-                      >
-                        {systemSettings.email.smtpSecure ? (
-                          <>
-                            <ToggleRight className="h-4 w-4 mr-2" />
-                            Enabled
-                          </>
-                        ) : (
-                          <>
-                            <ToggleLeft className="h-4 w-4 mr-2" />
-                            Disabled
-                          </>
-                        )}
-                      </Button>
                     </div>
                   </div>
 

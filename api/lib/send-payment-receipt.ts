@@ -1,6 +1,5 @@
-import nodemailer from 'nodemailer';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
-import { getSmtpConfig } from './smtp-config.js';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { sendResendEmail } from '../../server/lib/resend-client.js';
 
 function buildReceiptHtml(
   recipientName: string,
@@ -40,8 +39,7 @@ function buildReceiptHtml(
   `;
 }
 
-async function sendViaSmtp(
-  supabase: SupabaseClient,
+async function sendViaResend(
   toEmail: string,
   recipientName: string,
   amount: number,
@@ -50,38 +48,23 @@ async function sendViaSmtp(
   paymentReference: string
 ): Promise<boolean> {
   try {
-    const smtpConfig = await getSmtpConfig(supabase, '[PaymentReceipt]');
-
-    if (!smtpConfig.isValid || !smtpConfig.host || !smtpConfig.user || !smtpConfig.pass) {
-      console.warn('[PaymentReceipt] SMTP configuration invalid or missing, skipping receipt email');
-      return false;
-    }
-
-    const transporter = nodemailer.createTransport({
-      host: smtpConfig.host,
-      port: smtpConfig.port,
-      secure: smtpConfig.secure,
-      auth: {
-        user: smtpConfig.user,
-        pass: smtpConfig.pass,
-      },
-    });
-
     const date = new Date();
     const formattedAmount = new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: currency.toUpperCase(),
     }).format(amount);
 
-    await transporter.sendMail({
-      from: `"Soccer Circular" <${smtpConfig.from}>`,
+    const result = await sendResendEmail({
       to: toEmail,
       subject: `Payment Confirmed - ${planName}`,
       text: `Dear ${recipientName},\n\nYour payment of ${formattedAmount} for ${planName} was successful.\nReference: ${paymentReference}\nDate: ${date.toLocaleString()}`,
       html: buildReceiptHtml(recipientName, amount, currency, planName, paymentReference, date),
     });
 
-    return true;
+    if (!result.success) {
+      console.error('[PaymentReceipt] Resend rejected receipt email:', result.error);
+    }
+    return result.success;
   } catch (error: any) {
     console.error('[PaymentReceipt] Failed to send receipt email:', error);
     return false;
@@ -112,7 +95,7 @@ export async function sendAcademyPaymentReceipt(
     }
 
     // Attempt to send the email first
-    const emailSent = await sendViaSmtp(supabase, academyEmail, academyName, amount, currency, planName, paymentReference);
+    const emailSent = await sendViaResend(academyEmail, academyName, amount, currency, planName, paymentReference);
 
     if (!emailSent) {
       console.warn('[PaymentReceipt] Failed to send receipt email, not marking as sent');

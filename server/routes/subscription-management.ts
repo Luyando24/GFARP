@@ -1166,7 +1166,7 @@ export const handleSendReceiptManually: RequestHandler = async (req, res) => {
         });
       }
 
-      // Ensure email service uses latest SMTP configuration from database
+      // Ensure email service uses the latest Resend sender configuration
       await emailService.initializeFromDatabase();
 
       const emailSent = await emailService.sendPaymentConfirmationEmail(
@@ -1208,7 +1208,7 @@ export const handleSendReceiptManually: RequestHandler = async (req, res) => {
         });
       }
 
-      // Ensure email service uses latest SMTP configuration from database
+      // Ensure email service uses the latest Resend sender configuration
       await emailService.initializeFromDatabase();
 
       const recipientName = `${purchase.first_name || ''} ${purchase.last_name || ''}`.trim() || 'Player';

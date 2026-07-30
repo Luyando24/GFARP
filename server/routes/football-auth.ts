@@ -285,6 +285,21 @@ async function ensurePlayersSchema(client: any) {
   await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS display_name VARCHAR(200);`);
   await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS profile_image_url TEXT;`);
   
+  // Ensure player_profiles table has extra profile/contact columns
+  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS address TEXT;`);
+  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS city VARCHAR(100);`);
+  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS country VARCHAR(100);`);
+  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS guardian_name VARCHAR(200);`);
+  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS guardian_phone VARCHAR(50);`);
+  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS guardian_email VARCHAR(255);`);
+  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS guardian_info TEXT;`);
+  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS medical_info TEXT;`);
+  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS emergency_contact VARCHAR(200);`);
+  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS emergency_phone VARCHAR(50);`);
+  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS playing_history TEXT;`);
+  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS notes TEXT;`);
+  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS internal_notes TEXT;`);
+
   // Add unique constraint on slug if not exists
   await client.query(`
     DO $$

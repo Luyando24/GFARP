@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { createClient } from '@supabase/supabase-js';
-import nodemailer from 'nodemailer';
-import { getSmtpConfig } from '../lib/smtp-config.js';
+import { sendResendEmail } from '../../server/lib/resend-client.js';
 
 export const config = {
     maxDuration: 10,
@@ -158,62 +157,49 @@ export default async function handler(
 
         // Send Email Notification
         try {
-            const smtpConfig = await getSmtpConfig(supabase, '[VERCEL] Compliance Document');
+            const academyName = docInfo.fifa_compliance?.academies?.name || 'Academy';
+            const academyEmail = docInfo.fifa_compliance?.academies?.email;
+            const documentName = docInfo.document_name;
 
-            if (smtpConfig.isValid && smtpConfig.host && smtpConfig.user && smtpConfig.pass) {
-                const transporter = nodemailer.createTransport({
-                    host: smtpConfig.host,
-                    port: smtpConfig.port,
-                    secure: smtpConfig.secure,
-                    auth: {
-                        user: smtpConfig.user,
-                        pass: smtpConfig.pass,
-                    },
-                });
+            if (academyEmail) {
+                let subject = '';
+                let htmlContent = '';
 
-                const academyName = docInfo.fifa_compliance?.academies?.name || 'Academy';
-                const academyEmail = docInfo.fifa_compliance?.academies?.email;
-                const documentName = docInfo.document_name;
-
-                if (academyEmail) {
-                    let subject = '';
-                    let htmlContent = '';
-
-                    if (status === 'verified') {
-                        subject = 'Compliance Document Approved - Soccer Circular';
-                        htmlContent = `
-                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                                <h2 style="color: #10b981;">Document Approved</h2>
-                                <p>Hello ${academyName},</p>
-                                <p>Your document <strong>${documentName}</strong> has been reviewed and <strong>approved</strong>.</p>
-                                <p>Thank you for ensuring compliance.</p>
-                            </div>
-                        `;
-                    } else if (status === 'rejected') {
-                        subject = 'Compliance Document Rejected - Soccer Circular';
-                        htmlContent = `
-                            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-                                <h2 style="color: #ef4444;">Document Rejected</h2>
-                                <p>Hello ${academyName},</p>
-                                <p>Your document <strong>${documentName}</strong> has been reviewed and <strong>rejected</strong>.</p>
-                                ${rejectionReason ? `<p><strong>Reason for rejection:</strong> ${rejectionReason}</p>` : ''}
-                                <p>Please review the requirements and upload a corrected version.</p>
-                            </div>
-                        `;
-                    }
-
-                    if (subject && htmlContent) {
-                        await transporter.sendMail({
-                            from: `"Soccer Circular Compliance" <${smtpConfig.from}>`,
-                            to: academyEmail,
-                            subject: subject,
-                            html: htmlContent
-                        });
-                        console.log(`[VERCEL] Notification email sent to ${academyEmail} for status ${status}`);
-                    }
+                if (status === 'verified') {
+                    subject = 'Compliance Document Approved - Soccer Circular';
+                    htmlContent = `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                            <h2 style="color: #10b981;">Document Approved</h2>
+                            <p>Hello ${academyName},</p>
+                            <p>Your document <strong>${documentName}</strong> has been reviewed and <strong>approved</strong>.</p>
+                            <p>Thank you for ensuring compliance.</p>
+                        </div>
+                    `;
+                } else if (status === 'rejected') {
+                    subject = 'Compliance Document Rejected - Soccer Circular';
+                    htmlContent = `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                            <h2 style="color: #ef4444;">Document Rejected</h2>
+                            <p>Hello ${academyName},</p>
+                            <p>Your document <strong>${documentName}</strong> has been reviewed and <strong>rejected</strong>.</p>
+                            ${rejectionReason ? `<p><strong>Reason for rejection:</strong> ${rejectionReason}</p>` : ''}
+                            <p>Please review the requirements and upload a corrected version.</p>
+                        </div>
+                    `;
                 }
-            } else {
-                console.warn('[VERCEL] SMTP configuration invalid or missing, skipping email notification.');
+
+                if (subject && htmlContent) {
+                    const emailResult = await sendResendEmail({
+                        to: academyEmail,
+                        subject,
+                        html: htmlContent,
+                        fromName: 'Soccer Circular Compliance',
+                    });
+                    if (!emailResult.success) {
+                        throw new Error(emailResult.error);
+                    }
+                    console.log(`[VERCEL] Notification email sent to ${academyEmail} for status ${status}`);
+                }
             }
         } catch (emailError) {
             console.error('[VERCEL] Failed to send notification email:', emailError);

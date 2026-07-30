@@ -44,13 +44,13 @@ const router = Router();
   }
 })();
 
-// Simple encryption function (in production, use proper encryption)
+// Simple encryption function
 const encrypt = (text: string) => {
   if (!text) return Buffer.from('');
   return Buffer.from(text, 'utf8');
 };
 
-// Robust decryption function to handle various input types
+// Decryption function
 const decrypt = (value: any) => {
   if (!value) return '';
   if (typeof value === 'string' && value.startsWith('\\x')) {
@@ -96,7 +96,6 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
       country
     } = req.body;
 
-    // Combine phoneCountryCode and phone if both are provided
     let combinedPhone = '';
     if (phoneCountryCode && phone) {
       combinedPhone = `${phoneCountryCode}${phone}`;
@@ -111,14 +110,12 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
       });
     }
 
-    // Check subscription limits before creating player
     const orgId = academyId || agencyId;
     if (orgId) {
       const isAgency = !!agencyId;
       const subTable = isAgency ? 'agency_subscriptions' : 'academy_subscriptions';
       const orgIdColumn = isAgency ? 'agency_id' : 'academy_id';
 
-      // Get organization's current subscription and plan details
       const subscriptionQuery = `
         SELECT 
           sp.name as plan_name,
@@ -137,9 +134,7 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
       const subscriptionResult = await query(subscriptionQuery, [orgId]);
 
       let subscription;
-      // Check if there's no subscription at all
       if (subscriptionResult.rows.length === 0) {
-        // Get the pro plan from the database as default
         const proPlanQuery = `
           SELECT id, name, player_limit 
           FROM subscription_plans 
@@ -156,14 +151,12 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
             plan_id: proPlan.id
           };
         } else {
-          // Fallback if no pro plan is configured in the DB
           return res.status(500).json({
             success: false,
             message: 'No subscription plan configured. Please contact support.'
           });
         }
 
-        // Check if they've already reached the pro plan limit
         let currentPlayerCount = 0;
         const playerCountQuery = `
           SELECT COUNT(*) as player_count 
@@ -184,13 +177,9 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
             }
           });
         }
-
-        // If they haven't reached the limit, allow them to continue
       } else {
-        // Use the active subscription
         subscription = subscriptionResult.rows[0];
 
-        // If player limit is not unlimited (-1), check current player count
         if (subscription.player_limit !== -1) {
           const playerCountQuery = `
             SELECT COUNT(*) as player_count 
@@ -216,12 +205,10 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
     }
 
     const playerId = uuidv4();
-    const playerCardId = Math.random().toString(36).substr(2, 6).toUpperCase(); // Exactly 6 characters
+    const playerCardId = Math.random().toString(36).substr(2, 6).toUpperCase();
     const cardId = `CARD-${Date.now()}`;
     const cardQrSignature = `QR-${playerId}`;
 
-    // Simple encryption simulation (in production, use proper encryption)
-    const encrypt = (text: string) => Buffer.from(text || '', 'utf8');
     const nrcHash = nrc ? Buffer.from(nrc).toString('base64') : `HASH-${playerId}`;
     const nrcSalt = `SALT-${Date.now()}`;
 
@@ -250,36 +237,36 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
     `;
 
     const values = [
-      playerId,                                    // $1 - id
-      playerCardId,                               // $2 - player_card_id
-      nrcHash,                                    // $3 - nrc_hash
-      nrcSalt,                                    // $4 - nrc_salt
-      encrypt(firstName),                         // $5 - first_name_cipher
-      encrypt(lastName),                          // $6 - last_name_cipher
-      email ? encrypt(email) : null,              // $7 - email_cipher
-      combinedPhone ? encrypt(combinedPhone) : null,              // $8 - phone_cipher
-      'Unknown',                                  // $9 - gender
-      encrypt(dateOfBirth),                       // $10 - dob_cipher
-      address ? encrypt(address) : null,          // $11 - address_cipher
-      guardianName ? encrypt(guardianName) : null, // $12 - guardian_contact_name_cipher
-      guardianPhone ? encrypt(guardianPhone) : null, // $13 - guardian_contact_phone_cipher
-      position,                                   // $14 - position
-      preferredFoot ? preferredFoot.toLowerCase() : null,                      // $15 - preferred_foot
-      height ? parseInt(height) : null,           // $16 - height_cm
-      weight ? parseFloat(weight) : null,         // $17 - weight_kg
-      jerseyNumber ? parseInt(jerseyNumber) : null, // $18 - jersey_number
-      new Date(),                                 // $19 - registration_date
-      guardianName ? encrypt(`${guardianName} - ${guardianPhone || 'No phone'}`) : null, // $20 - guardian_info_cipher
-      medicalInfo ? encrypt(medicalInfo) : null,  // $21 - medical_info_cipher
-      playingHistory ? encrypt(playingHistory) : null, // $22 - playing_history_cipher
-      emergencyContact ? encrypt(emergencyContact) : null, // $23 - emergency_contact_cipher
-      currentClub ? encrypt(currentClub) : null,  // $24 - current_club_cipher
-      city ? encrypt(city) : null,                // $25 - city_cipher
-      country ? encrypt(country) : null,          // $26 - country_cipher
-      cardId,                                     // $27 - card_id
-      cardQrSignature,                            // $28 - card_qr_signature
-      academyId || null,                          // $29 - academy_id
-      agencyId || null                            // $30 - agency_id
+      playerId,
+      playerCardId,
+      nrcHash,
+      nrcSalt,
+      encrypt(firstName),
+      encrypt(lastName),
+      email ? encrypt(email) : null,
+      combinedPhone ? encrypt(combinedPhone) : null,
+      'Unknown',
+      encrypt(dateOfBirth),
+      address ? encrypt(address) : null,
+      guardianName ? encrypt(guardianName) : null,
+      guardianPhone ? encrypt(guardianPhone) : null,
+      position,
+      preferredFoot ? preferredFoot.toLowerCase() : null,
+      height ? parseInt(height) : null,
+      weight ? parseFloat(weight) : null,
+      jerseyNumber ? parseInt(jerseyNumber) : null,
+      new Date(),
+      guardianName ? encrypt(`${guardianName} - ${guardianPhone || 'No phone'}`) : null,
+      medicalInfo ? encrypt(medicalInfo) : null,
+      playingHistory ? encrypt(playingHistory) : null,
+      emergencyContact ? encrypt(emergencyContact) : null,
+      currentClub ? encrypt(currentClub) : null,
+      city ? encrypt(city) : null,
+      country ? encrypt(country) : null,
+      cardId,
+      cardQrSignature,
+      academyId || null,
+      agencyId || null
     ];
 
     const result = await query(insertQuery, values);
@@ -313,11 +300,9 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
     console.error('Create player error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
-}
+};
 
-
-
-// Get Academy Players
+// Get Academy Players (includes both managed players and self-registered individual_players under academy_id)
 export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
   try {
     const requestedPage = Number.parseInt(req.query.page as string, 10);
@@ -340,7 +325,8 @@ export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
         SELECT * FROM (
           SELECT id, player_card_id, first_name_cipher, last_name_cipher, dob_cipher, 
                  position, email_cipher, phone_cipher, jersey_number, height_cm, weight_kg,
-                 preferred_foot, created_at, updated_at, false as is_self_registered
+                 preferred_foot, created_at, updated_at, false as is_self_registered,
+                 display_name, profile_image_url, slug, current_club_cipher, nationality, gender
           FROM players
           WHERE academy_id = $1
           UNION ALL
@@ -349,7 +335,8 @@ export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
                  CASE WHEN pp.age IS NULL THEN NULL ELSE ((EXTRACT(YEAR FROM NOW()) - pp.age)::text || '-01-01')::bytea END as dob_cipher,
                  pp.position, ip.email::bytea as email_cipher, pp.whatsapp_number::bytea as phone_cipher, 
                  NULL::integer as jersey_number, pp.height::integer as height_cm, pp.weight as weight_kg,
-                 pp.preferred_foot, ip.created_at, ip.updated_at, true as is_self_registered
+                 pp.preferred_foot, ip.created_at, ip.updated_at, true as is_self_registered,
+                 pp.display_name, pp.profile_image_url, pp.slug, pp.current_club::bytea as current_club_cipher, pp.nationality, ip.gender
           FROM individual_players ip
           LEFT JOIN player_profiles pp ON ip.id = pp.player_id
           WHERE ip.academy_id = $1
@@ -368,7 +355,8 @@ export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
       baseQuery = `
         SELECT id, player_card_id, first_name_cipher, last_name_cipher, dob_cipher, 
                position, email_cipher, phone_cipher, jersey_number, height_cm, weight_kg,
-               preferred_foot, created_at, updated_at, false as is_self_registered
+               preferred_foot, created_at, updated_at, false as is_self_registered,
+               display_name, profile_image_url, slug, current_club_cipher, nationality, gender
         FROM players
         WHERE agency_id = $1
         ORDER BY created_at DESC, id DESC LIMIT $2 OFFSET $3
@@ -377,7 +365,6 @@ export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
 
       countQuery = `SELECT COUNT(*)::int as count FROM players WHERE agency_id = $1`;
     } else {
-      // Security: If no ID provided, return empty list
       return res.json({
         success: true,
         data: {
@@ -396,6 +383,9 @@ export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
       playerCardId: p.player_card_id,
       firstName: decrypt(p.first_name_cipher),
       lastName: decrypt(p.last_name_cipher),
+      displayName: p.display_name || null,
+      profileImageUrl: p.profile_image_url || null,
+      slug: p.slug || null,
       dateOfBirth: decrypt(p.dob_cipher),
       position: p.position,
       email: decrypt(p.email_cipher),
@@ -404,6 +394,9 @@ export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
       height: p.height_cm ?? null,
       weight: p.weight_kg ?? null,
       preferredFoot: p.preferred_foot ?? null,
+      currentClub: p.current_club_cipher ? decrypt(p.current_club_cipher) : null,
+      nationality: p.nationality || null,
+      gender: p.gender || null,
       isActive: true,
       isSelfRegistered: p.is_self_registered,
       createdAt: p.created_at ? new Date(p.created_at).toISOString() : null,
@@ -426,7 +419,7 @@ export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
     console.error('Get academy players error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
-}
+};
 
 // Search Players
 export const handleSearchPlayers: RequestHandler = async (req, res) => {
@@ -443,8 +436,6 @@ export const handleSearchPlayers: RequestHandler = async (req, res) => {
       });
     }
 
-    // Search in encrypted first_name and last_name fields
-    // Note: This is a simplified search - in production you'd want more sophisticated search
     let searchQuery = '';
     const params: any[] = [];
 
@@ -481,7 +472,6 @@ export const handleSearchPlayers: RequestHandler = async (req, res) => {
 
     const { rows } = await query(searchQuery, params);
 
-    // Filter results by decrypted names (client-side filtering for encrypted data)
     const searchTerm = query_param.toLowerCase();
     const filteredResults = rows
       .map((p: any) => {
@@ -515,7 +505,7 @@ export const handleSearchPlayers: RequestHandler = async (req, res) => {
     console.error('Search players error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
-}
+};
 
 // Get Player Details
 export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
@@ -523,7 +513,6 @@ export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
     const { playerId } = req.params;
     console.log(`[GetPlayerDetails] Fetching details for player: ${playerId}`);
 
-    // Fetch player from database
     const playerQuery = `SELECT id, player_card_id, 
                                 first_name_cipher, last_name_cipher, 
                                 dob_cipher, position, 
@@ -552,12 +541,14 @@ export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
     if (playerResult.rows.length === 0) {
       console.log(`[GetPlayerDetails] Player not found in players table: ${playerId}. Checking individual_players...`);
       const individualQuery = `
-        SELECT ip.id, ip.first_name, ip.last_name, ip.email,
+        SELECT ip.id, ip.first_name, ip.last_name, ip.email, ip.gender,
                pp.position, pp.age, pp.nationality, pp.height, pp.weight, pp.preferred_foot,
                pp.bio, pp.career_history, pp.honours, pp.education, pp.video_links,
                pp.transfermarket_link, pp.gallery_images, pp.cover_image_url,
                pp.contact_email, pp.whatsapp_number, pp.social_links, pp.slug, pp.display_name, pp.profile_image_url,
-               pp.current_club, ip.created_at, ip.updated_at
+               pp.current_club, pp.address, pp.city, pp.country, pp.guardian_name, pp.guardian_phone,
+               pp.guardian_email, pp.guardian_info, pp.medical_info, pp.emergency_contact, pp.emergency_phone,
+               pp.playing_history, pp.notes, pp.internal_notes, ip.created_at, ip.updated_at
         FROM individual_players ip
         LEFT JOIN player_profiles pp ON ip.id = pp.player_id
         WHERE ip.id = $1
@@ -585,15 +576,15 @@ export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
           position: p.position || '',
           email: p.email || '',
           phone: p.whatsapp_number || '',
-          address: '',
-          gender: '',
-          guardianName: '',
-          guardianPhone: '',
-          guardianEmail: '',
-          guardianInfo: '',
-          medicalInfo: '',
-          emergencyContact: '',
-          playingHistory: '',
+          address: p.address || '',
+          gender: p.gender || '',
+          guardianName: p.guardian_name || '',
+          guardianPhone: p.guardian_phone || '',
+          guardianEmail: p.guardian_email || '',
+          guardianInfo: p.guardian_info || '',
+          medicalInfo: p.medical_info || '',
+          emergencyContact: p.emergency_contact || '',
+          playingHistory: p.playing_history || p.career_history || '',
           height: p.height || null,
           weight: p.weight || null,
           preferredFoot: p.preferred_foot ? p.preferred_foot.charAt(0).toUpperCase() + p.preferred_foot.slice(1) : '',
@@ -602,12 +593,12 @@ export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
           nationality: p.nationality || '',
           trainingStartDate: null,
           trainingEndDate: null,
-          emergencyPhone: '',
-          internalNotes: '',
-          notes: '',
+          emergencyPhone: p.emergency_phone || '',
+          internalNotes: p.internal_notes || '',
+          notes: p.notes || p.bio || '',
           currentClub: p.current_club || '',
-          city: '',
-          country: '',
+          city: p.city || '',
+          country: p.country || '',
           cardId: '',
           cardQrSignature: '',
           bio: p.bio || '',
@@ -633,7 +624,6 @@ export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
     }
 
     const player = playerResult.rows[0];
-    console.log(`[GetPlayerDetails] Player found. Decrypting...`);
 
     res.json({
       success: true,
@@ -660,20 +650,17 @@ export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
         preferredFoot: player.preferred_foot ? player.preferred_foot.charAt(0).toUpperCase() + player.preferred_foot.slice(1) : '',
         jerseyNumber: player.jersey_number || null,
         registrationDate: player.registration_date ? new Date(player.registration_date).toISOString().split('T')[0] : null,
-        // Add the missing fields to the response
         nationality: player.nationality || '',
         trainingStartDate: player.training_start_date ? new Date(player.training_start_date).toISOString().split('T')[0] : null,
         trainingEndDate: player.training_end_date ? new Date(player.training_end_date).toISOString().split('T')[0] : null,
         emergencyPhone: decrypt(player.emergency_phone_cipher) || '',
         internalNotes: player.internal_notes_cipher ? decrypt(player.internal_notes_cipher) : '',
         notes: decrypt(player.notes_cipher) || '',
-        // Add the new contact info fields
         currentClub: player.current_club_cipher ? decrypt(player.current_club_cipher) : '',
         city: decrypt(player.city_cipher) || '',
         country: decrypt(player.country_cipher) || '',
         cardId: player.card_id || '',
         cardQrSignature: player.card_qr_signature || '',
-        // Rich profile fields
         bio: player.bio || '',
         career_history: player.career_history || '',
         honours: player.honours || '',
@@ -689,8 +676,9 @@ export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
         display_name: player.display_name || '',
         profile_image_url: player.profile_image_url || '',
         isActive: true,
-        createdAt: player.created_at.toISOString(),
-        updatedAt: player.updated_at.toISOString()
+        isSelfRegistered: false,
+        createdAt: player.created_at ? new Date(player.created_at).toISOString() : '',
+        updatedAt: player.updated_at ? new Date(player.updated_at).toISOString() : ''
       }
     });
 
@@ -698,7 +686,7 @@ export const handleGetPlayerDetails: RequestHandler = async (req, res) => {
     console.error('Get player details error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
-}
+};
 
 // Update Player
 export const handleUpdatePlayer: RequestHandler = async (req, res) => {
@@ -706,19 +694,16 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
     const { playerId } = req.params;
     const updateData = req.body;
 
-    // Check if player exists
     const checkQuery = 'SELECT * FROM players WHERE id = $1';
     const existingResult = await query(checkQuery, [playerId]);
 
     if (existingResult.rows.length === 0) {
       console.log(`[UpdatePlayer] Player not found in players table: ${playerId}. Checking individual_players...`);
-      // Check if it's a self-registered individual player
       const individualCheck = await query('SELECT * FROM individual_players WHERE id = $1', [playerId]);
       if (individualCheck.rows.length === 0) {
         return res.status(404).json({ success: false, message: 'Player not found' });
       }
       
-      // Update individual_players table
       const ipUpdates: string[] = [];
       const ipValues: any[] = [];
       let ipParamCount = 1;
@@ -735,13 +720,16 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
         ipUpdates.push(`email = $${ipParamCount++}`);
         ipValues.push(updateData.email || '');
       }
+      if (updateData.gender !== undefined) {
+        ipUpdates.push(`gender = $${ipParamCount++}`);
+        ipValues.push(updateData.gender || null);
+      }
       
       if (ipUpdates.length > 0) {
         ipValues.push(playerId);
         await query(`UPDATE individual_players SET ${ipUpdates.join(', ')}, updated_at = NOW() WHERE id = $${ipParamCount}`, ipValues);
       }
       
-      // Update player_profiles table
       const ppUpdates: string[] = [];
       const ppValues: any[] = [];
       let ppParamCount = 1;
@@ -761,6 +749,58 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
       if (updateData.preferredFoot !== undefined) {
         ppUpdates.push(`preferred_foot = $${ppParamCount++}`);
         ppValues.push(updateData.preferredFoot ? updateData.preferredFoot.toLowerCase() : null);
+      }
+      if (updateData.address !== undefined) {
+        ppUpdates.push(`address = $${ppParamCount++}`);
+        ppValues.push(updateData.address);
+      }
+      if (updateData.city !== undefined) {
+        ppUpdates.push(`city = $${ppParamCount++}`);
+        ppValues.push(updateData.city);
+      }
+      if (updateData.country !== undefined) {
+        ppUpdates.push(`country = $${ppParamCount++}`);
+        ppValues.push(updateData.country);
+      }
+      if (updateData.guardianName !== undefined || updateData.parentName !== undefined) {
+        ppUpdates.push(`guardian_name = $${ppParamCount++}`);
+        ppValues.push(updateData.guardianName || updateData.parentName);
+      }
+      if (updateData.guardianPhone !== undefined || updateData.parentPhone !== undefined) {
+        ppUpdates.push(`guardian_phone = $${ppParamCount++}`);
+        ppValues.push(updateData.guardianPhone || updateData.parentPhone);
+      }
+      if (updateData.guardianEmail !== undefined || updateData.parentEmail !== undefined) {
+        ppUpdates.push(`guardian_email = $${ppParamCount++}`);
+        ppValues.push(updateData.guardianEmail || updateData.parentEmail);
+      }
+      if (updateData.guardianInfo !== undefined) {
+        ppUpdates.push(`guardian_info = $${ppParamCount++}`);
+        ppValues.push(updateData.guardianInfo);
+      }
+      if (updateData.medicalInfo !== undefined) {
+        ppUpdates.push(`medical_info = $${ppParamCount++}`);
+        ppValues.push(updateData.medicalInfo);
+      }
+      if (updateData.emergencyContact !== undefined) {
+        ppUpdates.push(`emergency_contact = $${ppParamCount++}`);
+        ppValues.push(updateData.emergencyContact);
+      }
+      if (updateData.emergencyPhone !== undefined) {
+        ppUpdates.push(`emergency_phone = $${ppParamCount++}`);
+        ppValues.push(updateData.emergencyPhone);
+      }
+      if (updateData.playingHistory !== undefined) {
+        ppUpdates.push(`playing_history = $${ppParamCount++}`);
+        ppValues.push(updateData.playingHistory);
+      }
+      if (updateData.notes !== undefined) {
+        ppUpdates.push(`notes = $${ppParamCount++}`);
+        ppValues.push(updateData.notes);
+      }
+      if (updateData.internalNotes !== undefined) {
+        ppUpdates.push(`internal_notes = $${ppParamCount++}`);
+        ppValues.push(updateData.internalNotes);
       }
       if (updateData.bio !== undefined) {
         ppUpdates.push(`bio = $${ppParamCount++}`);
@@ -843,14 +883,15 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
         await query(`UPDATE player_profiles SET ${ppUpdates.join(', ')}, updated_at = NOW() WHERE player_id = $${ppParamCount}`, ppValues);
       }
       
-      // Fetch the updated profile and return it in standard player response shape
       const updatedRes = await query(
-        `SELECT ip.id, ip.first_name, ip.last_name, ip.email,
+        `SELECT ip.id, ip.first_name, ip.last_name, ip.email, ip.gender,
                 pp.position, pp.age, pp.nationality, pp.height, pp.weight, pp.preferred_foot,
                 pp.bio, pp.career_history, pp.honours, pp.education, pp.video_links,
                 pp.transfermarket_link, pp.gallery_images, pp.cover_image_url,
                 pp.contact_email, pp.whatsapp_number, pp.social_links, pp.slug, pp.display_name, pp.profile_image_url,
-                pp.current_club, ip.created_at, ip.updated_at
+                pp.current_club, pp.address, pp.city, pp.country, pp.guardian_name, pp.guardian_phone,
+                pp.guardian_email, pp.guardian_info, pp.medical_info, pp.emergency_contact, pp.emergency_phone,
+                pp.playing_history, pp.notes, pp.internal_notes, ip.created_at, ip.updated_at
          FROM individual_players ip
          LEFT JOIN player_profiles pp ON ip.id = pp.player_id
          WHERE ip.id = $1`,
@@ -872,15 +913,15 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
           position: p.position || '',
           email: p.email || '',
           phone: p.whatsapp_number || '',
-          address: '',
-          gender: '',
-          guardianName: '',
-          guardianPhone: '',
-          guardianEmail: '',
-          guardianInfo: '',
-          medicalInfo: '',
-          emergencyContact: '',
-          playingHistory: '',
+          address: p.address || '',
+          gender: p.gender || '',
+          guardianName: p.guardian_name || '',
+          guardianPhone: p.guardian_phone || '',
+          guardianEmail: p.guardian_email || '',
+          guardianInfo: p.guardian_info || '',
+          medicalInfo: p.medical_info || '',
+          emergencyContact: p.emergency_contact || '',
+          playingHistory: p.playing_history || p.career_history || '',
           height: p.height || null,
           weight: p.weight || null,
           preferredFoot: p.preferred_foot ? p.preferred_foot.charAt(0).toUpperCase() + p.preferred_foot.slice(1) : '',
@@ -889,12 +930,12 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
           nationality: p.nationality || '',
           trainingStartDate: null,
           trainingEndDate: null,
-          emergencyPhone: '',
-          internalNotes: '',
-          notes: '',
+          emergencyPhone: p.emergency_phone || '',
+          internalNotes: p.internal_notes || '',
+          notes: p.notes || p.bio || '',
           currentClub: p.current_club || '',
-          city: '',
-          country: '',
+          city: p.city || '',
+          country: p.country || '',
           cardId: '',
           cardQrSignature: '',
           bio: p.bio || '',
@@ -921,12 +962,10 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
 
     const existing = existingResult.rows[0];
 
-    // Build update query
     const updates: string[] = [];
     const values: any[] = [];
     let paramCount = 1;
 
-    // Encrypt and update fields that require it
     if (updateData.firstName !== undefined) {
       updates.push(`first_name_cipher = $${paramCount++}`);
       values.push(encrypt(updateData.firstName));
@@ -945,7 +984,6 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
     }
     if (updateData.phone !== undefined || updateData.phoneCountryCode !== undefined) {
       updates.push(`phone_cipher = $${paramCount++}`);
-      // Combine phoneCountryCode and phone if both are provided, otherwise use existing logic
       let combinedPhone = '';
       if (updateData.phoneCountryCode && updateData.phone) {
         combinedPhone = `${updateData.phoneCountryCode}${updateData.phone}`;
@@ -982,38 +1020,38 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
       updates.push(`playing_history_cipher = $${paramCount++}`);
       values.push(encrypt(updateData.playingHistory || ''));
     }
-
-    // Non-encrypted fields
     if (updateData.position !== undefined) {
       updates.push(`position = $${paramCount++}`);
       values.push(updateData.position);
-    }
-    if (updateData.height !== undefined) {
-      updates.push(`height_cm = $${paramCount++}`);
-      values.push(updateData.height ? parseFloat(updateData.height) : null);
-    }
-    if (updateData.weight !== undefined) {
-      updates.push(`weight_kg = $${paramCount++}`);
-      values.push(updateData.weight ? parseFloat(updateData.weight) : null);
     }
     if (updateData.preferredFoot !== undefined) {
       updates.push(`preferred_foot = $${paramCount++}`);
       values.push(updateData.preferredFoot ? updateData.preferredFoot.toLowerCase() : null);
     }
+    if (updateData.height !== undefined) {
+      updates.push(`height_cm = $${paramCount++}`);
+      values.push(updateData.height ? parseInt(updateData.height) : null);
+    }
+    if (updateData.weight !== undefined) {
+      updates.push(`weight_kg = $${paramCount++}`);
+      values.push(updateData.weight ? parseFloat(updateData.weight) : null);
+    }
     if (updateData.jerseyNumber !== undefined) {
       updates.push(`jersey_number = $${paramCount++}`);
       values.push(updateData.jerseyNumber ? parseInt(updateData.jerseyNumber) : null);
     }
+    if (updateData.guardianInfo !== undefined) {
+      updates.push(`guardian_info_cipher = $${paramCount++}`);
+      values.push(encrypt(updateData.guardianInfo || ''));
+    }
     if (updateData.gender !== undefined) {
       updates.push(`gender = $${paramCount++}`);
-      values.push(updateData.gender || null);
+      values.push(updateData.gender);
     }
     if (updateData.registrationDate !== undefined) {
       updates.push(`registration_date = $${paramCount++}`);
       values.push(updateData.registrationDate ? new Date(updateData.registrationDate) : null);
     }
-
-    // Handle missing fields that were not being saved
     if (updateData.nationality !== undefined) {
       updates.push(`nationality = $${paramCount++}`);
       values.push(updateData.nationality || null);
@@ -1025,20 +1063,6 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
     if (updateData.trainingEndDate !== undefined) {
       updates.push(`training_end_date = $${paramCount++}`);
       values.push(updateData.trainingEndDate ? new Date(updateData.trainingEndDate) : null);
-    }
-
-    // Handle contact information fields
-    if (updateData.currentClub !== undefined) {
-      updates.push(`current_club_cipher = $${paramCount++}`);
-      values.push(encrypt(updateData.currentClub || ''));
-    }
-    if (updateData.city !== undefined) {
-      updates.push(`city_cipher = $${paramCount++}`);
-      values.push(encrypt(updateData.city || ''));
-    }
-    if (updateData.country !== undefined) {
-      updates.push(`country_cipher = $${paramCount++}`);
-      values.push(encrypt(updateData.country || ''));
     }
     if (updateData.emergencyPhone !== undefined) {
       updates.push(`emergency_phone_cipher = $${paramCount++}`);
@@ -1052,8 +1076,19 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
       updates.push(`notes_cipher = $${paramCount++}`);
       values.push(encrypt(updateData.notes || ''));
     }
+    if (updateData.currentClub !== undefined) {
+      updates.push(`current_club_cipher = $${paramCount++}`);
+      values.push(encrypt(updateData.currentClub || ''));
+    }
+    if (updateData.city !== undefined) {
+      updates.push(`city_cipher = $${paramCount++}`);
+      values.push(encrypt(updateData.city || ''));
+    }
+    if (updateData.country !== undefined) {
+      updates.push(`country_cipher = $${paramCount++}`);
+      values.push(encrypt(updateData.country || ''));
+    }
 
-    // Rich profile fields for academy players
     if (updateData.bio !== undefined) {
       updates.push(`bio = $${paramCount++}`);
       values.push(updateData.bio);
@@ -1111,14 +1146,11 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
       values.push(updateData.profile_image_url);
     }
 
-    // Add updated_at timestamp
     updates.push(`updated_at = $${paramCount++}`);
     values.push(new Date());
 
-    // Add player ID as the last parameter
     values.push(playerId);
 
-    // Execute update query if there are fields to update
     if (updates.length > 0) {
       const updateQuery = `
         UPDATE players 
@@ -1130,7 +1162,6 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
       const result = await query(updateQuery, values);
       const player = result.rows[0];
 
-      // Decrypt data for the response
       const decryptedPlayer = {
         id: player.id,
         playerCardId: player.player_card_id,
@@ -1153,7 +1184,6 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
         preferredFoot: player.preferred_foot ? player.preferred_foot.charAt(0).toUpperCase() + player.preferred_foot.slice(1) : '',
         jerseyNumber: player.jersey_number || null,
         registrationDate: player.registration_date ? new Date(player.registration_date).toISOString().split('T')[0] : null,
-        // Add the missing fields to the response
         nationality: player.nationality || '',
         trainingStartDate: player.training_start_date ? new Date(player.training_start_date).toISOString().split('T')[0] : null,
         trainingEndDate: player.training_end_date ? new Date(player.training_end_date).toISOString().split('T')[0] : null,
@@ -1162,7 +1192,6 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
         notes: player.notes_cipher ? decrypt(player.notes_cipher) : '',
         cardId: player.card_id || '',
         cardQrSignature: player.card_qr_signature || '',
-        // Rich profile fields
         bio: player.bio || '',
         career_history: player.career_history || '',
         honours: player.honours || '',
@@ -1188,7 +1217,6 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
         data: decryptedPlayer,
       });
     } else {
-      // No fields to update
       res.json({
         success: true,
         message: 'No changes to update',
@@ -1218,14 +1246,13 @@ export const handleUpdatePlayer: RequestHandler = async (req, res) => {
       message: 'Internal server error'
     });
   }
-}
+};
 
 // Delete Player
 export const handleDeletePlayer: RequestHandler = async (req, res) => {
   try {
     const { playerId } = req.params;
 
-    // Check if player exists and get encrypted data
     const checkQuery = 'SELECT id, first_name_cipher, last_name_cipher FROM players WHERE id = $1';
     const existingResult = await query(checkQuery, [playerId]);
 
@@ -1237,7 +1264,6 @@ export const handleDeletePlayer: RequestHandler = async (req, res) => {
         return res.status(404).json({ success: false, message: 'Player not found' });
       }
       
-      // Unlink self-registered player from academy instead of full delete
       await query('UPDATE individual_players SET academy_id = NULL WHERE id = $1', [playerId]);
       
       const firstName = individualCheck.rows[0].first_name || 'Unknown';
@@ -1257,8 +1283,6 @@ export const handleDeletePlayer: RequestHandler = async (req, res) => {
 
     existingPlayer = existingResult.rows[0];
 
-    // For now, implement hard delete since is_active column doesn't exist
-    // In production, you might want to add the is_active column first
     const deleteQuery = 'DELETE FROM players WHERE id = $1 RETURNING id';
     const result = await query(deleteQuery, [playerId]);
 
@@ -1266,7 +1290,6 @@ export const handleDeletePlayer: RequestHandler = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Player not found' });
     }
 
-    // Decrypt the player names for the response
     const firstName = existingPlayer.first_name_cipher ? decrypt(existingPlayer.first_name_cipher) : 'Unknown';
     const lastName = existingPlayer.last_name_cipher ? decrypt(existingPlayer.last_name_cipher) : 'Player';
 
@@ -1284,7 +1307,7 @@ export const handleDeletePlayer: RequestHandler = async (req, res) => {
     console.error('Delete player error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
-}
+};
 
 // Get Player Statistics
 export const handleGetPlayerStatistics: RequestHandler = async (req, res) => {
@@ -1295,7 +1318,6 @@ export const handleGetPlayerStatistics: RequestHandler = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Academy ID is required' });
     }
 
-    // Total players count
     let totalPlayersCount = 0;
     try {
       const totalPlayersQuery = 'SELECT COUNT(*) as count FROM "Players" WHERE academy_id = $1';
@@ -1307,11 +1329,8 @@ export const handleGetPlayerStatistics: RequestHandler = async (req, res) => {
       totalPlayersCount = parseInt(result.rows[0].count);
     }
 
-    // Active players count (same as total since we don't have is_active column yet, or it's handled in where clause if it existed)
-    // Using total for now as placeholder
     const activePlayersCount = totalPlayersCount;
 
-    // Position statistics
     let positionStatsResult: any[] = [];
     try {
       const positionStatsQuery = `
@@ -1335,7 +1354,6 @@ export const handleGetPlayerStatistics: RequestHandler = async (req, res) => {
       positionStatsResult = result.rows;
     }
 
-    // Age groups statistics
     let ageGroupsResult: any[] = [];
     try {
       const ageGroupsQuery = `
@@ -1373,7 +1391,6 @@ export const handleGetPlayerStatistics: RequestHandler = async (req, res) => {
       ageGroupsResult = result.rows;
     }
 
-    // Recent players (using encrypted columns)
     const recentPlayersQuery = `
       SELECT id, first_name_cipher, last_name_cipher, position, created_at
       FROM players 
@@ -1416,9 +1433,7 @@ export const handleGetPlayerStatistics: RequestHandler = async (req, res) => {
     console.error('Get player statistics error:', error);
     res.status(500).json({ success: false, message: 'Internal server error' });
   }
-}
-
-
+};
 
 // Bulk Import Players
 export const handleBulkImportPlayers: RequestHandler = async (req, res) => {
@@ -1433,7 +1448,6 @@ export const handleBulkImportPlayers: RequestHandler = async (req, res) => {
       });
     }
 
-    // Check academy's subscription limits
     const academyQuery = `
       SELECT a.*, 
         (SELECT COUNT(*) FROM players p WHERE p.academy_id = a.id AND p.is_active = true) as player_count,
@@ -1466,8 +1480,7 @@ export const handleBulkImportPlayers: RequestHandler = async (req, res) => {
       });
     }
 
-    // Check if bulk import would exceed player limit
-    if (academy.player_limit !== -1) { // -1 means unlimited
+    if (academy.player_limit !== -1) {
       const newPlayerCount = parseInt(academy.player_count) + players.length;
       if (newPlayerCount > academy.player_limit) {
         return res.status(403).json({
@@ -1478,16 +1491,14 @@ export const handleBulkImportPlayers: RequestHandler = async (req, res) => {
     }
 
     const results = {
-      successful: [],
-      failed: []
+      successful: [] as any[],
+      failed: [] as any[]
     };
 
-    // Process each player
     for (let i = 0; i < players.length; i++) {
       const playerData = players[i];
 
       try {
-        // Validate required fields
         if (!playerData.firstName || !playerData.lastName || !playerData.dateOfBirth || !playerData.position) {
           results.failed.push({
             row: i + 1,
@@ -1497,7 +1508,6 @@ export const handleBulkImportPlayers: RequestHandler = async (req, res) => {
           continue;
         }
 
-        // Check jersey number conflict
         if (playerData.jerseyNumber) {
           const jerseyNumberQuery = `
             SELECT id FROM players 
@@ -1521,7 +1531,6 @@ export const handleBulkImportPlayers: RequestHandler = async (req, res) => {
           }
         }
 
-        // Create player
         const playerId = uuidv4();
         const createPlayerQuery = `
           INSERT INTO players (
@@ -1585,7 +1594,6 @@ export const handleBulkImportPlayers: RequestHandler = async (req, res) => {
       }
     }
 
-    // Log activity
     const logActivityQuery = `
       INSERT INTO activities (
         id, academy_id, action, description, metadata, ip_address, created_at
@@ -1620,7 +1628,7 @@ export const handleBulkImportPlayers: RequestHandler = async (req, res) => {
       message: 'Internal server error'
     });
   }
-}
+};
 
 // Check Slug Availability for academy players
 export const handleCheckSlugAvailability: RequestHandler = async (req, res) => {
@@ -1636,7 +1644,6 @@ export const handleCheckSlugAvailability: RequestHandler = async (req, res) => {
       return res.json({ available: false, message: 'Link Name must contain only lowercase letters, numbers, and hyphens.' });
     }
 
-    // Check if taken in player_profiles (individual players)
     const indyCheck = await query(
       'SELECT player_id FROM player_profiles WHERE slug = $1',
       [slug]
@@ -1646,7 +1653,6 @@ export const handleCheckSlugAvailability: RequestHandler = async (req, res) => {
       return res.json({ available: false, message: 'Link Name is already taken.' });
     }
 
-    // Check if taken in players (academy players)
     const academyCheck = await query(
       'SELECT id FROM players WHERE slug = $1 AND id != $2',
       [slug, playerId || '']
