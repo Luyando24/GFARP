@@ -279,8 +279,7 @@ export default function PlayerDashboard() {
       const data = await PlayerApi.getProfile();
 
       // Strip any legacy base64 data: URLs that may be stored in the DB.
-      // These would cause FUNCTION_PAYLOAD_TOO_LARGE if re-sent on save.
-      const clean = sanitizeImageFields(data);
+      const clean = sanitizeImageFields(data as any);
       setProfile(clean as PlayerProfile);
       
       const draftStr = localStorage.getItem('player_profile_draft');
@@ -384,7 +383,8 @@ export default function PlayerDashboard() {
    * Players who had small images saved to the DB before this fix would
    * otherwise re-send those blobs on every subsequent save.
    */
-  const sanitizeImageFields = <T extends Record<string, unknown>>(obj: T): T => {
+  const sanitizeImageFields = <T extends Record<string, any>>(obj: T): T => {
+    if (!obj) return obj;
     const isBase64 = (v: unknown) => typeof v === 'string' && v.startsWith('data:');
     return {
       ...obj,

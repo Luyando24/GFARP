@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth, clearSession, isAdmin } from '@/lib/auth';
 import { useToast } from '@/components/ui/use-toast';
 import AcademyManagement from '../components/academy/AcademyManagement';
@@ -134,6 +134,7 @@ import TestimonialManagement from '@/components/admin/TestimonialManagement';
 import DiscountManager from '@/components/admin/DiscountManager';
 import ExemptionManager from '@/components/admin/ExemptionManager';
 import PlanManagement from '@/components/admin/PlanManagement';
+import AllPlayersManagement from '@/components/admin/AllPlayersManagement';
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTranslation } from "@/lib/i18n";
 
@@ -220,12 +221,20 @@ interface ComplianceRecord {
 
 export default function AdminDashboard() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { dir } = useTranslation();
   usePageTitle("Admin Panel");
   const { session } = useAuth();
   const { toast } = useToast();
-  const [activeTab, setActiveTab] = useState("dashboard");
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    const tabParam = searchParams.get('tab');
+    if (tabParam) {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   // Users state for admin list
   const [users, setUsers] = useState<any[]>([]);
@@ -1262,6 +1271,7 @@ export default function AdminDashboard() {
       title: "Core Management",
       items: [
         { id: "dashboard", label: "Dashboard", icon: Home },
+        { id: "all-players", label: "All Players Directory", icon: Users },
         { id: "academies", label: "Academy Management", icon: Building },
         { id: "players", label: "Individual Players", icon: User },
         { id: "super-admins", label: "Super Admins", icon: Users },
@@ -1705,6 +1715,11 @@ export default function AdminDashboard() {
                   </CardContent>
                 </Card>
               </div>
+            </TabsContent>
+
+            {/* All Players Directory Tab */}
+            <TabsContent value="all-players" className="space-y-6">
+              <AllPlayersManagement />
             </TabsContent>
 
             {/* Individual Players Tab */}

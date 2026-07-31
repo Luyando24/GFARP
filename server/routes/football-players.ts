@@ -421,6 +421,138 @@ export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
   }
 };
 
+// Admin: Get and search ALL players (across all academies and individual registrations)
+export const handleGetAllAdminPlayers: RequestHandler = async (req, res) => {
+  try {
+    const search = ((req.query.search || req.query.q || '') as string).trim().toLowerCase();
+    const registrationType = (req.query.registrationType as string) || 'all';
+    const academyIdFilter = (req.query.academyId as string) || 'all';
+
+    const baseQuery = `
+      SELECT * FROM (
+        SELECT p.id, p.player_card_id, p.first_name_cipher, p.last_name_cipher, p.dob_cipher, 
+               p.position, p.email_cipher, p.phone_cipher, p.jersey_number, p.height_cm, p.weight_kg,
+               p.preferred_foot, p.created_at, p.updated_at, false as is_self_registered,
+               p.display_name, p.profile_image_url, p.slug, p.current_club_cipher, p.nationality, p.gender,
+               p.academy_id, a.name as academy_name
+        FROM players p
+        LEFT JOIN academies a ON a.id = p.academy_id
+
+        UNION ALL
+
+        SELECT ip.id, NULL::text as player_card_id, 
+               ip.first_name::bytea as first_name_cipher, ip.last_name::bytea as last_name_cipher, 
+               CASE WHEN pp.age IS NULL THEN NULL ELSE ((EXTRACT(YEAR FROM NOW()) - pp.age)::text || '-01-01')::bytea END as dob_cipher,
+               pp.position, ip.email::bytea as email_cipher, pp.whatsapp_number::bytea as phone_cipher, 
+               NULL::integer as jersey_number, pp.height::integer as height_cm, pp.weight as weight_kg,
+               pp.preferred_foot, ip.created_at, ip.updated_at, true as is_self_registered,
+               pp.display_name, pp.profile_image_url, pp.slug, pp.current_club::bytea as current_club_cipher, pp.nationality, ip.gender,
+               ip.academy_id, a.name as academy_name
+        FROM individual_players ip
+        LEFT JOIN player_profiles pp ON ip.id = pp.player_id
+        LEFT JOIN academies a ON a.id = ip.academy_id
+      ) combined_players
+      ORDER BY created_at DESC, id DESC
+    `;
+
+    const { rows } = await query(baseQuery);
+
+    let mapped = rows.map((p: any) => {
+      const firstName = decrypt(p.first_name_cipher) || '';
+      const lastName = decrypt(p.last_name_cipher) || '';
+      const fullName = p.display_name || `${firstName} ${lastName}`.trim() || 'Unnamed Player';
+      const email = decrypt(p.email_cipher) || '';
+      const phone = decrypt(p.phone_cipher) || '';
+      const currentClub = p.current_club_cipher ? decrypt(p.current_club_cipher) : null;
+      const dateOfBirth = decrypt(p.dob_cipher) || null;
+
+      let age: number | null = null;
+      if (dateOfBirth) {
+        const dobDate = new Date(dateOfBirth);
+        if (!isNaN(dobDate.getTime())) {
+          const ageDifMs = Date.now() - dobDate.getTime();
+          const ageDate = new Date(ageDifMs);
+          age = Math.abs(ageDate.getUTCFullYear() - 1970);
+        }
+      }
+
+      const isSelf = Boolean(p.is_self_registered);
+      let academyName = p.academy_name;
+      if (!academyName) {
+        academyName = isSelf ? 'Independent / Self-Registered' : 'Unassigned Academy';
+      }
+
+      return {
+        id: p.id,
+        playerCardId: p.player_card_id || null,
+        firstName,
+        lastName,
+        fullName,
+        displayName: p.display_name || null,
+        email,
+        phone,
+        position: p.position || 'Unassigned',
+        jerseyNumber: p.jersey_number ?? null,
+        dateOfBirth,
+        age,
+        height: p.height_cm ?? null,
+        weight: p.weight_kg ?? null,
+        preferredFoot: p.preferred_foot ?? null,
+        photoUrl: p.profile_image_url || null,
+        slug: p.slug || null,
+        currentClub: currentClub || null,
+        nationality: p.nationality || null,
+        gender: p.gender || null,
+        academyId: p.academy_id || null,
+        academyName,
+        isSelfRegistered: isSelf,
+        createdAt: p.created_at
+      };
+    });
+
+    if (registrationType === 'academy') {
+      mapped = mapped.filter(p => !p.isSelfRegistered);
+    } else if (registrationType === 'individual') {
+      mapped = mapped.filter(p => p.isSelfRegistered);
+    }
+
+    if (academyIdFilter && academyIdFilter !== 'all') {
+      mapped = mapped.filter(p => p.academyId === academyIdFilter);
+    }
+
+    if (search) {
+      mapped = mapped.filter(p =>
+        p.fullName.toLowerCase().includes(search) ||
+        p.email.toLowerCase().includes(search) ||
+        p.phone.toLowerCase().includes(search) ||
+        p.position.toLowerCase().includes(search) ||
+        p.academyName.toLowerCase().includes(search) ||
+        (p.currentClub && p.currentClub.toLowerCase().includes(search)) ||
+        (p.playerCardId && p.playerCardId.toLowerCase().includes(search)) ||
+        (p.nationality && p.nationality.toLowerCase().includes(search))
+      );
+    }
+
+    const stats = {
+      totalPlayers: mapped.length,
+      academyPlayers: mapped.filter(p => !p.isSelfRegistered).length,
+      individualPlayers: mapped.filter(p => p.isSelfRegistered).length
+    };
+
+    return res.json({
+      success: true,
+      data: {
+        players: mapped,
+        stats
+      }
+    });
+
+  } catch (error: any) {
+    console.error('Error fetching all admin players:', error);
+    return res.status(500).json({ success: false, message: 'Failed to fetch players', error: error.message });
+  }
+};
+
 // Search Players
 export const handleSearchPlayers: RequestHandler = async (req, res) => {
   try {
@@ -1688,6 +1820,7 @@ export const handleCheckSlugAvailability: RequestHandler = async (req, res) => {
 };
 
 // Mount routes
+router.get('/all-admin', handleGetAllAdminPlayers);
 router.get('/', handleGetAcademyPlayers);
 router.get('/search', handleSearchPlayers);
 router.get('/statistics', handleGetPlayerStatistics);

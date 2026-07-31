@@ -47,6 +47,12 @@ const navigationGroups = [
     title: 'Management',
     items: [
       {
+        title: 'All Players',
+        href: '/admin?tab=all-players',
+        icon: Users,
+        description: 'Directory of all players'
+      },
+      {
         title: 'Subscriptions',
         href: '/admin/subscriptions',
         icon: CreditCard,
