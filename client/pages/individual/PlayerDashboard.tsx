@@ -277,21 +277,25 @@ export default function PlayerDashboard() {
   const fetchProfile = async () => {
     try {
       const data = await PlayerApi.getProfile();
-      setProfile(data);
+
+      // Strip any legacy base64 data: URLs that may be stored in the DB.
+      // These would cause FUNCTION_PAYLOAD_TOO_LARGE if re-sent on save.
+      const clean = sanitizeImageFields(data);
+      setProfile(clean as PlayerProfile);
       
       const draftStr = localStorage.getItem('player_profile_draft');
       if (draftStr) {
         try {
           const draft = JSON.parse(draftStr);
-          setFormData({ ...data, ...draft });
+          setFormData({ ...clean, ...sanitizeImageFields(draft) });
           setIsEditing(true);
           setActiveTab('profile');
         } catch (e) {
           console.error("Failed to parse player profile draft", e);
-          setFormData(data);
+          setFormData(clean);
         }
       } else {
-        setFormData(data);
+        setFormData(clean);
       }
 
       if (data.active_plan) {
@@ -375,6 +379,23 @@ export default function PlayerDashboard() {
     }
   };
 
+  /**
+   * Strips any legacy base64 data: URLs from image fields.
+   * Players who had small images saved to the DB before this fix would
+   * otherwise re-send those blobs on every subsequent save.
+   */
+  const sanitizeImageFields = <T extends Record<string, unknown>>(obj: T): T => {
+    const isBase64 = (v: unknown) => typeof v === 'string' && v.startsWith('data:');
+    return {
+      ...obj,
+      profile_image_url: isBase64(obj.profile_image_url) ? undefined : obj.profile_image_url,
+      cover_image_url:   isBase64(obj.cover_image_url)   ? undefined : obj.cover_image_url,
+      gallery_images: Array.isArray(obj.gallery_images)
+        ? (obj.gallery_images as string[]).map(img => isBase64(img) ? '' : img)
+        : obj.gallery_images,
+    };
+  };
+
   const handleSaveProfile = async () => {
     // Prevent save if slug is invalid (and explicitly checked as false)
     if (slugAvailable === false) {
@@ -384,7 +405,8 @@ export default function PlayerDashboard() {
 
     setSaving(true);
     try {
-      await PlayerApi.updateProfile(formData);
+      // Strip any base64 blobs before sending — safety net for legacy DB data
+      await PlayerApi.updateProfile(sanitizeImageFields(formData as Record<string, unknown>) as typeof formData);
       // Safely merge profile to ensure state updates
       setProfile(prev => prev ? { ...prev, ...formData } as PlayerProfile : formData as PlayerProfile);
       setIsEditing(false);

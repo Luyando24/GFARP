@@ -1,12 +1,19 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Supabase configuration
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY
+// Default fallback Supabase configuration for production client bundle
+const DEFAULT_SUPABASE_URL = 'https://lpsujzvospfaomgkrcew.supabase.co';
+const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxwc3VqenZvc3BmYW9tZ2tyY2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzEwMTQsImV4cCI6MjA3NjYwNzAxNH0.5Q210arv1Xd0ab87OM5VYklq1yoML6CpmIuzEQRjRdE';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables. Please check your .env file.')
-}
+// Supabase configuration
+const supabaseUrl =
+  import.meta.env.VITE_SUPABASE_URL ||
+  (typeof process !== 'undefined' && process.env ? process.env.REACT_APP_SUPABASE_URL : undefined) ||
+  DEFAULT_SUPABASE_URL;
+
+const supabaseAnonKey =
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  (typeof process !== 'undefined' && process.env ? process.env.REACT_APP_SUPABASE_ANON_KEY : undefined) ||
+  DEFAULT_SUPABASE_ANON_KEY;
 
 // Create Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {

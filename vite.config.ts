@@ -36,7 +36,9 @@ export default defineConfig(({ mode }) => ({
     external: []
   },
   define: {
-    global: 'globalThis'
+    global: 'globalThis',
+    'process.env.VITE_SUPABASE_URL': JSON.stringify(process.env.VITE_SUPABASE_URL || process.env.REACT_APP_SUPABASE_URL || "https://lpsujzvospfaomgkrcew.supabase.co"),
+    'process.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(process.env.VITE_SUPABASE_ANON_KEY || process.env.REACT_APP_SUPABASE_ANON_KEY || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxwc3VqenZvc3BmYW9tZ2tyY2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzEwMTQsImV4cCI6MjA3NjYwNzAxNH0.5Q210arv1Xd0ab87OM5VYklq1yoML6CpmIuzEQRjRdE"),
   },
   test: {
     environment: 'jsdom',
