@@ -34,7 +34,7 @@ router.get('/list', (async (req, res) => {
     res.json({ success: true, data: rows });
   } catch (error) {
     console.error('Error fetching notification list:', error);
-    res.status(500).json({ error: 'Failed to fetch notifications' });
+    res.json({ success: true, data: [] });
   }
 }) as RequestHandler);
 
