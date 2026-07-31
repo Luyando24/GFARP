@@ -58,6 +58,14 @@ export function getProfileSaveErrorMessage(
     };
   }
 
+  if (status === 413) {
+    return {
+      title: "Image is too large to save",
+      description: "One of your images could not be processed. Please try uploading it again, or use a smaller image.",
+      action: "retry",
+    };
+  }
+
   if (error instanceof AuthError || status === 401) {
     return {
       title: "Your session has expired",

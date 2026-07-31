@@ -29,7 +29,8 @@ export const STORAGE_BUCKETS = {
   AVATARS: 'avatars',
   DOCUMENTS: 'documents',
   ACADEMY_MEDIA: 'academy-media',
-  PLAYER_PHOTOS: 'player-photos'
+  PLAYER_PHOTOS: 'player-photos',
+  PLAYER_IMAGES: 'player-images'
 } as const
 
 // Helper function to get public URL for uploaded files

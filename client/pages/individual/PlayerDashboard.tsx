@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PlayerApi, PlayerProfile } from "@/lib/api";
 import { getProfileSaveErrorMessage } from "@/lib/profile-save-error";
+import { supabase, STORAGE_BUCKETS } from "@/lib/supabase";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import PlayerPaymentMethodSelector from "@/components/PlayerPaymentMethodSelector";
@@ -150,6 +151,10 @@ export default function PlayerDashboard() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
+  // Image Upload State – tracks which slots are currently uploading
+  // Keys: 'profile_image_url' | 'cover_image_url' | 'gallery_0' | 'gallery_1' | 'gallery_2'
+  const [uploadingImages, setUploadingImages] = useState<Record<string, boolean>>({});
+
   useEffect(() => {
     const initializeDashboard = async () => {
       setLoading(true);
@@ -189,10 +194,19 @@ export default function PlayerDashboard() {
     return () => clearTimeout(timer);
   }, [formData.slug, profile]);
 
-  // Autosave draft profile to localStorage when formData changes
+  // Autosave draft profile to localStorage when formData changes.
+  // Strip any base64 data: URLs from the draft so we never persist large blobs.
   useEffect(() => {
     if (isEditing && profile && formData && Object.keys(formData).length > 0) {
-      localStorage.setItem('player_profile_draft', JSON.stringify(formData));
+      const safeForStorage = (v: unknown): unknown => {
+        if (typeof v === 'string' && v.startsWith('data:')) return ''; // never persist base64
+        if (Array.isArray(v)) return v.map(safeForStorage);
+        return v;
+      };
+      const safeDraft = Object.fromEntries(
+        Object.entries(formData).map(([k, v]) => [k, safeForStorage(v)])
+      );
+      localStorage.setItem('player_profile_draft', JSON.stringify(safeDraft));
     }
   }, [formData, isEditing, profile]);
 
@@ -713,23 +727,140 @@ export default function PlayerDashboard() {
       .slice(0, 2);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: string, index?: number) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        if (field === 'profile_image_url') {
-          setFormData(prev => ({ ...prev, profile_image_url: result }));
-        } else if (field === 'cover_image_url') {
-          setFormData(prev => ({ ...prev, cover_image_url: result }));
-        } else if (field === 'gallery_images' && index !== undefined) {
-          const newGallery = [...(formData.gallery_images || ['', '', ''])];
-          newGallery[index] = result;
-          setFormData(prev => ({ ...prev, gallery_images: newGallery }));
+  /**
+   * Compress an image file using a canvas, keeping quality high (0.92).
+   * Only resizes if the image exceeds MAX_DIMENSION to avoid unnecessarily
+   * large payloads while preserving visual quality.
+   */
+  const compressImage = (file: File): Promise<Blob> => {
+    const MAX_DIMENSION = 1920;
+    return new Promise((resolve, reject) => {
+      const img = new window.Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        let { width, height } = img;
+        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
+          if (width > height) {
+            height = Math.round((height * MAX_DIMENSION) / width);
+            width = MAX_DIMENSION;
+          } else {
+            width = Math.round((width * MAX_DIMENSION) / height);
+            height = MAX_DIMENSION;
+          }
         }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { reject(new Error('Canvas not available')); return; }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (blob) resolve(blob);
+            else reject(new Error('Canvas toBlob failed'));
+          },
+          'image/jpeg',
+          0.92 // High quality – only reduces file size via resize, not compression artefacts
+        );
       };
-      reader.readAsDataURL(file);
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load failed')); };
+      img.src = url;
+    });
+  };
+
+  /**
+   * Upload an image file to the Supabase `player-images` bucket.
+   * Returns the public URL on success, or null on failure.
+   */
+  const uploadImageToStorage = async (
+    file: File,
+    pathSuffix: string
+  ): Promise<string | null> => {
+    try {
+      const playerId = session?.userId || profile?.player_id || 'unknown';
+      const compressed = await compressImage(file);
+      const ext = file.type === 'image/png' ? 'png' : 'jpg';
+      const storagePath = `${playerId}/${pathSuffix}_${Date.now()}.${ext}`;
+
+      const { data, error } = await supabase.storage
+        .from(STORAGE_BUCKETS.PLAYER_IMAGES)
+        .upload(storagePath, compressed, {
+          contentType: 'image/jpeg',
+          upsert: true,
+        });
+
+      if (error) {
+        console.error('[ImageUpload] Storage error:', error);
+        return null;
+      }
+
+      // Try public URL first; fall back to signed URL if the bucket is private
+      const { data: publicData } = supabase.storage
+        .from(STORAGE_BUCKETS.PLAYER_IMAGES)
+        .getPublicUrl(data.path);
+
+      if (publicData?.publicUrl) return publicData.publicUrl;
+
+      // Bucket may be private – generate a long-lived signed URL (10 years)
+      const { data: signedData, error: signedError } = await supabase.storage
+        .from(STORAGE_BUCKETS.PLAYER_IMAGES)
+        .createSignedUrl(data.path, 60 * 60 * 24 * 365 * 10);
+
+      if (signedError || !signedData?.signedUrl) {
+        console.error('[ImageUpload] Could not get URL:', signedError);
+        return null;
+      }
+
+      return signedData.signedUrl;
+    } catch (err) {
+      console.error('[ImageUpload] Unexpected error:', err);
+      return null;
+    }
+  };
+
+  /**
+   * Handles image selection: compresses the file and uploads it to Supabase
+   * Storage, then stores only the returned public URL in formData.
+   * This replaces the old base64 approach that caused FUNCTION_PAYLOAD_TOO_LARGE.
+   */
+  const handleImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: string,
+    index?: number
+  ) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const uploadKey = field === 'gallery_images' && index !== undefined
+      ? `gallery_${index}`
+      : field;
+
+    // Mark as uploading
+    setUploadingImages(prev => ({ ...prev, [uploadKey]: true }));
+
+    // Determine path suffix for storage
+    const pathSuffix = field === 'gallery_images' && index !== undefined
+      ? `gallery_${index}`
+      : field === 'cover_image_url' ? 'cover' : 'profile';
+
+    const url = await uploadImageToStorage(file, pathSuffix);
+
+    setUploadingImages(prev => ({ ...prev, [uploadKey]: false }));
+
+    if (!url) {
+      toast.error('Image upload failed. Please try again.');
+      return;
+    }
+
+    if (field === 'profile_image_url') {
+      setFormData(prev => ({ ...prev, profile_image_url: url }));
+    } else if (field === 'cover_image_url') {
+      setFormData(prev => ({ ...prev, cover_image_url: url }));
+    } else if (field === 'gallery_images' && index !== undefined) {
+      const newGallery = [...(formData.gallery_images || ['', '', ''])];
+      newGallery[index] = url;
+      setFormData(prev => ({ ...prev, gallery_images: newGallery }));
     }
   };
 
@@ -1049,12 +1180,15 @@ export default function PlayerDashboard() {
                             htmlFor="profile-upload"
                             className="absolute bottom-0 right-0 p-2 bg-blue-600 rounded-full text-white cursor-pointer hover:bg-blue-700 shadow-md transition-colors"
                           >
-                            <Camera className="h-5 w-5" />
+                            {uploadingImages['profile_image_url']
+                              ? <Loader2 className="h-5 w-5 animate-spin" />
+                              : <Camera className="h-5 w-5" />}
                             <input
                               id="profile-upload"
                               type="file"
                               accept="image/*"
                               className="hidden"
+                              disabled={!!uploadingImages['profile_image_url']}
                               onChange={(e) => handleImageUpload(e, 'profile_image_url')}
                             />
                           </label>
@@ -1080,12 +1214,15 @@ export default function PlayerDashboard() {
                             htmlFor="cover-upload"
                             className="absolute bottom-2 right-2 p-2 bg-blue-600 rounded-full text-white cursor-pointer hover:bg-blue-700 shadow-md transition-colors"
                           >
-                            <Camera className="h-5 w-5" />
+                            {uploadingImages['cover_image_url']
+                              ? <Loader2 className="h-5 w-5 animate-spin" />
+                              : <Camera className="h-5 w-5" />}
                             <input
                               id="cover-upload"
                               type="file"
                               accept="image/*"
                               className="hidden"
+                              disabled={!!uploadingImages['cover_image_url']}
                               onChange={(e) => handleImageUpload(e, 'cover_image_url')}
                             />
                           </label>
@@ -1390,11 +1527,17 @@ export default function PlayerDashboard() {
                                     <span className="text-xs">{t('dash.player.uploadImage')}</span>
                                   </label>
                                 )}
+                                {uploadingImages[`gallery_${index}`] && (
+                                  <div className="absolute inset-0 flex items-center justify-center bg-black/30 z-10">
+                                    <Loader2 className="h-8 w-8 animate-spin text-white" />
+                                  </div>
+                                )}
                                 <input
                                   id={`gallery-upload-${index}`}
                                   type="file"
                                   accept="image/*"
                                   className="hidden"
+                                  disabled={!!uploadingImages[`gallery_${index}`]}
                                   onChange={(e) => handleImageUpload(e, 'gallery_images', index)}
                                 />
                               </div>
