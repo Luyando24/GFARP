@@ -341,7 +341,11 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
         || `HTTP ${res.status}`;
 
       if (res.status === 401) {
-        clearSession();
+        // A 401 from an unauthenticated request (such as a login attempt with
+        // a wrong password) is an expected form error, not an expired session.
+        if (token) {
+          clearSession();
+        }
         throw new AuthError(message || "Authentication failed");
       }
 
