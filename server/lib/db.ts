@@ -135,7 +135,7 @@ console.log('[DB] Pool initialized:', pool ? 'Connected' : 'No connection string
 // Helper function to execute queries
 import { QueryResultRow } from 'pg';
 
-export async function query(text: string, params?: (string | number | boolean | null)[]): Promise<{ rows: QueryResultRow[] }> {
+export async function query(text: string, params?: any[]): Promise<{ rows: QueryResultRow[] }> {
   if (!pool) {
     const details = {
       message: 'Database connection string not configured',
@@ -164,74 +164,6 @@ export async function query(text: string, params?: (string | number | boolean | 
     console.error('[DB] Database query error:', error.message);
     if (error.code) console.error('[DB] Error code:', error.code);
     if (error.detail) console.error('[DB] Error detail:', error.detail);
-
-    // Handle specific table access for super admin dashboard
-    if (client && text.includes('SELECT COUNT(*) as count FROM academies')) {
-      console.log('Attempting to create academies table if it does not exist');
-      try {
-        // Create academies table if it doesn't exist
-        await client.query(`
-          CREATE TABLE IF NOT EXISTS academies (
-            id SERIAL PRIMARY KEY,
-            name VARCHAR(255) NOT NULL,
-            code VARCHAR(50) UNIQUE,
-            email VARCHAR(255) UNIQUE,
-            password_hash VARCHAR(255),
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
-        `);
-        // Try the query again
-        const retryResult = await client.query(text, params);
-        return { rows: retryResult.rows };
-      } catch (createError) {
-        console.error('Failed to create academies table:', createError);
-        return { rows: [{ count: 0 }] };
-      }
-    }
-
-    // Handle players table access
-    if (text.toLowerCase().includes('count(*)') && text.includes('players') && error.message.includes('does not exist')) {
-      console.log('Players table may not exist, using fallback count 0');
-      return { rows: [{ count: 0 }] };
-    }
-
-    // Handle transfers table access
-    if (text.toLowerCase().includes('count(*)') && (text.includes('football_transfers') || text.includes('transfers')) && error.message.includes('does not exist')) {
-      console.log('Transfers table may not exist, using fallback count 0');
-      return { rows: [{ count: 0 }] };
-    }
-
-    // Handle subscriptions table access
-    if (text.toLowerCase().includes('count(*)') && text.includes('subscriptions') && error.message.includes('does not exist')) {
-      console.log('Subscriptions table may not exist, using fallback count 0');
-      return { rows: [{ count: 0 }] };
-    }
-
-    // Handle users table access
-    if (text.toLowerCase().includes('count(*)') && text.includes('users') && error.message.includes('does not exist')) {
-      console.log('Users table may not exist, using fallback count 0');
-      return { rows: [{ count: 0 }] };
-    }
-
-    // Handle system_settings table access
-    if (text.includes('system_settings') && error.message.includes('does not exist')) {
-      console.log('Attempting to create system_settings table...');
-      try {
-        await client.query(`
-          CREATE TABLE IF NOT EXISTS system_settings (
-            key VARCHAR(255) PRIMARY KEY,
-            value TEXT NOT NULL,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-          )
-        `);
-        // Retry the query
-        const retryResult = await client.query(text, params);
-        return { rows: retryResult.rows };
-      } catch (createError) {
-        console.error('Failed to create system_settings table:', createError);
-      }
-    }
 
     throw error;
   } finally {
@@ -270,16 +202,6 @@ export async function hashPassword(password: string): Promise<string> {
 export async function verifyPassword(password: string, hash: string): Promise<boolean> {
   return bcrypt.compare(password, hash);
 }
-
-// NRC hashing utilities for student lookup
-// Use a deterministic approach for consistent lookups
-export function hashNrc(nrc: string): string {
-  // Use a fixed salt for NRC hashing to ensure consistent lookups
-  const fixedSalt = process.env.NRC_SALT || 'sofwan_nrc_salt_2024';
-  return bcrypt.hashSync(nrc + fixedSalt, 10);
-}
-
-// National ID hashing removed: identity/resident features not part of this project
 
 // Graceful shutdown
 process.on('SIGINT', async () => {

@@ -6,17 +6,19 @@ import {
   createPaymentIntent,
   getStripeSubscription,
   cancelStripeSubscription,
-  updateStripeSubscription
+  updateStripeSubscription,
+  STRIPE_CONFIG,
 } from '../lib/stripe.js';
 import { query, transaction } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, normalizeRole } from '../middleware/auth.js';
+import { addBillingCycleToDate } from '../../shared/calendar-date.js';
 
 const router = Router();
 
 // Helper to get entity info
 const getEntityInfo = (user: any) => {
-  const isAgency = user?.role === 'agency';
+  const isAgency = normalizeRole(user?.role) === 'agency_admin';
   return {
     isAgency,
     table: isAgency ? 'agencies' : 'academies',
@@ -99,8 +101,8 @@ router.post('/create-customer', authenticateToken, (async (req, res) => {
 router.post('/create-checkout-session', authenticateToken, (async (req, res) => {
   try {
     const entityId = (req as any).user?.id;
-    const { table } = getEntityInfo((req as any).user);
-    const { planId, billingCycle, successUrl, cancelUrl, promoCodeId } = req.body;
+    const { table, isAgency } = getEntityInfo((req as any).user);
+    const { planId, promoCodeId } = req.body;
 
     if (!entityId || !planId) {
       return res.status(400).json({
@@ -111,8 +113,8 @@ router.post('/create-checkout-session', authenticateToken, (async (req, res) => 
 
     // Get plan details
     const planResult = await query(
-      'SELECT * FROM subscription_plans WHERE id = $1',
-      [planId]
+      'SELECT * FROM subscription_plans WHERE id = $1 AND target_type = $2 AND is_active = true',
+      [planId, isAgency ? 'AGENCY' : 'ACADEMY']
     );
 
     if (planResult.rows.length === 0) {
@@ -124,11 +126,8 @@ router.post('/create-checkout-session', authenticateToken, (async (req, res) => 
 
     const plan = planResult.rows[0];
     let price = Number(plan.price);
-    
-    // Apply billing cycle adjustment
-    if (billingCycle === 'yearly') {
-      price = price * 10; // Simple 2 months free logic or use plan.price_yearly if exists
-    }
+    const billingCycle = String(plan.billing_cycle || 'MONTHLY').toUpperCase();
+    const isRecurring = billingCycle !== 'LIFETIME';
 
     // Apply Promo Code
     if (promoCodeId) {
@@ -145,7 +144,6 @@ router.post('/create-checkout-session', authenticateToken, (async (req, res) => 
         const percent = parseFloat(promo.discount_percent);
         price = Math.max(0, price - (price * percent / 100));
         
-        await query('UPDATE promo_codes SET used_count = used_count + 1 WHERE id = $1', [promoCodeId]);
       }
     }
 
@@ -154,6 +152,9 @@ router.post('/create-checkout-session', authenticateToken, (async (req, res) => 
       `SELECT name, email, stripe_customer_id FROM ${table} WHERE id = $1`,
       [entityId]
     );
+    if (entityResult.rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Organization not found' });
+    }
     const entity = entityResult.rows[0];
 
     // Ensure Stripe customer exists
@@ -169,28 +170,28 @@ router.post('/create-checkout-session', authenticateToken, (async (req, res) => 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
       payment_method_types: ['card'],
-      line_items: [
-        plan.stripe_price_id ? {
-          price: plan.stripe_price_id,
-          quantity: 1,
-        } : {
-          price_data: {
-            currency: plan.currency?.toLowerCase() || 'usd',
-            product_data: {
-              name: `${plan.name} Plan (${billingCycle})`,
-            },
-            unit_amount: Math.round(price * 100),
-          },
-          quantity: 1,
+      line_items: [plan.stripe_price_id ? {
+        price: plan.stripe_price_id,
+        quantity: 1,
+      } : {
+        price_data: {
+          currency: plan.currency?.toLowerCase() || 'usd',
+          product_data: { name: `${plan.name} Plan` },
+          unit_amount: Math.round(price * 100),
+          ...(isRecurring ? {
+            recurring: { interval: billingCycle === 'YEARLY' ? 'year' as const : 'month' as const },
+          } : {}),
         },
-      ],
-      mode: plan.stripe_price_id ? 'subscription' : 'payment',
-      success_url: successUrl,
-      cancel_url: cancelUrl,
+        quantity: 1,
+      }],
+      mode: isRecurring ? 'subscription' : 'payment',
+      success_url: STRIPE_CONFIG.successUrl,
+      cancel_url: STRIPE_CONFIG.cancelUrl,
       metadata: {
-        entityId,
+        orgId: entityId,
         planId,
         billingCycle,
+        type: isAgency ? 'AGENCY' : 'ACADEMY',
         promoCodeId: promoCodeId || null
       }
     });
@@ -215,7 +216,7 @@ router.post('/create-checkout-session', authenticateToken, (async (req, res) => 
 router.post('/create-subscription', authenticateToken, (async (req, res) => {
   try {
     const entityId = (req as any).user?.id;
-    const { table, subTable, idColumn, entityLabel } = getEntityInfo((req as any).user);
+    const { table, subTable, idColumn, entityLabel, isAgency } = getEntityInfo((req as any).user);
     const { planId } = req.body;
 
     if (!entityId || !planId) {
@@ -240,8 +241,8 @@ router.post('/create-subscription', authenticateToken, (async (req, res) => {
 
       // Get plan details
       const planResult = await client.query(
-        'SELECT * FROM subscription_plans WHERE id = $1 AND is_active = true',
-        [planId]
+        'SELECT * FROM subscription_plans WHERE id = $1 AND target_type = $2 AND is_active = true',
+        [planId, isAgency ? 'AGENCY' : 'ACADEMY']
       );
 
       if (planResult.rows.length === 0) {
@@ -277,6 +278,10 @@ router.post('/create-subscription', authenticateToken, (async (req, res) => {
         { entityId, planId }
       );
       const subData: any = (stripeSubscription as any)?.data ?? stripeSubscription;
+      const startDate = new Date((subData.current_period_start ?? Math.floor(Date.now() / 1000)) * 1000);
+      const endDate = subData.current_period_end
+        ? new Date(subData.current_period_end * 1000)
+        : addBillingCycleToDate(startDate, plan.billing_cycle);
 
       // Create local subscription record
       const subscriptionId = uuidv4();
@@ -292,8 +297,8 @@ router.post('/create-subscription', authenticateToken, (async (req, res) => {
         planId,
         stripeSubscription.id,
         'PENDING',
-        new Date((subData.current_period_start ?? Math.floor(Date.now() / 1000)) * 1000).toISOString(),
-        new Date((subData.current_period_end ?? Math.floor(Date.now() / 1000)) * 1000).toISOString(),
+        startDate.toISOString(),
+        endDate.toISOString(),
         true
       ]);
 
@@ -333,7 +338,7 @@ router.post('/create-subscription', authenticateToken, (async (req, res) => {
 router.post('/upgrade-subscription', authenticateToken, (async (req, res) => {
   try {
     const entityId = (req as any).user?.id;
-    const { subTable, idColumn } = getEntityInfo((req as any).user);
+    const { subTable, idColumn, isAgency } = getEntityInfo((req as any).user);
     const { newPlanId } = req.body;
 
     if (!entityId || !newPlanId) {
@@ -362,8 +367,8 @@ router.post('/upgrade-subscription', authenticateToken, (async (req, res) => {
 
       // Get new plan details
       const newPlanResult = await client.query(
-        'SELECT * FROM subscription_plans WHERE id = $1 AND is_active = true',
-        [newPlanId]
+        'SELECT * FROM subscription_plans WHERE id = $1 AND target_type = $2 AND is_active = true',
+        [newPlanId, isAgency ? 'AGENCY' : 'ACADEMY']
       );
 
       if (newPlanResult.rows.length === 0) {
@@ -500,13 +505,21 @@ router.post('/cancel-subscription', authenticateToken, (async (req, res) => {
 router.post('/create-payment-intent', authenticateToken, (async (req, res) => {
   try {
     const entityId = (req as any).user?.id;
-    const { table, entityLabel } = getEntityInfo((req as any).user);
+    const { table, entityLabel, isAgency } = getEntityInfo((req as any).user);
     const { amount, currency = 'usd', description } = req.body;
+    const numericAmount = Number(amount);
 
-    if (!entityId || !amount) {
+    if (!entityId || !Number.isFinite(numericAmount) || numericAmount <= 0 || numericAmount > 1_000_000) {
       return res.status(400).json({
         success: false,
-        message: 'Entity ID and amount are required'
+        message: 'A valid payment amount is required'
+      });
+    }
+
+    if (isAgency) {
+      return res.status(400).json({
+        success: false,
+        message: 'One-time agency payments are not supported by the academy ledger',
       });
     }
 
@@ -527,10 +540,10 @@ router.post('/create-payment-intent', authenticateToken, (async (req, res) => {
 
     // Create payment intent
     const paymentIntent = await createPaymentIntent(
-      amount,
+      numericAmount,
       currency,
       customerId,
-      { entityId, description }
+      { academyId: entityId, description: String(description || 'One-time payment') }
     );
 
     res.json({

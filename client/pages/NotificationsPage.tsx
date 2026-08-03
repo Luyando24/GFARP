@@ -65,6 +65,7 @@ import {
   Bell,
   AlertTriangle,
 } from 'lucide-react';
+import { Api } from '../lib/api';
 
 interface Notification {
   id: string;
@@ -133,8 +134,7 @@ export default function NotificationsPage() {
   const fetchNotifications = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/notifications');
-      const data = await response.json();
+      const data = await Api.get<{ notifications: Notification[] }>('/notifications');
       
       if (data.notifications) {
         setNotifications(data.notifications);
@@ -153,9 +153,8 @@ export default function NotificationsPage() {
 
   const fetchSchools = async () => {
     try {
-      const response = await fetch('/api/schools');
-      const data = await response.json();
-      setSchools(data.filter((school: School) => school.status === 'active'));
+      const data = await Api.get<{ data: { academies: School[] } }>('/academies?status=active&limit=100');
+      setSchools((data.data?.academies || []).filter((school: School) => school.status === 'active'));
     } catch (error) {
       console.error('Error fetching schools:', error);
       toast({
@@ -176,26 +175,14 @@ export default function NotificationsPage() {
         type: formData.type,
         priority: formData.priority,
         category: formData.category,
-        is_global: formData.targetType === 'global',
-        expiry_date: formData.expiryDate || null,
-        action_url: formData.actionUrl || null,
-        action_text: formData.actionText || null,
-        school_ids: formData.targetType === 'specific' ? formData.selectedSchools : [],
+        isGlobal: formData.targetType === 'global' || formData.targetType === 'all',
+        expiryDate: formData.expiryDate || null,
+        actionUrl: formData.actionUrl || null,
+        actionText: formData.actionText || null,
+        schoolIds: formData.targetType === 'specific' ? formData.selectedSchools : [],
       };
 
-      const response = await fetch('/api/notifications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create notification');
-      }
-
-      const newNotification = await response.json();
+      const newNotification = await Api.post<Notification>('/notifications', payload);
       setNotifications([newNotification, ...notifications]);
       setIsCreateDialogOpen(false);
       resetForm();
@@ -267,9 +254,7 @@ export default function NotificationsPage() {
 
   const markAsRead = async (id: string) => {
     try {
-      await fetch(`/api/notifications/${id}/read`, {
-        method: 'POST',
-      });
+      await Api.post(`/notifications/${id}/read`);
       
       setNotifications(notifications.map(notification => 
         notification.id === id ? { ...notification, read: true } : notification
@@ -291,9 +276,7 @@ export default function NotificationsPage() {
 
   const deleteNotification = async (id: string) => {
     try {
-      await fetch(`/api/notifications/${id}`, {
-        method: 'DELETE',
-      });
+      await Api.delete(`/notifications/${id}`);
       
       setNotifications(notifications.filter(notification => notification.id !== id));
       

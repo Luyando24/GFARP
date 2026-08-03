@@ -6,6 +6,7 @@ import {
   calculateAttendanceGamification,
   type TrainingAttendanceStatus,
 } from '../lib/training-attendance.js';
+import { decryptField } from '../lib/field-encryption.js';
 
 const router = Router();
 
@@ -19,17 +20,7 @@ const attendanceStatuses = new Set<TrainingAttendanceStatus>([
 
 type PlayerSource = 'academy' | 'individual';
 
-function decryptPlayerValue(value: unknown): string {
-  if (!value) return '';
-  if (typeof value === 'string' && value.startsWith('\\x')) {
-    return Buffer.from(value.slice(2), 'hex').toString('utf8');
-  }
-  if (Buffer.isBuffer(value)) return value.toString('utf8');
-  if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
-    return Buffer.from(value as ArrayBuffer).toString('utf8');
-  }
-  return String(value);
-}
+const decryptPlayerValue = decryptField;
 
 function normalizeRole(role: unknown): string {
   return String(role || '').trim().toLowerCase().replace(/-/g, '_');

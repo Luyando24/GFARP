@@ -1,10 +1,15 @@
 import { Request, Response, Router, type RequestHandler } from 'express';
 import { query, transaction } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
-import { authenticateToken } from '../middleware/auth.js';
+import {
+  authenticateToken,
+  canAccessOrganizationForRequest,
+  requireAdmin,
+} from '../middleware/auth.js';
 import { getStripe, createStripeCustomer, STRIPE_CONFIG } from '../lib/stripe.js';
 import { emailService } from '../lib/email-service.js';
 import { sendSubscriptionPaymentReceiptByPaymentId } from '../lib/payment-receipt.js';
+import { addBillingCycleToDate } from '../../shared/calendar-date.js';
 
 // Get Academy Subscription Details
 export const handleGetSubscription: RequestHandler = async (req, res) => {
@@ -19,7 +24,7 @@ export const handleGetSubscription: RequestHandler = async (req, res) => {
       });
     }
 
-    const isAgency = role === 'AGENCY_ADMIN';
+    const isAgency = role === 'agency_admin';
     const subTable = isAgency ? 'agency_subscriptions' : 'academy_subscriptions';
     const orgTable = isAgency ? 'agencies' : 'academies';
     const orgIdColumn = isAgency ? 'agency_id' : 'academy_id';
@@ -59,7 +64,9 @@ export const handleGetSubscription: RequestHandler = async (req, res) => {
 
     // Calculate usage statistics
 
-    const daysRemaining = Math.ceil((new Date(subscription.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    const daysRemaining = subscription.end_date
+      ? Math.ceil((new Date(subscription.end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      : null;
     const playerUsagePercentage = subscription.player_limit > 0
       ? (playerCount / subscription.player_limit) * 100
       : 0;
@@ -75,7 +82,7 @@ export const handleGetSubscription: RequestHandler = async (req, res) => {
           startDate: subscription.start_date,
           endDate: subscription.end_date,
           autoRenew: subscription.auto_renew,
-          daysRemaining: Math.max(0, daysRemaining),
+          daysRemaining: daysRemaining === null ? null : Math.max(0, daysRemaining),
           features: typeof subscription.features === 'string' ? JSON.parse(subscription.features) : (subscription.features || [])
         },
         limits: {
@@ -97,254 +104,64 @@ export const handleGetSubscription: RequestHandler = async (req, res) => {
   }
 };
 
-// Get Available Subscription Plans
-// OPTIMIZED FOR VERCEL: Returns fallback plans immediately if DB is slow
+// Get available subscription plans
 export const handleGetPlans: RequestHandler = async (req, res) => {
-  console.log('[SUBSCRIPTION] GET /plans request received');
-
-  // CRITICAL: Set very aggressive timeout (2s) for Vercel serverless
-  // If database doesn't respond in 2s, return fallback immediately
-  // Aggressive timeout for serverless, but let's give it more room in dev/slow DBs
-  const timeoutMs = 10000; // 10 seconds
-  console.log('[SUBSCRIPTION] Fetching plans. req.query:', JSON.stringify(req.query));
-  
-  let responded = false;
-  
-  // Extract targetType robustly
-  let targetType = 'ACADEMY';
-  if (req.query.targetType) {
-    targetType = Array.isArray(req.query.targetType) 
-      ? String(req.query.targetType[0]) 
-      : String(req.query.targetType);
-  }
-  
-  targetType = targetType.toUpperCase();
-
-  // Start timeout timer that will send fallback plans
-  const timeoutId = setTimeout(() => {
-    if (!responded) {
-      responded = true;
-      console.warn('[SUBSCRIPTION] Database timeout after 10s, returning fallback plans for:', targetType);
-      res.json({ success: true, data: getFallbackPlans(targetType) });
-    }
-  }, timeoutMs);
-
   try {
+    const requestedTarget = Array.isArray(req.query.targetType)
+      ? req.query.targetType[0]
+      : req.query.targetType;
+    const targetType = String(requestedTarget || 'ACADEMY').toUpperCase();
+
+    if (!['ACADEMY', 'AGENCY', 'INDIVIDUAL'].includes(targetType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid subscription target type',
+      });
+    }
+
     const includeInactive = req.query.includeInactive === 'true';
+    const result = await query(
+      `SELECT id, name, description, price, currency, billing_cycle,
+              player_limit, storage_limit, features, is_active, is_free,
+              sort_order, target_type
+       FROM subscription_plans
+       WHERE target_type = $1
+         AND ($2::boolean = true OR is_active = true)
+       ORDER BY sort_order ASC`,
+      [targetType, includeInactive],
+    );
 
-    let plansQuery = `
-      SELECT 
-        id, name, description, price, currency, billing_cycle,
-        player_limit, storage_limit, features, is_active, is_free, sort_order, target_type
-      FROM subscription_plans 
-      WHERE target_type = $1
-    `;
-
-    if (!includeInactive) {
-      plansQuery += ' AND is_active = true';
-    }
-
-    plansQuery += ' ORDER BY sort_order ASC';
-
-    const result = await query(plansQuery, [targetType]);
-
-    // Clear timeout if query succeeded
-    clearTimeout(timeoutId);
-
-    if (responded) {
-      // Already sent fallback response due to timeout
-      console.log('[SUBSCRIPTION] Query completed but already sent fallback');
-      return;
-    }
-
-    responded = true;
-    const dbRowCount = result.rows.length;
-    const dbFirstRowTargetType = result.rows.length > 0 ? result.rows[0].target_type : null;
-
-    let plans = result.rows
-      .filter(plan => {
-        // Double-check: Manual filter in case SQL WHERE failed on live
-        return plan.target_type === targetType;
-      })
-      .map(plan => {
-      // Parse features if it's a JSON string
+    const plans = result.rows.map((plan) => {
       let features = plan.features;
       if (typeof features === 'string') {
         try {
           features = JSON.parse(features);
-        } catch (e) {
-          console.error('[SUBSCRIPTION] Failed to parse features for plan:', plan.name, e);
+        } catch {
           features = [];
         }
       }
 
-      const mappedPlan = {
-        id: plan.id,
-        name: plan.name,
-        description: plan.description,
-        price: parseFloat(plan.price),
-        currency: plan.currency,
-        billing_cycle: plan.billing_cycle,
-        player_limit: plan.player_limit,
-        features: features,
-        is_active: plan.is_active,
-        is_free: plan.is_free,
-        sort_order: plan.sort_order,
-        target_type: plan.target_type,
-        storage_limit: plan.storage_limit || 5368709120 // Default 5GB if missing
+      return {
+        ...plan,
+        price: Number(plan.price),
+        features: Array.isArray(features) ? features : [],
+        storage_limit: Number(plan.storage_limit || 0),
       };
-
-      return mappedPlan;
     });
 
-    // DO NOT use fallback just because length is 0. 
-    // If the user deactivated all plans, we should honor that and show 0 plans.
-    // Fallbacks should ONLY be used for genuine DB errors or timeouts.
-    
-    console.log(`[SUBSCRIPTION] Query successful, returning ${plans.length} plans to client`);
-    return res.json({ 
-      success: true, 
-      data: plans,
-      _debug: {
-        requestedTargetType: targetType,
-        dbRowsReturned: dbRowCount,
-        dbFirstRowTargetType: dbFirstRowTargetType,
-        filteredCount: plans.length
-      }
+    return res.json({ success: true, data: plans });
+  } catch (error: any) {
+    console.error('[SUBSCRIPTION] Failed to get plans:', error);
+    return res.status(503).json({
+      success: false,
+      message: 'Subscription plans are temporarily unavailable',
     });
-
-  } catch (dbError: any) {
-    clearTimeout(timeoutId);
-
-    if (responded) {
-      // Already sent fallback response
-      console.log('[SUBSCRIPTION] DB error but already sent fallback');
-      return;
-    }
-
-    responded = true;
-    console.error('[SUBSCRIPTION] DB error, returning fallback:', dbError.message);
-    return res.json({ success: true, data: getFallbackPlans(targetType) });
   }
-}
-
-// Helper function to get fallback plans (extracted to avoid duplication)
-function getFallbackPlans(targetType: string = 'ACADEMY') {
-  if (targetType === 'INDIVIDUAL') {
-    return [
-      {
-        id: 'ind-pro',
-        name: 'Pro Plan',
-        description: 'Elite features for rising stars.',
-        price: 19.99,
-        currency: 'USD',
-        billing_cycle: 'LIFETIME',
-        player_limit: 1,
-        features: [
-          'Unlimited profile updates',
-          'Video highlights upload',
-          'Direct messaging with scouts',
-          'Priority support',
-          'Verified player badge'
-        ],
-        is_active: true,
-        is_free: false,
-        sort_order: 0,
-        target_type: 'INDIVIDUAL',
-        storage_limit: 5368709120
-      }
-    ];
-  }
-
-  if (targetType === 'AGENCY') {
-    return [
-      {
-        id: 'agency-basic',
-        name: 'Basic Agency',
-        description: 'For growing talent agencies.',
-        price: 99.99,
-        currency: 'USD',
-        billing_cycle: 'MONTHLY',
-        player_limit: 100,
-        features: ['Up to 100 player profiles', 'Basic agency branding', 'Document management'],
-        is_active: true,
-        is_free: false,
-        sort_order: 0,
-        target_type: 'AGENCY',
-        storage_limit: 10737418240
-      },
-      {
-        id: 'agency-pro',
-        name: 'Professional Agency',
-        description: 'Advanced tools for busy agents.',
-        price: 299.99,
-        currency: 'USD',
-        billing_cycle: 'MONTHLY',
-        player_limit: 500,
-        features: ['Up to 500 player profiles', 'Full agency branding', 'Advanced analytics'],
-        is_active: true,
-        is_free: false,
-        sort_order: 1,
-        target_type: 'AGENCY',
-        storage_limit: 53687091200
-      }
-    ];
-  }
-
-  return [
-    {
-      id: 'free',
-      name: 'Free Plan',
-      description: 'Basic features for new academies.',
-      price: 0,
-      currency: 'USD',
-      billing_cycle: 'LIFETIME',
-      player_limit: 50,
-      features: ['Up to 50 players', 'Basic registration', 'Standard support'],
-      is_active: true,
-      is_free: true,
-      sort_order: 0,
-      target_type: 'ACADEMY',
-      storage_limit: 5368709120
-    },
-    {
-      id: 'pro',
-      name: 'Pro Plan',
-      description: 'Professional features for established academies.',
-      price: 49.99,
-      currency: 'USD',
-      billing_cycle: 'MONTHLY',
-      player_limit: 500,
-      features: ['Up to 500 players', 'Advanced analytics', 'Priority support'],
-      is_active: true,
-      is_free: false,
-      sort_order: 1,
-      target_type: 'ACADEMY',
-      storage_limit: 5368709120
-    },
-    {
-      id: 'elite',
-      name: 'Elite Plan',
-      description: 'Comprehensive suite for large organizations.',
-      price: 99.99,
-      currency: 'USD',
-      billing_cycle: 'MONTHLY',
-      player_limit: -1,
-      features: ['Unlimited players', 'Full FIFA compliance', 'Dedicated manager'],
-      is_active: true,
-      is_free: false,
-      sort_order: 2,
-      target_type: 'ACADEMY',
-      storage_limit: 53687091200
-    }
-  ];
-}
-
-
+};
 // Upgrade Subscription Plan
 export const handleUpgradePlan: RequestHandler = async (req, res) => {
   try {
-    const { academyId, newPlanId, paymentMethod, paymentReference, notes } = req.body;
+    const { academyId, newPlanId, paymentMethod, paymentReference, promoCodeId, notes } = req.body;
 
     if (!academyId || !newPlanId) {
       return res.status(400).json({
@@ -353,8 +170,22 @@ export const handleUpgradePlan: RequestHandler = async (req, res) => {
       });
     }
 
+    if (!['CARD', 'CASH'].includes(paymentMethod)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment method must be CARD or CASH',
+      });
+    }
+
     const user = (req as any).user;
-    const isAgency = user?.role === 'AGENCY_ADMIN';
+    if (!(await canAccessOrganizationForRequest(user, academyId))) {
+      return res.status(403).json({
+        success: false,
+        message: 'You cannot manage this organization'
+      });
+    }
+
+    const isAgency = user?.role === 'agency_admin';
     const subTable = isAgency ? 'agency_subscriptions' : 'academy_subscriptions';
     const orgTable = isAgency ? 'agencies' : 'academies';
     const orgIdColumn = isAgency ? 'agency_id' : 'academy_id';
@@ -391,52 +222,79 @@ export const handleUpgradePlan: RequestHandler = async (req, res) => {
 
         // Get plan details
         let plan;
-        if (['pro', 'free', 'elite', 'agency-basic', 'agency-pro'].includes(newPlanId)) {
-          const fallbackPlans = getFallbackPlans(isAgency ? 'AGENCY' : 'ACADEMY');
-          plan = fallbackPlans.find(p => p.id === newPlanId);
-        } else {
-          const planResult = await query('SELECT * FROM subscription_plans WHERE id = $1', [newPlanId]);
-          if (planResult.rows.length > 0) plan = planResult.rows[0];
-        }
+        const planResult = await query(
+          'SELECT * FROM subscription_plans WHERE id = $1 AND target_type = $2 AND is_active = true',
+          [newPlanId, isAgency ? 'AGENCY' : 'ACADEMY']
+        );
+        if (planResult.rows.length > 0) plan = planResult.rows[0];
 
         if (!plan) throw new Error('Invalid plan selected');
 
-        // Create Checkout Session
-        const stripe = getStripe();
-        const session = await stripe.checkout.sessions.create({
-          customer: customerId,
-          payment_method_types: ['card'],
-          line_items: [
-            plan.stripe_price_id ? {
-              price: plan.stripe_price_id,
-              quantity: 1,
-            } : {
-              price_data: {
-                currency: plan.currency?.toLowerCase() || 'usd',
-                product_data: {
-                  name: `${plan.name} Plan`,
-                  description: `Subscription upgrade to ${plan.name}`,
-                },
-                unit_amount: Math.round(Number(plan.price) * 100),
-              },
-              quantity: 1,
-            },
-          ],
-          mode: 'payment',
-          success_url: STRIPE_CONFIG.successUrl,
-          cancel_url: STRIPE_CONFIG.cancelUrl,
-          metadata: {
-            orgId: academyId,
-            planId: newPlanId,
-            type: isAgency ? 'AGENCY' : 'ACADEMY'
+        if (Number(plan.price) > 0) {
+          let checkoutPrice = Number(plan.price);
+          let appliedPromoCodeId: string | null = null;
+          if (promoCodeId) {
+            const promoResult = await query(
+              `SELECT id, discount_percent
+               FROM promo_codes
+               WHERE id = $1 AND status = 'active'
+                 AND (expires_at IS NULL OR expires_at > NOW())
+                 AND (max_uses IS NULL OR used_count < max_uses)`,
+              [promoCodeId],
+            );
+            if (promoResult.rows.length === 0) {
+              return res.status(400).json({ success: false, message: 'Promo code is invalid or expired' });
+            }
+            const discountPercent = Math.min(100, Math.max(0, Number(promoResult.rows[0].discount_percent)));
+            checkoutPrice = checkoutPrice * (1 - discountPercent / 100);
+            appliedPromoCodeId = promoResult.rows[0].id;
           }
-        });
+          if (checkoutPrice < 0.5) {
+            return res.status(400).json({
+              success: false,
+              message: 'The discounted amount is below the minimum card payment amount',
+            });
+          }
+          const billingCycle = String(plan.billing_cycle || 'MONTHLY').toUpperCase();
+          const isRecurring = billingCycle !== 'LIFETIME';
+          const stripe = getStripe();
+          const lineItem = plan.stripe_price_id && !appliedPromoCodeId
+            ? { price: plan.stripe_price_id, quantity: 1 }
+            : {
+                price_data: {
+                  currency: plan.currency?.toLowerCase() || 'usd',
+                  product_data: {
+                    name: `${plan.name} Plan`,
+                    description: `Subscription upgrade to ${plan.name}`,
+                  },
+                  unit_amount: Math.round(checkoutPrice * 100),
+                  ...(isRecurring ? {
+                    recurring: { interval: billingCycle === 'YEARLY' ? 'year' as const : 'month' as const }
+                  } : {}),
+                },
+                quantity: 1,
+              };
+          const session = await stripe.checkout.sessions.create({
+            customer: customerId,
+            payment_method_types: ['card'],
+            line_items: [lineItem],
+            mode: isRecurring ? 'subscription' : 'payment',
+            success_url: STRIPE_CONFIG.successUrl,
+            cancel_url: STRIPE_CONFIG.cancelUrl,
+            metadata: {
+              orgId: academyId,
+              planId: newPlanId,
+              type: isAgency ? 'AGENCY' : 'ACADEMY',
+              ...(appliedPromoCodeId ? { promoCodeId: appliedPromoCodeId } : {}),
+            }
+          });
 
-        return res.json({
-          success: true,
-          url: session.url,
-          message: 'Redirecting to checkout...'
-        });
+          return res.json({
+            success: true,
+            url: session.url,
+            message: 'Redirecting to checkout...'
+          });
+        }
       } catch (stripeError: any) {
         console.error('Stripe session creation error:', stripeError);
         return res.status(500).json({
@@ -462,25 +320,21 @@ export const handleUpgradePlan: RequestHandler = async (req, res) => {
       // Get new plan details
       let newPlan;
       
-      // Check if it's a predefined plan ID (fallback plans)
-      if (['pro', 'free', 'elite', 'agency-basic', 'agency-pro'].includes(newPlanId)) {
-        const fallbackPlans = getFallbackPlans(isAgency ? 'AGENCY' : 'ACADEMY');
-        newPlan = fallbackPlans.find(p => p.id === newPlanId);
-      } else {
-        // Check DB
-        const newPlanQuery = `SELECT * FROM subscription_plans WHERE id = $1 AND is_active = true`;
-        const newPlanResult = await client.query(newPlanQuery, [newPlanId]);
-        if (newPlanResult.rows.length > 0) {
-          newPlan = newPlanResult.rows[0];
-        }
+      const newPlanQuery = `SELECT * FROM subscription_plans WHERE id = $1 AND target_type = $2 AND is_active = true`;
+      const newPlanResult = await client.query(newPlanQuery, [newPlanId, isAgency ? 'AGENCY' : 'ACADEMY']);
+      if (newPlanResult.rows.length > 0) {
+        newPlan = newPlanResult.rows[0];
       }
 
       if (!newPlan) {
         throw new Error('Invalid or inactive subscription plan');
       }
 
-      // If there's an existing subscription, deactivate it
-      if (currentSubscription) {
+      const amount = Number(newPlan.price || 0);
+      const isCashPending = amount > 0 && paymentMethod === 'CASH';
+
+      // Keep the existing plan active until a cash payment is approved.
+      if (currentSubscription && !isCashPending) {
         await client.query(
           `UPDATE ${subTable} SET status = 'CANCELLED', updated_at = NOW() WHERE id = $1`,
           [currentSubscription.id]
@@ -490,8 +344,9 @@ export const handleUpgradePlan: RequestHandler = async (req, res) => {
       // Create new subscription
       const newSubscriptionId = uuidv4();
       const startDate = new Date();
-      const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + 1); // 1 month subscription
+      const endDate = addBillingCycleToDate(startDate, newPlan.billing_cycle);
+      const subscriptionStatus = isCashPending ? 'PENDING' : 'ACTIVE';
+      const autoRenew = String(newPlan.billing_cycle).toUpperCase() !== 'LIFETIME';
 
       const newSubQuery = `
         INSERT INTO ${subTable} (
@@ -506,10 +361,10 @@ export const handleUpgradePlan: RequestHandler = async (req, res) => {
         newSubscriptionId,
         academyId,
         newPlanId,
-        'ACTIVE',
+        subscriptionStatus,
         startDate,
         endDate,
-        true
+        autoRenew
       ]);
 
       const newSubscription = newSubResult.rows[0];
@@ -517,9 +372,11 @@ export const handleUpgradePlan: RequestHandler = async (req, res) => {
       // Log subscription history
       const historyId = uuidv4();
       const action = currentSubscription ? 'UPGRADED' : 'CREATED';
-      const notes = currentSubscription
-        ? `Plan upgraded from ${currentSubscription.current_plan_name} to ${newPlan.name}`
-        : `Initial subscription created with ${newPlan.name} plan`;
+      const historyNotes = isCashPending
+        ? `Pending cash payment for ${newPlan.name} plan`
+        : currentSubscription
+          ? `Plan upgraded from ${currentSubscription.current_plan_name} to ${newPlan.name}`
+          : `Initial subscription created with ${newPlan.name} plan`;
 
       await client.query(`
         INSERT INTO subscription_history (
@@ -533,13 +390,11 @@ export const handleUpgradePlan: RequestHandler = async (req, res) => {
         action,
         currentSubscription?.plan_id || null,
         newPlanId,
-        notes
+        historyNotes
       ]);
 
       // Create payment record
       const paymentId = uuidv4();
-      const amount = newPlan.price;
-
       await client.query(`
         INSERT INTO subscription_payments (
           id, subscription_id, amount, currency, payment_method, 
@@ -553,7 +408,7 @@ export const handleUpgradePlan: RequestHandler = async (req, res) => {
         'USD',
         paymentMethod || 'CARD',
         paymentReference || 'DASHBOARD_UPGRADE',
-        paymentMethod === 'CASH' ? 'PENDING' : 'COMPLETED',
+        isCashPending ? 'PENDING' : 'COMPLETED',
         notes
       ]);
 
@@ -561,7 +416,7 @@ export const handleUpgradePlan: RequestHandler = async (req, res) => {
     });
 
     // If the payment is completed immediately (i.e. not PENDING/CASH), send email
-    const isPaymentCompleted = result.newPlan.price === 0 || paymentMethod !== 'CASH';
+    const isPaymentCompleted = Number(result.newPlan.price) === 0 || paymentMethod !== 'CASH';
     if (isPaymentCompleted && result.paymentId) {
       try {
         const sent = await sendSubscriptionPaymentReceiptByPaymentId(result.paymentId);
@@ -585,7 +440,7 @@ export const handleUpgradePlan: RequestHandler = async (req, res) => {
           endDate: result.newSubscription.end_date
         },
         paymentId: result.paymentId,
-        paymentStatus: result.newPlan.price > 0
+        paymentStatus: Number(result.newPlan.price) > 0
           ? (paymentMethod === 'CASH' ? 'PENDING' : 'COMPLETED')
           : 'NOT_REQUIRED'
       }
@@ -603,12 +458,13 @@ export const handleUpgradePlan: RequestHandler = async (req, res) => {
 // Process Cash Payment (Admin only)
 export const handleProcessCashPayment: RequestHandler = async (req, res) => {
   try {
-    const { paymentId, status, processedBy, notes } = req.body;
+    const { paymentId, status, notes } = req.body;
+    const processedBy = req.user?.id;
 
     if (!paymentId || !status || !processedBy) {
       return res.status(400).json({
         success: false,
-        message: 'Payment ID, status, and processed by are required'
+        message: 'Payment ID and status are required'
       });
     }
 
@@ -640,22 +496,67 @@ export const handleProcessCashPayment: RequestHandler = async (req, res) => {
       }
 
       const payment = paymentResult.rows[0];
+      const subscriptionSources = [
+        { table: 'academy_subscriptions', idColumn: 'academy_id' },
+        { table: 'agency_subscriptions', idColumn: 'agency_id' },
+      ] as const;
+      let subscriptionContext: {
+        table: 'academy_subscriptions' | 'agency_subscriptions';
+        idColumn: 'academy_id' | 'agency_id';
+        subscription: any;
+      } | null = null;
 
-      // If payment failed, deactivate the subscription in whichever table it resides
-      if (status === 'FAILED') {
-        // Try updating academy_subscriptions
-        const acadUpdate = await client.query(
-          `UPDATE academy_subscriptions SET status = 'CANCELLED' WHERE id = $1 RETURNING id`,
+      for (const source of subscriptionSources) {
+        const subscriptionResult = await client.query(
+          `SELECT s.*, p.billing_cycle
+           FROM ${source.table} s
+           JOIN subscription_plans p ON p.id = s.plan_id
+           WHERE s.id = $1
+           FOR UPDATE`,
           [payment.subscription_id]
         );
-        
-        // If not found in academies, try agencies
-        if (acadUpdate.rows.length === 0) {
-          await client.query(
-            `UPDATE agency_subscriptions SET status = 'CANCELLED' WHERE id = $1`,
-            [payment.subscription_id]
-          );
+        if (subscriptionResult.rows.length > 0) {
+          subscriptionContext = { ...source, subscription: subscriptionResult.rows[0] };
+          break;
         }
+      }
+
+      if (!subscriptionContext) {
+        throw new Error('Subscription linked to this payment was not found');
+      }
+
+      const { table, idColumn, subscription } = subscriptionContext;
+      if (status === 'COMPLETED') {
+        const startDate = new Date();
+        const endDate = addBillingCycleToDate(startDate, subscription.billing_cycle);
+
+        await client.query(
+          `UPDATE ${table}
+           SET status = 'CANCELLED', auto_renew = false, updated_at = NOW()
+           WHERE ${idColumn} = $1 AND status = 'ACTIVE' AND id <> $2`,
+          [subscription[idColumn], subscription.id]
+        );
+
+        await client.query(
+          `UPDATE ${table}
+           SET status = 'ACTIVE', start_date = $1, end_date = $2,
+               auto_renew = $3, activated_by = $4, activated_at = NOW(), updated_at = NOW()
+           WHERE id = $5`,
+          [
+            startDate,
+            endDate,
+            String(subscription.billing_cycle).toUpperCase() !== 'LIFETIME',
+            processedBy,
+            subscription.id,
+          ]
+        );
+      } else {
+        await client.query(
+          `UPDATE ${table}
+           SET status = 'CANCELLED', auto_renew = false, updated_at = NOW()
+           WHERE id = $1`,
+          [subscription.id]
+        );
       }
 
       return payment;
@@ -703,6 +604,13 @@ export const handleGetSubscriptionHistory: RequestHandler = async (req, res) => 
       return res.status(400).json({
         success: false,
         message: 'Organization ID is required'
+      });
+    }
+
+    if (!(await canAccessOrganizationForRequest(req.user, orgId))) {
+      return res.status(403).json({
+        success: false,
+        message: 'You cannot access this organization'
       });
     }
 
@@ -761,7 +669,14 @@ export const handleCancelSubscription: RequestHandler = async (req, res) => {
     }
 
     const user = (req as any).user;
-    const isAgency = user?.role === 'AGENCY_ADMIN';
+    if (!(await canAccessOrganizationForRequest(user, academyId))) {
+      return res.status(403).json({
+        success: false,
+        message: 'You cannot manage this organization'
+      });
+    }
+
+    const isAgency = user?.role === 'agency_admin';
     const subTable = isAgency ? 'agency_subscriptions' : 'academy_subscriptions';
     const orgIdColumn = isAgency ? 'agency_id' : 'academy_id';
 
@@ -1257,13 +1172,13 @@ export const handleSendReceiptManually: RequestHandler = async (req, res) => {
 const subscriptionRouter = Router();
 subscriptionRouter.get('/current', authenticateToken, handleGetSubscription);
 subscriptionRouter.get('/plans', handleGetPlans);
-subscriptionRouter.post('/plans', authenticateToken, handleCreatePlan);
-subscriptionRouter.put('/plans/:id', authenticateToken, handleUpdatePlan);
-subscriptionRouter.delete('/plans/:id', authenticateToken, handleDeletePlan);
+subscriptionRouter.post('/plans', authenticateToken, requireAdmin, handleCreatePlan);
+subscriptionRouter.put('/plans/:id', authenticateToken, requireAdmin, handleUpdatePlan);
+subscriptionRouter.delete('/plans/:id', authenticateToken, requireAdmin, handleDeletePlan);
 subscriptionRouter.post('/upgrade', authenticateToken, handleUpgradePlan);
-subscriptionRouter.post('/process-payment', authenticateToken, handleProcessCashPayment);
+subscriptionRouter.post('/process-payment', authenticateToken, requireAdmin, handleProcessCashPayment);
 subscriptionRouter.get('/history', authenticateToken, handleGetSubscriptionHistory);
 subscriptionRouter.post('/cancel', authenticateToken, handleCancelSubscription);
-subscriptionRouter.post('/send-receipt', authenticateToken, handleSendReceiptManually);
+subscriptionRouter.post('/send-receipt', authenticateToken, requireAdmin, handleSendReceiptManually);
 
 export default subscriptionRouter;

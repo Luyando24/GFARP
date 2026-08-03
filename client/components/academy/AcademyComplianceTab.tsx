@@ -153,7 +153,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
-            if (file.size > 4 * 1024 * 1024) {
+            if (file.size > 10 * 1024 * 1024) {
                 toast({
                     title: "File too large",
                     description: "Maximum file size is 4MB",
@@ -178,7 +178,7 @@ export default function AcademyComplianceTab({ academyId }: AcademyComplianceTab
         try {
             setUploading(true);
             const formData = new FormData();
-            formData.append('file', selectedFile);
+            formData.append('document', selectedFile);
             formData.append('academyId', academyId);
             formData.append('document_name', newDocument.document_name);
             formData.append('document_type', newDocument.document_type);

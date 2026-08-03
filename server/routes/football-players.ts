@@ -1,70 +1,41 @@
 import { Router, RequestHandler } from 'express';
 import { query } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
-import crypto from 'crypto';
+import { authenticateToken, canAccessOrganizationForRequest, requireAdmin, requireRoles } from '../middleware/auth.js';
+import { decryptField, encryptField } from '../lib/field-encryption.js';
+import { hashNationalId } from '../lib/identity-hash.js';
 
 const router = Router();
 
-// Auto-run migrations for players table rich fields
-(async () => {
-  try {
-    console.log('[FootballPlayers] Ensuring rich profile columns exist in players table...');
-    await query(`
-      ALTER TABLE players 
-      ADD COLUMN IF NOT EXISTS bio TEXT,
-      ADD COLUMN IF NOT EXISTS career_history TEXT,
-      ADD COLUMN IF NOT EXISTS honours TEXT,
-      ADD COLUMN IF NOT EXISTS education TEXT,
-      ADD COLUMN IF NOT EXISTS video_links TEXT[],
-      ADD COLUMN IF NOT EXISTS transfermarket_link VARCHAR(255),
-      ADD COLUMN IF NOT EXISTS gallery_images TEXT[],
-      ADD COLUMN IF NOT EXISTS cover_image_url TEXT,
-      ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255),
-      ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(50),
-      ADD COLUMN IF NOT EXISTS social_links JSONB,
-      ADD COLUMN IF NOT EXISTS slug VARCHAR(100),
-      ADD COLUMN IF NOT EXISTS display_name VARCHAR(200),
-      ADD COLUMN IF NOT EXISTS profile_image_url TEXT;
-    `);
-    
-    await query(`
-      DO $$
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM pg_constraint WHERE conname = 'players_slug_key'
-        ) THEN
-          ALTER TABLE players ADD CONSTRAINT players_slug_key UNIQUE (slug);
-        END IF;
-      END
-      $$;
-    `);
-    console.log('[FootballPlayers] Rich profile columns and constraints ensured successfully.');
-  } catch (error) {
-    console.error('[FootballPlayers] Failed to ensure rich profile columns:', error);
+const requireAcademyQuery: RequestHandler = async (req, res, next) => {
+  const academyId = req.query.academyId;
+  if (!academyId || !(await canAccessOrganizationForRequest(req.user, academyId))) {
+    return res.status(403).json({ success: false, message: 'You cannot access this academy' });
   }
-})();
-
-// Simple encryption function
-const encrypt = (text: string) => {
-  if (!text) return Buffer.from('');
-  return Buffer.from(text, 'utf8');
+  next();
 };
 
-// Decryption function
-const decrypt = (value: any) => {
-  if (!value) return '';
-  if (typeof value === 'string' && value.startsWith('\\x')) {
-    return Buffer.from(value.slice(2), 'hex').toString('utf8');
+const requireAcademyBody: RequestHandler = async (req, res, next) => {
+  const academyId = req.body?.academyId || req.body?.academy_id;
+  if (!academyId || !(await canAccessOrganizationForRequest(req.user, academyId))) {
+    return res.status(403).json({ success: false, message: 'You cannot access this academy' });
   }
-  if (Buffer.isBuffer(value)) {
-    return value.toString('utf8');
-  }
-  if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
-    return Buffer.from(value as ArrayBuffer).toString('utf8');
-  }
-  if (typeof value === 'string') return value;
-  return String(value);
+  next();
 };
+
+const requirePlayerAccess: RequestHandler = async (req, res, next) => {
+  const playerId = req.params.playerId;
+  let owner = await query('SELECT academy_id FROM players WHERE id = $1 LIMIT 1', [playerId]);
+  if (!owner.rows.length) owner = await query('SELECT academy_id FROM individual_players WHERE id = $1 LIMIT 1', [playerId]);
+  if (!owner.rows.length) return res.status(404).json({ success: false, message: 'Player not found' });
+  if (!(await canAccessOrganizationForRequest(req.user, owner.rows[0].academy_id))) {
+    return res.status(403).json({ success: false, message: 'You cannot access this player' });
+  }
+  next();
+};
+
+const encrypt = encryptField;
+const decrypt = decryptField;
 
 // Create Player
 export const handleCreatePlayer: RequestHandler = async (req, res) => {
@@ -209,8 +180,8 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
     const cardId = `CARD-${Date.now()}`;
     const cardQrSignature = `QR-${playerId}`;
 
-    const nrcHash = nrc ? Buffer.from(nrc).toString('base64') : `HASH-${playerId}`;
-    const nrcSalt = `SALT-${Date.now()}`;
+    const nrcHash = nrc ? hashNationalId(nrc) : `missing:${playerId}`;
+    const nrcSalt = 'hmac-sha256:v1';
 
     const insertQuery = `
       INSERT INTO players (
@@ -1605,7 +1576,7 @@ export const handleBulkImportPlayers: RequestHandler = async (req, res) => {
         sp.name as plan_name, 
         sp.player_limit
       FROM academies a
-      LEFT JOIN academy_subscriptions asub ON a.id = asub.academy_id AND asub.status = 'active' AND asub.end_date > NOW()
+      LEFT JOIN academy_subscriptions asub ON a.id = asub.academy_id AND asub.status = 'ACTIVE' AND asub.end_date > NOW()
       LEFT JOIN subscription_plans sp ON asub.plan_id = sp.id
       WHERE a.id = $1
       ORDER BY asub.created_at DESC
@@ -1820,15 +1791,16 @@ export const handleCheckSlugAvailability: RequestHandler = async (req, res) => {
 };
 
 // Mount routes
-router.get('/all-admin', handleGetAllAdminPlayers);
-router.get('/', handleGetAcademyPlayers);
-router.get('/search', handleSearchPlayers);
-router.get('/statistics', handleGetPlayerStatistics);
+router.use(authenticateToken);
+router.get('/all-admin', requireAdmin, handleGetAllAdminPlayers);
+router.get('/', requireAcademyQuery, handleGetAcademyPlayers);
+router.get('/search', requireAcademyQuery, handleSearchPlayers);
+router.get('/statistics', requireAcademyQuery, handleGetPlayerStatistics);
 router.post('/check-slug-availability', handleCheckSlugAvailability);
-router.get('/:playerId', handleGetPlayerDetails);
-router.post('/', handleCreatePlayer);
-router.put('/:playerId', handleUpdatePlayer);
-router.delete('/:playerId', handleDeletePlayer);
-router.post('/bulk-import', handleBulkImportPlayers);
+router.get('/:playerId', requirePlayerAccess, handleGetPlayerDetails);
+router.post('/', requireAcademyBody, handleCreatePlayer);
+router.put('/:playerId', requirePlayerAccess, handleUpdatePlayer);
+router.delete('/:playerId', requirePlayerAccess, handleDeletePlayer);
+router.post('/bulk-import', requireRoles('academy'), handleBulkImportPlayers);
 
 export default router;

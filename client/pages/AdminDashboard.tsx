@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { lazy, useState, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth, clearSession, isAdmin } from '@/lib/auth';
 import { useToast } from '@/components/ui/use-toast';
-import AcademyManagement from '../components/academy/AcademyManagement';
 import {
   Trophy,
   Users,
@@ -128,15 +127,17 @@ import { Area, AreaChart, Bar, BarChart, Line, LineChart, Pie, PieChart, Cell, C
 import ThemeToggle from '@/components/navigation/ThemeToggle';
 import LanguageToggle from '@/components/navigation/LanguageToggle';
 import { NotificationsPopover } from '@/components/navigation/NotificationsPopover';
-import BlogManagement from '@/components/admin/BlogManagement';
-import SalesAgentsManager from '@/components/admin/SalesAgentsManager';
-import TestimonialManagement from '@/components/admin/TestimonialManagement';
-import DiscountManager from '@/components/admin/DiscountManager';
-import ExemptionManager from '@/components/admin/ExemptionManager';
-import PlanManagement from '@/components/admin/PlanManagement';
-import AllPlayersManagement from '@/components/admin/AllPlayersManagement';
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useTranslation } from "@/lib/i18n";
+
+const AcademyManagement = lazy(() => import('../components/academy/AcademyManagement'));
+const BlogManagement = lazy(() => import('@/components/admin/BlogManagement'));
+const SalesAgentsManager = lazy(() => import('@/components/admin/SalesAgentsManager'));
+const TestimonialManagement = lazy(() => import('@/components/admin/TestimonialManagement'));
+const DiscountManager = lazy(() => import('@/components/admin/DiscountManager'));
+const ExemptionManager = lazy(() => import('@/components/admin/ExemptionManager'));
+const PlanManagement = lazy(() => import('@/components/admin/PlanManagement'));
+const AllPlayersManagement = lazy(() => import('@/components/admin/AllPlayersManagement'));
 
 // Real admin data will be fetched from API
 
@@ -696,84 +697,22 @@ export default function AdminDashboard() {
           });
         } else {
           console.error('Failed to fetch new accounts data');
-          // Set mock data for development
-          const mockAccounts = [
-            {
-              id: 1,
-              name: "Barcelona Youth Academy",
-              location: "Barcelona, Spain",
-              registeredDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-              status: "active",
-              playersCount: 45
-            },
-            {
-              id: 2,
-              name: "Manchester United Academy",
-              location: "Manchester, UK",
-              registeredDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-              status: "pending",
-              playersCount: 32
-            },
-            {
-              id: 3,
-              name: "Real Madrid Cantera",
-              location: "Madrid, Spain",
-              registeredDate: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
-              status: "active",
-              playersCount: 58
-            },
-            {
-              id: 4,
-              name: "Bayern Munich Youth",
-              location: "Munich, Germany",
-              registeredDate: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
-              status: "active",
-              playersCount: 41
-            },
-            {
-              id: 5,
-              name: "Ajax Academy",
-              location: "Amsterdam, Netherlands",
-              registeredDate: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(),
-              status: "active",
-              playersCount: 37
-            }
-          ];
-          setNewAccounts(mockAccounts);
+          setNewAccounts([]);
           setNewAccountsStats({
-            totalNewAccounts: mockAccounts.length,
-            thisWeek: 2,
-            thisMonth: mockAccounts.length,
-            growthRate: 15.2
+            totalNewAccounts: 0,
+            thisWeek: 0,
+            thisMonth: 0,
+            growthRate: 0
           });
         }
       } catch (err) {
         console.error('Error fetching new accounts:', err);
-        // Set mock data on error
-        const mockAccounts = [
-          {
-            id: 1,
-            name: "Barcelona Youth Academy",
-            location: "Barcelona, Spain",
-            registeredDate: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-            status: "active",
-            playersCount: 45
-          },
-          {
-            id: 2,
-            name: "Manchester United Academy",
-            location: "Manchester, UK",
-            registeredDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-            status: "pending",
-            playersCount: 32
-          }
-        ];
-        setNewAccounts(mockAccounts);
+        setNewAccounts([]);
         setNewAccountsStats({
-          totalNewAccounts: mockAccounts.length,
-          thisWeek: 1,
-          thisMonth: mockAccounts.length,
-          growthRate: 8.5
+          totalNewAccounts: 0,
+          thisWeek: 0,
+          thisMonth: 0,
+          growthRate: 0
         });
       }
     };
@@ -796,38 +735,22 @@ export default function AdminDashboard() {
           });
         } else {
           console.error('Failed to fetch country distribution data');
-          // Set mock data for development
-          const mockCountries = [
-            { country: "Zambia", academyCount: 15, percentage: 35.7, flag: "🇿🇲" },
-            { country: "South Africa", academyCount: 8, percentage: 19.0, flag: "🇿🇦" },
-            { country: "Kenya", academyCount: 6, percentage: 14.3, flag: "🇰🇪" },
-            { country: "Nigeria", academyCount: 5, percentage: 11.9, flag: "🇳🇬" },
-            { country: "Ghana", academyCount: 4, percentage: 9.5, flag: "🇬🇭" },
-            { country: "Tanzania", academyCount: 4, percentage: 9.5, flag: "🇹🇿" }
-          ];
-          setCountryDistribution(mockCountries);
+          setCountryDistribution([]);
           setCountryDistributionStats({
-            totalCountries: mockCountries.length,
-            topCountry: mockCountries[0].country,
-            topCountryPercentage: mockCountries[0].percentage,
-            totalAcademies: mockCountries.reduce((sum, c) => sum + c.academyCount, 0)
+            totalCountries: 0,
+            topCountry: '',
+            topCountryPercentage: 0,
+            totalAcademies: 0
           });
         }
       } catch (err) {
         console.error('Error fetching country distribution:', err);
-        // Set mock data on error
-        const mockCountries = [
-          { country: "Zambia", academyCount: 15, percentage: 35.7, flag: "🇿🇲" },
-          { country: "South Africa", academyCount: 8, percentage: 19.0, flag: "🇿🇦" },
-          { country: "Kenya", academyCount: 6, percentage: 14.3, flag: "🇰🇪" },
-          { country: "Nigeria", academyCount: 5, percentage: 11.9, flag: "🇳🇬" }
-        ];
-        setCountryDistribution(mockCountries);
+        setCountryDistribution([]);
         setCountryDistributionStats({
-          totalCountries: mockCountries.length,
-          topCountry: mockCountries[0].country,
-          topCountryPercentage: mockCountries[0].percentage,
-          totalAcademies: mockCountries.reduce((sum, c) => sum + c.academyCount, 0)
+          totalCountries: 0,
+          topCountry: '',
+          topCountryPercentage: 0,
+          totalAcademies: 0
         });
       }
     };
@@ -844,56 +767,25 @@ export default function AdminDashboard() {
           setFinancialGrowthData(data.data || []);
           setFinancialGrowthStats(data.stats || {});
         } else {
-          // Use mock data for development or if API fails
-          const mockFinancialData = [
-            { month: 'Jan', revenue: 12500, subscriptions: 25, growth: 8.5 },
-            { month: 'Feb', revenue: 15200, subscriptions: 32, growth: 21.6 },
-            { month: 'Mar', revenue: 18900, subscriptions: 41, growth: 24.3 },
-            { month: 'Apr', revenue: 22100, subscriptions: 48, growth: 16.9 },
-            { month: 'May', revenue: 26800, subscriptions: 58, growth: 21.3 },
-            { month: 'Jun', revenue: 31200, subscriptions: 67, growth: 16.4 },
-            { month: 'Jul', revenue: 35600, subscriptions: 76, growth: 14.1 },
-            { month: 'Aug', revenue: 39800, subscriptions: 84, growth: 11.8 },
-            { month: 'Sep', revenue: 44200, subscriptions: 93, growth: 11.1 },
-            { month: 'Oct', revenue: 48900, subscriptions: 102, growth: 10.6 },
-            { month: 'Nov', revenue: 53800, subscriptions: 112, growth: 10.0 },
-            { month: 'Dec', revenue: 58500, subscriptions: 121, growth: 8.7 }
-          ];
-          setFinancialGrowthData(mockFinancialData);
+          setFinancialGrowthData([]);
           setFinancialGrowthStats({
-            totalRevenue: 467500,
-            monthlyGrowth: 13.2,
-            totalSubscriptions: 879,
-            avgRevenuePerSubscription: 532
+            totalRevenue: 0,
+            monthlyGrowth: 0,
+            totalSubscriptions: 0,
+            avgRevenuePerSubscription: 0
           });
         }
       } catch (error) {
         console.error('Error fetching financial growth data:', error);
-        // Use mock data as fallback
-        const mockFinancialData = [
-          { month: 'Jan', revenue: 12500, subscriptions: 25, growth: 8.5 },
-          { month: 'Feb', revenue: 15200, subscriptions: 32, growth: 21.6 },
-          { month: 'Mar', revenue: 18900, subscriptions: 41, growth: 24.3 },
-          { month: 'Apr', revenue: 22100, subscriptions: 48, growth: 16.9 },
-          { month: 'May', revenue: 26800, subscriptions: 58, growth: 21.3 },
-          { month: 'Jun', revenue: 31200, subscriptions: 67, growth: 16.4 },
-          { month: 'Jul', revenue: 35600, subscriptions: 76, growth: 14.1 },
-          { month: 'Aug', revenue: 39800, subscriptions: 84, growth: 11.8 },
-          { month: 'Sep', revenue: 44200, subscriptions: 93, growth: 11.1 },
-          { month: 'Oct', revenue: 48900, subscriptions: 102, growth: 10.6 },
-          { month: 'Nov', revenue: 53800, subscriptions: 112, growth: 10.0 },
-          { month: 'Dec', revenue: 58500, subscriptions: 121, growth: 8.7 }
-        ];
-        setFinancialGrowthData(mockFinancialData);
+        setFinancialGrowthData([]);
         setFinancialGrowthStats({
-          totalRevenue: 467500,
-          monthlyGrowth: 13.2,
-          totalSubscriptions: 879,
-          avgRevenuePerSubscription: 532
+          totalRevenue: 0,
+          monthlyGrowth: 0,
+          totalSubscriptions: 0,
+          avgRevenuePerSubscription: 0
         });
       }
     };
-    fetchFinancialGrowth();
     fetchFinancialGrowth();
   }, []);
 

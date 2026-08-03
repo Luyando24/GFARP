@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import ThemeToggle from '@/components/navigation/ThemeToggle';
+import { Api } from '@/lib/api';
 
 export default function BillingSettings() {
   const navigate = useNavigate();
@@ -20,16 +21,10 @@ export default function BillingSettings() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch('/api/stripe/admin/settings');
-        if (res.ok) {
-          const data = await res.json();
-          setSettings(data);
-        }
-        const plansRes = await fetch('/api/stripe/admin/plans');
-        if (plansRes.ok) {
-          const data = await plansRes.json();
-          setPlans(data.plans);
-        }
+        const data = await Api.get<typeof settings>('/stripe/admin/settings');
+        setSettings(data);
+        const plansData = await Api.get<{ plans: any[] }>('/stripe/admin/plans');
+        setPlans(plansData.plans);
       } catch (e) {
         console.error('Failed to load billing data', e);
       }
@@ -39,19 +34,10 @@ export default function BillingSettings() {
   const saveKeys = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/stripe/admin/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ secretKey: secretKey || undefined, webhookSecret: webhookSecret || undefined })
-      });
-      if (res.ok) {
-        const s = await fetch('/api/stripe/admin/settings');
-        setSettings(await s.json());
-        setSecretKey('');
-        setWebhookSecret('');
-      } else {
-        console.error('Failed to save keys');
-      }
+      await Api.put('/stripe/admin/settings', { secretKey: secretKey || undefined, webhookSecret: webhookSecret || undefined });
+      setSettings(await Api.get<typeof settings>('/stripe/admin/settings'));
+      setSecretKey('');
+      setWebhookSecret('');
     } finally {
       setLoading(false);
     }
@@ -74,21 +60,9 @@ export default function BillingSettings() {
     if (!u || !u.amount) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/stripe/admin/plans/${id}/price`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: Number(u.amount), currency: u.currency || 'USD', interval: u.interval || undefined })
-      });
-      if (res.ok) {
-        const data = await res.json();
-        const plansRes = await fetch('/api/stripe/admin/plans');
-        if (plansRes.ok) {
-          const p = await plansRes.json();
-          setPlans(p.plans);
-        }
-      } else {
-        console.error('Failed to create price');
-      }
+      await Api.post(`/stripe/admin/plans/${id}/price`, { amount: Number(u.amount), currency: u.currency || 'USD', interval: u.interval || undefined });
+      const p = await Api.get<{ plans: any[] }>('/stripe/admin/plans');
+      setPlans(p.plans);
     } finally {
       setLoading(false);
     }

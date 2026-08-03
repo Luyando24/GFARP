@@ -1,36 +1,49 @@
 import { Router } from 'express';
 import { query } from '../lib/db.js';
-import { authenticateToken } from '../middleware/auth.js';
+import {
+  authenticateToken,
+  canAccessOrganizationForRequest,
+  normalizeRole,
+  requireAdmin,
+} from '../middleware/auth.js';
 
 const router = Router();
 
 // Apply authentication to all FIFA compliance routes
 router.use(authenticateToken);
 
+async function requireAcademyAccess(req: any, res: any, academyId: unknown): Promise<boolean> {
+  if (!academyId || !(await canAccessOrganizationForRequest(req.user, academyId))) {
+    res.status(403).json({ error: 'You do not have access to this academy compliance data' });
+    return false;
+  }
+  return true;
+}
+
+async function requireComplianceAccess(req: any, res: any, complianceId: string): Promise<boolean> {
+  const owner = await query('SELECT academy_id FROM fifa_compliance WHERE id = $1', [complianceId]);
+  if (!owner.rows.length) {
+    res.status(404).json({ error: 'Compliance record not found' });
+    return false;
+  }
+  return requireAcademyAccess(req, res, owner.rows[0].academy_id);
+}
+
 // GET /api/fifa-compliance - Get all compliance records for an academy
 router.get('/', async (req, res) => {
   try {
     let { academy_id, status, compliance_type, limit = 50, offset = 0 } = req.query;
     const user = (req as any).user;
-    const userRole = user?.role?.toUpperCase();
-
-    // Security & Session Pick-up:
-    // 1. If user is a direct academy/agency admin, user.id is the target organization ID
-    // 2. If user is a staff member, we must look up their academy_id from staff_users
-    if (userRole === 'ACADEMY_ADMIN' || userRole === 'AGENCY_ADMIN') {
-        academy_id = user.id;
-        console.log(`[FIFA-COMP] Using direct OrgAdmin ID: ${academy_id} (Role: ${userRole})`);
-    } else if (user && userRole !== 'ADMIN' && userRole !== 'SUPERADMIN') {
-        const staffRes = await query('SELECT academy_id FROM staff_users WHERE id = $1', [user.id]);
-        if (staffRes.rows.length > 0 && staffRes.rows[0].academy_id) {
-            academy_id = staffRes.rows[0].academy_id;
-            console.log(`[FIFA-COMP] Using staff-linked academy_id: ${academy_id} for user: ${user.id}`);
-        }
+    const role = normalizeRole(user?.role);
+    if (!academy_id && (role === 'academy' || role === 'agency_admin')) academy_id = user.id;
+    if (!academy_id && role !== 'admin' && role !== 'superadmin') {
+      const staff = await query('SELECT academy_id FROM staff_users WHERE id = $1', [user.id]);
+      academy_id = staff.rows[0]?.academy_id;
     }
-
-
-
-
+    if (academy_id && !(await requireAcademyAccess(req, res, academy_id))) return;
+    if (!academy_id && role !== 'admin' && role !== 'superadmin') {
+      return res.status(403).json({ error: 'No academy is linked to this account' });
+    }
 
     let sql = `
       SELECT fc.*, 
@@ -85,6 +98,8 @@ router.get('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
+    if (!(await requireComplianceAccess(req, res, id))) return;
+
     const result = await query(`
       SELECT fc.*,
              json_agg(DISTINCT fcd.*) FILTER (WHERE fcd.id IS NOT NULL) as documents,
@@ -127,6 +142,7 @@ router.post('/', async (req, res) => {
     if (!academy_id || !compliance_type || !title) {
       return res.status(400).json({ error: 'Missing required fields: academy_id, compliance_type, title' });
     }
+    if (!(await requireAcademyAccess(req, res, academy_id))) return;
 
     const result = await query(`
       INSERT INTO fifa_compliance (
@@ -147,6 +163,7 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    if (!(await requireComplianceAccess(req, res, id))) return;
     const {
       title,
       description,
@@ -195,6 +212,8 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
+    if (!(await requireComplianceAccess(req, res, id))) return;
+
     const result = await query('DELETE FROM fifa_compliance WHERE id = $1 RETURNING id', [id]);
 
     if (result.rows.length === 0) {
@@ -212,6 +231,8 @@ router.delete('/:id', async (req, res) => {
 router.get('/areas/:academy_id', async (req, res) => {
   try {
     const { academy_id } = req.params;
+
+    if (!(await requireAcademyAccess(req, res, academy_id))) return;
 
     const result = await query(`
       SELECT * FROM fifa_compliance_areas 
@@ -241,6 +262,7 @@ router.post('/areas', async (req, res) => {
     if (!academy_id || !area_name || !area_type) {
       return res.status(400).json({ error: 'Missing required fields: academy_id, area_name, area_type' });
     }
+    if (!(await requireAcademyAccess(req, res, academy_id))) return;
 
     const result = await query(`
       INSERT INTO fifa_compliance_areas (
@@ -268,6 +290,8 @@ router.post('/areas', async (req, res) => {
 router.get('/documents/:compliance_id', async (req, res) => {
   try {
     const { compliance_id } = req.params;
+
+    if (!(await requireComplianceAccess(req, res, compliance_id))) return;
 
     const result = await query(`
       SELECT * FROM fifa_compliance_documents 
@@ -299,6 +323,7 @@ router.post('/documents', async (req, res) => {
     if (!compliance_id || !document_name || !document_type) {
       return res.status(400).json({ error: 'Missing required fields: compliance_id, document_name, document_type' });
     }
+    if (!(await requireComplianceAccess(req, res, compliance_id))) return;
 
     const result = await query(`
       INSERT INTO fifa_compliance_documents (
@@ -316,7 +341,7 @@ router.post('/documents', async (req, res) => {
 });
 
 // PUT /api/fifa-compliance/documents/:id/status - Update document status
-router.put('/documents/:id/status', async (req, res) => {
+router.put('/documents/:id/status', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -354,6 +379,8 @@ router.get('/actions/:academy_id', async (req, res) => {
   try {
     const { academy_id } = req.params;
     const { status, priority } = req.query;
+
+    if (!(await requireAcademyAccess(req, res, academy_id))) return;
 
     let sql = `
       SELECT fca.*, fc.title as compliance_title 
@@ -402,6 +429,7 @@ router.post('/actions', async (req, res) => {
     if (!academy_id || !title) {
       return res.status(400).json({ error: 'Missing required fields: academy_id, title' });
     }
+    if (!(await requireAcademyAccess(req, res, academy_id))) return;
 
     const result = await query(`
       INSERT INTO fifa_compliance_actions (
@@ -421,6 +449,9 @@ router.post('/actions', async (req, res) => {
 router.put('/actions/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const owner = await query('SELECT academy_id FROM fifa_compliance_actions WHERE id = $1', [id]);
+    if (!owner.rows.length) return res.status(404).json({ error: 'Action item not found' });
+    if (!(await requireAcademyAccess(req, res, owner.rows[0].academy_id))) return;
     const { title, description, priority, status, assigned_to, due_date, completion_date } = req.body;
 
     const result = await query(`
@@ -453,6 +484,8 @@ router.get('/audits/:academy_id', async (req, res) => {
   try {
     const { academy_id } = req.params;
 
+    if (!(await requireAcademyAccess(req, res, academy_id))) return;
+
     const result = await query(`
       SELECT * FROM fifa_compliance_audits 
       WHERE academy_id = $1 
@@ -467,7 +500,7 @@ router.get('/audits/:academy_id', async (req, res) => {
 });
 
 // POST /api/fifa-compliance/audits - Create audit record
-router.post('/audits', async (req, res) => {
+router.post('/audits', requireAdmin, async (req, res) => {
   try {
     const {
       academy_id,
@@ -515,6 +548,7 @@ router.post('/comments', async (req, res) => {
     if (!compliance_id || !author_name || !comment_text) {
       return res.status(400).json({ error: 'Missing required fields: compliance_id, author_name, comment_text' });
     }
+    if (!(await requireComplianceAccess(req, res, compliance_id))) return;
 
     const result = await query(`
       INSERT INTO fifa_compliance_comments (
@@ -534,6 +568,8 @@ router.post('/comments', async (req, res) => {
 router.get('/dashboard/:academy_id', async (req, res) => {
   try {
     const { academy_id } = req.params;
+
+    if (!(await requireAcademyAccess(req, res, academy_id))) return;
 
     // Get overall compliance statistics
     const statsResult = await query(`

@@ -26,23 +26,10 @@ export async function sendPaymentReceipt(params: PaymentReceiptParams): Promise<
   );
 }
 
-async function ensureReceiptColumns(): Promise<void> {
-  await query(`
-    ALTER TABLE subscription_payments
-    ADD COLUMN IF NOT EXISTS receipt_email_sent_at TIMESTAMPTZ
-  `);
-  await query(`
-    ALTER TABLE player_purchases
-    ADD COLUMN IF NOT EXISTS receipt_email_sent_at TIMESTAMPTZ
-  `);
-}
-
 /** Send receipt for a subscription_payments row (idempotent). */
 export async function sendSubscriptionPaymentReceiptByPaymentId(
   paymentId: string
 ): Promise<boolean> {
-  await ensureReceiptColumns();
-
   const claim = await query(
     `UPDATE subscription_payments
      SET receipt_email_sent_at = NOW(), updated_at = NOW()
@@ -108,8 +95,6 @@ export async function sendAcademyCheckoutReceipt(
   paymentReference: string,
   stripeInvoiceId?: string
 ): Promise<boolean> {
-  await ensureReceiptColumns();
-
   const claim = await query(
     `UPDATE subscription_payments
      SET receipt_email_sent_at = NOW(), updated_at = NOW()
@@ -176,8 +161,6 @@ export async function sendPlayerPurchaseReceipt(
   currency: string,
   paymentReference: string
 ): Promise<boolean> {
-  await ensureReceiptColumns();
-
   const claim = await query(
     `UPDATE player_purchases
      SET receipt_email_sent_at = NOW()

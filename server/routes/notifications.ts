@@ -1,12 +1,15 @@
 import express, { type RequestHandler } from 'express';
 import { query, transaction } from '../lib/db.js';
+import { normalizeRole, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
 // Get notifications for a specific user (used by NotificationsPopover)
 router.get('/list', (async (req, res) => {
   try {
-    const userId = req.query.userId || (req as any).user?.id;
+    const requestedUserId = String(req.query.userId || '');
+    const isAdmin = ['admin', 'superadmin'].includes(normalizeRole(req.user?.role));
+    const userId = isAdmin && requestedUserId ? requestedUserId : req.user?.id;
 
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
@@ -39,7 +42,7 @@ router.get('/list', (async (req, res) => {
 }) as RequestHandler);
 
 // Get all notifications (with filtering options)
-router.get('/', (async (req, res) => {
+router.get('/', requireAdmin, (async (req, res) => {
   try {
     const { type, status, limit = 20, offset = 0 } = req.query;
     const userId = (req as any).user?.id;
@@ -97,6 +100,28 @@ router.get('/', (async (req, res) => {
   }
 }) as RequestHandler);
 
+// Get notification templates
+router.get('/templates', requireAdmin, (async (_req, res) => {
+  try {
+    const { rows } = await query('SELECT * FROM notification_templates ORDER BY name');
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching notification templates:', error);
+    res.status(500).json({ error: 'Failed to fetch notification templates' });
+  }
+}) as RequestHandler);
+
+// Get notification events
+router.get('/events', requireAdmin, (async (_req, res) => {
+  try {
+    const { rows } = await query('SELECT * FROM notification_events ORDER BY name');
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching notification events:', error);
+    res.status(500).json({ error: 'Failed to fetch notification events' });
+  }
+}) as RequestHandler);
+
 // Get a specific notification
 router.get('/:id', (async (req, res) => {
   try {
@@ -135,11 +160,11 @@ router.post('/mark-read', (async (req, res) => {
     const sql = `
       UPDATE user_notifications
       SET read = true, read_at = NOW()
-      WHERE id = $1
+      WHERE id = $1 AND user_id = $2
       RETURNING *
     `;
 
-    const { rows } = await query(sql, [userNotificationId]);
+    const { rows } = await query(sql, [userNotificationId, req.user?.id]);
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Notification record not found' });
     }
@@ -152,7 +177,7 @@ router.post('/mark-read', (async (req, res) => {
 }) as RequestHandler);
 
 // Create a new notification
-router.post('/', (async (req, res) => {
+router.post('/', requireAdmin, (async (req, res) => {
   try {
     await transaction(async (client) => {
       const {
@@ -195,7 +220,7 @@ router.post('/', (async (req, res) => {
         type || 'info',
         priority || 'medium',
         category || 'general',
-        senderId || null,
+        senderId || req.user?.id || null,
         isGlobal || false,
         expiryDate || null,
         actionUrl || null,
@@ -217,16 +242,19 @@ router.post('/', (async (req, res) => {
         }
       }
 
-      // If schoolIds are specified, create school_notifications entries
+      // Resolve selected academies to their staff recipients.
       if (schoolIds && schoolIds.length > 0) {
-        const schoolNotificationQuery = `
-          INSERT INTO school_notifications (notification_id, school_id)
-          VALUES ($1, $2)
-        `;
-
-        for (const schoolId of schoolIds) {
-          await client.query(schoolNotificationQuery, [notification.id, schoolId]);
-        }
+        await client.query(`
+          INSERT INTO user_notifications (notification_id, user_id)
+          SELECT $1, id FROM staff_users WHERE academy_id = ANY($2::uuid[])
+          ON CONFLICT (notification_id, user_id) DO NOTHING
+        `, [notification.id, schoolIds]);
+      } else if (isGlobal) {
+        await client.query(`
+          INSERT INTO user_notifications (notification_id, user_id)
+          SELECT $1, id FROM staff_users
+          ON CONFLICT (notification_id, user_id) DO NOTHING
+        `, [notification.id]);
       }
 
       res.status(201).json(notification);
@@ -284,16 +312,13 @@ router.post('/:id/read', (async (req, res) => {
 }) as RequestHandler);
 
 // Delete a notification
-router.delete('/:id', (async (req, res) => {
+router.delete('/:id', requireAdmin, (async (req, res) => {
   try {
     await transaction(async (client) => {
       const { id } = req.params;
 
       // Delete related user_notifications
       await client.query('DELETE FROM user_notifications WHERE notification_id = $1', [id]);
-
-      // Delete related school_notifications
-      await client.query('DELETE FROM school_notifications WHERE notification_id = $1', [id]);
 
       // Delete the notification
       const { rowCount } = await client.query('DELETE FROM notifications WHERE id = $1 RETURNING id', [id]);
@@ -307,28 +332,6 @@ router.delete('/:id', (async (req, res) => {
   } catch (error) {
     console.error('Error deleting notification:', error);
     res.status(500).json({ error: 'Failed to delete notification' });
-  }
-}) as RequestHandler);
-
-// Get notification templates
-router.get('/templates', (async (_req, res) => {
-  try {
-    const { rows } = await query('SELECT * FROM notification_templates ORDER BY name');
-    res.json(rows);
-  } catch (error) {
-    console.error('Error fetching notification templates:', error);
-    res.status(500).json({ error: 'Failed to fetch notification templates' });
-  }
-}) as RequestHandler);
-
-// Get notification events
-router.get('/events', (async (_req, res) => {
-  try {
-    const { rows } = await query('SELECT * FROM notification_events ORDER BY name');
-    res.json(rows);
-  } catch (error) {
-    console.error('Error fetching notification events:', error);
-    res.status(500).json({ error: 'Failed to fetch notification events' });
   }
 }) as RequestHandler);
 

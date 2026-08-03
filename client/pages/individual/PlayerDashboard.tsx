@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PlayerApi, PlayerProfile } from "@/lib/api";
 import { getProfileSaveErrorMessage } from "@/lib/profile-save-error";
-import { supabase, STORAGE_BUCKETS } from "@/lib/supabase";
+import { uploadPlayerImage } from "@/lib/image-upload";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import PlayerPaymentMethodSelector from "@/components/PlayerPaymentMethodSelector";
@@ -750,98 +750,6 @@ export default function PlayerDashboard() {
   };
 
   /**
-   * Compress an image file using a canvas, keeping quality high (0.92).
-   * Only resizes if the image exceeds MAX_DIMENSION to avoid unnecessarily
-   * large payloads while preserving visual quality.
-   */
-  const compressImage = (file: File): Promise<Blob> => {
-    const MAX_DIMENSION = 1920;
-    return new Promise((resolve, reject) => {
-      const img = new window.Image();
-      const url = URL.createObjectURL(file);
-      img.onload = () => {
-        URL.revokeObjectURL(url);
-        let { width, height } = img;
-        if (width > MAX_DIMENSION || height > MAX_DIMENSION) {
-          if (width > height) {
-            height = Math.round((height * MAX_DIMENSION) / width);
-            width = MAX_DIMENSION;
-          } else {
-            width = Math.round((width * MAX_DIMENSION) / height);
-            height = MAX_DIMENSION;
-          }
-        }
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) { reject(new Error('Canvas not available')); return; }
-        ctx.drawImage(img, 0, 0, width, height);
-        canvas.toBlob(
-          (blob) => {
-            if (blob) resolve(blob);
-            else reject(new Error('Canvas toBlob failed'));
-          },
-          'image/jpeg',
-          0.92 // High quality – only reduces file size via resize, not compression artefacts
-        );
-      };
-      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image load failed')); };
-      img.src = url;
-    });
-  };
-
-  /**
-   * Upload an image file to the Supabase `player-images` bucket.
-   * Returns the public URL on success, or null on failure.
-   */
-  const uploadImageToStorage = async (
-    file: File,
-    pathSuffix: string
-  ): Promise<string | null> => {
-    try {
-      const playerId = session?.userId || profile?.player_id || 'unknown';
-      const compressed = await compressImage(file);
-      const ext = file.type === 'image/png' ? 'png' : 'jpg';
-      const storagePath = `${playerId}/${pathSuffix}_${Date.now()}.${ext}`;
-
-      const { data, error } = await supabase.storage
-        .from(STORAGE_BUCKETS.PLAYER_IMAGES)
-        .upload(storagePath, compressed, {
-          contentType: 'image/jpeg',
-          upsert: true,
-        });
-
-      if (error) {
-        console.error('[ImageUpload] Storage error:', error);
-        return null;
-      }
-
-      // Try public URL first; fall back to signed URL if the bucket is private
-      const { data: publicData } = supabase.storage
-        .from(STORAGE_BUCKETS.PLAYER_IMAGES)
-        .getPublicUrl(data.path);
-
-      if (publicData?.publicUrl) return publicData.publicUrl;
-
-      // Bucket may be private – generate a long-lived signed URL (10 years)
-      const { data: signedData, error: signedError } = await supabase.storage
-        .from(STORAGE_BUCKETS.PLAYER_IMAGES)
-        .createSignedUrl(data.path, 60 * 60 * 24 * 365 * 10);
-
-      if (signedError || !signedData?.signedUrl) {
-        console.error('[ImageUpload] Could not get URL:', signedError);
-        return null;
-      }
-
-      return signedData.signedUrl;
-    } catch (err) {
-      console.error('[ImageUpload] Unexpected error:', err);
-      return null;
-    }
-  };
-
-  /**
    * Handles image selection: compresses the file and uploads it to Supabase
    * Storage, then stores only the returned public URL in formData.
    * This replaces the old base64 approach that caused FUNCTION_PAYLOAD_TOO_LARGE.
@@ -866,7 +774,13 @@ export default function PlayerDashboard() {
       ? `gallery_${index}`
       : field === 'cover_image_url' ? 'cover' : 'profile';
 
-    const url = await uploadImageToStorage(file, pathSuffix);
+    const playerId = session?.userId || profile?.player_id;
+    const url = playerId
+      ? await uploadPlayerImage(playerId, file, pathSuffix).catch((error) => {
+          toast.error(error instanceof Error ? error.message : 'Image upload failed');
+          return null;
+        })
+      : null;
 
     setUploadingImages(prev => ({ ...prev, [uploadKey]: false }));
 

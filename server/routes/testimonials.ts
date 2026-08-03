@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { supabase } from "../lib/supabase.js";
 
 const router = Router();
@@ -65,7 +66,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // POST /api/testimonials - Create a new testimonial
-router.post("/", async (req, res) => {
+router.post("/", authenticateToken, requireAdmin, async (req, res) => {
     try {
         const body = req.body;
 
@@ -112,7 +113,7 @@ router.post("/", async (req, res) => {
 });
 
 // PUT /api/testimonials/:id - Update an existing testimonial
-router.put("/:id", async (req, res) => {
+router.put("/:id", authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const body = req.body;
@@ -154,7 +155,7 @@ router.put("/:id", async (req, res) => {
 });
 
 // DELETE /api/testimonials/:id - Delete a testimonial
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
 

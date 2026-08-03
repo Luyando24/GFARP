@@ -1,20 +1,11 @@
 import { Router } from 'express';
 import { query } from '../lib/db.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
-// Middleware to check if user is admin or superadmin
-const isAdmin = (req: any, res: any, next: any) => {
-  if (req.user && (req.user.role === 'admin' || req.user.role === 'superadmin')) {
-    next();
-  } else {
-    res.status(403).json({ error: 'Access denied. Admin only.' });
-  }
-};
-
 // Get all exemptions
-router.get('/', authenticateToken, isAdmin, async (req, res) => {
+router.get('/', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const result = await query('SELECT * FROM exempted_emails ORDER BY created_at DESC');
     res.json({ success: true, data: result.rows });
@@ -25,9 +16,11 @@ router.get('/', authenticateToken, isAdmin, async (req, res) => {
 });
 
 // Add an exemption
-router.post('/', authenticateToken, isAdmin, async (req, res) => {
+router.post('/', authenticateToken, requireAdmin, async (req, res) => {
   try {
-    const { email, module, reason } = req.body;
+    const email = String(req.body?.email || '').trim().toLowerCase();
+    const module = String(req.body?.module || '').trim();
+    const reason = req.body?.reason ? String(req.body.reason).trim() : null;
     if (!email || !module) {
       return res.status(400).json({ error: 'Email and module are required' });
     }
@@ -45,7 +38,7 @@ router.post('/', authenticateToken, isAdmin, async (req, res) => {
 });
 
 // Delete an exemption
-router.delete('/:id', authenticateToken, isAdmin, async (req, res) => {
+router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     await query('DELETE FROM exempted_emails WHERE id = $1', [id]);

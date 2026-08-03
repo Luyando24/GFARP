@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../../lib/jwt.js';
 
 const mocks = vi.hoisted(() => ({
   query: vi.fn(),
@@ -33,7 +34,7 @@ describe('Academy player fee management', () => {
   const otherAcademyId = '22222222-2222-4222-8222-222222222222';
   const token = jwt.sign(
     { id: academyId, email: 'academy@example.com', role: 'ACADEMY_ADMIN' },
-    process.env.JWT_SECRET || 'your-secret-key',
+    getJwtSecret(),
   );
 
   beforeEach(() => {
@@ -101,6 +102,22 @@ describe('Academy player fee management', () => {
     expect(response.status).toBe(401);
     expect(response.body.message).toBe('Access token required');
     expect(mocks.query).not.toHaveBeenCalled();
+  });
+
+  it('does not activate a paid plan through an unverified payment method', async () => {
+    const response = await request(createServer())
+      .post('/api/subscriptions/upgrade')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        academyId,
+        newPlanId: '33333333-3333-4333-8333-333333333333',
+        paymentMethod: 'BANK_TRANSFER',
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.message).toBe('Payment method must be CARD or CASH');
+    expect(mocks.query).not.toHaveBeenCalled();
+    expect(mocks.transaction).not.toHaveBeenCalled();
   });
 
   it('records an external player fee and creates its recurring schedule atomically', async () => {

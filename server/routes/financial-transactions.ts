@@ -4,6 +4,7 @@ import { query, transaction as dbTransaction } from '../lib/db.js';
 import { authenticateToken } from '../middleware/auth.js';
 import { processPlayerFeeRenewalReminders } from '../lib/player-fee-reminders.js';
 import { processTrainingSessionReminders } from '../lib/training-session-reminders.js';
+import { decryptField } from '../lib/field-encryption.js';
 
 const router = Router();
 
@@ -48,17 +49,7 @@ interface BudgetCategory {
 }
 
 const normalizeCurrency = (value: unknown) => String(value || 'USD').trim().toUpperCase();
-const decryptPlayerValue = (value: any) => {
-  if (!value) return '';
-  if (typeof value === 'string' && value.startsWith('\\x')) {
-    return Buffer.from(value.slice(2), 'hex').toString('utf8');
-  }
-  if (Buffer.isBuffer(value)) return value.toString('utf8');
-  if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
-    return Buffer.from(value as ArrayBuffer).toString('utf8');
-  }
-  return String(value);
-};
+const decryptPlayerValue = decryptField;
 
 function canAccessAcademy(req: any, academyId: string) {
   const user = req.user || {};

@@ -299,9 +299,16 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
   try {
     const finalPath = path.startsWith('/') ? path.substring(1) : path;
 
+    const isPublicAuthRequest = [
+      /^auth\/(login|forgot-password|reset-password)$/,
+      /^football-auth\/(academy|agency)\/(login|register)$/,
+      /^football-auth\/verify-email$/,
+      /^individual-players\/(login|register|verify-email|resend-verification)$/,
+    ].some((pattern) => pattern.test(finalPath));
+
     // Get token from session
     const session = getSession();
-    const token = session?.tokens?.accessToken;
+    const token = isPublicAuthRequest ? undefined : session?.tokens?.accessToken;
 
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -341,8 +348,8 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
         || `HTTP ${res.status}`;
 
       if (res.status === 401) {
-        // A 401 from an unauthenticated request (such as a login attempt with
-        // a wrong password) is an expected form error, not an expired session.
+        // Wrong credentials are an expected form error. Only a request that
+        // actually carried a session token can prove that session is invalid.
         if (token) {
           clearSession();
         }
@@ -1650,12 +1657,8 @@ export const PlayerApi = {
     return Api.post<{ success: boolean; message: string }>('/individual-players/verify-payment', { sessionId });
   },
 
-  async createCheckoutSession(data: { planId: string; billingCycle: string; successUrl: string; cancelUrl: string }) {
+  async createCheckoutSession(data: { planId: string }) {
     return Api.post<{ success: boolean; url: string; sessionId: string }>('/individual-players/create-checkout-session', data);
-  },
-
-  async purchasePlan(data: { planType: string; amount: number }) {
-    return Api.post<{ success: boolean; message: string }>('/individual-players/purchase', data);
   },
 
   async deleteAccount(data?: { password?: string }) {

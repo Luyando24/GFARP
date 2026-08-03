@@ -4,7 +4,7 @@ import { uploadMiddleware } from './player-documents.js';
 import { supabase } from '../lib/supabase.js';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, canAccessOrganizationForRequest, requireAdmin } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -14,27 +14,13 @@ router.use(authenticateToken);
 // GET /api/compliance-documents?academyId=...
 router.get('/', async (req, res) => {
   try {
-    let { academyId } = req.query;
-    const user = (req as any).user;
-    const userRole = user?.role?.toUpperCase();
-
-    // Security & Session Pick-up:
-    // 1. If user is a direct academy/agency admin, user.id is the target organization ID
-    // 2. If user is a staff member, we must look up their academy_id from staff_users
-    // 3. System admins can specify any academyId in the query
-    if (userRole === 'ACADEMY_ADMIN' || userRole === 'AGENCY_ADMIN') {
-        academyId = user.id;
-        console.log(`[COMPLIANCE] Using direct OrgAdmin ID: ${academyId} (Role: ${userRole})`);
-    } else if (user && userRole !== 'ADMIN' && userRole !== 'SUPERADMIN') {
-        const staffRes = await query('SELECT academy_id FROM staff_users WHERE id = $1', [user.id]);
-        if (staffRes.rows.length > 0 && staffRes.rows[0].academy_id) {
-            academyId = staffRes.rows[0].academy_id;
-            console.log(`[COMPLIANCE] Using staff-linked academyId: ${academyId} for user: ${user.id}`);
-        }
-    }
+    const { academyId } = req.query;
 
     if (!academyId) {
-        return res.status(400).json({ success: false, message: 'Academy ID is required or session is invalid' });
+      return res.status(400).json({ success: false, message: 'Academy ID is required or session is invalid' });
+    }
+    if (!(await canAccessOrganizationForRequest(req.user, academyId))) {
+      return res.status(403).json({ success: false, message: 'You cannot access this organization' });
     }
 
     // Check if organization exists first (either academy or agency) to avoid FK violations
@@ -82,23 +68,10 @@ router.get('/', async (req, res) => {
       [complianceId]
     );
     
-    // Transform result to include public URL
-    const documents = result.rows.map(doc => {
-        let publicUrl = '';
-        try {
-          const { data: urlData } = supabase.storage
-              .from('compliance-documents')
-              .getPublicUrl(doc.file_path);
-          publicUrl = urlData?.publicUrl || '';
-        } catch (storageError) {
-          console.error('Error getting public URL:', storageError);
-        }
-        
-        return {
-            ...doc,
-            fileUrl: publicUrl
-        };
-    });
+    const documents = await Promise.all(result.rows.map(async doc => {
+      const { data } = await supabase.storage.from('compliance-documents').createSignedUrl(doc.file_path, 15 * 60);
+      return { ...doc, fileUrl: data?.signedUrl || '' };
+    }));
 
     res.json({ success: true, data: documents });
   } catch (error) {
@@ -115,6 +88,9 @@ router.post('/upload', uploadMiddleware, async (req, res) => {
 
     if (!file || !academyId || !document_name) {
       return res.status(400).json({ success: false, message: 'Missing required fields' });
+    }
+    if (!(await canAccessOrganizationForRequest(req.user, academyId))) {
+      return res.status(403).json({ success: false, message: 'You cannot upload for this organization' });
     }
     
     // Find/Create compliance record
@@ -175,12 +151,11 @@ router.post('/upload', uploadMiddleware, async (req, res) => {
       ]
     );
     
-    // Get public URL
-    const { data: urlData } = supabase.storage
+    const { data: urlData } = await supabase.storage
         .from('compliance-documents')
-        .getPublicUrl(filePath);
+        .createSignedUrl(filePath, 15 * 60);
 
-    res.json({ success: true, data: { ...result.rows[0], fileUrl: urlData.publicUrl } });
+    res.json({ success: true, data: { ...result.rows[0], fileUrl: urlData?.signedUrl || '' } });
   } catch (error) {
     console.error('Error uploading document:', error);
     res.status(500).json({ success: false, message: 'Failed to upload document' });
@@ -188,7 +163,7 @@ router.post('/upload', uploadMiddleware, async (req, res) => {
 });
 
 // POST /api/compliance-documents/update-status
-router.post('/update-status', async (req, res) => {
+router.post('/update-status', requireAdmin, async (req, res) => {
   try {
     const { documentId, status, rejectionReason } = req.body;
 
@@ -220,7 +195,7 @@ router.post('/update-status', async (req, res) => {
 });
 
 // DELETE /api/compliance-documents/delete
-router.post('/delete', async (req, res) => {
+router.post('/delete', requireAdmin, async (req, res) => {
     try {
         const { documentId } = req.body;
         if (!documentId) return res.status(400).json({ success: false, message: 'Document ID required' });
@@ -259,8 +234,19 @@ router.post('/delete', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     try {
         const { id } = req.params;
+        const owner = await query(`
+          SELECT fc.academy_id, fcd.file_path
+          FROM fifa_compliance_documents fcd
+          JOIN fifa_compliance fc ON fc.id = fcd.compliance_id
+          WHERE fcd.id = $1
+        `, [id]);
+        if (!owner.rows.length) return res.status(404).json({ success: false, message: 'Document not found' });
+        if (!(await canAccessOrganizationForRequest(req.user, owner.rows[0].academy_id))) {
+          return res.status(403).json({ success: false, message: 'You cannot delete this document' });
+        }
         const result = await query('DELETE FROM fifa_compliance_documents WHERE id = $1 RETURNING *', [id]);
         if (result.rows.length === 0) return res.status(404).json({ success: false, message: 'Document not found' });
+        if (owner.rows[0].file_path) await supabase.storage.from('compliance-documents').remove([owner.rows[0].file_path]);
         
         res.json({ success: true, message: 'Document deleted' });
     } catch (error) {
@@ -269,7 +255,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // GET /api/compliance-documents/admin-list - List all compliance documents for admin review
-router.get('/admin-list', async (req, res) => {
+router.get('/admin-list', requireAdmin, async (req, res) => {
     try {
         const result = await query(`
             SELECT fcd.*, a.name as academy_name, fc.academy_id
@@ -280,16 +266,10 @@ router.get('/admin-list', async (req, res) => {
         `);
         
         // Transform result to include public URL
-        const documents = result.rows.map(doc => {
-            const { data: urlData } = supabase.storage
-                .from('compliance-documents')
-                .getPublicUrl(doc.file_path);
-            
-            return {
-                ...doc,
-                fileUrl: urlData.publicUrl
-            };
-        });
+        const documents = await Promise.all(result.rows.map(async doc => {
+          const { data } = await supabase.storage.from('compliance-documents').createSignedUrl(doc.file_path, 15 * 60);
+          return { ...doc, fileUrl: data?.signedUrl || '' };
+        }));
 
         res.json({ success: true, data: documents });
     } catch (error) {
@@ -299,7 +279,7 @@ router.get('/admin-list', async (req, res) => {
 });
 
 // GET /api/compliance-documents/stats - Get compliance statistics for admin dashboard
-router.get('/stats', async (req, res) => {
+router.get('/stats', requireAdmin, async (req, res) => {
     try {
         const stats = await query(`
             SELECT 

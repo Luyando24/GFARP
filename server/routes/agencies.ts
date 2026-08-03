@@ -1,4 +1,5 @@
 import { Router, RequestHandler } from 'express';
+import { authenticateToken, requireOrganizationParam } from '../middleware/auth.js';
 import { query } from '../lib/db.js';
 
 const router = Router();
@@ -130,7 +131,7 @@ const handleUpdateAgency: RequestHandler = async (req, res) => {
   }
 };
 
-router.get('/:id', handleGetAgencyById);
-router.put('/:id', handleUpdateAgency);
+router.get('/:id', authenticateToken, requireOrganizationParam('id'), handleGetAgencyById);
+router.put('/:id', authenticateToken, requireOrganizationParam('id'), handleUpdateAgency);
 
 export default router;

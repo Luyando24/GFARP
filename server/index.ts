@@ -3,7 +3,6 @@ import { query } from "./lib/db.js";
 import express from "express";
 import cors from "cors";
 import { emailService } from "./lib/email-service.js";
-import { handleDemo } from "./routes/demo.js";
 import authRouter, {
   handleLogin,
   handleRegisterSuperAdmin,
@@ -24,9 +23,8 @@ import {
 import notificationsRouter from "./routes/notifications.js";
 import supportRouter from "./routes/support.js";
 import databaseRouter from "./routes/database.js";
-import setupPlayerDbRouter from "./routes/setup-player-db.js";
 import individualPlayersRouter from "./routes/individual-players.js";
-import systemSettingsRouter from "./routes/system-settings.js";
+import systemSettingsRouter, { handleGetPublicSystemSettings } from "./routes/system-settings.js";
 import academyRouter from "./routes/academy.js";
 import footballAuthRouter from "./routes/football-auth.js";
 import footballPlayersRouter from "./routes/football-players.js";
@@ -52,38 +50,52 @@ import {
   handleDeletePlayerDocument,
   uploadMiddleware
 } from "./routes/player-documents.js";
-import {
-  handleDemoUploadPlayerDocument,
-  handleDemoGetPlayerDocuments,
-  handleDemoDeletePlayerDocument,
-  handleServeDemoFile,
-  uploadMiddleware as demoUploadMiddleware
-} from "./routes/demo-documents.js";
 import agenciesRouter from "./routes/agencies.js";
 import sitemapRouter from "./routes/sitemap.js";
 import blogsRouter from "./routes/blogs.js";
 import testimonialsRouter from "./routes/testimonials.js";
+import { authenticateToken, requireAdmin, requireSuperAdmin } from "./middleware/auth.js";
 
 export function createServer() {
   console.log("Creating Express server...");
   const app = express();
   console.log("[SERVER] Express app instantiated");
 
-  // Initialize email service with database configuration
-  emailService.initializeFromDatabase().catch(error => {
-    console.warn('[SERVER] Failed to initialize email service from database:', error);
-  });
+  // Tests must remain hermetic and must not connect to the production database.
+  if (process.env.NODE_ENV !== 'test') {
+    emailService.initializeFromDatabase().catch(error => {
+      console.warn('[SERVER] Failed to initialize email service from database:', error);
+    });
+  }
 
   // Middleware
-  app.use(cors());
+  const configuredOrigins = new Set(
+    [
+      ...(process.env.CORS_ORIGINS || '').split(','),
+      process.env.CLIENT_URL,
+      process.env.VITE_APP_URL,
+      process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : undefined,
+    ]
+      .filter(Boolean)
+      .map((origin) => String(origin).trim().replace(/\/$/, '')),
+  );
+  app.use(cors({
+    origin(origin, callback) {
+      if (!origin || process.env.NODE_ENV !== 'production' || configuredOrigins.has(origin.replace(/\/$/, ''))) {
+        return callback(null, true);
+      }
+      return callback(new Error('Origin is not allowed by CORS'));
+    },
+    credentials: true,
+  }));
   console.log("[SERVER] CORS middleware added");
 
   // Stripe webhooks need raw body, so add this before express.json()
   app.use("/api/stripe/webhooks", express.raw({ type: 'application/json' }), stripeWebhooksRouter);
   console.log("[SERVER] Stripe webhooks route added");
 
-  app.use(express.json({ limit: '50mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+  app.use(express.json({ limit: '2mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '2mb' }));
   console.log("[SERVER] Body parsing middleware added");
 
   // Health check routes
@@ -92,7 +104,6 @@ export function createServer() {
     res.json({ message: ping });
   });
 
-  app.get("/demo", handleDemo);
   console.log("[SERVER] Health check routes added");
 
   // Prefix all API routes under /api to match client base URL
@@ -101,40 +112,38 @@ export function createServer() {
 
   // Authentication routes
   api.post("/auth/login", handleLogin);
-  api.post("/auth/register-superadmin", handleRegisterSuperAdmin);
-  api.get("/auth/list-superadmins", handleListSuperAdmins);
-  api.delete("/auth/delete-superadmin/:userId", handleDeleteSuperAdmin);
+  api.post("/auth/register-superadmin", authenticateToken, requireSuperAdmin, handleRegisterSuperAdmin);
+  api.get("/auth/list-superadmins", authenticateToken, requireSuperAdmin, handleListSuperAdmins);
+  api.delete("/auth/delete-superadmin/:userId", authenticateToken, requireSuperAdmin, handleDeleteSuperAdmin);
 
   // Use auth router for additional endpoints
   api.use("/", authRouter);
   console.log("[SERVER] Auth routes registered");
 
   // Dashboard routes
-  api.get("/dashboard/stats", handleGetDashboardStats);
-  api.get("/dashboard/new-accounts", handleGetNewAccounts);
-  api.get("/dashboard/country-distribution", handleGetCountryDistribution);
-  api.get("/dashboard/financial-growth", handleGetFinancialGrowth);
-  api.get("/dashboard/transactions", handleGetAdminTransactions);
-  api.get("/dashboard/academy-stats", handleGetAcademyDashboardStats);
+  api.get("/dashboard/stats", authenticateToken, requireAdmin, handleGetDashboardStats);
+  api.get("/dashboard/new-accounts", authenticateToken, requireAdmin, handleGetNewAccounts);
+  api.get("/dashboard/country-distribution", authenticateToken, requireAdmin, handleGetCountryDistribution);
+  api.get("/dashboard/financial-growth", authenticateToken, requireAdmin, handleGetFinancialGrowth);
+  api.get("/dashboard/transactions", authenticateToken, requireAdmin, handleGetAdminTransactions);
+  api.get("/dashboard/academy-stats", authenticateToken, requireAdmin, handleGetAcademyDashboardStats);
   console.log("[SERVER] Dashboard routes registered");
 
   // Notifications routes
-  api.use("/notifications", notificationsRouter);
+  api.use("/notifications", authenticateToken, notificationsRouter);
 
   // Support routes
   api.use("/support", supportRouter);
 
   // Database management routes
-  api.use("/database", databaseRouter);
-
-  // Setup routes
-  api.use("/", setupPlayerDbRouter);
+  api.use("/database", authenticateToken, requireAdmin, databaseRouter);
 
   // System settings routes
-  api.use("/system-settings", systemSettingsRouter);
+  api.get("/system-settings/public", handleGetPublicSystemSettings);
+  api.use("/system-settings", authenticateToken, requireAdmin, systemSettingsRouter);
 
   // Admin Sales routes
-  api.use("/admin/sales", adminSalesRouter);
+  api.use("/admin/sales", authenticateToken, requireAdmin, adminSalesRouter);
 
   // Admin Discounts routes
   api.use("/admin/discounts", adminDiscountsRouter);
@@ -194,12 +203,12 @@ export function createServer() {
   console.log("[SERVER] Transfer & financial routes registered");
 
   // Player documents routes
-  api.post("/player-documents/upload", uploadMiddleware, handleUploadPlayerDocument);
-  api.get("/player-documents/:playerId", handleGetPlayerDocuments);
-  api.delete("/player-documents/:documentId", handleDeletePlayerDocument);
+  api.post("/player-documents/upload", authenticateToken, uploadMiddleware, handleUploadPlayerDocument);
+  api.get("/player-documents/:playerId", authenticateToken, handleGetPlayerDocuments);
+  api.delete("/player-documents/:documentId", authenticateToken, handleDeletePlayerDocument);
 
   // Temporary maintenance route to check database connection and schema
-  api.get("/maintenance/check-db", async (req, res) => {
+  api.get("/maintenance/check-db", authenticateToken, requireAdmin, async (req, res) => {
     try {
       const result = await query('SELECT current_database(), inet_server_addr(), inet_client_addr()');
       const version = await query('SELECT version()');
@@ -238,18 +247,11 @@ export function createServer() {
   // Individual Players routes
   api.use("/individual-players", individualPlayersRouter);
 
-  // Demo player documents routes (for when database is unavailable)
-  api.post("/demo-player-documents/upload", demoUploadMiddleware, handleDemoUploadPlayerDocument);
-  api.get("/demo-player-documents/:playerId", handleDemoGetPlayerDocuments);
-  api.delete("/demo-player-documents/:documentId", handleDemoDeletePlayerDocument);
   console.log("[SERVER] Document routes registered");
 
   // Mount the /api router
   app.use("/api", api);
   console.log("[SERVER] API router mounted");
-
-  // Demo file serving route (outside /api prefix)
-  app.get("/demo-files/:fileId", handleServeDemoFile);
 
   // Dynamic Sitemap
   app.use("/", sitemapRouter);

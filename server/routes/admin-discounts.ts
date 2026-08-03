@@ -1,11 +1,12 @@
 import { Router } from 'express';
+import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { query } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
 
 const router = Router();
 
 // LIST Promo Codes
-router.get('/', async (req, res) => {
+router.get('/', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const result = await query('SELECT * FROM promo_codes ORDER BY created_at DESC');
     res.json({ success: true, data: result.rows });
@@ -16,11 +17,15 @@ router.get('/', async (req, res) => {
 });
 
 // CREATE Promo Code
-router.post('/', async (req, res) => {
+router.post('/', authenticateToken, requireAdmin, async (req, res) => {
   const { code, discount_percent, status, expires_at, max_uses } = req.body;
+  const discountPercent = Number(discount_percent);
   
-  if (!code || !discount_percent) {
+  if (!code || !Number.isFinite(discountPercent) || discountPercent <= 0 || discountPercent > 100) {
     return res.status(400).json({ success: false, message: 'Code and Discount Percentage are required' });
+  }
+  if (status && !['active', 'inactive'].includes(status)) {
+    return res.status(400).json({ success: false, message: 'Invalid promo code status' });
   }
 
   try {
@@ -29,7 +34,7 @@ router.post('/', async (req, res) => {
       `INSERT INTO promo_codes (id, code, discount_percent, status, expires_at, max_uses)
        VALUES ($1, $2, $3, $4, $5, $6)
        RETURNING *`,
-      [id, code.toUpperCase(), discount_percent, status || 'active', expires_at || null, max_uses || null]
+      [id, code.trim().toUpperCase(), discountPercent, status || 'active', expires_at || null, max_uses || null]
     );
     res.json({ success: true, data: result.rows[0] });
   } catch (error: any) {
@@ -42,9 +47,17 @@ router.post('/', async (req, res) => {
 });
 
 // UPDATE Promo Code
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
   const { id } = req.params;
   const { code, discount_percent, status, expires_at, max_uses } = req.body;
+  const discountPercent = discount_percent === undefined ? null : Number(discount_percent);
+
+  if (discountPercent !== null && (!Number.isFinite(discountPercent) || discountPercent <= 0 || discountPercent > 100)) {
+    return res.status(400).json({ success: false, message: 'Discount Percentage must be between 0 and 100' });
+  }
+  if (status && !['active', 'inactive'].includes(status)) {
+    return res.status(400).json({ success: false, message: 'Invalid promo code status' });
+  }
 
   try {
     const result = await query(
@@ -57,7 +70,7 @@ router.put('/:id', async (req, res) => {
            updated_at = CURRENT_TIMESTAMP
        WHERE id = $6
        RETURNING *`,
-      [code ? code.toUpperCase() : null, discount_percent, status, expires_at, max_uses, id]
+      [code ? code.trim().toUpperCase() : null, discountPercent, status, expires_at, max_uses, id]
     );
     
     if (result.rows.length === 0) {
@@ -75,7 +88,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // DELETE Promo Code
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
   const { id } = req.params;
   try {
     await query('DELETE FROM promo_codes WHERE id = $1', [id]);
@@ -87,7 +100,7 @@ router.delete('/:id', async (req, res) => {
 });
 
 // VALIDATE Promo Code (Public/Academy)
-router.post('/validate', async (req, res) => {
+router.post('/validate', authenticateToken, async (req, res) => {
   const { code } = req.body;
   if (!code) {
     return res.status(400).json({ success: false, message: 'Promo code is required' });

@@ -229,6 +229,46 @@ export const handleGetSystemSettings: RequestHandler = async (req, res) => {
   }
 }
 
+// Public bootstrap data is intentionally limited to presentation and
+// maintenance fields. Security, email, integrations, and operational settings
+// remain available only through the authenticated admin endpoint.
+export const handleGetPublicSystemSettings: RequestHandler = async (_req, res) => {
+  const allowedKeys = [
+    'general.siteName',
+    'general.siteDescription',
+    'general.language',
+    'general.maintenanceMode',
+    'general.maintenanceMessage',
+    'general.maintenanceEndTime',
+    'general.registrationEnabled',
+  ];
+  try {
+    const result = await query(
+      'SELECT key, value FROM system_settings WHERE key = ANY($1::text[])',
+      [allowedKeys],
+    );
+    const values = Object.fromEntries(result.rows.map((row) => [row.key, row.value]));
+    const general: Record<string, unknown> = {};
+    for (const key of allowedKeys) {
+      const field = key.replace('general.', '');
+      const rawValue = values[key];
+      if (rawValue === undefined) {
+        general[field] = defaultSettings.general[field as keyof typeof defaultSettings.general];
+        continue;
+      }
+      try {
+        general[field] = JSON.parse(rawValue);
+      } catch {
+        general[field] = rawValue;
+      }
+    }
+    return res.json({ general });
+  } catch (error) {
+    console.error('Error fetching public system settings:', error);
+    return res.status(500).json({ error: 'Failed to fetch public system settings' });
+  }
+};
+
 // PUT /api/system-settings - Update system settings
 export const handleUpdateSystemSettings: RequestHandler = async (req, res) => {
   try {

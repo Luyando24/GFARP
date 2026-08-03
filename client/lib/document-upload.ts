@@ -1,4 +1,5 @@
 import { Api } from './api';
+import { getSession } from './auth';
 
 // Helper functions for localStorage persistence
 const STORAGE_KEY_PREFIX = 'player_documents_';
@@ -116,18 +117,19 @@ export const uploadPlayerDocument = async (
     formData.append('playerId', playerId);
     formData.append('documentType', normalizeDocumentType(documentType));
 
-    // Try regular endpoint first
-    try {
-      const response = await fetch('/api/player-documents/upload', {
-        method: 'POST',
-        body: formData,
-      });
+    const token = getSession()?.tokens?.accessToken;
+    const response = await fetch('/api/player-documents/upload', {
+      method: 'POST',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      body: formData,
+    });
 
-      if (!response.ok) {
-        throw new Error(`Upload failed: ${response.status}`);
-      }
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      return { success: false, error: errorData.error || errorData.message || `Upload failed: ${response.status}` };
+    }
 
-      const result = await response.json();
+    const result = await response.json();
       
       // Map server response (camelCase) to client interface (snake_case)
       const mappedDoc: PlayerDocument = {
@@ -142,58 +144,8 @@ export const uploadPlayerDocument = async (
         is_active: true // New uploads are always active
       };
       
-      saveDocumentToLocalStorage(playerId, mappedDoc);
-      return {
-        success: true,
-        document: mappedDoc
-      };
-    } catch (error) {
-      console.log('Falling back to demo endpoint for document upload');
-      // If regular endpoint fails, try demo endpoint
-      try {
-        const demoResponse = await fetch('/api/demo-player-documents/upload', {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!demoResponse.ok) {
-          let errMsg = 'Upload failed';
-          try {
-            const errorData = await demoResponse.json();
-            errMsg = errorData.error || errMsg;
-          } catch {}
-          return {
-            success: false,
-            error: errMsg
-          };
-        }
-
-        const demoResult = await demoResponse.json();
-        
-        // Map demo response
-        const mappedDemoDoc: PlayerDocument = {
-          id: demoResult.document.id,
-          document_type: demoResult.document.documentType,
-          original_filename: demoResult.document.originalFilename,
-          file_size: demoResult.document.fileSize,
-          mime_type: demoResult.document.mimeType,
-          uploaded_at: demoResult.document.uploadDate,
-          file_url: demoResult.document.url,
-          is_active: true
-        };
-        
-        saveDocumentToLocalStorage(playerId, mappedDemoDoc);
-        return {
-          success: true,
-          document: mappedDemoDoc
-        };
-      } catch (demoError) {
-        return {
-          success: false,
-          error: 'Upload failed in both regular and demo modes'
-        };
-      }
-    }
+    saveDocumentToLocalStorage(playerId, mappedDoc);
+    return { success: true, document: mappedDoc };
 
   } catch (error) {
     console.error('Document upload error:', error);
@@ -214,14 +166,15 @@ export const getPlayerDocuments = async (
   try {
     const cachedDocs = getDocumentsFromLocalStorage(playerId);
     
-    // Always try the regular endpoint first for fresh data
-    try {
-      const queryParams = includeInactive ? '?include_inactive=true' : '';
-      const response = await fetch(`/api/player-documents/${playerId}${queryParams}`);
+    const queryParams = includeInactive ? '?include_inactive=true' : '';
+    const token = getSession()?.tokens?.accessToken;
+    const response = await fetch(`/api/player-documents/${playerId}${queryParams}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
       
-      if (!response.ok) {
-        throw new Error(`Failed to fetch documents: ${response.status}`);
-      }
+    if (!response.ok) {
+      return { success: false, documents: cachedDocs };
+    }
       
       const data = await response.json();
       const rawDocuments = data.documents || [];
@@ -244,37 +197,7 @@ export const getPlayerDocuments = async (
       // For now, let's just cache what we get, as localStorage is per-domain and 5-10MB is a lot of text.
       documents.forEach(doc => saveDocumentToLocalStorage(playerId, doc));
       
-      return { success: true, documents };
-    } catch (error) {
-      // If regular endpoint fails, try the demo endpoint
-      const demoResponse = await fetch(`/api/demo-player-documents/${playerId}`);
-      
-      if (!demoResponse.ok) {
-        // If both API endpoints fail, return the cached documents if any
-        if (cachedDocs && cachedDocs.length > 0) {
-          // If asking for inactive but cache only has active (likely), it's partial data but better than nothing
-          return { success: true, documents: cachedDocs };
-        }
-        return { success: false, documents: [] };
-      }
-      
-      const demoData = await demoResponse.json();
-      const demoRawDocuments = demoData.documents || [];
-      
-      const demoDocuments: PlayerDocument[] = demoRawDocuments.map((doc: any) => ({
-        id: doc.id,
-        document_type: doc.documentType,
-        original_filename: doc.originalFilename,
-        file_size: doc.fileSize,
-        mime_type: doc.mimeType,
-        uploaded_at: doc.uploadDate,
-        file_url: doc.url,
-        is_active: true // Demo docs are always active
-      }));
-
-      demoDocuments.forEach((doc: PlayerDocument) => saveDocumentToLocalStorage(playerId, doc));
-      return { success: true, documents: demoDocuments };
-    }
+    return { success: true, documents };
   } catch (error) {
     console.error('Error fetching player documents:', error);
     // Return cached documents as fallback if available
@@ -306,32 +229,14 @@ export const deletePlayerDocument = async (
       }
     }
     
-    // Try regular endpoint first
-    try {
-      const response = await fetch(`/api/player-documents/${documentId}`, {
-        method: 'DELETE'
-      });
-      
-      // Remove from localStorage regardless of API success
-      if (playerId) {
-        removeDocumentFromLocalStorage(playerId, documentId);
-      }
-      
-      if (response.ok) return { success: true };
-      throw new Error(`Failed to delete document: ${response.status}`);
-    } catch (error) {
-      // If regular endpoint fails, try demo endpoint
-      const demoResponse = await fetch(`/api/demo-player-documents/${documentId}`, {
-        method: 'DELETE'
-      });
-      
-      // Remove from localStorage regardless of API success
-      if (playerId) {
-        removeDocumentFromLocalStorage(playerId, documentId);
-      }
-      
-      return { success: demoResponse.ok };
-    }
+    const token = getSession()?.tokens?.accessToken;
+    const response = await fetch(`/api/player-documents/${documentId}`, {
+      method: 'DELETE',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    });
+    if (!response.ok) return { success: false };
+    if (playerId) removeDocumentFromLocalStorage(playerId, documentId);
+    return { success: true };
   } catch (error) {
     console.error('Error deleting document:', error);
     return { success: false };

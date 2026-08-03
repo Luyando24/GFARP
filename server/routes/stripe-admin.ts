@@ -1,20 +1,25 @@
 import { Router, type RequestHandler } from 'express';
 import Stripe from 'stripe';
 import { subscriptionSync } from '../lib/subscription-sync.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { query } from '../lib/db.js';
 
 const router = Router();
 
 // Apply authentication to all routes
-router.use(authenticateToken);
+router.use(authenticateToken, requireAdmin);
+
+function requestedAcademyId(req: any): string | null {
+  const value = req.body?.academyId || req.query?.academyId;
+  return value ? String(value) : null;
+}
 
 /**
  * Sync subscriptions for the authenticated academy
  */
 router.post('/sync', (async (req, res) => {
   try {
-    const academyId = (req as any).user?.academyId;
+    const academyId = requestedAcademyId(req);
     
     if (!academyId) {
       return res.status(400).json({ error: 'Academy ID not found' });
@@ -54,7 +59,7 @@ router.post('/sync', (async (req, res) => {
  */
 router.get('/validate', (async (req, res) => {
   try {
-    const academyId = (req as any).user?.academyId;
+    const academyId = requestedAcademyId(req);
     
     if (!academyId) {
       return res.status(400).json({ error: 'Academy ID not found' });
@@ -85,7 +90,7 @@ router.get('/validate', (async (req, res) => {
  */
 router.get('/status', (async (req, res) => {
   try {
-    const academyId = (req as any).user?.academyId;
+    const academyId = requestedAcademyId(req);
     
     if (!academyId) {
       return res.status(400).json({ error: 'Academy ID not found' });
@@ -108,7 +113,7 @@ router.get('/status', (async (req, res) => {
       FROM academy_subscriptions s
       JOIN subscription_plans p ON s.plan_id = p.id
       JOIN academies a ON s.academy_id = a.id
-      WHERE s.academy_id = $1 AND s.status IN ('ACTIVE', 'PAST_DUE', 'TRIALING')
+      WHERE s.academy_id = $1 AND s.status IN ('ACTIVE', 'SUSPENDED', 'PENDING')
       ORDER BY s.created_at DESC
       LIMIT 1
     `, [academyId]);
@@ -154,7 +159,7 @@ router.get('/status', (async (req, res) => {
  */
 router.get('/history', (async (req, res) => {
   try {
-    const academyId = (req as any).user?.academyId;
+    const academyId = requestedAcademyId(req);
     
     if (!academyId) {
       return res.status(400).json({ error: 'Academy ID not found' });
@@ -166,19 +171,25 @@ router.get('/history', (async (req, res) => {
     const historyResult = await query(`
       SELECT 
         sh.action,
-        sh.details,
+        sh.notes,
+        sh.old_status,
+        sh.new_status,
         sh.created_at,
-        p.name as plan_name
+        COALESCE(new_plan.name, current_plan.name) as plan_name
       FROM subscription_history sh
-      LEFT JOIN academy_subscriptions s ON sh.subscription_id = s.id
-      LEFT JOIN subscription_plans p ON s.plan_id = p.id
-      WHERE sh.academy_id = $1
+      JOIN academy_subscriptions s ON sh.subscription_id = s.id
+      LEFT JOIN subscription_plans current_plan ON s.plan_id = current_plan.id
+      LEFT JOIN subscription_plans new_plan ON sh.new_plan_id = new_plan.id
+      WHERE s.academy_id = $1
       ORDER BY sh.created_at DESC
       LIMIT $2 OFFSET $3
     `, [academyId, limit, offset]);
 
     const totalResult = await query(
-      'SELECT COUNT(*) as total FROM subscription_history WHERE academy_id = $1',
+      `SELECT COUNT(*) as total
+       FROM subscription_history sh
+       JOIN academy_subscriptions s ON sh.subscription_id = s.id
+       WHERE s.academy_id = $1`,
       [academyId]
     );
 
@@ -202,7 +213,7 @@ router.get('/history', (async (req, res) => {
  */
 router.post('/refresh', (async (req, res) => {
   try {
-    const academyId = (req as any).user?.academyId;
+    const academyId = requestedAcademyId(req);
     
     if (!academyId) {
       return res.status(400).json({ error: 'Academy ID not found' });
@@ -239,71 +250,32 @@ router.post('/refresh', (async (req, res) => {
   }
 }) as RequestHandler);
 
-export default router;
-
 // --------------------
 // Stripe Settings (Postgres)
 // --------------------
 
-// Get Stripe settings (secret key presence and webhook secret)
-router.get('/settings', (async (req, res) => {
-  try {
-    const result = await query(
-      `SELECT key, value, is_secret FROM system_settings WHERE key IN ('stripe.secret_key','stripe.webhook_secret')`
-    );
-
-    const map: Record<string, { value: string; is_secret: boolean }> = {};
-    for (const row of result.rows) {
-      map[row.key] = { value: row.value, is_secret: row.is_secret };
-    }
-
-    // Check database first, then environment variables
-    const secretKey = map['stripe.secret_key']?.value || process.env.STRIPE_SECRET_KEY || null;
-    const webhookSecret = map['stripe.webhook_secret']?.value || process.env.STRIPE_WEBHOOK_SECRET || null;
-    
-    const isFromEnv = !map['stripe.secret_key']?.value && !!process.env.STRIPE_SECRET_KEY;
-    const mode = secretKey?.startsWith('sk_live_') ? 'live' : (secretKey?.startsWith('sk_test_') ? 'test' : null);
-
-    res.json({
-      secret_key_set: !!secretKey,
-      webhook_secret_set: !!webhookSecret,
-      is_env_config: isFromEnv,
-      mode,
-    });
-  } catch (error: any) {
-    console.error('Error fetching Stripe settings:', error);
-    res.status(500).json({ error: 'Failed to fetch Stripe settings', message: error.message });
-  }
+// Stripe credentials are deployment secrets and are never returned or persisted.
+router.get('/settings', (async (_req, res) => {
+  const secretKey = process.env.STRIPE_SECRET_KEY || '';
+  res.json({
+    secret_key_set: Boolean(secretKey),
+    webhook_secret_set: Boolean(process.env.STRIPE_WEBHOOK_SECRET),
+    is_env_config: true,
+    mode: secretKey.startsWith('sk_live_')
+      ? 'live'
+      : secretKey.startsWith('sk_test_')
+        ? 'test'
+        : null,
+  });
 }) as RequestHandler);
 
-// Update Stripe settings
-router.put('/settings', (async (req, res) => {
-  try {
-    const { secretKey, webhookSecret } = req.body || {};
-
-    if (!secretKey && !webhookSecret) {
-      return res.status(400).json({ error: 'Provide secretKey or webhookSecret' });
-    }
-
-    const updates: Array<{ key: string; value: string; is_secret: boolean }> = [];
-    if (secretKey) updates.push({ key: 'stripe.secret_key', value: secretKey, is_secret: true });
-    if (webhookSecret) updates.push({ key: 'stripe.webhook_secret', value: webhookSecret, is_secret: true });
-
-    for (const u of updates) {
-      await query(
-        `INSERT INTO system_settings(key, value, is_secret, created_at, updated_at)
-         VALUES ($1, $2, $3, NOW(), NOW())
-         ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, is_secret = EXCLUDED.is_secret, updated_at = NOW()`,
-        [u.key, u.value, u.is_secret]
-      );
-    }
-
-    res.json({ success: true });
-  } catch (error: any) {
-    console.error('Error updating Stripe settings:', error);
-    res.status(500).json({ error: 'Failed to update Stripe settings', message: error.message });
-  }
+router.put('/settings', ((_req, res) => {
+  return res.status(410).json({
+    success: false,
+    message: 'Stripe credentials must be configured as deployment environment variables',
+  });
 }) as RequestHandler);
+
 
 // List subscription plans with Stripe mapping
 router.get('/plans', (async (_req, res) => {
@@ -335,11 +307,7 @@ router.post('/plans/:planId/price', (async (req, res) => {
     }
     const plan = planResult.rows[0];
 
-    // Load Stripe key from settings
-    const settingsResult = await query(
-      `SELECT value FROM system_settings WHERE key = 'stripe.secret_key'`
-    );
-    const secretKey = settingsResult.rows[0]?.value || process.env.STRIPE_SECRET_KEY;
+    const secretKey = process.env.STRIPE_SECRET_KEY;
     if (!secretKey) {
       return res.status(400).json({ error: 'Stripe secret key not configured' });
     }
@@ -384,3 +352,5 @@ router.post('/plans/:planId/price', (async (req, res) => {
     res.status(500).json({ error: 'Failed to create/update Stripe price', message: error.message });
   }
 }) as RequestHandler);
+
+export default router;

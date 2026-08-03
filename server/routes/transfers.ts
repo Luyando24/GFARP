@@ -1,8 +1,21 @@
 import { Router, RequestHandler } from 'express';
 import { query } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
+import { authenticateToken, canAccessOrganizationForRequest } from '../middleware/auth.js';
 
 const router = Router();
+
+const requireTransferOrganization: RequestHandler = async (req, res, next) => {
+  let academyId = req.body?.academy_id || req.body?.academyId || req.params.academyId || req.query.academyId;
+  if (!academyId && req.params.transferId) {
+    const owner = await query('SELECT academy_id FROM transfers WHERE id = $1 LIMIT 1', [req.params.transferId]);
+    academyId = owner.rows[0]?.academy_id;
+  }
+  if (!academyId || !(await canAccessOrganizationForRequest(req.user, academyId))) {
+    return res.status(403).json({ success: false, error: 'You cannot access this transfer' });
+  }
+  next();
+};
 
 // Helper function to create financial transactions for transfers
 async function createFinancialTransactionsForTransfer(transfer: any, isUpdate: boolean = false) {
@@ -510,12 +523,13 @@ export const handleGetTransferStats: RequestHandler = async (req, res) => {
 }
 
 // Routes
-router.get('/', handleGetTransfers);
-router.get('/stats', handleGetTransferStats);
-router.get('/:transferId', handleGetTransfer);
-router.post('/', handleCreateTransfer);
-router.post('/:academyId/sync-finances', handleSyncTransfersWithFinances);
-router.put('/:transferId', handleUpdateTransfer);
-router.delete('/:transferId', handleDeleteTransfer);
+router.use(authenticateToken);
+router.get('/', requireTransferOrganization, handleGetTransfers);
+router.get('/stats', requireTransferOrganization, handleGetTransferStats);
+router.get('/:transferId', requireTransferOrganization, handleGetTransfer);
+router.post('/', requireTransferOrganization, handleCreateTransfer);
+router.post('/:academyId/sync-finances', requireTransferOrganization, handleSyncTransfersWithFinances);
+router.put('/:transferId', requireTransferOrganization, handleUpdateTransfer);
+router.delete('/:transferId', requireTransferOrganization, handleDeleteTransfer);
 
 export default router;

@@ -1,41 +1,19 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../lib/jwt.js';
 import { query, hashPassword, verifyPassword, transaction } from '../lib/db.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { getStripe, createStripeCustomer } from '../lib/stripe.js';
 import { emailService } from '../lib/email-service.js';
 import { sendPlayerPurchaseReceipt } from '../lib/payment-receipt.js';
+import { decryptField } from '../lib/field-encryption.js';
 
 const router = Router();
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = getJwtSecret();
 
 function getAppBaseUrl(): string {
   return process.env.VITE_APP_URL || process.env.CLIENT_URL || 'http://localhost:8080';
-}
-
-let emailVerificationSchemaReady: Promise<void> | null = null;
-
-function ensureEmailVerificationSchema(): Promise<void> {
-  if (!emailVerificationSchemaReady) {
-    emailVerificationSchemaReady = (async () => {
-      await query(`
-        ALTER TABLE individual_players
-        ADD COLUMN IF NOT EXISTS email_verified BOOLEAN DEFAULT FALSE,
-        ADD COLUMN IF NOT EXISTS verification_token TEXT
-      `);
-      await query(`
-        UPDATE individual_players
-        SET email_verified = TRUE
-        WHERE email_verified IS NOT TRUE AND verification_token IS NULL
-      `);
-    })().catch((err) => {
-      emailVerificationSchemaReady = null;
-      console.warn('[Player] Could not ensure email verification columns:', err);
-      throw err;
-    });
-  }
-  return emailVerificationSchemaReady;
 }
 
 async function sendPlayerVerificationEmail(
@@ -90,18 +68,30 @@ router.get('/plans', async (req, res) => {
 router.post('/create-checkout-session', authenticateToken, async (req, res) => {
   try {
     const userId = (req as any).user.id;
-    const { planId, successUrl, cancelUrl } = req.body;
+    const { planId } = req.body;
 
     if (!planId) {
       return res.status(400).json({ error: 'Plan ID is required' });
     }
 
     // Get plan details from DB
-    const planResult = await query('SELECT * FROM subscription_plans WHERE id = $1', [planId]);
+    const planResult = await query(
+      `SELECT * FROM subscription_plans
+       WHERE id = $1 AND target_type = 'INDIVIDUAL' AND is_active = true`,
+      [planId]
+    );
     if (planResult.rows.length === 0) {
       return res.status(404).json({ error: 'Plan not found' });
     }
     const plan = planResult.rows[0];
+    const appBaseUrl = getAppBaseUrl();
+
+    if (Number(plan.price) <= 0) {
+      return res.json({
+        success: true,
+        url: `${appBaseUrl}/player/dashboard?tab=subscription`,
+      });
+    }
 
     // Get player details
     const playerResult = await query(
@@ -146,7 +136,8 @@ router.post('/create-checkout-session', authenticateToken, async (req, res) => {
       );
     }
 
-    const isRecurring = plan.billingCycle && plan.billingCycle.toLowerCase() !== 'lifetime' && plan.billingCycle.toLowerCase() !== 'one-time';
+    const billingCycle = String(plan.billing_cycle || 'LIFETIME').toUpperCase();
+    const isRecurring = billingCycle !== 'LIFETIME';
 
     const session = await stripe.checkout.sessions.create({
       customer: customerId,
@@ -162,7 +153,7 @@ router.post('/create-checkout-session', authenticateToken, async (req, res) => {
             unit_amount: Math.round(parseFloat(plan.price) * 100),
             ...(isRecurring && {
               recurring: {
-                interval: plan.billingCycle.toLowerCase() === 'yearly' ? 'year' : 'month',
+                interval: billingCycle === 'YEARLY' ? 'year' as const : 'month' as const,
               },
             }),
           },
@@ -170,8 +161,8 @@ router.post('/create-checkout-session', authenticateToken, async (req, res) => {
         },
       ],
       mode: isRecurring ? 'subscription' : 'payment',
-      success_url: successUrl,
-      cancel_url: cancelUrl,
+      success_url: `${appBaseUrl}/player/dashboard?tab=subscription&payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appBaseUrl}/player/dashboard?tab=subscription&payment_cancelled=true`,
       metadata: {
         playerId: userId,
         planId: planId,
@@ -205,7 +196,18 @@ router.post('/verify-payment', authenticateToken, async (req, res) => {
     const session = await stripe.checkout.sessions.retrieve(sessionId);
 
     if (session.payment_status === 'paid') {
-      const planId = session.metadata?.planId || 'pro';
+      if (session.metadata?.type !== 'player_subscription' || session.metadata?.playerId !== userId) {
+        return res.status(403).json({ error: 'Payment session does not belong to this player' });
+      }
+      const planId = session.metadata.planId;
+      const planResult = await query(
+        `SELECT id FROM subscription_plans
+         WHERE id = $1 AND target_type = 'INDIVIDUAL' AND is_active = true`,
+        [planId],
+      );
+      if (planResult.rows.length === 0) {
+        return res.status(400).json({ error: 'Payment references an invalid plan' });
+      }
       const amount = session.amount_total ? session.amount_total / 100 : 0;
       const currency = (session.currency || 'usd').toUpperCase();
       const paymentReference =
@@ -250,7 +252,6 @@ router.post('/verify-payment', authenticateToken, async (req, res) => {
 // Register a new individual player
 router.post('/register', async (req, res) => {
   try {
-    await ensureEmailVerificationSchema();
     const { email, password, firstName, lastName, academyCode } = req.body;
     const normalizedEmail = String(email || '').toLowerCase().trim();
     const normalizedGender = String(req.body.gender || '').toLowerCase().trim();
@@ -342,7 +343,6 @@ router.post('/register', async (req, res) => {
 // Verify email
 router.post('/verify-email', async (req, res) => {
   try {
-    await ensureEmailVerificationSchema();
     const { token } = req.body;
 
     if (!token) {
@@ -405,7 +405,6 @@ router.post('/verify-email', async (req, res) => {
 // Resend verification email
 router.post('/resend-verification', async (req, res) => {
   try {
-    await ensureEmailVerificationSchema();
     const normalizedEmail = String(req.body.email || '').toLowerCase().trim();
 
     if (!normalizedEmail) {
@@ -457,7 +456,6 @@ router.post('/resend-verification', async (req, res) => {
 // Login
 router.post('/login', async (req, res) => {
   try {
-    await ensureEmailVerificationSchema();
     const { email, password } = req.body;
     const normalizedEmail = String(email || '').toLowerCase().trim();
 
@@ -699,40 +697,6 @@ router.put('/profile', authenticateToken, async (req, res) => {
     const sanitizedGallery = Array.isArray(gallery_images) ? gallery_images : [];
     const sanitizedVideos = Array.isArray(video_links) ? video_links : [];
 
-    const runMigration = async () => {
-      console.log('Running auto-migration for player_profiles...');
-      await query(`
-        ALTER TABLE player_profiles 
-        ADD COLUMN IF NOT EXISTS gallery_images TEXT[],
-        ADD COLUMN IF NOT EXISTS height NUMERIC,
-        ADD COLUMN IF NOT EXISTS weight NUMERIC,
-        ADD COLUMN IF NOT EXISTS preferred_foot VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS cover_image_url TEXT,
-         ADD COLUMN IF NOT EXISTS career_history TEXT,
-        ADD COLUMN IF NOT EXISTS honours TEXT,
-        ADD COLUMN IF NOT EXISTS education TEXT,
-        ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255),
-        ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(50),
-        ADD COLUMN IF NOT EXISTS social_links JSONB,
-        ADD COLUMN IF NOT EXISTS slug VARCHAR(100);
-        
-        -- Also ensure profile_image_url is TEXT
-        ALTER TABLE player_profiles 
-        ALTER COLUMN profile_image_url TYPE TEXT;
-
-        -- Ensure unique constraint on slug
-        DO $$
-        BEGIN
-          IF NOT EXISTS (
-            SELECT 1 FROM pg_constraint WHERE conname = 'player_profiles_slug_key'
-          ) THEN
-            ALTER TABLE player_profiles ADD CONSTRAINT player_profiles_slug_key UNIQUE (slug);
-          END IF;
-        END
-        $$;
-      `);
-    };
-
     const queryParams = [
       display_name,
       sanitizedAge,
@@ -758,44 +722,20 @@ router.put('/profile', authenticateToken, async (req, res) => {
       userId
     ].map(p => p === undefined ? null : p);
 
-    try {
-      await query(
-        `UPDATE player_profiles 
-         SET display_name = $1, age = $2, nationality = $3, position = $4, 
-             current_club = $5, video_links = $6, transfermarket_link = $7, 
-             bio = $8, profile_image_url = $9, gallery_images = $10, 
-             height = $11, weight = $12, preferred_foot = $13,
-              cover_image_url = $14, career_history = $15, 
-             honours = $16, education = $17,
-             contact_email = $18, whatsapp_number = $19, social_links = $20,
-             slug = $21,
-             updated_at = NOW()
-         WHERE player_id = $22`,
-        queryParams
-      );
-    } catch (queryError: any) {
-      // If column is missing (Postgres error 42703), run migration and retry
-      if (queryError.code === '42703') {
-        await runMigration();
-        // Retry once
-        await query(
-          `UPDATE player_profiles 
-           SET display_name = $1, age = $2, nationality = $3, position = $4, 
-               current_club = $5, video_links = $6, transfermarket_link = $7, 
-               bio = $8, profile_image_url = $9, gallery_images = $10, 
-               height = $11, weight = $12, preferred_foot = $13,
-                cover_image_url = $14, career_history = $15, 
-                honours = $16, education = $17,
-                contact_email = $18, whatsapp_number = $19, social_links = $20,
-                slug = $21,
-                updated_at = NOW()
-            WHERE player_id = $22`,
-          queryParams
-        );
-      } else {
-        throw queryError;
-      }
-    }
+    await query(
+      `UPDATE player_profiles
+       SET display_name = $1, age = $2, nationality = $3, position = $4,
+           current_club = $5, video_links = $6, transfermarket_link = $7,
+           bio = $8, profile_image_url = $9, gallery_images = $10,
+           height = $11, weight = $12, preferred_foot = $13,
+           cover_image_url = $14, career_history = $15,
+           honours = $16, education = $17,
+           contact_email = $18, whatsapp_number = $19, social_links = $20,
+           slug = $21,
+           updated_at = NOW()
+       WHERE player_id = $22`,
+      queryParams
+    );
 
     res.json({ success: true, message: 'Profile updated successfully' });
 
@@ -805,21 +745,7 @@ router.put('/profile', authenticateToken, async (req, res) => {
   }
 });
 
-// Robust decryption helper for players table cipher columns
-const decrypt = (value: any) => {
-  if (!value) return '';
-  if (typeof value === 'string' && value.startsWith('\\x')) {
-    return Buffer.from(value.slice(2), 'hex').toString('utf8');
-  }
-  if (Buffer.isBuffer(value)) {
-    return value.toString('utf8');
-  }
-  if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
-    return Buffer.from(value as ArrayBuffer).toString('utf8');
-  }
-  if (typeof value === 'string') return value;
-  return String(value);
-};
+const decrypt = decryptField;
 
 // Get Public Profile
 router.get('/public/:id', async (req, res) => {
@@ -996,31 +922,15 @@ router.get('/public/by-slug/:slug', async (req, res) => {
 });
 
 // Record Purchase (Simple implementation for now)
-router.post('/purchase', authenticateToken, async (req, res) => {
-  try {
-    const userId = (req as any).user.id;
-    let { planType, amount } = req.body; // 'pdf', 'pro'
-
-    if (!['pdf', 'pro'].includes(planType)) {
-      return res.status(400).json({ error: 'Invalid plan type' });
-    }
-
-    await query(
-      `INSERT INTO player_purchases (player_id, plan_type, amount, status)
-       VALUES ($1, $2, $3, 'completed')`,
-      [userId, planType, amount]
-    );
-
-    res.json({ success: true, message: 'Purchase recorded successfully' });
-
-  } catch (error) {
-    console.error('Purchase error:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+router.post('/purchase', authenticateToken, (_req, res) => {
+  return res.status(410).json({
+    success: false,
+    message: 'Direct purchase recording has been retired; use the verified checkout flow',
+  });
 });
 
 // Get Admin List of Players
-router.get('/admin-list', async (req, res) => {
+router.get('/admin-list', authenticateToken, requireAdmin, async (req, res) => {
   try {
     // Check for admin role (assuming authenticateToken is used or handled by gateway, 
     // but here we might need specific admin check if exposed directly. 
@@ -1045,9 +955,14 @@ router.get('/admin-list', async (req, res) => {
           WHEN ip.academy_id IS NOT NULL THEN 'pro'
           ELSE COALESCE(
             (SELECT 'pro' FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile'),
-            (SELECT plan_type FROM player_purchases 
-             WHERE player_id = ip.id AND status = 'completed' AND plan_type = 'pro'
-             ORDER BY created_at DESC LIMIT 1),
+            (SELECT CASE
+                      WHEN pur.plan_type = 'pro' OR COALESCE(sp.is_free, false) = false THEN 'pro'
+                      ELSE 'free'
+                    END
+             FROM player_purchases pur
+             LEFT JOIN subscription_plans sp ON sp.id::text = pur.plan_type
+             WHERE pur.player_id = ip.id AND pur.status = 'completed'
+             ORDER BY pur.created_at DESC LIMIT 1),
             'free'
           )
         END as current_plan,
@@ -1067,7 +982,7 @@ router.get('/admin-list', async (req, res) => {
 });
 
 // Update a player's plan (Admin only)
-router.post('/:id/plan', async (req, res) => {
+router.post('/:id/plan', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { planType } = req.body;
@@ -1090,7 +1005,7 @@ router.post('/:id/plan', async (req, res) => {
 });
 
 // Get individual player details (Admin only)
-router.get('/:id', async (req, res) => {
+router.get('/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -1127,9 +1042,14 @@ router.get('/:id', async (req, res) => {
           WHEN ip.academy_id IS NOT NULL THEN 'pro'
           ELSE COALESCE(
             (SELECT 'pro' FROM exempted_emails WHERE email = ip.email AND module = 'individual_player_profile'),
-            (SELECT plan_type FROM player_purchases 
-             WHERE player_id = ip.id AND status = 'completed' AND plan_type = 'pro'
-             ORDER BY created_at DESC LIMIT 1),
+            (SELECT CASE
+                      WHEN pur.plan_type = 'pro' OR COALESCE(sp.is_free, false) = false THEN 'pro'
+                      ELSE 'free'
+                    END
+             FROM player_purchases pur
+             LEFT JOIN subscription_plans sp ON sp.id::text = pur.plan_type
+             WHERE pur.player_id = ip.id AND pur.status = 'completed'
+             ORDER BY pur.created_at DESC LIMIT 1),
             'free'
           )
         END as current_plan,
@@ -1161,7 +1081,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // Update individual player details (Admin only)
-router.put('/:id', async (req, res) => {
+router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const {
@@ -1293,7 +1213,7 @@ router.delete('/account', authenticateToken, async (req, res) => {
 });
 
 // Delete an individual player (Admin only)
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
 

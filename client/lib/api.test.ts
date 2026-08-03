@@ -31,6 +31,27 @@ describe("API authentication failures", () => {
     expect(authMocks.clearSession).not.toHaveBeenCalled();
   });
 
+  it("does not attach or invalidate an old session during a new login attempt", async () => {
+    authMocks.getSession.mockReturnValue({
+      userId: "academy-1",
+      role: "academy",
+      tokens: { accessToken: "old-token", expiresInSec: 0 },
+    });
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(
+      JSON.stringify({ message: "Invalid email or password" }),
+      { status: 401, headers: { "Content-Type": "application/json" } },
+    ));
+
+    await expect(Api.post("football-auth/academy/login", {
+      email: "academy@example.com",
+      password: "wrong-password",
+    })).rejects.toThrow("Invalid email or password");
+
+    const request = fetchSpy.mock.calls[0][1];
+    expect(new Headers(request?.headers).has("Authorization")).toBe(false);
+    expect(authMocks.clearSession).not.toHaveBeenCalled();
+  });
+
   it("clears an existing session when an authenticated request returns 401", async () => {
     authMocks.getSession.mockReturnValue({
       userId: "academy-1",

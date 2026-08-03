@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CreditCard, Wallet, DollarSign, Loader2, CheckCircle } from 'lucide-react';
+import { CreditCard, Loader2, CheckCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Api } from '@/lib/api';
 
@@ -15,7 +15,7 @@ interface PaymentMethodSelectorProps {
     id: string;
     name: string;
     price: number;
-    billingCycle?: 'monthly' | 'yearly';
+    billingCycle?: 'monthly' | 'yearly' | 'lifetime';
   } | null;
   academyId: string;
   onSuccess: () => void;
@@ -95,6 +95,7 @@ export default function PaymentMethodSelector({
           newPlanId: selectedPlan.id,
           paymentMethod,
           paymentReference: 'DASHBOARD_UPGRADE',
+          promoCodeId: appliedDiscount?.id,
           notes: `Upgraded to ${selectedPlan.name} plan`
         });
 
@@ -140,7 +141,12 @@ export default function PaymentMethodSelector({
         <DialogHeader>
           <DialogTitle>Complete Your Subscription</DialogTitle>
           <DialogDescription>
-            You're upgrading to <strong>{selectedPlan.name}</strong> for ${selectedPlan.price}/month
+            You're upgrading to <strong>{selectedPlan.name}</strong> for ${selectedPlan.price}/
+            {selectedPlan.billingCycle === 'yearly'
+              ? 'year'
+              : selectedPlan.billingCycle === 'lifetime'
+                ? 'one-time'
+                : 'month'}
           </DialogDescription>
         </DialogHeader>
 

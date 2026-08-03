@@ -25,7 +25,7 @@ export interface AcademyDashboardStats {
 export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) => {
   try {
     const orgId = req.query.academyId || req.query.agencyId || req.query.orgId;
-    const isAgency = !!req.query.agencyId || (req as any).user?.role === 'AGENCY_ADMIN';
+    const isAgency = !!req.query.agencyId || (req as any).user?.role === 'agency_admin';
     const idColumn = isAgency ? 'agency_id' : 'academy_id';
 
     if (!orgId) {

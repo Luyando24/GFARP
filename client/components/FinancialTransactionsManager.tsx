@@ -19,6 +19,7 @@ import {
   UserRound
 } from 'lucide-react';
 import { getPlayerFeePaymentState } from '@/lib/player-fee-filters';
+import { addCalendarMonths, addCalendarYears } from '@shared/calendar-date';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 import InvoiceGenerator from './InvoiceGenerator';
@@ -168,18 +169,10 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   ];
 
   const calculateNextRenewalDate = (baseDateStr?: string, paymentType?: string): string => {
-    const baseDate = baseDateStr ? new Date(baseDateStr) : new Date();
-    if (isNaN(baseDate.getTime())) return '';
-
-    const nextDate = new Date(baseDate);
-
-    if (paymentType === 'yearly') {
-      nextDate.setFullYear(nextDate.getFullYear() + 1);
-    } else {
-      nextDate.setMonth(nextDate.getMonth() + 1);
-    }
-
-    return nextDate.toISOString().split('T')[0];
+    const baseDate = baseDateStr || new Date().toISOString().slice(0, 10);
+    return paymentType === 'yearly'
+      ? addCalendarYears(baseDate)
+      : addCalendarMonths(baseDate);
   };
 
   const emptyTransactionForm = (playerFee = true): Partial<FinancialTransaction> => {

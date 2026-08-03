@@ -2,7 +2,6 @@ import { Trophy, Users, FileText, ShoppingCart, BookOpen, Globe, Shield, UserChe
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import ThemeToggle from "@/components/navigation/ThemeToggle";
@@ -20,8 +19,7 @@ const faqData = [];
 export default function Index() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
-  const { t, dir, language } = useTranslation();
+  const { t, dir } = useTranslation();
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [isLoadingTestimonials, setIsLoadingTestimonials] = useState(true);
   const [plans, setPlans] = useState<any[]>([]);
@@ -57,10 +55,6 @@ export default function Index() {
         const academyData = await academyRes.json();
         const individualData = await individualRes.json();
         const agencyData = await agencyRes.json();
-        
-        console.log('[DEBUG] Academy response:', academyData._debug);
-        console.log('[DEBUG] Individual response:', individualData._debug);
-        console.log('[DEBUG] Agency response:', agencyData._debug);
         
         const allPlans = [
           ...(academyData.success ? academyData.data : []),
@@ -138,11 +132,7 @@ export default function Index() {
       overlay: "from-[#005391]/5 to-[#0066b3]/5"
     };
 
-    // Calculate yearly price if needed (assuming 20% discount for yearly)
-    let displayPrice = plan.price;
-    if (billingCycle === 'yearly' && plan.billing_cycle === 'MONTHLY') {
-      displayPrice = (plan.price * 12 * 0.8).toFixed(2);
-    }
+    const displayPrice = plan.price;
 
     const planKey = plan.name.toLowerCase().includes('starter') ? 'starter' : 
                     plan.name.toLowerCase().includes('pro') ? 'pro' : 
@@ -153,13 +143,18 @@ export default function Index() {
       id: plan.id,
       name: t(`plans.${planKey}.name` as any) || plan.name,
       price: isFree ? t('landing.pricing.free') : `${t(`common.currency.${plan.currency?.toUpperCase()}` as any) || plan.currency} ${displayPrice}`,
-      period: isFree ? "" : plan.billing_cycle === 'LIFETIME' ? t('landing.pricing.lifetime') : billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year'),
+      period: isFree
+        ? ""
+        : plan.billing_cycle === 'LIFETIME'
+          ? t('landing.pricing.lifetime')
+          : plan.billing_cycle === 'YEARLY'
+            ? t('landing.pricing.year')
+            : t('landing.pricing.month'),
       desc: t(`plans.${planKey}.desc` as any) || plan.description,
       badge: isFree ? t('landing.pricing.tier.starter') : isPro ? t('landing.pricing.tier.recommended') : isElite ? t('landing.pricing.tier.premium') : t('landing.pricing.tier.standard'),
       icon: isElite ? Crown : isPro ? Trophy : Building,
       features: (plan.features || []).map((f: string) => {
         const lowerF = f.toLowerCase();
-        console.log(`Translating feature: "${f}", lower: "${lowerF}", language: ${language}`);
         if (lowerF.includes('player')) {
           const count = f.match(/\d+/)?.[0] || plan.player_limit;
           return t('plans.feature.playerCount', { count });
@@ -962,26 +957,6 @@ export default function Index() {
                 </TabsTrigger>
               </TabsList>
             </Tabs>
-          </div>
-
-          {/* Billing Cycle Toggle */}
-          <div className="flex justify-center items-center gap-4 mb-12">
-            <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-white' : 'text-blue-200'}`}>
-              {t('landing.pricing.toggle.monthly')}
-            </span>
-            <Switch
-              checked={billingCycle === 'yearly'}
-              onCheckedChange={(checked) => setBillingCycle(checked ? 'yearly' : 'monthly')}
-              className="bg-blue-900 border-2 border-yellow-400 data-[state=checked]:bg-yellow-400"
-            />
-            <div className="flex items-center gap-2">
-              <span className={`text-sm font-bold ${billingCycle === 'yearly' ? 'text-white' : 'text-blue-200'}`}>
-                {t('landing.pricing.toggle.yearly')}
-              </span>
-              <span className="bg-gradient-to-r from-yellow-400 to-yellow-500 text-black text-[10px] font-black px-2 py-0.5 rounded-full">
-                {t('landing.pricing.save')}
-              </span>
-            </div>
           </div>
 
           {/* Pricing Grid */}

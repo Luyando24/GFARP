@@ -12,8 +12,10 @@ import {
 } from "../../shared/api.js";
 import { query, hashPassword, verifyPassword } from "../lib/db.js";
 import { emailService } from "../lib/email-service.js";
+import { getJwtSecret } from "../lib/jwt.js";
+import { authenticateToken, requireAdmin, requireSuperAdmin } from "../middleware/auth.js";
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = getJwtSecret();
 
 // Create router
 const router = Router();
@@ -462,7 +464,7 @@ export const handleRegisterSuperAdmin: RequestHandler = async (req, res) => {
 
     // Check if email already exists
     const existingUserResult = await query(
-      'SELECT id FROM staff_users WHERE email = $1',
+      'SELECT id FROM "Admin" WHERE LOWER(email) = LOWER($1)',
       [email]
     );
 
@@ -474,14 +476,10 @@ export const handleRegisterSuperAdmin: RequestHandler = async (req, res) => {
     const userId = uuidv4();
     const passwordHash = await hashPassword(password);
 
-    // Map client-side role to valid database enum value
-    const clientRole = req.body.role || "super_admin";
-    const dbRole = "superadmin"; // Always use 'superadmin' as the valid enum value
-
     await query(
-      `INSERT INTO staff_users (id, school_id, email, password_hash, role, first_name, last_name, phone, is_active) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [userId, null, email, passwordHash, dbRole, firstName, lastName, req.body.phoneNumber || "", true]
+      `INSERT INTO "Admin" (id, email, password_hash, role, first_name, last_name, phone, is_active)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+      [userId, email, passwordHash, 'SUPERADMIN', firstName, lastName, req.body.phoneNumber || "", true]
     );
 
     // Generate JWT token
@@ -489,7 +487,7 @@ export const handleRegisterSuperAdmin: RequestHandler = async (req, res) => {
       { 
         id: userId, 
         email, 
-        role: dbRole.toLowerCase() 
+        role: 'superadmin'
       },
       JWT_SECRET,
       { expiresIn: '24h' }
@@ -497,7 +495,7 @@ export const handleRegisterSuperAdmin: RequestHandler = async (req, res) => {
 
     const response = {
       userId,
-      role: clientRole, // Return the client-side role for consistency
+      role: 'super_admin',
       token
     };
 
@@ -512,8 +510,8 @@ export const handleListSuperAdmins: RequestHandler = async (req, res) => {
   try {
     const result = await query(
       `SELECT id, email, first_name, last_name, phone, role, is_active, created_at, updated_at
-       FROM staff_users 
-       WHERE role = 'superadmin' 
+       FROM "Admin"
+       WHERE role = 'SUPERADMIN'
        ORDER BY created_at DESC`,
       []
     );
@@ -538,38 +536,14 @@ export const handleListSuperAdmins: RequestHandler = async (req, res) => {
   }
 };
 
-// Define the /api/admin/create-user endpoint
-router.post('/admin/create-user', async (req, res) => {
-  try {
-    const { name, email, password, role, status } = req.body;
-
-    // Validate required fields
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email, and password are required' });
-    }
-
-    // Insert the new user into the database
-    const result = await query(
-      `INSERT INTO users (name, email, password, role, status, created_at) 
-       VALUES ($1, $2, $3, $4, $5, NOW()) RETURNING *`,
-      [name, email, password, role || 'staff', status || 'active']
-    );
-
-    res.status(201).json(result.rows[0]);
-  } catch (error) {
-    console.error('Error creating user:', error);
-    res.status(500).json({ error: 'Failed to create user' });
-  }
-});
-
 export const handleDeleteSuperAdmin: RequestHandler = async (req, res) => {
   try {
     const { userId } = req.params;
 
     // Check if user exists
     const userResult = await query(
-      'SELECT id FROM staff_users WHERE id = $1 AND role = $2',
-      [userId, 'superadmin']
+      'SELECT id FROM "Admin" WHERE id = $1 AND role = $2',
+      [userId, 'SUPERADMIN']
     );
 
     if (userResult.rows.length === 0) {
@@ -578,7 +552,7 @@ export const handleDeleteSuperAdmin: RequestHandler = async (req, res) => {
 
     // Delete the user
     await query(
-      'DELETE FROM staff_users WHERE id = $1',
+      'DELETE FROM "Admin" WHERE id = $1',
       [userId]
     );
 
@@ -623,7 +597,7 @@ export const handleListStaffUsers: RequestHandler = async (req, res) => {
 
 // Define the /api/admin/list-users endpoint
 // Use the same data source and shape as handleListStaffUsers
-router.get('/admin/list-users', async (req, res) => {
+router.get('/admin/list-users', authenticateToken, requireAdmin, async (req, res) => {
   try {
     const result = await query(
       `SELECT id, academy_id, email, first_name, last_name, role, is_active, created_at, updated_at
@@ -660,7 +634,7 @@ router.get('/admin/list-users', async (req, res) => {
 // Admin Management Endpoints
 
 // List admin users only (admin and superadmin roles)
-router.get('/admin/list-admins', async (req, res) => {
+router.get('/admin/list-admins', authenticateToken, requireSuperAdmin, async (req, res) => {
   try {
     const result = await query(
       `SELECT id, first_name, last_name, email, role, is_active, created_at, updated_at
@@ -673,19 +647,14 @@ router.get('/admin/list-admins', async (req, res) => {
     res.json(result.rows);
   } catch (error: any) {
     console.error('List Admins error:', error);
-    
-    // Return empty fallback data if database connection fails
-    if (error.message && (error.message.includes('timeout') || error.message.includes('ECONNREFUSED') || error.message.includes('terminat'))) {
-      console.log('Returning fallback empty admin list due to DB error');
-      return res.json([]);
-    }
-
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
+router.use('/admin', authenticateToken, requireAdmin);
+
 // Create new admin user
-router.post('/admin/create-admin', async (req, res) => {
+router.post('/admin/create-admin', requireSuperAdmin, async (req, res) => {
   try {
     const { first_name, last_name, email, password, role } = req.body;
 
@@ -710,8 +679,7 @@ router.post('/admin/create-admin', async (req, res) => {
       return res.status(400).json({ error: 'Email already exists' });
     }
 
-    // Hash password (in production, use bcrypt)
-    const hashedPassword = password; // TODO: Implement proper password hashing
+    const hashedPassword = await hashPassword(password);
 
     // Insert new admin user
     const result = await query(
@@ -729,7 +697,7 @@ router.post('/admin/create-admin', async (req, res) => {
 });
 
 // Update admin user
-router.put('/admin/update-admin/:id', async (req, res) => {
+router.put('/admin/update-admin/:id', requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { first_name, last_name, email, password, role } = req.body;
@@ -772,7 +740,7 @@ router.put('/admin/update-admin/:id', async (req, res) => {
     // Add password update if provided
     if (password) {
       updateQuery += `, password_hash = $5`;
-      queryParams.push(password); // TODO: Hash password in production
+      queryParams.push(await hashPassword(password));
     }
 
     updateQuery += ` WHERE id = $${queryParams.length + 1} RETURNING id, first_name, last_name, email, role, is_active, created_at, updated_at`;
@@ -788,7 +756,7 @@ router.put('/admin/update-admin/:id', async (req, res) => {
 });
 
 // Delete admin user
-router.delete('/admin/delete-admin/:id', async (req, res) => {
+router.delete('/admin/delete-admin/:id', requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -813,7 +781,7 @@ router.delete('/admin/delete-admin/:id', async (req, res) => {
 });
 
 // Toggle admin user status
-router.put('/admin/toggle-status/:id', async (req, res) => {
+router.put('/admin/toggle-status/:id', requireSuperAdmin, async (req, res) => {
   try {
     const { id } = req.params;
     const { is_active } = req.body;

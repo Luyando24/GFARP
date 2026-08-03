@@ -1,13 +1,18 @@
 
 import { Router, RequestHandler } from 'express';
 import { query } from '../lib/db.js';
+import { authenticateToken, canAccessOrganizationForRequest } from '../middleware/auth.js';
 
 const router = Router();
+router.use(authenticateToken);
 
 // GET /api/financial/summary
 const handleGetSummary: RequestHandler = async (req, res) => {
     try {
         const academyId = req.query.academyId as string;
+        if (!academyId || !(await canAccessOrganizationForRequest(req.user, academyId))) {
+            return res.status(403).json({ success: false, message: 'You cannot access this academy' });
+        }
 
         // Get completed financial transactions
         const txResult = await query(
@@ -104,6 +109,9 @@ const handleGetTransactions: RequestHandler = async (req, res) => {
         if (!academyId) {
             return res.status(400).json({ success: false, message: 'Academy ID is required' });
         }
+        if (!(await canAccessOrganizationForRequest(req.user, academyId))) {
+            return res.status(403).json({ success: false, message: 'You cannot access this academy' });
+        }
 
         const pageNum = Number(page);
         const limitNum = Number(limit);
@@ -157,6 +165,9 @@ const handleGetCategories: RequestHandler = async (req, res) => {
                 success: true,
                 data: []
             });
+        }
+        if (!(await canAccessOrganizationForRequest(req.user, academyId))) {
+            return res.status(403).json({ success: false, message: 'You cannot access this academy' });
         }
 
         const result = await query(

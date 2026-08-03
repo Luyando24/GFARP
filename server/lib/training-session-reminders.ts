@@ -1,5 +1,6 @@
 import { query } from './db.js';
 import { emailService } from './email-service.js';
+import { decryptField } from './field-encryption.js';
 
 type ReminderRecipientType = 'academy_admin' | 'player';
 
@@ -38,17 +39,7 @@ const escapeHtml = (value: unknown) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 
-function decryptPlayerValue(value: unknown): string {
-  if (!value) return '';
-  if (typeof value === 'string' && value.startsWith('\\x')) {
-    return Buffer.from(value.slice(2), 'hex').toString('utf8');
-  }
-  if (Buffer.isBuffer(value)) return value.toString('utf8');
-  if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
-    return Buffer.from(value as ArrayBuffer).toString('utf8');
-  }
-  return String(value);
-}
+const decryptPlayerValue = decryptField;
 
 function normalizeEmail(value: unknown) {
   const email = decryptPlayerValue(value).trim().toLowerCase();

@@ -52,6 +52,7 @@ import { countryCodes, formatPhoneDisplay, parsePhoneNumber } from '@/lib/countr
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PlayerAttendanceCard from '@/components/training/PlayerAttendanceCard';
 import jsPDF from 'jspdf';
+import { uploadPlayerImage } from '@/lib/image-upload';
 
 const playerPositions = [
   "Goalkeeper",
@@ -360,23 +361,31 @@ const PlayerDetails = () => {
     }));
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: string, index?: number) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: string, index?: number) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        if (field === 'profile_image_url') {
-          setFormData(prev => ({ ...prev, profile_image_url: result }));
-        } else if (field === 'cover_image_url') {
-          setFormData(prev => ({ ...prev, cover_image_url: result }));
-        } else if (field === 'gallery_images' && index !== undefined) {
-          const newGallery = [...(formData.gallery_images || ['', '', ''])];
+    if (!file || !id) return;
+    try {
+      const kind = field === 'gallery_images' && index !== undefined ? `gallery_${index}` : field;
+      const result = await uploadPlayerImage(id, file, kind);
+      if (field === 'profile_image_url') {
+        setFormData(prev => ({ ...prev, profile_image_url: result }));
+      } else if (field === 'cover_image_url') {
+        setFormData(prev => ({ ...prev, cover_image_url: result }));
+      } else if (field === 'gallery_images' && index !== undefined) {
+        setFormData(prev => {
+          const newGallery = [...(prev.gallery_images || ['', '', ''])];
           newGallery[index] = result;
-          setFormData(prev => ({ ...prev, gallery_images: newGallery }));
-        }
-      };
-      reader.readAsDataURL(file);
+          return { ...prev, gallery_images: newGallery };
+        });
+      }
+    } catch (error) {
+      toast({
+        title: 'Image upload failed',
+        description: error instanceof Error ? error.message : 'Please select another image.',
+        variant: 'destructive',
+      });
+    } finally {
+      e.target.value = '';
     }
   };
 

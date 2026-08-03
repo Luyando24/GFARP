@@ -11,90 +11,6 @@
   "framework": "vite",
   "rewrites": [
     {
-      "source": "/api/football-players/search",
-      "destination": "/api/football-players/search"
-    },
-    {
-      "source": "/api/football-players/:id",
-      "destination": "/api/football-players/[id]"
-    },
-    {
-      "source": "/api/football-players",
-      "destination": "/api/football-players"
-    },
-    {
-      "source": "/api/player-documents/upload",
-      "destination": "/api/player-documents/upload"
-    },
-    {
-      "source": "/api/player-documents/:id",
-      "destination": "/api/player-documents/[id]"
-    },
-    {
-      "source": "/api/transfers/:id",
-      "destination": "/api/transfers/[id]"
-    },
-    {
-      "source": "/api/transfers",
-      "destination": "/api/transfers"
-    },
-    {
-      "source": "/api/financial/summary",
-      "destination": "/api/financial/summary"
-    },
-    {
-      "source": "/api/financial/transactions/:id",
-      "destination": "/api/financial/transactions/[id]"
-    },
-    {
-      "source": "/api/financial/transactions",
-      "destination": "/api/financial/transactions"
-    },
-    {
-      "source": "/api/financial/categories/:id",
-      "destination": "/api/financial/categories/[id]"
-    },
-    {
-      "source": "/api/financial/categories",
-      "destination": "/api/financial/categories"
-    },
-    {
-      "source": "/api/blogs/slug/:slug",
-      "destination": "/api/blogs/slug/[slug]"
-    },
-    {
-      "source": "/api/blogs/:id",
-      "destination": "/api/blogs/[id]"
-    },
-    {
-      "source": "/api/blogs",
-      "destination": "/api/blogs/index"
-    },
-    {
-      "source": "/api/setup-admin",
-      "destination": "/api/setup-admin"
-    },
-    {
-      "source": "/api/payments/verify-payment",
-      "destination": "/api/payments/verify-payment"
-    },
-    {
-      "source": "/api/payments/create-checkout-session",
-      "destination": "/api/payments/create-checkout-session"
-    },
-    {
-      "source": "/api/subscriptions/plans",
-      "destination": "/api/subscriptions/plans"
-    },
-    {
-      "source": "/api/subscriptions/upgrade",
-      "destination": "/api/subscriptions/upgrade"
-    },
-    {
-      "source": "/api/subscriptions/cancel",
-      "destination": "/api/subscriptions/cancel"
-    },
-    {
       "source": "/sitemap.xml",
       "destination": "/api/server/index"
     },
@@ -116,21 +32,12 @@
     }
   ],
   "functions": {
-    "api/football-players.ts": {
-      "maxDuration": 60
-    },
     "api/server/index.ts": {
       "maxDuration": 60
     }
   },
   "env": {
-    "VITE_SUPABASE_URL": "https://lpsujzvospfaomgkrcew.supabase.co",
-    "VITE_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxwc3VqenZvc3BmYW9tZ2tyY2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzEwMTQsImV4cCI6MjA3NjYwNzAxNH0.5Q210arv1Xd0ab87OM5VYklq1yoML6CpmIuzEQRjRdE",
-    "REACT_APP_SUPABASE_URL": "https://lpsujzvospfaomgkrcew.supabase.co",
-    "REACT_APP_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imxwc3VqenZvc3BmYW9tZ2tyY2V3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwMzEwMTQsImV4cCI6MjA3NjYwNzAxNH0.5Q210arv1Xd0ab87OM5VYklq1yoML6CpmIuzEQRjRdE",
-    "DB_RUNTIME_GUARDS": "off",
     "PGSSLMODE": "require",
-    "NRC_SALT": "your_secure_salt_value",
     "PNPM_CONFIG_PREFER_FROZEN_LOCKFILE": "false"
   }
 }

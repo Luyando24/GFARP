@@ -40,8 +40,6 @@ export function saveSession(s: AuthSession) {
 export function clearSession() {
   removeStoredSession();
   window.dispatchEvent(new CustomEvent("auth:changed"));
-  // Redirect to portal after logout
-  window.location.href = "/portal";
 }
 
 export function getSession(): AuthSession | null {

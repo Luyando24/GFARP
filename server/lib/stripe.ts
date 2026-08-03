@@ -22,8 +22,8 @@ export const getStripe = (): Stripe => {
 export const STRIPE_CONFIG = {
   currency: 'usd',
   webhookSecret: process.env.STRIPE_WEBHOOK_SECRET,
-  successUrl: `${process.env.CLIENT_URL || 'https://soccercircular.com'}/subscription/success`,
-  cancelUrl: `${process.env.CLIENT_URL || 'https://soccercircular.com'}/subscription/cancel`,
+  successUrl: `${process.env.CLIENT_URL || 'https://soccercircular.com'}/academy-dashboard?tab=subscription&payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
+  cancelUrl: `${process.env.CLIENT_URL || 'https://soccercircular.com'}/academy-dashboard?tab=subscription&payment_cancelled=true`,
 } as const;
 
 // Export webhook secret for direct access

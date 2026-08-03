@@ -12,15 +12,15 @@ let supabaseInstance: SupabaseClient | null = null;
 
 export const getSupabase = () => {
   if (!supabaseInstance) {
-    const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.VITE_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Missing Supabase environment variables:', { 
         url: !!supabaseUrl, 
         key: !!supabaseServiceKey 
       });
-      throw new Error('Missing Supabase environment variables. Please check your .env file.');
+      throw new Error('Server requires SUPABASE_SERVICE_ROLE_KEY and a Supabase URL.');
     }
 
     supabaseInstance = createClient(supabaseUrl, supabaseServiceKey, {

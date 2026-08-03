@@ -79,7 +79,7 @@ export interface FinancialGrowthStats {
   totalRevenue: number;
   monthlyGrowth: number;
   totalSubscriptions: number;
-  averageRevenuePerSubscription: number;
+  avgRevenuePerSubscription: number;
 }
 
 export const handleGetDashboardStats: RequestHandler = async (req, res) => {
@@ -88,113 +88,91 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
     const academiesResult = await query('SELECT COUNT(*) as count FROM academies');
     const totalAcademies = parseInt(academiesResult.rows[0].count);
 
-    // Get total players count from players table (Academy Players)
-    let totalPlayers = 0;
-    try {
-      const playersResult = await query(`
-        SELECT COUNT(*) as count 
-        FROM players p
-        JOIN academies a ON p.academy_id = a.id
-        WHERE a.status = 'active'
-      `);
-      totalPlayers = parseInt(playersResult.rows[0].count) || 0;
-    } catch (err) {
-      console.log('Players table may not exist or query failed, using fallback calculation');
-      totalPlayers = totalAcademies * 25; // Fallback: average 25 players per academy
-    }
+    const playersResult = await query(`
+      SELECT COUNT(*) as count
+      FROM players p
+      JOIN academies a ON p.academy_id = a.id
+      WHERE a.status = 'active'
+    `);
+    const totalPlayers = parseInt(playersResult.rows[0].count) || 0;
 
-    // Get total Individual Players
-    let totalIndividualPlayers = 0;
-    try {
-      console.log('Fetching total individual players count...');
-      const indPlayersResult = await query('SELECT COUNT(*) as count FROM individual_players');
-      totalIndividualPlayers = parseInt(indPlayersResult.rows[0].count) || 0;
-      console.log(`Found ${totalIndividualPlayers} individual players`);
-    } catch (err: any) {
-      console.error('Individual players table query failed:', err.message);
-    }
+    const indPlayersResult = await query('SELECT COUNT(*) as count FROM individual_players');
+    const totalIndividualPlayers = parseInt(indPlayersResult.rows[0].count) || 0;
 
-    // Get active transfers count (using transfers table)
-    let activeTransfers = 0;
-    try {
-      const transfersResult = await query('SELECT COUNT(*) as count FROM transfers WHERE status IN ($1, $2)', ['pending', 'in_progress']);
-      activeTransfers = parseInt(transfersResult.rows[0].count) || 0;
-    } catch (err) {
-      console.log('Transfers table may not exist, using calculated value');
-      activeTransfers = Math.floor(totalAcademies * 0.3); // Fallback calculation
-    }
+    const transfersResult = await query(
+      'SELECT COUNT(*) as count FROM transfers WHERE status IN ($1, $2)',
+      ['pending', 'in_progress']
+    );
+    const activeTransfers = parseInt(transfersResult.rows[0].count) || 0;
 
     // Calculate monthly revenue from financial transactions and subscriptions
-    let monthlyRevenue = 0;
-    let subscriptionRevenue = 0;
-    try {
-      // Get revenue from financial transactions (e.g. transfers)
-      const revenueResult = await query(`
-        SELECT SUM(amount) as total FROM financial_transactions 
-        WHERE created_at >= date_trunc('month', CURRENT_DATE) 
-        AND status = 'completed'
-      `);
-      monthlyRevenue = parseFloat(revenueResult.rows[0].total) || 0;
+    const revenueResult = await query(`
+      SELECT SUM(amount) as total FROM financial_transactions
+      WHERE created_at >= date_trunc('month', CURRENT_DATE)
+      AND lower(status) = 'completed'
+    `);
+    const monthlyTransactionRevenue = parseFloat(revenueResult.rows[0].total) || 0;
 
-      // Add revenue from subscription payments
-      const subscriptionResult = await query(`
-        SELECT SUM(amount) as total FROM subscription_payments
-        WHERE created_at >= date_trunc('month', CURRENT_DATE)
-        AND status = 'COMPLETED'
-      `);
-      subscriptionRevenue = parseFloat(subscriptionResult.rows[0].total) || 0;
+    const subscriptionResult = await query(`
+      SELECT SUM(amount) as total FROM subscription_payments
+      WHERE created_at >= date_trunc('month', CURRENT_DATE)
+      AND lower(status) = 'completed'
+    `);
+    const subscriptionRevenue = parseFloat(subscriptionResult.rows[0].total) || 0;
 
-      // Add revenue from individual player purchases
-      const playerPurchaseResult = await query(`
-        SELECT SUM(amount) as total FROM player_purchases
-        WHERE created_at >= date_trunc('month', CURRENT_DATE)
-        AND status = 'completed'
-      `);
-      const playerRevenue = parseFloat(playerPurchaseResult.rows[0].total) || 0;
+    const playerPurchaseResult = await query(`
+      SELECT SUM(amount) as total FROM player_purchases
+      WHERE created_at >= date_trunc('month', CURRENT_DATE)
+      AND lower(status) = 'completed'
+    `);
+    const monthlyPlayerRevenue = parseFloat(playerPurchaseResult.rows[0].total) || 0;
+    const monthlyRevenue = monthlyTransactionRevenue + subscriptionRevenue + monthlyPlayerRevenue;
 
-      monthlyRevenue += subscriptionRevenue + playerRevenue;
-    } catch (err) {
-      console.log('Error calculating revenue:', err);
-      // Fallback calculation if tables don't exist yet
-      monthlyRevenue = 0;
-    }
-
-    // Calculate monthly growth (academies created in the last month vs previous month)
-    const currentMonth = new Date();
-    const lastMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1);
-    const twoMonthsAgo = new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 2, 1);
-
-    const currentMonthAcademies = await query(
-      'SELECT COUNT(*) as count FROM academies WHERE created_at >= $1',
-      [lastMonth.toISOString()]
-    );
-
-    const previousMonthAcademies = await query(
-      'SELECT COUNT(*) as count FROM academies WHERE created_at >= $1 AND created_at < $2',
-      [twoMonthsAgo.toISOString(), lastMonth.toISOString()]
-    );
-
-    const currentMonthCount = parseInt(currentMonthAcademies.rows[0].count);
-    const previousMonthCount = parseInt(previousMonthAcademies.rows[0].count);
-    const academiesGrowth = previousMonthCount > 0 ? currentMonthCount - previousMonthCount : currentMonthCount;
+    const growthResult = await query(`
+      SELECT
+        (SELECT COUNT(*) FROM academies
+          WHERE created_at >= date_trunc('month', CURRENT_DATE)) AS current_academies,
+        (SELECT COUNT(*) FROM academies
+          WHERE created_at >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+            AND created_at < date_trunc('month', CURRENT_DATE)) AS previous_academies,
+        ((SELECT COUNT(*) FROM players
+            WHERE created_at >= date_trunc('month', CURRENT_DATE))
+         + (SELECT COUNT(*) FROM individual_players
+            WHERE created_at >= date_trunc('month', CURRENT_DATE))) AS current_players,
+        ((SELECT COUNT(*) FROM players
+            WHERE created_at >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+              AND created_at < date_trunc('month', CURRENT_DATE))
+         + (SELECT COUNT(*) FROM individual_players
+            WHERE created_at >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+              AND created_at < date_trunc('month', CURRENT_DATE))) AS previous_players,
+        ((SELECT COUNT(*) FROM academy_subscriptions
+            WHERE created_at >= date_trunc('month', CURRENT_DATE))
+         + (SELECT COUNT(*) FROM agency_subscriptions
+            WHERE created_at >= date_trunc('month', CURRENT_DATE))) AS current_subscriptions,
+        ((SELECT COUNT(*) FROM academy_subscriptions
+            WHERE created_at >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+              AND created_at < date_trunc('month', CURRENT_DATE))
+         + (SELECT COUNT(*) FROM agency_subscriptions
+            WHERE created_at >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+              AND created_at < date_trunc('month', CURRENT_DATE))) AS previous_subscriptions
+    `);
+    const growth = growthResult.rows[0];
+    const academiesGrowth = (parseInt(growth.current_academies) || 0) - (parseInt(growth.previous_academies) || 0);
+    const playersGrowth = (parseInt(growth.current_players) || 0) - (parseInt(growth.previous_players) || 0);
+    const subscriptionsGrowth = (parseInt(growth.current_subscriptions) || 0) - (parseInt(growth.previous_subscriptions) || 0);
 
     // Get recent system activity
-    let recentActivity = [];
-    try {
-      const activityResult = await query(`
-        SELECT 
-          'registration' as type,
-          a.name as name,
-          a.created_at as timestamp
-        FROM academies a
-        WHERE a.created_at >= NOW() - INTERVAL '7 days'
-        ORDER BY a.created_at DESC
-        LIMIT 5
-      `);
-      recentActivity = activityResult.rows;
-    } catch (err) {
-      console.log('Error fetching recent activity, using empty array');
-    }
+    const activityResult = await query(`
+      SELECT
+        'registration' as type,
+        a.name as name,
+        a.created_at as timestamp
+      FROM academies a
+      WHERE a.created_at >= NOW() - INTERVAL '7 days'
+      ORDER BY a.created_at DESC
+      LIMIT 5
+    `);
+    const recentActivity = activityResult.rows;
 
     // Calculate total revenue (lifetime)
     let totalRevenue = 0;
@@ -203,11 +181,10 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
     let averageTransactionValue = 0;
     let revenueGrowth = 0;
 
-    try {
-      // Total revenue from financial transactions
+    // Total revenue from financial transactions
       const totalTxRevenueResult = await query(`
         SELECT SUM(amount) as total, COUNT(*) as count FROM financial_transactions 
-        WHERE status = 'completed'
+        WHERE lower(status) = 'completed'
       `);
       const txRevenue = parseFloat(totalTxRevenueResult.rows[0].total) || 0;
       const txCount = parseInt(totalTxRevenueResult.rows[0].count) || 0;
@@ -215,7 +192,7 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
       // Total revenue from subscription payments
       const totalSubRevenueResult = await query(`
         SELECT SUM(amount) as total, COUNT(*) as count FROM subscription_payments
-        WHERE status = 'COMPLETED'
+        WHERE lower(status) = 'completed'
       `);
       const subRevenue = parseFloat(totalSubRevenueResult.rows[0].total) || 0;
       const subCount = parseInt(totalSubRevenueResult.rows[0].count) || 0;
@@ -223,7 +200,7 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
       // Total revenue from individual player purchases
       const totalPlayerRevenueResult = await query(`
         SELECT SUM(amount) as total, COUNT(*) as count FROM player_purchases
-        WHERE status = 'completed'
+        WHERE lower(status) = 'completed'
       `);
       const playerRevenue = parseFloat(totalPlayerRevenueResult.rows[0].total) || 0;
       const playerCount = parseInt(totalPlayerRevenueResult.rows[0].count) || 0;
@@ -234,30 +211,28 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
 
       // Pending payments
       const pendingTxResult = await query(`
-        SELECT COUNT(*) as count FROM financial_transactions WHERE status = 'pending'
+        SELECT COUNT(*) as count FROM financial_transactions WHERE lower(status) = 'pending'
       `);
       const pendingSubResult = await query(`
-        SELECT COUNT(*) as count FROM subscription_payments WHERE status = 'PENDING'
+        SELECT COUNT(*) as count FROM subscription_payments WHERE lower(status) = 'pending'
       `);
       pendingPayments = (parseInt(pendingTxResult.rows[0].count) || 0) + (parseInt(pendingSubResult.rows[0].count) || 0);
 
-      // Calculate revenue growth (this month vs last month)
-      const lastMonthStart = new Date();
-      lastMonthStart.setMonth(lastMonthStart.getMonth() - 1);
-      lastMonthStart.setDate(1);
-      lastMonthStart.setHours(0, 0, 0, 0);
-
-      const lastMonthEnd = new Date();
-      lastMonthEnd.setDate(1);
-      lastMonthEnd.setHours(0, 0, 0, 0);
-
       const lastMonthRevenueResult = await query(`
-        SELECT 
+        SELECT
           (SELECT COALESCE(SUM(amount), 0) FROM financial_transactions 
-           WHERE created_at >= $1 AND created_at < $2 AND status = 'completed') +
+           WHERE created_at >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+             AND created_at < date_trunc('month', CURRENT_DATE)
+             AND lower(status) = 'completed') +
           (SELECT COALESCE(SUM(amount), 0) FROM subscription_payments 
-           WHERE created_at >= $1 AND created_at < $2 AND status = 'COMPLETED') as total
-      `, [lastMonthStart.toISOString(), lastMonthEnd.toISOString()]);
+           WHERE created_at >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+             AND created_at < date_trunc('month', CURRENT_DATE)
+             AND lower(status) = 'completed') +
+          (SELECT COALESCE(SUM(amount), 0) FROM player_purchases
+           WHERE created_at >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month'
+             AND created_at < date_trunc('month', CURRENT_DATE)
+             AND lower(status) = 'completed') as total
+      `);
 
       const lastMonthRevenue = parseFloat(lastMonthRevenueResult.rows[0].total) || 0;
 
@@ -266,9 +241,6 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
       } else if (monthlyRevenue > 0) {
         revenueGrowth = 100;
       }
-    } catch (err) {
-      console.error('Error calculating financial stats:', err);
-    }
 
     const stats = {
       totalAcademies,
@@ -282,13 +254,13 @@ export const handleGetDashboardStats: RequestHandler = async (req, res) => {
       averageTransactionValue: Math.round(averageTransactionValue * 100) / 100,
       revenueGrowth: Math.round(revenueGrowth * 10) / 10,
       revenueBreakdown: {
-        subscriptions: subscriptionRevenue,
-        transactions: monthlyRevenue - subscriptionRevenue
+        subscriptions: subRevenue,
+        transactions: txRevenue + playerRevenue
       },
       monthlyGrowth: {
         academies: academiesGrowth,
-        subscriptions: academiesGrowth, // Assuming 1:1 relationship for now
-        players: academiesGrowth * 25 // Estimate based on average players per academy
+        subscriptions: subscriptionsGrowth,
+        players: playersGrowth
       },
       recentActivity
     };
@@ -604,14 +576,13 @@ export const handleGetFinancialGrowth: RequestHandler = async (req, res) => {
     // Get financial data from subscription payments over the last 12 months
     const financialQuery = `
       WITH monthly_data AS (
-        SELECT 
+        SELECT
           DATE_TRUNC('month', sp.created_at) as month,
-          COUNT(DISTINCT asub.id) as subscription_count,
+          COUNT(DISTINCT sp.subscription_id) as subscription_count,
           COALESCE(SUM(sp.amount), 0) as monthly_revenue
         FROM subscription_payments sp
-        JOIN academy_subscriptions asub ON sp.subscription_id = asub.id
         WHERE sp.created_at >= NOW() - INTERVAL '12 months'
-          AND sp.status = 'COMPLETED'
+          AND lower(sp.status) = 'completed'
         GROUP BY DATE_TRUNC('month', sp.created_at)
       ),
       growth_calculation AS (
@@ -638,42 +609,12 @@ export const handleGetFinancialGrowth: RequestHandler = async (req, res) => {
 
     const result = await query(financialQuery);
 
-    // If no real data, provide mock data for development
-    let financialData: FinancialGrowthData[];
-
-    if (result.rows.length === 0) {
-      // Mock data for development
-      const months = ['Jan 2024', 'Feb 2024', 'Mar 2024', 'Apr 2024', 'May 2024', 'Jun 2024'];
-      financialData = months.map((month, index) => ({
-        month,
-        revenue: 1500 + (index * 200) + Math.random() * 300,
-        subscriptions: 15 + (index * 2) + Math.floor(Math.random() * 5),
-        growth: index === 0 ? 0 : 5 + Math.random() * 10
-      }));
-    } else {
-      financialData = result.rows.map(row => ({
-        month: row.month_label,
-        revenue: parseFloat(row.revenue) || 0,
-        subscriptions: parseInt(row.subscriptions) || 0,
-        growth: parseFloat(row.growth) || 0
-      }));
-
-      // If we only have 1 data point, add a previous month with 0 values to make the chart look better
-      if (financialData.length === 1) {
-        const currentDate = new Date(result.rows[0].raw_date);
-        const prevDate = new Date(currentDate);
-        prevDate.setMonth(prevDate.getMonth() - 1);
-
-        const prevMonthLabel = prevDate.toLocaleString('default', { month: 'short', year: 'numeric' });
-
-        financialData.unshift({
-          month: prevMonthLabel,
-          revenue: 0,
-          subscriptions: 0,
-          growth: 0
-        });
-      }
-    }
+    const financialData: FinancialGrowthData[] = result.rows.map(row => ({
+      month: row.month_label,
+      revenue: parseFloat(row.revenue) || 0,
+      subscriptions: parseInt(row.subscriptions) || 0,
+      growth: parseFloat(row.growth) || 0
+    }));
 
     // Calculate statistics
     const totalRevenue = financialData.reduce((sum, data) => sum + data.revenue, 0);
@@ -687,7 +628,7 @@ export const handleGetFinancialGrowth: RequestHandler = async (req, res) => {
       totalRevenue: Math.round(totalRevenue),
       monthlyGrowth: Math.round(averageGrowth * 10) / 10,
       totalSubscriptions: totalSubscriptions,
-      averageRevenuePerSubscription: Math.round(averageRevenuePerSubscription * 100) / 100
+      avgRevenuePerSubscription: Math.round(averageRevenuePerSubscription * 100) / 100
     };
 
     res.json({

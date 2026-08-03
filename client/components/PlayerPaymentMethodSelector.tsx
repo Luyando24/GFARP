@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { CreditCard, Wallet, DollarSign, Loader2, CheckCircle } from 'lucide-react';
+import { CreditCard, Loader2, CheckCircle } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { PlayerApi } from '@/lib/api';
 
@@ -53,9 +53,6 @@ export default function PlayerPaymentMethodSelector({
         // Create Stripe Checkout Session
         const result = await PlayerApi.createCheckoutSession({
           planId: selectedPlan.id,
-          billingCycle: selectedPlan.billingCycle || 'one-time',
-          successUrl: `${window.location.origin}/player/dashboard?tab=subscription&payment_success=true&session_id={CHECKOUT_SESSION_ID}`,
-          cancelUrl: `${window.location.origin}/player/dashboard?tab=subscription&payment_cancelled=true`,
         });
 
         if (result.success && result.url) {

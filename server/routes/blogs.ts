@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { supabase } from "../lib/supabase.js";
 
 const router = Router();
@@ -114,7 +115,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // POST /api/blogs - Create a new blog post
-router.post("/", async (req, res) => {
+router.post("/", authenticateToken, requireAdmin, async (req, res) => {
     try {
         const body = req.body;
 
@@ -170,7 +171,7 @@ router.post("/", async (req, res) => {
 });
 
 // PUT /api/blogs/:id - Update an existing blog post
-router.put("/:id", async (req, res) => {
+router.put("/:id", authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
         const body = req.body;
@@ -231,7 +232,7 @@ router.put("/:id", async (req, res) => {
 });
 
 // DELETE /api/blogs/:id - Delete a blog post
-router.delete("/:id", async (req, res) => {
+router.delete("/:id", authenticateToken, requireAdmin, async (req, res) => {
     try {
         const { id } = req.params;
 

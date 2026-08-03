@@ -2,10 +2,12 @@ import express, { RequestHandler } from 'express';
 import { Router } from 'express';
 // bcrypt usage is centralized in lib/db; avoid importing here
 import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../lib/jwt.js';
 import { v4 as uuidv4 } from 'uuid';
 import { query, transaction, hashPassword, verifyPassword } from '../lib/db.js';
+import { addBillingCycleToDate } from '../../shared/calendar-date.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
+const JWT_SECRET = getJwtSecret();
 
 // Determine academies.id column type to align FKs
 async function getAcademiesIdType(client: any): Promise<'uuid' | 'integer'> {
@@ -17,301 +19,6 @@ async function getAcademiesIdType(client: any): Promise<'uuid' | 'integer'> {
   const t = res.rows[0]?.data_type?.toLowerCase();
   if (t === 'integer' || t === 'bigint') return 'integer';
   return 'uuid';
-}
-
-// Ensure subscription schema exists with basic seed data (runtime safeguard)
-async function ensureSubscriptionSchema(client: any, academyIdType: 'uuid' | 'integer' = 'uuid') {
-  // Create tables if missing (no UUID default to avoid extension requirements)
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS subscription_plans (
-      id UUID PRIMARY KEY,
-      name TEXT NOT NULL UNIQUE,
-      description TEXT,
-      price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
-      currency TEXT NOT NULL DEFAULT 'USD',
-      billing_cycle TEXT NOT NULL CHECK (billing_cycle IN ('MONTHLY', 'YEARLY', 'LIFETIME')),
-      player_limit INTEGER NOT NULL DEFAULT 2,
-      storage_limit BIGINT NOT NULL DEFAULT 1073741824,
-      features JSONB NOT NULL DEFAULT '[]'::jsonb,
-      is_active BOOLEAN NOT NULL DEFAULT TRUE,
-      is_free BOOLEAN NOT NULL DEFAULT FALSE,
-      sort_order INTEGER NOT NULL DEFAULT 0,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      target_type TEXT NOT NULL DEFAULT 'ACADEMY' CHECK (target_type IN ('ACADEMY', 'INDIVIDUAL', 'AGENCY'))
-    );
-  `);
-  // Ensure target_type column exists (migration)
-  await client.query(`ALTER TABLE subscription_plans ADD COLUMN IF NOT EXISTS target_type TEXT NOT NULL DEFAULT 'ACADEMY' CHECK (target_type IN ('ACADEMY', 'INDIVIDUAL', 'AGENCY'));`);
-
-  const academyIdColumn = academyIdType === 'integer' ? 'INTEGER' : 'UUID';
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS academy_subscriptions (
-      id UUID PRIMARY KEY,
-      academy_id ${academyIdColumn} NOT NULL REFERENCES academies(id) ON DELETE CASCADE,
-      plan_id UUID NOT NULL REFERENCES subscription_plans(id) ON DELETE RESTRICT,
-      status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACTIVE', 'EXPIRED', 'CANCELLED', 'SUSPENDED')),
-      start_date TIMESTAMPTZ,
-      end_date TIMESTAMPTZ,
-      auto_renew BOOLEAN NOT NULL DEFAULT FALSE,
-      payment_method TEXT CHECK (payment_method IN ('CASH', 'BANK_TRANSFER', 'MOBILE_MONEY', 'CARD', 'PAYPAL')),
-      payment_status TEXT NOT NULL DEFAULT 'PENDING' CHECK (payment_status IN ('PENDING', 'PAID', 'FAILED', 'REFUNDED')),
-      amount_paid DECIMAL(10,2),
-      payment_reference TEXT,
-      notes TEXT,
-      activated_by UUID,
-      activated_at TIMESTAMPTZ,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-  `);
-
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS subscription_history (
-      id UUID PRIMARY KEY,
-      subscription_id UUID NOT NULL REFERENCES academy_subscriptions(id) ON DELETE CASCADE,
-      action TEXT NOT NULL CHECK (action IN ('CREATED', 'ACTIVATED', 'RENEWED', 'UPGRADED', 'DOWNGRADED', 'SUSPENDED', 'CANCELLED', 'EXPIRED')),
-      old_status TEXT,
-      new_status TEXT,
-      old_plan_id UUID REFERENCES subscription_plans(id),
-      new_plan_id UUID REFERENCES subscription_plans(id),
-      performed_by UUID,
-      notes TEXT,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-  `);
-
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS subscription_payments (
-      id UUID PRIMARY KEY,
-      subscription_id UUID NOT NULL REFERENCES academy_subscriptions(id) ON DELETE CASCADE,
-      amount DECIMAL(10,2) NOT NULL,
-      currency TEXT NOT NULL DEFAULT 'USD',
-      payment_method TEXT NOT NULL CHECK (payment_method IN ('CASH', 'BANK_TRANSFER', 'MOBILE_MONEY', 'CARD', 'PAYPAL')),
-      payment_reference TEXT,
-      payment_date TIMESTAMPTZ,
-      status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'COMPLETED', 'FAILED', 'REFUNDED')),
-      processed_by UUID,
-      notes TEXT,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-  `);
-
-  // Indexes
-  await client.query(`CREATE INDEX IF NOT EXISTS idx_subscription_plans_active ON subscription_plans(is_active, sort_order);`);
-  await client.query(`CREATE INDEX IF NOT EXISTS idx_academy_subscriptions_academy ON academy_subscriptions(academy_id);`);
-  await client.query(`CREATE INDEX IF NOT EXISTS idx_academy_subscriptions_status ON academy_subscriptions(status);`);
-
-  // Seed default plans
-  const makePlan = (name: string, desc: string, price: number, cycle: 'MONTHLY' | 'YEARLY' | 'LIFETIME', players: number, storage: number, features: any[], isFree: boolean, order: number, target: string = 'ACADEMY') => ({
-    id: uuidv4(), name, description: desc, price, currency: 'USD', billing_cycle: cycle, player_limit: players, storage_limit: storage, features: JSON.stringify(features), is_active: true, is_free: isFree, sort_order: order, target_type: target
-  });
-  const plans = [
-    makePlan('Free Plan', 'Basic features for new academies', 0, 'LIFETIME', 50, 5368709120, [
-      'Up to 50 players', 'Basic registration', 'Standard support'
-    ], true, 0, 'ACADEMY'),
-    makePlan('Pro Plan', 'For established academies', 49.99, 'MONTHLY', 500, 10737418240, [
-      'Unlimited player management', 'Document storage (10GB)', 'Priority support', 'Advanced analytics', 'Custom reports', 'API access'
-    ], false, 1, 'ACADEMY'),
-    makePlan('Elite Plan', 'Comprehensive suite for large organizations', 99.99, 'MONTHLY', -1, 53687091200, [
-      'Unlimited players', 'Full FIFA compliance', 'Dedicated manager'
-    ], false, 2, 'ACADEMY'),
-    makePlan('Individual Free', 'Get your start in football', 0, 'LIFETIME', 1, 536870912, [
-      'Basic player profile', 'Public profile link', 'Document storage (500MB)'
-    ], true, 0, 'INDIVIDUAL'),
-    makePlan('Individual Pro', 'Elite features for rising stars', 19.99, 'LIFETIME', 1, 5368709120, [
-      'Unlimited profile updates', 'Video highlights upload', 'Direct messaging with scouts', 'Priority support', 'Verified player badge'
-    ], false, 1, 'INDIVIDUAL'),
-    makePlan('Individual Lifetime', 'One-time payment for eternal pro status', 49.99, 'LIFETIME', 1, 10737418240, [
-      'All Pro features', 'Featured profile status', 'Lifetime updates', '10GB storage'
-    ], false, 2, 'INDIVIDUAL'),
-    makePlan('Basic Agency', 'For growing talent agencies', 99.99, 'MONTHLY', 100, 10737418240, [
-      'Up to 100 player profiles', 'Basic agency branding', 'Document management', 'Talent scouting tools'
-    ], false, 0, 'AGENCY'),
-    makePlan('Professional Agency', 'Advanced tools for busy agents', 299.99, 'MONTHLY', 500, 53687091200, [
-      'Up to 500 player profiles', 'Full agency branding', 'Advanced analytics', 'Priority support', 'Team collaboration'
-    ], false, 1, 'AGENCY'),
-    makePlan('Enterprise Agency', 'Maximum capacity for top agencies', 999.99, 'MONTHLY', 2000, 214748364800, [
-      'Up to 2000 player profiles', 'Dedicated account manager', 'White-label options', 'Custom integrations', 'Bulk profile management'
-    ], false, 2, 'AGENCY'),
-  ];
-  for (const p of plans) {
-    await client.query(
-      `INSERT INTO subscription_plans (id, name, description, price, currency, billing_cycle, player_limit, storage_limit, features, is_active, is_free, sort_order, target_type)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
-       ON CONFLICT (name) DO NOTHING`,
-      [p.id, p.name, p.description, p.price, p.currency, p.billing_cycle, p.player_limit, p.storage_limit, p.features, p.is_active, p.is_free, p.sort_order, (p as any).target_type]
-    );
-  }
-}
-
-// Ensure academies table exists with expected columns
-async function ensureAcademiesSchema(client: any) {
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS academies (
-      id UUID PRIMARY KEY,
-      name TEXT NOT NULL,
-      code TEXT NOT NULL UNIQUE,
-      email TEXT,
-      password_hash TEXT,
-      address TEXT,
-      district TEXT,
-      province TEXT,
-      phone TEXT,
-      website TEXT,
-      academy_type TEXT CHECK (academy_type IN ('youth','professional','community','elite')),
-      status TEXT DEFAULT 'active' CHECK (status IN ('active','inactive','suspended')),
-      director_name TEXT,
-      director_email TEXT,
-      director_phone TEXT,
-      founded_year INTEGER,
-      facilities TEXT[],
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-  `);
-  // Ensure storage_used column exists
-  await client.query(`ALTER TABLE academies ADD COLUMN IF NOT EXISTS storage_used BIGINT DEFAULT 0;`);
-}
-
-// Ensure agencies table exists
-async function ensureAgenciesSchema(client: any) {
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS agencies (
-      id UUID PRIMARY KEY,
-      name TEXT NOT NULL,
-      code TEXT NOT NULL UNIQUE,
-      email TEXT,
-      password_hash TEXT,
-      address TEXT,
-      city TEXT,
-      country TEXT,
-      phone TEXT,
-      website TEXT,
-      bio TEXT,
-      logo_url TEXT,
-      status TEXT DEFAULT 'active' CHECK (status IN ('active','inactive','suspended')),
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-  `);
-  
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS agency_subscriptions (
-      id UUID PRIMARY KEY,
-      agency_id UUID NOT NULL REFERENCES agencies(id) ON DELETE CASCADE,
-      plan_id UUID NOT NULL REFERENCES subscription_plans(id) ON DELETE RESTRICT,
-      status TEXT NOT NULL DEFAULT 'PENDING' CHECK (status IN ('PENDING', 'ACTIVE', 'EXPIRED', 'CANCELLED', 'SUSPENDED')),
-      start_date TIMESTAMPTZ,
-      end_date TIMESTAMPTZ,
-      auto_renew BOOLEAN NOT NULL DEFAULT FALSE,
-      payment_method TEXT CHECK (payment_method IN ('CASH', 'BANK_TRANSFER', 'MOBILE_MONEY', 'CARD', 'PAYPAL')),
-      payment_status TEXT NOT NULL DEFAULT 'PENDING' CHECK (payment_status IN ('PENDING', 'PAID', 'FAILED', 'REFUNDED')),
-      amount_paid DECIMAL(10,2),
-      payment_reference TEXT,
-      notes TEXT,
-      activated_by UUID,
-      activated_at TIMESTAMPTZ,
-      created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-      updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-    );
-  `);
-}
-
-// Ensure players table exists and has expected columns
-async function ensurePlayersSchema(client: any) {
-  // Try to determine if we should use UUID or INTEGER for academy_id based on academies table
-  const res = await client.query(`
-    SELECT data_type
-    FROM information_schema.columns
-    WHERE table_name = 'academies' AND column_name = 'id'
-  `);
-  const academyIdType = res.rows[0]?.data_type?.toLowerCase() === 'integer' ? 'INTEGER' : 'UUID';
-
-  await client.query(`
-    CREATE TABLE IF NOT EXISTS players (
-      id UUID PRIMARY KEY,
-      player_card_id TEXT UNIQUE,
-      first_name_cipher BYTEA,
-      last_name_cipher BYTEA,
-      dob_cipher BYTEA,
-      position TEXT,
-      email_cipher BYTEA,
-      phone_cipher BYTEA,
-      jersey_number INTEGER,
-      height_cm INTEGER,
-      weight_kg DECIMAL(10,2),
-      preferred_foot TEXT,
-      academy_id ${academyIdType} REFERENCES academies(id) ON DELETE CASCADE,
-      is_active BOOLEAN DEFAULT true,
-      created_at TIMESTAMPTZ DEFAULT now(),
-      updated_at TIMESTAMPTZ DEFAULT now()
-    );
-  `);
-  
-  // Migrations
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS agency_id UUID REFERENCES agencies(id) ON DELETE CASCADE;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS nrc_hash TEXT;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS nrc_salt TEXT;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS gender TEXT;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS address_cipher BYTEA;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS guardian_contact_name_cipher BYTEA;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS guardian_contact_phone_cipher BYTEA;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS registration_date TIMESTAMPTZ;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS guardian_info_cipher BYTEA;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS medical_info_cipher BYTEA;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS playing_history_cipher BYTEA;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS emergency_contact_cipher BYTEA;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS current_club_cipher BYTEA;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS city_cipher BYTEA;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS country_cipher BYTEA;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS card_id TEXT;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS card_qr_signature TEXT;`);
-  
-  // Rich profile columns for academy players (matching individual player profiles)
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS bio TEXT;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS career_history TEXT;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS honours TEXT;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS education TEXT;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS video_links TEXT[];`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS transfermarket_link VARCHAR(255);`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS gallery_images TEXT[];`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS cover_image_url TEXT;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS contact_email VARCHAR(255);`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS whatsapp_number VARCHAR(50);`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS social_links JSONB;`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS slug VARCHAR(100);`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS display_name VARCHAR(200);`);
-  await client.query(`ALTER TABLE players ADD COLUMN IF NOT EXISTS profile_image_url TEXT;`);
-  
-  // Ensure player_profiles table has extra profile/contact columns
-  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS address TEXT;`);
-  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS city VARCHAR(100);`);
-  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS country VARCHAR(100);`);
-  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS guardian_name VARCHAR(200);`);
-  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS guardian_phone VARCHAR(50);`);
-  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS guardian_email VARCHAR(255);`);
-  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS guardian_info TEXT;`);
-  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS medical_info TEXT;`);
-  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS emergency_contact VARCHAR(200);`);
-  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS emergency_phone VARCHAR(50);`);
-  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS playing_history TEXT;`);
-  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS notes TEXT;`);
-  await client.query(`ALTER TABLE player_profiles ADD COLUMN IF NOT EXISTS internal_notes TEXT;`);
-
-  // Add unique constraint on slug if not exists
-  await client.query(`
-    DO $$
-    BEGIN
-      IF NOT EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'players_slug_key'
-      ) THEN
-        ALTER TABLE players ADD CONSTRAINT players_slug_key UNIQUE (slug);
-      END IF;
-    END
-    $$;
-  `);
 }
 
 // Academy Registration
@@ -435,39 +142,7 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
 
     // Use transaction to ensure all operations succeed or fail together
     const result = await transaction(async (client) => {
-      const runtimeSchemaGuards = (process.env.DB_RUNTIME_GUARDS || 'on').toLowerCase() === 'on';
-
-      // In development we can auto-create missing tables; in production prefer explicit migrations
-      if (runtimeSchemaGuards) {
-        await ensureAcademiesSchema(client);
-        await ensurePlayersSchema(client);
-      } else {
-        const { rows: [existsRow] } = await client.query(
-          `SELECT EXISTS (
-             SELECT 1 FROM information_schema.tables 
-             WHERE table_schema = 'public' AND table_name = 'academies'
-           ) AS exists`
-        );
-        if (!existsRow?.exists) {
-          throw new Error('Database schema missing: academies table is not present. Disable DB_RUNTIME_GUARDS only after running migrations.');
-        }
-      }
-
       const academyIdType = await getAcademiesIdType(client);
-
-      if (runtimeSchemaGuards) {
-        await ensureSubscriptionSchema(client, academyIdType);
-      } else {
-        const { rows: [existsSub] } = await client.query(
-          `SELECT EXISTS (
-             SELECT 1 FROM information_schema.tables 
-             WHERE table_schema = 'public' AND table_name = 'subscription_plans'
-           ) AS exists`
-        );
-        if (!existsSub?.exists) {
-          throw new Error('Database schema missing: subscription tables are not present. Disable DB_RUNTIME_GUARDS only after running migrations.');
-        }
-      }
       // Hash password
       const hashedPassword = await hashPassword(password);
 
@@ -573,22 +248,16 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
           if (planById.rows.length > 0) {
             plan = planById.rows[0];
           }
-          // If still no plan found, default to Pro Plan
+          // Do not silently grant a different plan when the requested plan is invalid.
           if (!plan) {
-            const defaultPlanByName = await client.query(
-              `SELECT * FROM subscription_plans WHERE name = $1 AND is_active = true`,
-              ['Pro Plan']
-            );
-            if (defaultPlanByName.rows.length > 0) {
-              plan = defaultPlanByName.rows[0];
-            }
+            throw new Error('Selected subscription plan was not found');
           }
         }
       } else {
-        // No plan provided, default to Pro Plan
+        // No plan provided: start on the free plan, never a paid plan without payment.
         const defaultPlanByName = await client.query(
           `SELECT * FROM subscription_plans WHERE name = $1 AND is_active = true`,
-          ['Pro Plan']
+          ['Free Plan']
         );
         if (defaultPlanByName.rows.length > 0) {
           plan = defaultPlanByName.rows[0];
@@ -610,17 +279,17 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
         `;
 
         const startDate = new Date();
-        const endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + 1); // 1 month subscription
+        const endDate = addBillingCycleToDate(startDate, plan.billing_cycle);
+        const isFreePlan = Number(plan.price || 0) === 0;
 
         const subscriptionValues = [
           subscriptionId,
           academy.id,
           plan.id,
-          'ACTIVE',
+          isFreePlan ? 'ACTIVE' : 'PENDING',
           startDate,
           endDate,
-          true
+          isFreePlan && String(plan.billing_cycle).toUpperCase() !== 'LIFETIME'
         ];
 
         const subscriptionResult = await client.query(subscriptionQuery, subscriptionValues);
@@ -639,10 +308,12 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
         await client.query(historyQuery, [
           historyId,
           subscriptionId,
-          'ACTIVATED',
+          isFreePlan ? 'ACTIVATED' : 'CREATED',
           null,
           plan.id,
-          'Initial subscription on academy registration'
+          isFreePlan
+            ? 'Free subscription activated on academy registration'
+            : 'Paid subscription awaiting payment'
         ]);
       }
 
@@ -757,12 +428,15 @@ export const handleAcademyLogin: RequestHandler = async (req, res) => {
 
     let passwordHash = academy.password_hash;
 
-    // Check if password_hash exists, if not, try to fallback to staff_users table
+    // Legacy academies may keep their administrator password on staff_users.
     if (!passwordHash) {
       console.log(`[AUTH] Academy ${academy.id} has no password_hash, checking staff_users...`);
       const staffResult = await query(`
-        SELECT password_hash FROM staff_users 
-        WHERE academy_id = $1 AND password_hash IS NOT NULL 
+        SELECT password_hash FROM staff_users
+        WHERE academy_id = $1
+          AND role = 'academy_admin'
+          AND is_active = TRUE
+          AND password_hash IS NOT NULL
         LIMIT 1
       `, [academy.id]);
 
@@ -897,11 +571,6 @@ export const handleAgencyRegister: RequestHandler = async (req, res) => {
     }
 
     const result = await transaction(async (client) => {
-      if ((process.env.DB_RUNTIME_GUARDS || 'on').toLowerCase() === 'on') {
-        await ensureAgenciesSchema(client);
-        await ensurePlayersSchema(client);
-      }
-
       const hashedPassword = await hashPassword(password);
       const agencyId = uuidv4();
       const agencyCode = (name || 'agency')
@@ -947,14 +616,22 @@ export const handleAgencyRegister: RequestHandler = async (req, res) => {
       if (plan) {
         const subId = uuidv4();
         const startDate = new Date();
-        const endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + 1);
+        const endDate = addBillingCycleToDate(startDate, plan.billing_cycle);
+        const isFreePlan = Number(plan.price || 0) === 0;
 
         const subRes = await client.query(`
           INSERT INTO agency_subscriptions (id, agency_id, plan_id, status, start_date, end_date, auto_renew)
-          VALUES ($1, $2, $3, 'ACTIVE', $4, $5, true)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
           RETURNING id, status, start_date, end_date
-        `, [subId, agency.id, plan.id, startDate, endDate]);
+        `, [
+          subId,
+          agency.id,
+          plan.id,
+          isFreePlan ? 'ACTIVE' : 'PENDING',
+          startDate,
+          endDate,
+          isFreePlan && String(plan.billing_cycle).toUpperCase() !== 'LIFETIME',
+        ]);
         subscription = subRes.rows[0];
       }
 

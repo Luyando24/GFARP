@@ -1,24 +1,12 @@
 import { Router, RequestHandler } from 'express';
 import { query, hashPassword, verifyPassword } from '../lib/db.js';
 import { emailService } from '../lib/email-service.js';
+import { authenticateToken, requireAdmin, requireOrganizationParam } from '../middleware/auth.js';
+import { decryptField } from '../lib/field-encryption.js';
 
 const router = Router();
 
-// Decrypt function
-const decrypt = (value: any) => {
-    if (!value) return '';
-    if (typeof value === 'string' && value.startsWith('\\x')) {
-        return Buffer.from(value.slice(2), 'hex').toString('utf8');
-    }
-    if (Buffer.isBuffer(value)) {
-        return value.toString('utf8');
-    }
-    if (value instanceof Uint8Array || value instanceof ArrayBuffer) {
-        return Buffer.from(value as ArrayBuffer).toString('utf8');
-    }
-    if (typeof value === 'string') return value;
-    return String(value);
-};
+const decrypt = decryptField;
 
 // Helper function to log activation history
 async function logActivationHistory(
@@ -179,24 +167,6 @@ const handleGetAcademies: RequestHandler = async (req, res) => {
     });
   } catch (error: any) {
     console.error('Error fetching academies:', error);
-    
-    // Return empty fallback data if database connection fails
-    if (error.message && (error.message.includes('timeout') || error.message.includes('ECONNREFUSED') || error.message.includes('terminat'))) {
-      console.log('Returning fallback empty academies data due to DB error');
-      return res.json({
-        success: true,
-        data: {
-          academies: [],
-          pagination: {
-            page: parseInt(req.query.page as string) || 1,
-            limit: parseInt(req.query.limit as string) || 10,
-            total: 0,
-            pages: 0
-          }
-        }
-      });
-    }
-
     res.status(500).json({
       success: false,
       error: 'Failed to fetch academies'
@@ -204,7 +174,7 @@ const handleGetAcademies: RequestHandler = async (req, res) => {
   }
 };
 
-router.get('/', handleGetAcademies);
+router.get('/', authenticateToken, requireAdmin, handleGetAcademies);
 
 // GET /api/academies/:id - Get academy by ID
 const handleGetAcademyById: RequestHandler = async (req, res) => {
@@ -495,7 +465,7 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
   }
 };
 
-router.get('/:id', handleGetAcademyById);
+router.get('/:id', authenticateToken, requireOrganizationParam('id'), handleGetAcademyById);
 
 // POST /api/academies - Create new academy
 const handleCreateAcademy: RequestHandler = async (req, res) => {
@@ -571,7 +541,7 @@ const handleCreateAcademy: RequestHandler = async (req, res) => {
   }
 };
 
-router.post('/', handleCreateAcademy);
+router.post('/', authenticateToken, requireAdmin, handleCreateAcademy);
 
 // PUT /api/academies/:id - Update academy
 const handleUpdateAcademy: RequestHandler = async (req, res) => {
@@ -711,7 +681,7 @@ const handleUpdateAcademy: RequestHandler = async (req, res) => {
   }
 };
 
-router.put('/:id', handleUpdateAcademy);
+router.put('/:id', authenticateToken, requireOrganizationParam('id'), handleUpdateAcademy);
 // DELETE /api/academies/:id - Delete academy (soft delete by setting status to inactive)
 const handleDeleteAcademy: RequestHandler = async (req, res) => {
   try {
@@ -768,7 +738,7 @@ const handleDeleteAcademy: RequestHandler = async (req, res) => {
   }
 };
 
-router.delete('/:id', handleDeleteAcademy);
+router.delete('/:id', authenticateToken, requireAdmin, handleDeleteAcademy);
 // PATCH /api/academies/:id/activate - Activate/Deactivate academy
 const handleActivateAcademy: RequestHandler = async (req, res) => {
   try {
@@ -825,7 +795,7 @@ const handleActivateAcademy: RequestHandler = async (req, res) => {
   }
 };
 
-router.patch('/:id/activate', handleActivateAcademy);
+router.patch('/:id/activate', authenticateToken, requireAdmin, handleActivateAcademy);
 // PATCH /api/academies/:id/verify - Verify academy
 const handleVerifyAcademy: RequestHandler = async (req, res) => {
   try {
@@ -877,7 +847,7 @@ const handleVerifyAcademy: RequestHandler = async (req, res) => {
   }
 };
 
-router.patch('/:id/verify', handleVerifyAcademy);
+router.patch('/:id/verify', authenticateToken, requireAdmin, handleVerifyAcademy);
 
 // GET /api/academies/stats/overview - Get academy statistics
 const handleGetAcademyStats: RequestHandler = async (req, res) => {
@@ -888,7 +858,9 @@ const handleGetAcademyStats: RequestHandler = async (req, res) => {
         (SELECT COUNT(*) FROM academies) as total_academies,
         (SELECT COUNT(*) FROM academies WHERE status = 'active') as active_academies,
         (SELECT COUNT(*) FROM academies WHERE status IN ('inactive', 'suspended')) as inactive_academies,
-        (SELECT COUNT(*) FROM players) as total_players,
+        (SELECT COUNT(*) FROM academies WHERE COALESCE(is_verified, false)) as verified_academies,
+        (SELECT COUNT(*) FROM academies WHERE NOT COALESCE(is_verified, false)) as unverified_academies,
+        ((SELECT COUNT(*) FROM players) + (SELECT COUNT(*) FROM individual_players)) as total_players,
         (SELECT COUNT(*) FROM academies WHERE created_at >= NOW() - INTERVAL '30 days') as recent_registrations
     `);
     
@@ -898,8 +870,8 @@ const handleGetAcademyStats: RequestHandler = async (req, res) => {
       totalAcademies: parseInt(row.total_academies),
       activeAcademies: parseInt(row.active_academies),
       inactiveAcademies: parseInt(row.inactive_academies),
-      verifiedAcademies: 0, // Placeholder
-      unverifiedAcademies: parseInt(row.total_academies), // Placeholder logic from original
+      verifiedAcademies: parseInt(row.verified_academies),
+      unverifiedAcademies: parseInt(row.unverified_academies),
       totalPlayers: parseInt(row.total_players),
       recentRegistrations: parseInt(row.recent_registrations)
     };
@@ -910,24 +882,6 @@ const handleGetAcademyStats: RequestHandler = async (req, res) => {
     });
   } catch (error: any) {
     console.error('Error fetching academy stats:', error);
-    
-    // Return empty fallback data if database connection fails
-    if (error.message && (error.message.includes('timeout') || error.message.includes('ECONNREFUSED') || error.message.includes('terminat'))) {
-      console.log('Returning fallback zero stats due to DB error');
-      return res.json({
-        success: true,
-        data: {
-          totalAcademies: 0,
-          activeAcademies: 0,
-          inactiveAcademies: 0,
-          verifiedAcademies: 0,
-          unverifiedAcademies: 0,
-          totalPlayers: 0,
-          recentRegistrations: 0
-        }
-      });
-    }
-
     res.status(500).json({
       success: false,
       error: 'Failed to fetch academy statistics'
@@ -935,6 +889,6 @@ const handleGetAcademyStats: RequestHandler = async (req, res) => {
   }
 };
 
-router.get('/stats/overview', handleGetAcademyStats);
+router.get('/stats/overview', authenticateToken, requireAdmin, handleGetAcademyStats);
 
 export default router;

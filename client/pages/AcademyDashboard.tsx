@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { lazy, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { clearSession, useAuth } from '@/lib/auth';
 import { getCurrentSubscription, getSubscriptionHistory } from '@/lib/api';
@@ -51,7 +51,6 @@ import {
   Upload,
   Crown
 } from 'lucide-react';
-import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -70,15 +69,16 @@ import LanguageToggle from '@/components/navigation/LanguageToggle';
 import { NotificationsPopover } from '@/components/navigation/NotificationsPopover';
 import { useTranslation } from '@/lib/i18n';
 
-import PlayerManagement from '@/components/players/PlayerManagement';
-import TrainingAttendanceManager from '@/components/training/TrainingAttendanceManager';
-import FinancialTransactionsManager from '@/components/FinancialTransactionsManager';
-import PaymentMethodSelector from '@/components/PaymentMethodSelector';
-import AcademyComplianceTab from '@/components/academy/AcademyComplianceTab';
-import ComplianceDocuments from './ComplianceDocuments';
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { Player, Transfer, getTransfers, createTransfer, updateTransfer, deleteTransfer, getAcademyDashboardStats, Api } from '@/lib/api';
 import { getDashboardPlayerTotal, hasCurrentSubscription, normalizeAcademyDashboardProfile } from '@/lib/academy-dashboard-data';
+
+const PlayerManagement = lazy(() => import('@/components/players/PlayerManagement'));
+const TrainingAttendanceManager = lazy(() => import('@/components/training/TrainingAttendanceManager'));
+const FinancialTransactionsManager = lazy(() => import('@/components/FinancialTransactionsManager'));
+const PaymentMethodSelector = lazy(() => import('@/components/PaymentMethodSelector'));
+const AcademyComplianceTab = lazy(() => import('@/components/academy/AcademyComplianceTab'));
+const ComplianceDocuments = lazy(() => import('./ComplianceDocuments'));
 
 // Mock data removed
 // Player positions for dropdown
@@ -122,7 +122,6 @@ export default function AcademyDashboard() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeView, setActiveView] = useState("main");
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'yearly'>('monthly');
   const [searchQuery, setSearchQuery] = useState("");
   const [isEditingSettings, setIsEditingSettings] = useState(false);
   const [settingsFormData, setSettingsFormData] = useState({
@@ -137,162 +136,6 @@ export default function AcademyDashboard() {
   });
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  // Localized compliance mock data
-  const complianceData = {
-    overallScore: 95,
-    lastAudit: "December 2023",
-    nextReview: "March 2024",
-    status: "Active",
-    areas: [
-      {
-        id: 1,
-        name: t('dash.compliance.area.playerReg.name'),
-        score: 98,
-        status: "compliant",
-        lastCheck: "2024-01-15",
-        issues: 0,
-        description: t('dash.compliance.area.playerReg.desc')
-      },
-      {
-        id: 2,
-        name: t('dash.compliance.area.trainingComp.name'),
-        score: 95,
-        status: "compliant",
-        lastCheck: "2024-01-10",
-        issues: 0,
-        description: t('dash.compliance.area.trainingComp.desc')
-      },
-      {
-        id: 3,
-        name: t('dash.compliance.area.docs.name'),
-        score: 88,
-        status: "review_required",
-        lastCheck: "2024-01-08",
-        issues: 2,
-        description: t('dash.compliance.area.docs.desc')
-      },
-      {
-        id: 4,
-        name: t('dash.compliance.area.solidarity.name'),
-        score: 92,
-        status: "compliant",
-        lastCheck: "2024-01-12",
-        issues: 0,
-        description: t('dash.compliance.area.solidarity.desc')
-      },
-      {
-        id: 5,
-        name: t('dash.compliance.area.transfers.name'),
-        score: 90,
-        status: "compliant",
-        lastCheck: "2024-01-14",
-        issues: 1,
-        description: t('dash.compliance.area.transfers.desc')
-      },
-      {
-        id: 6,
-        name: t('dash.compliance.area.youth.name'),
-        score: 96,
-        status: "compliant",
-        lastCheck: "2024-01-16",
-        issues: 0,
-        description: t('dash.compliance.area.youth.desc')
-      }
-    ],
-    actionItems: [
-      {
-        id: 1,
-        title: t('dash.compliance.action.medical.title'),
-        priority: "high",
-        dueDate: "2024-02-01",
-        assignee: "Medical Team",
-        status: "in_progress",
-        description: t('dash.compliance.action.medical.desc')
-      },
-      {
-        id: 2,
-        title: t('dash.compliance.action.review.title'),
-        priority: "medium",
-        dueDate: "2024-02-15",
-        assignee: "Legal Team",
-        status: "pending",
-        description: t('dash.compliance.action.review.desc')
-      },
-      {
-        id: 3,
-        title: t('dash.compliance.action.audit.title'),
-        priority: "low",
-        dueDate: "2024-03-01",
-        assignee: "Compliance Officer",
-        status: "pending",
-        description: t('dash.compliance.action.audit.desc')
-      }
-    ],
-    auditHistory: [
-      {
-        id: 1,
-        date: "2023-12-15",
-        type: t('dash.compliance.audit.fifaInspection'),
-        result: "Passed",
-        score: 95,
-        inspector: "FIFA Regional Office",
-        notes: t('dash.compliance.audit.note1')
-      },
-      {
-        id: 2,
-        date: "2023-09-20",
-        type: t('dash.compliance.audit.internal'),
-        result: "Passed",
-        score: 93,
-        inspector: "Internal Team",
-        notes: t('dash.compliance.audit.note2')
-      },
-      {
-        id: 3,
-        date: "2023-06-10",
-        type: t('dash.compliance.audit.fifaInspection'),
-        result: "Passed",
-        score: 91,
-        inspector: "FIFA Regional Office",
-        notes: t('dash.compliance.audit.note3')
-      }
-    ],
-    documents: [
-      {
-        id: 1,
-        name: "FIFA Compliance Manual 2024",
-        type: "Manual",
-        lastUpdated: "2024-01-01",
-        status: "current",
-        size: "2.4 MB"
-      },
-      {
-        id: 2,
-        name: "Player Registration Forms",
-        type: "Forms",
-        lastUpdated: "2024-01-15",
-        status: "current",
-        size: "1.8 MB"
-      },
-      {
-        id: 3,
-        name: "Training Compensation Guidelines",
-        type: "Guidelines",
-        lastUpdated: "2023-12-20",
-        status: "review_needed",
-        size: "956 KB"
-      },
-      {
-        id: 4,
-        name: "Audit Report December 2023",
-        type: "Report",
-        lastUpdated: "2023-12-16",
-        status: "current",
-        size: "3.2 MB"
-      }
-    ]
-  };
 
   // Transfer management state
   const [transfers, setTransfers] = useState<Transfer[]>([]);
@@ -700,11 +543,13 @@ export default function AcademyDashboard() {
     setSelectedPlanForUpgrade({
       id: selectedPlan.id,
       name: selectedPlan.name,
-      price: billingCycle === 'yearly'
-        ? Math.round(selectedPlan.price * 12 * 0.8) // 20% discount for yearly
-        : selectedPlan.price,
+      price: selectedPlan.price,
       isFree: selectedPlan.is_free || selectedPlan.price === 0,
-      billingCycle: billingCycle
+      billingCycle: String(selectedPlan.billing_cycle).toUpperCase() === 'YEARLY'
+        ? 'yearly'
+        : String(selectedPlan.billing_cycle).toUpperCase() === 'LIFETIME'
+          ? 'lifetime'
+          : 'monthly'
     });
     setShowPaymentModal(true);
   };
@@ -878,9 +723,6 @@ export default function AcademyDashboard() {
     transaction.type.toLowerCase().includes(searchQuery.toLowerCase()) ||
     transaction.amount.toString().includes(searchQuery)
   );
-
-  const filteredComplianceAreas = complianceData.areas;
-  const filteredActionItems = complianceData.actionItems;
 
   const handleLogout = () => {
     clearSession();
@@ -2029,266 +1871,6 @@ export default function AcademyDashboard() {
                   <AcademyComplianceTab academyId={academyInfo?.id} />
                 </TabsContent>
 
-                {/* Compliance Tab */}
-                <TabsContent value="compliance" className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-2xl font-bold text-slate-900 dark:text-white">{t('features.fifaComp.title')}</h2>
-                    <div className="flex gap-2">
-                      <Button variant="outline">
-                        <FileText className="h-4 w-4 mr-2" />
-                        {t('dash.compliance.report')}
-                      </Button>
-                      <Button variant="outline">
-                        <Download className="h-4 w-4 mr-2" />
-                        {t('dash.compliance.data')}
-                      </Button>
-                      <Button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setActiveView('compliance-documents');
-                        }}
-                        className="bg-gradient-to-r from-[#005391] to-[#0066b3] hover:from-[#0066b3] hover:to-[#005391] text-white"
-                      >
-                        <Settings className="h-4 w-4 mr-2" />
-                        {t('features.docMgmt.title')}
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Compliance Overview Cards */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Card>
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Overall Score</p>
-                            <p className="text-2xl font-bold text-green-600">{complianceData.overallScore}%</p>
-                          </div>
-                          <Shield className="h-8 w-8 text-green-600" />
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('dash.compliance.areas')}</p>
-                            <p className="text-2xl font-bold text-[#005391]">
-                              {(complianceData.areas || []).filter(area => area.status === 'compliant').length}/{(complianceData.areas || []).length}
-                            </p>
-                          </div>
-                          <CheckCircle className="h-8 w-8 text-[#005391]" />
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('dash.compliance.issues')}</p>
-                            <p className="text-2xl font-bold text-orange-600">
-                              {complianceData.areas.reduce((sum, area) => sum + area.issues, 0)}
-                            </p>
-                          </div>
-                          <AlertCircle className="h-8 w-8 text-orange-600" />
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm font-medium text-slate-600 dark:text-slate-400">{t('dash.compliance.review')}</p>
-                            <p className="text-lg font-bold text-slate-900 dark:text-white">{complianceData.nextReview}</p>
-                          </div>
-                          <Calendar className="h-8 w-8 text-slate-600" />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Main Compliance Content */}
-                  <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    {/* Compliance Areas */}
-                    <Card className="lg:col-span-2">
-                      <CardHeader>
-                        <CardTitle>{t('dash.compliance.breakdown')}</CardTitle>
-                        <CardDescription>{t('dash.compliance.breakdownDesc')}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {filteredComplianceAreas.length > 0 ? (
-                            filteredComplianceAreas.map((area) => (
-                              <div key={area.id} className="border rounded-lg p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                <div className="flex items-center justify-between mb-2">
-                                  <div className="flex items-center gap-3">
-                                    {area.status === 'compliant' ? (
-                                      <CheckCircle className="h-5 w-5 text-green-600" />
-                                    ) : (
-                                      <AlertCircle className="h-5 w-5 text-yellow-600" />
-                                    )}
-                                    <span className="font-medium">{area.name}</span>
-                                  </div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium">{area.score}%</span>
-                                    <Badge variant={area.status === 'compliant' ? 'default' : 'secondary'}>
-                                      {area.status === 'compliant' ? 'Compliant' : 'Review Required'}
-                                    </Badge>
-                                  </div>
-                                </div>
-                                <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{area.description}</p>
-                                <div className="flex items-center justify-between text-xs text-slate-500">
-                                  <span>Last checked: {area.lastCheck}</span>
-                                  {area.issues > 0 && (
-                                    <span className="text-orange-600">{area.issues} issue{area.issues > 1 ? 's' : ''}</span>
-                                  )}
-                                </div>
-                                <Progress value={area.score} className="mt-2 h-2" />
-                              </div>
-                            ))
-                          ) : searchQuery && (
-                            <div className="text-center py-8 text-slate-500">
-                              <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                              <p>No compliance areas found matching "{searchQuery}"</p>
-                            </div>
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Action Items */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>{t('dash.compliance.actions')}</CardTitle>
-                        <CardDescription>{t('dash.compliance.actionsDesc')}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {filteredActionItems.length > 0 ? (
-                            filteredActionItems.map((item) => (
-                              <div key={item.id} className="border rounded-lg p-3">
-                                <div className="flex items-start justify-between mb-2">
-                                  <h4 className="font-medium text-sm">{item.title}</h4>
-                                  <Badge
-                                    variant={
-                                      item.priority === 'high' ? 'destructive' :
-                                        item.priority === 'medium' ? 'secondary' : 'outline'
-                                    }
-                                    className="text-xs"
-                                  >
-                                    {item.priority}
-                                  </Badge>
-                                </div>
-                                <p className="text-xs text-slate-600 dark:text-slate-400 mb-2">{item.description}</p>
-                                <div className="flex items-center justify-between text-xs">
-                                  <span className="text-slate-500">Due: {item.dueDate}</span>
-                                  <Badge variant="outline" className="text-xs">
-                                    {item.status.replace('_', ' ')}
-                                  </Badge>
-                                </div>
-                              </div>
-                            ))
-                          ) : searchQuery && (
-                            <div className="text-center py-8 text-slate-500">
-                              <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                              <p>No action items found matching "{searchQuery}"</p>
-                            </div>
-                          )}
-                        </div>
-                        <Button className="w-full mt-4" variant="outline">
-                          <ClipboardCheck className="h-4 w-4 mr-2" />
-                          {t('dash.compliance.viewTasks')}
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Additional Sections */}
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    {/* Audit History */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>{t('dash.compliance.audit')}</CardTitle>
-                        <CardDescription>{t('dash.compliance.auditDesc')}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-4">
-                          {complianceData.auditHistory.map((audit) => (
-                            <div key={audit.id} className="flex items-center justify-between p-3 border rounded-lg">
-                              <div>
-                                <h4 className="font-medium">{audit.type}</h4>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">{audit.date}</p>
-                                <p className="text-xs text-slate-500">{audit.inspector}</p>
-                              </div>
-                              <div className="text-right">
-                                <Badge variant={audit.result === 'Passed' ? 'default' : 'destructive'}>
-                                  {audit.result}
-                                </Badge>
-                                <p className="text-sm font-medium mt-1">{audit.score}%</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <Button className="w-full mt-4" variant="outline">
-                          <Eye className="h-4 w-4 mr-2" />
-                          {t('dash.compliance.viewHistory')}
-                        </Button>
-                      </CardContent>
-                    </Card>
-
-                    {/* Document Management */}
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>{t('dash.compliance.documentsTitle')}</CardTitle>
-                        <CardDescription>{t('dash.compliance.documentsDesc')}</CardDescription>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-3">
-                          {complianceData.documents.map((doc) => (
-                            <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                              <div className="flex items-center gap-3">
-                                <FileText className="h-4 w-4 text-slate-600" />
-                                <div>
-                                  <h4 className="font-medium text-sm">{doc.name}</h4>
-                                  <p className="text-xs text-slate-500">{doc.type} • {doc.size}</p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Badge
-                                  variant={doc.status === 'current' ? 'default' : 'secondary'}
-                                  className="text-xs"
-                                >
-                                  {doc.status === 'current' ? 'Current' : 'Review Needed'}
-                                </Badge>
-                                <Button size="sm" variant="ghost">
-                                  <Download className="h-3 w-3" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <Button className="w-full mt-4" variant="outline">
-                          <FileText className="h-4 w-4 mr-2" />
-                          Document Library
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </div>
-
-                  {/* Compliance Alerts */}
-                  <Alert>
-                    <Shield className="h-4 w-4" />
-                    <AlertDescription>
-                      <strong>{t('dash.compliance.alert.reviewTitle')}</strong> {t('dash.compliance.alert.reviewMsg')} {complianceData.nextReview}.
-                      {t('dash.compliance.alert.reviewDesc')}
-                    </AlertDescription>
-                  </Alert>
-                </TabsContent>
-
                 {/* Finances Tab */}
                 <TabsContent value="finances" className="space-y-6">
                   {academyInfo?.id && academyInfo?.address && academyInfo?.phone && academyInfo?.directorName ? (
@@ -2545,35 +2127,13 @@ export default function AcademyDashboard() {
                                     </DialogDescription>
                                   </DialogHeader>
 
-                                  <div className="flex justify-center items-center gap-4 mb-4">
-                                    <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-blue-900' : 'text-slate-500'}`}>
-                                      {t('landing.pricing.toggle.monthly')}
-                                    </span>
-                                    <Switch
-                                      checked={billingCycle === 'yearly'}
-                                      onCheckedChange={(checked) => setBillingCycle(checked ? 'yearly' : 'monthly')}
-                                      className="bg-blue-900 data-[state=checked]:bg-yellow-400"
-                                    />
-                                    <div className="flex items-center gap-2">
-                                      <span className={`text-sm font-bold ${billingCycle === 'yearly' ? 'text-blue-900' : 'text-slate-500'}`}>
-                                        {t('landing.pricing.toggle.yearly')}
-                                      </span>
-                                      <span className="bg-yellow-400 text-black text-[10px] font-black px-2 py-0.5 rounded-full">
-                                        {t('landing.pricing.save')}
-                                      </span>
-                                    </div>
-                                  </div>
-
                                   <div className="grid grid-cols-1 gap-4 max-h-[60vh] overflow-y-auto pr-2">
                                     {availablePlans.map((plan: any) => {
                                       const isMostExpensive = availablePlans.length > 0 && 
                                         plan.price === Math.max(...availablePlans.map(p => p.price || 0)) &&
                                         plan.price > 0;
                                       
-                                      let displayPrice: string | number = plan.price;
-                                      if (billingCycle === 'yearly') {
-                                        displayPrice = Math.round(plan.price * 12 * 0.8);
-                                      }
+                                      const displayPrice: string | number = plan.price;
                                       const formattedPrice = `${t(`common.currency.${(plan.currency || 'USD').toUpperCase()}` as any) || plan.currency || 'USD'} ${displayPrice}`;
 
                                       return (
@@ -2665,7 +2225,11 @@ export default function AcademyDashboard() {
                                                   <div className="text-2xl font-black text-[#005391]">
                                                     {formattedPrice}
                                                     <span className="text-xs font-normal text-slate-500 ml-1">
-                                                      /{billingCycle === 'monthly' ? t('landing.pricing.month') : t('landing.pricing.year')}
+                                                      /{String(plan.billing_cycle).toUpperCase() === 'YEARLY'
+                                                        ? t('landing.pricing.year')
+                                                        : String(plan.billing_cycle).toUpperCase() === 'LIFETIME'
+                                                          ? 'one-time'
+                                                          : t('landing.pricing.month')}
                                                     </span>
                                                   </div>
                                                   <div className="text-xs font-medium text-slate-500 mt-1 bg-slate-100 px-2 py-1 rounded">

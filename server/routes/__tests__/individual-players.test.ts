@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import request from 'supertest';
 import { createServer } from '../../index';
+import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../../lib/jwt.js';
 
 vi.mock('../../lib/db.js', () => {
   const queryMock = vi.fn().mockImplementation(async (sql) => {
@@ -168,6 +170,24 @@ describe('Individual Players Routes', () => {
 
       expect(unsupportedGender.status).toBe(400);
       expect(unsupportedGender.body.error).toBe('Gender must be male or female');
+    });
+  });
+
+  describe('POST /api/individual-players/purchase', () => {
+    it('does not allow a player to self-report a completed purchase', async () => {
+      const token = jwt.sign(
+        { id: 'player-1', email: 'player@example.com', role: 'INDIVIDUAL_PLAYER' },
+        getJwtSecret(),
+      );
+
+      const response = await request(app)
+        .post('/api/individual-players/purchase')
+        .set('Authorization', `Bearer ${token}`)
+        .send({ planType: 'pro', amount: 0 });
+
+      expect(response.status).toBe(410);
+      expect(response.body.message).toContain('verified checkout flow');
+      expect(query).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,5 +1,8 @@
 import "./global.css";
 import "./styles/card-animations.css";
+import { installAuthenticatedFetch } from "./lib/authenticated-fetch";
+
+installAuthenticatedFetch();
 
 import { Toaster } from "@/components/ui/toaster";
 import { createRoot } from "react-dom/client";
@@ -9,56 +12,54 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { HelmetProvider } from "react-helmet-async";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import AuthLogin from "./pages/AuthLogin";
-import AdminLogin from "./pages/AdminLogin";
-import LoginPortal from "./pages/LoginPortal";
-import AgencyLogin from "./pages/AgencyLogin";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Shop from "./pages/Shop";
-import RegisterAcademy from "./pages/RegisterAcademy";
-import RegisterAgency from "./pages/RegisterAgency";
-import CompleteProfile from "./pages/CompleteProfile";
-import AcademyDashboard from "./pages/AcademyDashboard";
-import AdminDashboard from "./pages/AdminDashboard";
-import DatabaseManagement from "./pages/DatabaseManagement";
-import BillingSettings from "./pages/BillingSettings";
-import NotificationsPage from "./pages/NotificationsPage";
-import AdminSupportManagement from "./pages/AdminSupportManagement";
-import SuperAdmins from "./pages/SuperAdmins";
-import PlayerDetails from "./pages/PlayerDetails";
-import AcademyDetails from "./pages/AcademyDetails";
-import Contact from "./pages/Contact";
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { syncService } from "@/lib/sync";
 import { ProtectedRoute } from "./components/ProtectedRoute";
-import PaymentSuccess from "./pages/PaymentSuccess";
-import SubscriptionSuccess from "./pages/SubscriptionSuccess";
-import SubscriptionCancel from "./pages/SubscriptionCancel";
-import SetupSuperAdmin from "./pages/SetupSuperAdmin";
-import VerifyEmail from "./pages/VerifyEmail";
-import VerificationPending from "./pages/VerificationPending";
-import PrivacyPolicy from "./pages/PrivacyPolicy";
-import TermsOfService from "./pages/TermsOfService";
-import Support from "./pages/Support";
-import About from "./pages/About";
-import Services from "./pages/Services";
-import Compliance from "./pages/Compliance";
-import ApiDocs from "./pages/ApiDocs";
-import BlogList from "./pages/BlogList";
-import BlogDetails from "./pages/BlogDetails";
-import BlogEditor from "./pages/BlogEditor";
 import { LanguageProvider } from "@/lib/i18n";
-import PublicPlayerProfile from "./pages/individual/PublicPlayerProfile";
-import PlayerRegister from "./pages/individual/PlayerRegister";
-import PlayerLogin from "./pages/individual/PlayerLogin";
-import PlayerDashboard from "./pages/individual/PlayerDashboard";
-import IndividualPlayerDetails from "./pages/admin/IndividualPlayerDetails";
 
-import Maintenance from "./pages/Maintenance";
-import { useState } from "react";
+const AuthLogin = lazy(() => import("./pages/AuthLogin"));
+const Index = lazy(() => import("./pages/Index"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const AdminLogin = lazy(() => import("./pages/AdminLogin"));
+const LoginPortal = lazy(() => import("./pages/LoginPortal"));
+const AgencyLogin = lazy(() => import("./pages/AgencyLogin"));
+const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword"));
+const Shop = lazy(() => import("./pages/Shop"));
+const RegisterAcademy = lazy(() => import("./pages/RegisterAcademy"));
+const RegisterAgency = lazy(() => import("./pages/RegisterAgency"));
+const CompleteProfile = lazy(() => import("./pages/CompleteProfile"));
+const AcademyDashboard = lazy(() => import("./pages/AcademyDashboard"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const DatabaseManagement = lazy(() => import("./pages/DatabaseManagement"));
+const BillingSettings = lazy(() => import("./pages/BillingSettings"));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
+const AdminSupportManagement = lazy(() => import("./pages/AdminSupportManagement"));
+const SuperAdmins = lazy(() => import("./pages/SuperAdmins"));
+const PlayerDetails = lazy(() => import("./pages/PlayerDetails"));
+const AcademyDetails = lazy(() => import("./pages/AcademyDetails"));
+const Contact = lazy(() => import("./pages/Contact"));
+const PaymentSuccess = lazy(() => import("./pages/PaymentSuccess"));
+const SubscriptionSuccess = lazy(() => import("./pages/SubscriptionSuccess"));
+const SubscriptionCancel = lazy(() => import("./pages/SubscriptionCancel"));
+const VerifyEmail = lazy(() => import("./pages/VerifyEmail"));
+const VerificationPending = lazy(() => import("./pages/VerificationPending"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const TermsOfService = lazy(() => import("./pages/TermsOfService"));
+const Support = lazy(() => import("./pages/Support"));
+const About = lazy(() => import("./pages/About"));
+const Services = lazy(() => import("./pages/Services"));
+const Compliance = lazy(() => import("./pages/Compliance"));
+const ApiDocs = lazy(() => import("./pages/ApiDocs"));
+const BlogList = lazy(() => import("./pages/BlogList"));
+const BlogDetails = lazy(() => import("./pages/BlogDetails"));
+const BlogEditor = lazy(() => import("./pages/BlogEditor"));
+const PublicPlayerProfile = lazy(() => import("./pages/individual/PublicPlayerProfile"));
+const PlayerRegister = lazy(() => import("./pages/individual/PlayerRegister"));
+const PlayerLogin = lazy(() => import("./pages/individual/PlayerLogin"));
+const PlayerDashboard = lazy(() => import("./pages/individual/PlayerDashboard"));
+const IndividualPlayerDetails = lazy(() => import("./pages/admin/IndividualPlayerDetails"));
+const Maintenance = lazy(() => import("./pages/Maintenance"));
 
 const queryClient = new QueryClient();
 
@@ -72,7 +73,7 @@ const App = () => {
     // Fetch system settings
     const fetchSettings = async () => {
       try {
-        const res = await fetch('/api/system-settings');
+        const res = await fetch('/api/system-settings/public');
         if (res.ok) {
           const data = await res.json();
           setSystemSettings(data);
@@ -126,6 +127,11 @@ const App = () => {
             <Toaster />
             <Sonner />
           <ThemeProvider attribute="class" defaultTheme="light">
+            <Suspense fallback={(
+              <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
+              </div>
+            )}>
             {(() => {
               const hostname = window.location.hostname;
               const parts = hostname.split('.');
@@ -166,7 +172,6 @@ const App = () => {
               <Route path="/reset-password" element={<ResetPassword />} />
 
               {/* Temporary Setup Route */}
-              <Route path="/setup-super-admin" element={<SetupSuperAdmin />} />
 
               {/* Academy Registration - Public route */}
               <Route path="/academy-registration" element={<RegisterAcademy />} />
@@ -201,11 +206,9 @@ const App = () => {
                 <Route path="/academy-dashboard/player-details/:id" element={<PlayerDetails />} />
               </Route>
 
-              {/* Admin Dashboard - Protected route requiring superadmin authentication */}
-              <Route path="/admin" element={<AdminDashboard />} />
-
               {/* Protected Admin Routes */}
               <Route element={<ProtectedRoute allowedRoles={["admin", "superadmin"]} />}>
+                <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/admin/database" element={<DatabaseManagement />} />
                 <Route path="/admin/billing" element={<BillingSettings />} />
                 <Route path="/admin/notifications" element={<NotificationsPage />} />
@@ -229,6 +232,7 @@ const App = () => {
           </BrowserRouter>
               );
             })()}
+            </Suspense>
         </ThemeProvider>
       </TooltipProvider>
       </LanguageProvider>

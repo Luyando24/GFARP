@@ -1,8 +1,20 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { query } from '../lib/db.js';
+import { authenticateToken, canAccessOrganizationForRequest, normalizeRole, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
+router.use(authenticateToken);
+router.param('id', async (req, res, next, id) => {
+  const result = await query('SELECT created_by, school_id FROM support_tickets WHERE id = $1 LIMIT 1', [id]);
+  if (!result.rows.length) return res.status(404).json({ error: 'Ticket not found' });
+  const ticket = result.rows[0];
+  const isAdmin = ['admin', 'superadmin'].includes(normalizeRole(req.user?.role));
+  if (!isAdmin && ticket.created_by !== req.user?.id && !(await canAccessOrganizationForRequest(req.user, ticket.school_id))) {
+    return res.status(403).json({ error: 'You cannot access this ticket' });
+  }
+  next();
+});
 
 // GET /api/support/tickets - Get all support tickets
 router.get('/tickets', async (req, res) => {
@@ -16,7 +28,7 @@ router.get('/tickets', async (req, res) => {
         creator.username as created_by_username,
         assignee.username as assigned_to_username
       FROM support_tickets st
-      LEFT JOIN academies a ON st.academy_id = a.id
+      LEFT JOIN academies a ON st.school_id = a.id
       LEFT JOIN staff_users creator ON st.created_by = creator.id
       LEFT JOIN staff_users assignee ON st.assigned_to = assignee.id
       WHERE 1=1
@@ -24,6 +36,11 @@ router.get('/tickets', async (req, res) => {
 
     const params: any[] = [];
     let paramCount = 0;
+    if (!['admin', 'superadmin'].includes(normalizeRole(req.user?.role))) {
+      paramCount++;
+      sql += ` AND (st.created_by = $${paramCount} OR st.school_id = $${paramCount})`;
+      params.push(req.user?.id);
+    }
 
     if (status) {
       paramCount++;
@@ -112,7 +129,7 @@ router.get('/tickets/:id', async (req, res) => {
         creator.username as created_by_username,
         assignee.username as assigned_to_username
       FROM support_tickets st
-      LEFT JOIN academies a ON st.academy_id = a.id
+      LEFT JOIN academies a ON st.school_id = a.id
       LEFT JOIN staff_users creator ON st.created_by = creator.id
       LEFT JOIN staff_users assignee ON st.assigned_to = assignee.id
       WHERE st.id = $1`,
@@ -164,6 +181,9 @@ router.post('/tickets', async (req, res) => {
     if (!title || !description) {
       return res.status(400).json({ error: 'Title and description are required' });
     }
+    if (school_id && !(await canAccessOrganizationForRequest(req.user, school_id))) {
+      return res.status(403).json({ error: 'You cannot create a ticket for this academy' });
+    }
 
     const ticketId = uuidv4();
     const createdBy = (req as any).user?.id || 'anonymous';
@@ -184,7 +204,7 @@ router.post('/tickets', async (req, res) => {
         a.name as academy_name,
         creator.username as created_by_username
       FROM support_tickets st
-      LEFT JOIN academies a ON st.academy_id = a.id
+      LEFT JOIN academies a ON st.school_id = a.id
       LEFT JOIN staff_users creator ON st.created_by = creator.id
       WHERE st.id = $1`,
       [ticketId]
@@ -278,7 +298,7 @@ router.patch('/tickets/:id', async (req, res) => {
 });
 
 // DELETE /api/support/tickets/:id - Delete a support ticket
-router.delete('/tickets/:id', async (req, res) => {
+router.delete('/tickets/:id', requireAdmin, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -385,7 +405,7 @@ router.get('/tickets/:id/responses', async (req, res) => {
 });
 
 // GET /api/support/stats - Get support statistics
-router.get('/stats', async (req, res) => {
+router.get('/stats', requireAdmin, async (req, res) => {
   try {
     const statsResult = await query(`
       SELECT 

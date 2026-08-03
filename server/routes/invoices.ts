@@ -1,13 +1,18 @@
 
 import { Router, RequestHandler } from 'express';
 import { query, transaction } from '../lib/db.js';
+import { authenticateToken, canAccessOrganizationForRequest } from '../middleware/auth.js';
 
 const router = Router();
+router.use(authenticateToken);
 
 // GET /api/invoices/:academyId or /api/invoices?academy_id=...
 const handleGetInvoices: RequestHandler = async (req, res) => {
     try {
         const academyId = req.params.academyId || req.query.academy_id;
+        if (!academyId || !(await canAccessOrganizationForRequest(req.user, academyId))) {
+            return res.status(403).json({ success: false, error: 'You cannot access this academy' });
+        }
         const { page = 1, limit = 20, status, search } = req.query;
 
         let whereClause = 'WHERE academy_id = $1';
@@ -70,6 +75,9 @@ const handleGetInvoiceDetail: RequestHandler = async (req, res) => {
         if (invoiceResult.rows.length === 0) {
             return res.status(404).json({ success: false, error: 'Invoice not found' });
         }
+        if (!(await canAccessOrganizationForRequest(req.user, invoiceResult.rows[0].academy_id))) {
+            return res.status(403).json({ success: false, error: 'You cannot access this invoice' });
+        }
 
         const itemsResult = await query('SELECT * FROM invoice_items WHERE invoice_id = $1', [id]);
 
@@ -103,6 +111,9 @@ const handleCreateInvoice: RequestHandler = async (req, res) => {
             total_amount,
             status = 'draft'
         } = req.body;
+        if (!(await canAccessOrganizationForRequest(req.user, academy_id))) {
+            return res.status(403).json({ success: false, error: 'You cannot create invoices for this academy' });
+        }
 
         await transaction(async (client) => {
             // 1. Create Invoice
@@ -178,6 +189,9 @@ const handleUpdateInvoice: RequestHandler = async (req, res) => {
             total_amount,
             status
         } = req.body;
+        if (!(await canAccessOrganizationForRequest(req.user, academy_id))) {
+            return res.status(403).json({ success: false, error: 'You cannot update invoices for this academy' });
+        }
 
         await transaction(async (client) => {
             // 1. Update Invoice

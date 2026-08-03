@@ -8,6 +8,22 @@ export interface SyncResult {
   errors: string[];
 }
 
+function mapStripeSubscriptionStatus(status: unknown): 'PENDING' | 'ACTIVE' | 'SUSPENDED' | 'CANCELLED' {
+  switch (String(status || '').toLowerCase()) {
+    case 'active':
+    case 'trialing':
+      return 'ACTIVE';
+    case 'canceled':
+      return 'CANCELLED';
+    case 'past_due':
+    case 'unpaid':
+    case 'paused':
+      return 'SUSPENDED';
+    default:
+      return 'PENDING';
+  }
+}
+
 /**
  * Synchronizes subscription data between Stripe and local database
  */
@@ -131,10 +147,18 @@ export class SubscriptionSyncService {
       const planId = planResult.rows[0].id;
       const startDate = new Date(stripeSubscription.current_period_start * 1000);
       const endDate = new Date(stripeSubscription.current_period_end * 1000);
-      const status = stripeSubscription.status.toUpperCase();
+      const status = mapStripeSubscriptionStatus(stripeSubscription.status);
       const autoRenew = !stripeSubscription.cancel_at_period_end;
 
       if (existingResult.rows.length === 0) {
+        if (status === 'ACTIVE') {
+          await client.query(
+            `UPDATE academy_subscriptions
+             SET status = 'CANCELLED', auto_renew = false, updated_at = NOW()
+             WHERE academy_id = $1 AND status = 'ACTIVE'`,
+            [academyId],
+          );
+        }
         // Create new subscription
         const subscriptionId = uuidv4();
         await client.query(`
@@ -157,19 +181,17 @@ export class SubscriptionSyncService {
         // Log creation
         await client.query(`
           INSERT INTO subscription_history (
-            id, academy_id, subscription_id, action, details, created_at
+            id, subscription_id, action, old_status, new_status,
+            new_plan_id, notes, created_at
           )
-          VALUES ($1, $2, $3, $4, $5, NOW())
+          VALUES ($1, $2, $3, NULL, $4, $5, $6, NOW())
         `, [
           uuidv4(),
-          academyId,
           subscriptionId,
-          'SYNCED_CREATE',
-          JSON.stringify({
-            stripe_subscription_id: stripeSubscription.id,
-            status: status,
-            sync_date: new Date().toISOString()
-          })
+          status === 'ACTIVE' ? 'ACTIVATED' : 'CREATED',
+          status,
+          planId,
+          `Created from Stripe subscription ${stripeSubscription.id}`,
         ]);
 
       } else {
@@ -180,11 +202,19 @@ export class SubscriptionSyncService {
         // Check if update is needed
         const needsUpdate = (
           localSubscription.status !== status ||
-          localSubscription.start_date.getTime() !== startDate.getTime() ||
-          localSubscription.end_date.getTime() !== endDate.getTime()
+          new Date(localSubscription.start_date).getTime() !== startDate.getTime() ||
+          new Date(localSubscription.end_date).getTime() !== endDate.getTime()
         );
 
         if (needsUpdate) {
+          if (status === 'ACTIVE') {
+            await client.query(
+              `UPDATE academy_subscriptions
+               SET status = 'CANCELLED', auto_renew = false, updated_at = NOW()
+               WHERE academy_id = $1 AND status = 'ACTIVE' AND id <> $2`,
+              [academyId, subscriptionId],
+            );
+          }
           await client.query(`
             UPDATE academy_subscriptions 
             SET 
@@ -205,19 +235,24 @@ export class SubscriptionSyncService {
           // Log update
           await client.query(`
             INSERT INTO subscription_history (
-              id, academy_id, subscription_id, action, details, created_at
+              id, subscription_id, action, old_status, new_status,
+              old_plan_id, new_plan_id, notes, created_at
             )
-            VALUES ($1, $2, $3, $4, $5, NOW())
+            VALUES ($1, $2, $3, $4, $5, $6, $6, $7, NOW())
           `, [
             uuidv4(),
-            academyId,
             subscriptionId,
-            'SYNCED_UPDATE',
-            JSON.stringify({
-              old_status: localSubscription.status,
-              new_status: status,
-              sync_date: new Date().toISOString()
-            })
+            status === 'ACTIVE'
+              ? 'ACTIVATED'
+              : status === 'CANCELLED'
+                ? 'CANCELLED'
+                : status === 'SUSPENDED'
+                  ? 'SUSPENDED'
+                  : 'CREATED',
+            localSubscription.status,
+            status,
+            planId,
+            `Updated from Stripe subscription ${stripeSubscription.id}`,
           ]);
         }
       }
@@ -321,7 +356,8 @@ export class SubscriptionSyncService {
           );
 
           // Compare status
-          if (subscription.status !== stripeSubscription.status.toUpperCase()) {
+          const stripeStatus = mapStripeSubscriptionStatus(stripeSubscription.status);
+          if (subscription.status !== stripeStatus) {
             issues.push(
               `Subscription ${subscription.id}: Status mismatch (Local: ${subscription.status}, Stripe: ${stripeSubscription.status})`
             );
