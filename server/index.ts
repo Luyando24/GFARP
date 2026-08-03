@@ -79,14 +79,31 @@ export function createServer() {
       .filter(Boolean)
       .map((origin) => String(origin).trim().replace(/\/$/, '')),
   );
-  app.use(cors({
-    origin(origin, callback) {
-      if (!origin || process.env.NODE_ENV !== 'production' || configuredOrigins.has(origin.replace(/\/$/, ''))) {
-        return callback(null, true);
+  app.use(cors((req, callback) => {
+    const origin = String(req.headers.origin || '').trim().replace(/\/$/, '');
+    const forwardedHost = String(req.headers['x-forwarded-host'] || req.headers.host || '')
+      .split(',')[0]
+      .trim();
+    let isSameOrigin = false;
+
+    if (origin && forwardedHost) {
+      try {
+        isSameOrigin = new URL(origin).host === forwardedHost;
+      } catch {
+        isSameOrigin = false;
       }
-      return callback(new Error('Origin is not allowed by CORS'));
-    },
-    credentials: true,
+    }
+
+    const allowed =
+      !origin ||
+      process.env.NODE_ENV !== 'production' ||
+      isSameOrigin ||
+      configuredOrigins.has(origin);
+
+    callback(null, {
+      origin: allowed,
+      credentials: true,
+    });
   }));
   console.log("[SERVER] CORS middleware added");
 

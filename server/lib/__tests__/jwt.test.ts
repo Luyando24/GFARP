@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { getJwtSecret } from '../jwt.js';
 
 describe('JWT secret configuration', () => {
@@ -21,5 +21,15 @@ describe('JWT secret configuration', () => {
     process.env.NODE_ENV = 'production';
     process.env.JWT_SECRET = 'too-short';
     expect(() => getJwtSecret()).toThrow('at least 32 characters');
+  });
+
+  it('does not evaluate the production secret while route modules are imported', async () => {
+    process.env.NODE_ENV = 'production';
+    delete process.env.JWT_SECRET;
+    vi.resetModules();
+
+    await expect(import('../../routes/auth.js')).resolves.toBeDefined();
+    await expect(import('../../routes/football-auth.js')).resolves.toBeDefined();
+    await expect(import('../../routes/individual-players.js')).resolves.toBeDefined();
   });
 });

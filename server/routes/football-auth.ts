@@ -7,8 +7,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { query, transaction, hashPassword, verifyPassword } from '../lib/db.js';
 import { addBillingCycleToDate } from '../../shared/calendar-date.js';
 
-const JWT_SECRET = getJwtSecret();
-
 // Determine academies.id column type to align FKs
 async function getAcademiesIdType(client: any): Promise<'uuid' | 'integer'> {
   const res = await client.query(`
@@ -347,7 +345,7 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
     // Generate JWT token
     const token = jwt.sign(
       { id: result.academy.id, email: result.academy.email, role: 'ACADEMY_ADMIN' },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '24h' }
     );
 
@@ -460,7 +458,7 @@ export const handleAcademyLogin: RequestHandler = async (req, res) => {
 
     const token = jwt.sign(
       { id: academy.id, email: academy.email, role: 'ACADEMY_ADMIN' },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '7d' }
     );
 
@@ -500,7 +498,7 @@ export const handleVerifyEmail: RequestHandler = async (req, res) => {
     // Verify the token
     let decoded: any;
     try {
-      decoded = jwt.verify(token, JWT_SECRET);
+      decoded = jwt.verify(token, getJwtSecret());
     } catch (err) {
       return res.status(400).json({ success: false, message: 'Invalid or expired token' });
     }
@@ -528,7 +526,7 @@ export const handleVerifyEmail: RequestHandler = async (req, res) => {
     // Generate a new long-lived token for login
     const loginToken = jwt.sign(
       { id: academy.id, email: academy.email, role: 'ACADEMY_ADMIN' },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '24h' }
     );
 
@@ -640,7 +638,7 @@ export const handleAgencyRegister: RequestHandler = async (req, res) => {
 
     const token = jwt.sign(
       { id: result.agency.id, email: result.agency.email, role: 'AGENCY_ADMIN' },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '24h' }
     );
 
@@ -691,7 +689,7 @@ export const handleAgencyLogin: RequestHandler = async (req, res) => {
 
     const token = jwt.sign(
       { id: agency.id, email: agency.email, role: 'AGENCY_ADMIN' },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '7d' }
     );
 

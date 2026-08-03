@@ -15,8 +15,6 @@ import { emailService } from "../lib/email-service.js";
 import { getJwtSecret } from "../lib/jwt.js";
 import { authenticateToken, requireAdmin, requireSuperAdmin } from "../middleware/auth.js";
 
-const JWT_SECRET = getJwtSecret();
-
 // Create router
 const router = Router();
 
@@ -60,7 +58,7 @@ router.post('/auth/forgot-password', async (req, res) => {
 
     const token = jwt.sign(
       { email, accountType, purpose: 'password-reset' },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '30m' }
     );
     const appUrl = (process.env.APP_URL || process.env.FRONTEND_URL || 'https://www.soccercircular.com').replace(/\/$/, '');
@@ -92,7 +90,7 @@ router.post('/auth/reset-password', async (req, res) => {
   }
 
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as jwt.JwtPayload & {
+    const payload = jwt.verify(token, getJwtSecret()) as jwt.JwtPayload & {
       email?: string;
       accountType?: ResetAccountType;
       purpose?: string;
@@ -209,7 +207,7 @@ export const handleLogin: RequestHandler = async (req, res) => {
         name: `${adminUser.first_name} ${adminUser.last_name}`,
         role: frontendRole 
       },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '24h' }
     );
 
@@ -252,7 +250,7 @@ export const handleStudentLogin: RequestHandler = async (req, res) => {
         id: student.id, 
         role: "student" 
       },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '24h' }
     );
 
@@ -312,7 +310,7 @@ export const handleStudentAlternativeLogin: RequestHandler = async (req, res) =>
         id: student.id, 
         role: "student" 
       },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '24h' }
     );
 
@@ -436,7 +434,7 @@ export const handleRegisterSchool: RequestHandler = async (req, res) => {
         email, 
         role: role.toLowerCase() 
       },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '24h' }
     );
 
@@ -489,7 +487,7 @@ export const handleRegisterSuperAdmin: RequestHandler = async (req, res) => {
         email, 
         role: 'superadmin'
       },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '24h' }
     );
 

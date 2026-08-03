@@ -10,7 +10,6 @@ import { sendPlayerPurchaseReceipt } from '../lib/payment-receipt.js';
 import { decryptField } from '../lib/field-encryption.js';
 
 const router = Router();
-const JWT_SECRET = getJwtSecret();
 
 function getAppBaseUrl(): string {
   return process.env.VITE_APP_URL || process.env.CLIENT_URL || 'http://localhost:8080';
@@ -378,7 +377,7 @@ router.post('/verify-email', async (req, res) => {
         name: `${player.first_name} ${player.last_name}`,
         role: 'individual_player'
       },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '24h' }
     );
 
@@ -490,7 +489,7 @@ router.post('/login', async (req, res) => {
         name: `${player.first_name} ${player.last_name}`,
         role: 'individual_player'
       },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '24h' }
     );
 

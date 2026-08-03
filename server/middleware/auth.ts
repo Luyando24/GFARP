@@ -46,6 +46,13 @@ export const authenticateToken: RequestHandler = (req, res, next) => {
     next();
   } catch (err: any) {
     console.error('[AUTH DEBUG] Token verification failed:', err.message);
+    if (String(err?.message || '').startsWith('JWT_SECRET')) {
+      return res.status(503).json({
+        success: false,
+        code: 'AUTH_CONFIGURATION_ERROR',
+        message: 'Authentication service is temporarily unavailable'
+      });
+    }
     return res.status(401).json({
       success: false,
       message: 'Invalid or expired token',
