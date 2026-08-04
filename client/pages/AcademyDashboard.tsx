@@ -91,6 +91,7 @@ const FinancialTransactionsManager = lazy(() => import('@/components/FinancialTr
 const PaymentMethodSelector = lazy(() => import('@/components/PaymentMethodSelector'));
 const AcademyComplianceTab = lazy(() => import('@/components/academy/AcademyComplianceTab'));
 const ComplianceDocuments = lazy(() => import('./ComplianceDocuments'));
+import MissingCountryModal from '@/components/modals/MissingCountryModal';
 
 // Mock data removed
 // Player positions for dropdown
@@ -256,6 +257,7 @@ export default function AcademyDashboard() {
   const [isCancelling, setIsCancelling] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPlanForUpgrade, setSelectedPlanForUpgrade] = useState<any>(null);
+  const [showMissingCountryModal, setShowMissingCountryModal] = useState(false);
 
   // Scroll to plan management function
   const scrollToPlanManagement = () => {
@@ -334,6 +336,15 @@ export default function AcademyDashboard() {
 
     loadAcademyData();
   }, [session?.userId, session?.tokens?.accessToken]);
+
+  useEffect(() => {
+    if (academyInfo?.id && !isAgency) {
+      const hasCountry = Boolean((academyInfo.country || academyInfo.province || '').trim());
+      if (!hasCountry) {
+        setShowMissingCountryModal(true);
+      }
+    }
+  }, [academyInfo?.id, academyInfo?.country, academyInfo?.province, isAgency]);
 
   useEffect(() => {
     if (!academyInfo?.id || isAgency) return;
@@ -2804,7 +2815,21 @@ export default function AcademyDashboard() {
           <div className="h-[env(safe-area-inset-bottom)] bg-white/95 dark:bg-slate-900/95" />
         </nav>
       )}
-    </div >
+      {academyInfo?.id && !isAgency && (
+        <MissingCountryModal
+          isOpen={showMissingCountryModal}
+          onClose={() => setShowMissingCountryModal(false)}
+          academyId={academyInfo.id}
+          onSuccess={(updatedCountry) => {
+            setAcademyInfo((prev: any) => ({
+              ...prev,
+              country: updatedCountry,
+              province: updatedCountry,
+            }));
+          }}
+        />
+      )}
+    </div>
   );
 }
 

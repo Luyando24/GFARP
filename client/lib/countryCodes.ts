@@ -184,7 +184,6 @@ export const countryCodes: CountryCode[] = [
   { code: "+963", country: "Syria", flag: "🇸🇾" },
   { code: "+961", country: "Lebanon", flag: "🇱🇧" },
   { code: "+962", country: "Jordan", flag: "🇯🇴" },
-  { code: "+972", country: "Israel", flag: "🇮🇱" },
   { code: "+970", country: "Palestine", flag: "🇵🇸" },
   { code: "+98", country: "Iran", flag: "🇮🇷" },
   { code: "+93", country: "Afghanistan", flag: "🇦🇫" },

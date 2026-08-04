@@ -604,9 +604,9 @@ const handleUpdateAcademy: RequestHandler = async (req, res) => {
       updateFields.push(`district = $${paramCount++}`);
       updateValues.push(academyData.district);
     }
-    if (academyData.province) {
+    if (academyData.province || (academyData as any).country) {
       updateFields.push(`province = $${paramCount++}`);
-      updateValues.push(academyData.province);
+      updateValues.push(academyData.province || (academyData as any).country);
     }
     if (academyData.website) {
       updateFields.push(`website = $${paramCount++}`);

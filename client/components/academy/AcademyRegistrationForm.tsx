@@ -460,7 +460,6 @@ export default function AcademyRegistrationForm() {
                     <SelectItem value="+964">🇮🇶 +964</SelectItem>
                     <SelectItem value="+353">🇮🇪 +353</SelectItem>
                     <SelectItem value="+44">🇮🇲 +44</SelectItem>
-                    <SelectItem value="+972">🇮🇱 +972</SelectItem>
                     <SelectItem value="+39">🇮🇹 +39</SelectItem>
                     <SelectItem value="+1 876">🇯🇲 +1 876</SelectItem>
                     <SelectItem value="+81">🇯🇵 +81</SelectItem>

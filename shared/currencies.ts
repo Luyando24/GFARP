@@ -1,7 +1,6 @@
 export const DEFAULT_ACADEMY_CURRENCY = 'USD';
 
 export const SUPPORTED_CURRENCIES = [
-  { name: 'Israeli New Shekel', code: 'ILS', symbol: '₪' },
   { name: 'US Dollar', code: 'USD', symbol: '$' },
   { name: 'Euro', code: 'EUR', symbol: '€' },
   { name: 'British Pound Sterling', code: 'GBP', symbol: '£' },
