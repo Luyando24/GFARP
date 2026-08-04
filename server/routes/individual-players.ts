@@ -251,9 +251,10 @@ router.post('/verify-payment', authenticateToken, async (req, res) => {
 // Register a new individual player
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, firstName, lastName, academyCode } = req.body;
+    const { email, password, firstName, lastName, academyCode, country, nationality } = req.body;
     const normalizedEmail = String(email || '').toLowerCase().trim();
     const normalizedGender = String(req.body.gender || '').toLowerCase().trim();
+    const playerCountry = String(country || nationality || '').trim();
 
     if (!normalizedEmail || !password || !firstName || !lastName || !normalizedGender) {
       return res.status(400).json({ error: 'All fields are required' });
@@ -308,8 +309,8 @@ router.post('/register', async (req, res) => {
     );
 
     await query(
-      `INSERT INTO player_profiles (player_id) VALUES ($1)`,
-      [playerId]
+      `INSERT INTO player_profiles (player_id, nationality) VALUES ($1, $2)`,
+      [playerId, playerCountry || null]
     );
 
     await sendPlayerVerificationEmail(

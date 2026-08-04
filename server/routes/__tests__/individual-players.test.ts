@@ -104,6 +104,7 @@ describe('Individual Players Routes', () => {
           password: 'Password123!',
           firstName: 'John',
           lastName: 'Doe',
+          country: 'Zambia',
           gender: 'male',
           academyCode: 'ACAD123'
         });

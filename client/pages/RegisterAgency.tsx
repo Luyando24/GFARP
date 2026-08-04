@@ -7,10 +7,12 @@ import { useToast } from '../hooks/use-toast';
 import { saveSession } from '@/lib/auth';
 import { useTranslation } from '@/lib/i18n';
 import { usePageTitle } from "@/hooks/usePageTitle";
+import { countryCodes } from '@/lib/countryCodes';
 
 interface FormData {
   name: string;
   email: string;
+  country: string;
   password: string;
   confirmPassword: string;
   referralCode?: string;
@@ -19,10 +21,15 @@ interface FormData {
 const initialFormData: FormData = {
   name: '',
   email: '',
+  country: '',
   password: '',
   confirmPassword: '',
   referralCode: ''
 };
+
+const countriesList = Array.from(
+  new Map(countryCodes.map(c => [c.country, c])).values()
+).sort((a, b) => a.country.localeCompare(b.country));
 
 export default function RegisterAgency() {
   const { t, dir } = useTranslation();
@@ -51,6 +58,7 @@ export default function RegisterAgency() {
     if (!formData.name.trim()) newErrors.name = t('auth.error.agencyNameRequired');
     if (!formData.email.trim()) newErrors.email = t('auth.error.emailRequired');
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) newErrors.email = t('auth.error.invalidEmail');
+    if (!formData.country.trim()) newErrors.country = 'Please select a country';
     if (!formData.password || formData.password.length < 8) newErrors.password = t('auth.error.passwordLength');
     if (!formData.confirmPassword) newErrors.confirmPassword = t('auth.error.confirmRequired');
     else if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = t('auth.error.passwordMismatch');
@@ -74,6 +82,7 @@ export default function RegisterAgency() {
       const submitData = {
         name: formData.name,
         email: formData.email,
+        country: formData.country,
         password: formData.password,
         subscriptionPlan: plan,
         referralCode: formData.referralCode
@@ -190,6 +199,25 @@ export default function RegisterAgency() {
                     required
                   />
                   {errors.email && <p className="text-red-500 text-[10px] font-bold uppercase mt-1">{errors.email}</p>}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-slate-700 uppercase tracking-widest" htmlFor="country">Country</label>
+                  <select
+                    id="country"
+                    value={formData.country}
+                    onChange={(e) => handleInputChange('country', e.target.value)}
+                    className="w-full px-4 py-3 border-2 border-slate-100 rounded-xl focus:border-yellow-400 focus:outline-none transition-all font-medium text-slate-900 bg-slate-50/50"
+                    required
+                  >
+                    <option value="" disabled>Select Country</option>
+                    {countriesList.map((c) => (
+                      <option key={c.country} value={c.country}>
+                        {c.flag} {c.country}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.country && <p className="text-red-500 text-[10px] font-bold uppercase mt-1">{errors.country}</p>}
                 </div>
 
                 <div className="grid grid-cols-1 gap-5">

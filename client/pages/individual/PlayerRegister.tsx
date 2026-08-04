@@ -18,12 +18,18 @@ import { useTranslation } from "@/lib/i18n";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import LanguageToggle from "@/components/navigation/LanguageToggle";
 import { useToast } from "@/hooks/use-toast";
+import { countryCodes } from "@/lib/countryCodes";
+
+const countriesList = Array.from(
+  new Map(countryCodes.map(c => [c.country, c])).values()
+).sort((a, b) => a.country.localeCompare(b.country));
 
 export default function PlayerRegister() {
   usePageTitle("Player Registration");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
+  const [country, setCountry] = useState("");
   const [gender, setGender] = useState<"" | "male" | "female">("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -44,6 +50,9 @@ export default function PlayerRegister() {
       if (password !== confirmPassword) {
         throw new Error("Passwords do not match");
       }
+      if (!country) {
+        throw new Error("Please select a country");
+      }
       if (!gender) {
         throw new Error(t("auth.error.genderRequired"));
       }
@@ -52,6 +61,7 @@ export default function PlayerRegister() {
         firstName,
         lastName,
         email,
+        country,
         gender,
         password,
         academyCode: academyCode || undefined,
@@ -150,22 +160,43 @@ export default function PlayerRegister() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="player-gender">{t("auth.gender")}</Label>
-              <Select
-                value={gender}
-                onValueChange={(value) =>
-                  setGender(value as "male" | "female")
-                }
-              >
-                <SelectTrigger id="player-gender" aria-required="true">
-                  <SelectValue placeholder={t("auth.gender.placeholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="male">{t("auth.gender.male")}</SelectItem>
-                  <SelectItem value="female">{t("auth.gender.female")}</SelectItem>
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="player-gender">{t("auth.gender")}</Label>
+                <Select
+                  value={gender}
+                  onValueChange={(value) =>
+                    setGender(value as "male" | "female")
+                  }
+                >
+                  <SelectTrigger id="player-gender" aria-required="true">
+                    <SelectValue placeholder={t("auth.gender.placeholder")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">{t("auth.gender.male")}</SelectItem>
+                    <SelectItem value="female">{t("auth.gender.female")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="player-country">Country</Label>
+                <Select
+                  value={country}
+                  onValueChange={(value) => setCountry(value)}
+                >
+                  <SelectTrigger id="player-country" aria-required="true">
+                    <SelectValue placeholder="Select Country" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {countriesList.map((item) => (
+                      <SelectItem key={item.country} value={item.country}>
+                        {item.flag} {item.country}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2">
