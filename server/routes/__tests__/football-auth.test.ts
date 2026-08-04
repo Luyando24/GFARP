@@ -122,6 +122,7 @@ describe('Football Auth Routes', () => {
         .send({ 
           name: 'New Academy',
           email: 'new@academy.com', 
+          country: 'Zambia',
           password: 'password123',
           contactPerson: 'John Doe',
           subscriptionPlan: 'pro'
