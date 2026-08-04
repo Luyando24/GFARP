@@ -2,9 +2,23 @@
 import { Router, RequestHandler } from 'express';
 import { query, transaction } from '../lib/db.js';
 import { authenticateToken, canAccessOrganizationForRequest } from '../middleware/auth.js';
+import {
+    DEFAULT_ACADEMY_CURRENCY,
+    isSupportedCurrency,
+    normalizeCurrencyCode,
+} from '../../shared/currencies.js';
 
 const router = Router();
 router.use(authenticateToken);
+
+async function resolveAcademyCurrency(academyId: string): Promise<string> {
+    const result = await query(
+        'SELECT default_currency FROM academy_financial_settings WHERE academy_id = $1',
+        [academyId],
+    );
+    const currency = normalizeCurrencyCode(result.rows[0]?.default_currency);
+    return /^[A-Z]{3}$/.test(currency) ? currency : DEFAULT_ACADEMY_CURRENCY;
+}
 
 // GET /api/invoices/:academyId or /api/invoices?academy_id=...
 const handleGetInvoices: RequestHandler = async (req, res) => {
@@ -109,11 +123,30 @@ const handleCreateInvoice: RequestHandler = async (req, res) => {
             items,
             subtotal,
             total_amount,
+            currency: requestedCurrency,
             status = 'draft'
         } = req.body;
         if (!(await canAccessOrganizationForRequest(req.user, academy_id))) {
             return res.status(403).json({ success: false, error: 'You cannot create invoices for this academy' });
         }
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ success: false, error: 'Add at least one invoice item' });
+        }
+
+        const normalizedRequestedCurrency = normalizeCurrencyCode(requestedCurrency);
+        const storedAcademyCurrency = requestedCurrency === undefined || !isSupportedCurrency(normalizedRequestedCurrency)
+            ? await resolveAcademyCurrency(academy_id)
+            : null;
+        if (
+            requestedCurrency !== undefined
+            && !isSupportedCurrency(normalizedRequestedCurrency)
+            && normalizedRequestedCurrency !== storedAcademyCurrency
+        ) {
+            return res.status(400).json({ success: false, error: 'Select a supported academy currency' });
+        }
+        const currency = requestedCurrency === undefined
+            ? storedAcademyCurrency || DEFAULT_ACADEMY_CURRENCY
+            : normalizedRequestedCurrency;
 
         await transaction(async (client) => {
             // 1. Create Invoice
@@ -121,13 +154,13 @@ const handleCreateInvoice: RequestHandler = async (req, res) => {
                 INSERT INTO invoices (
                     academy_id, invoice_number, client_name, client_email, 
                     client_address, issue_date, due_date, notes, 
-                    subtotal, total_amount, status
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                    subtotal, total_amount, currency, status
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                 RETURNING id
             `, [
                 academy_id, invoice_number, client_name, client_email,
                 client_address, issue_date, due_date, notes,
-                subtotal, total_amount, status
+                subtotal, total_amount, currency, status
             ]);
 
             const invoiceId = invoiceResult.rows[0].id;
@@ -150,8 +183,8 @@ const handleCreateInvoice: RequestHandler = async (req, res) => {
                 INSERT INTO financial_transactions (
                     academy_id, transaction_type, category, amount, 
                     description, transaction_date, status, 
-                    reference_number, notes
-                ) VALUES ($1, 'income', 'Academy Fees', $2, $3, $4, $5, $6, $7)
+                    reference_number, notes, currency
+                ) VALUES ($1, 'income', 'Academy Fees', $2, $3, $4, $5, $6, $7, $8)
             `, [
                 academy_id, 
                 total_amount, 
@@ -159,7 +192,8 @@ const handleCreateInvoice: RequestHandler = async (req, res) => {
                 issue_date,
                 status === 'paid' ? 'completed' : 'pending',
                 invoice_number,
-                `Linked to Invoice ID: ${invoiceId}`
+                `Linked to Invoice ID: ${invoiceId}`,
+                currency,
             ]);
         });
 
@@ -187,11 +221,40 @@ const handleUpdateInvoice: RequestHandler = async (req, res) => {
             items,
             subtotal,
             total_amount,
+            currency: requestedCurrency,
             status
         } = req.body;
-        if (!(await canAccessOrganizationForRequest(req.user, academy_id))) {
+
+        const existingInvoiceResult = await query(
+            'SELECT academy_id, currency FROM invoices WHERE id = $1',
+            [id],
+        );
+        if (!existingInvoiceResult.rows.length) {
+            return res.status(404).json({ success: false, error: 'Invoice not found' });
+        }
+
+        const existingInvoice = existingInvoiceResult.rows[0];
+        if (!(await canAccessOrganizationForRequest(req.user, existingInvoice.academy_id))) {
             return res.status(403).json({ success: false, error: 'You cannot update invoices for this academy' });
         }
+        if (academy_id && String(academy_id) !== String(existingInvoice.academy_id)) {
+            return res.status(400).json({ success: false, error: 'Invoice does not belong to that academy' });
+        }
+        if (!Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ success: false, error: 'Add at least one invoice item' });
+        }
+
+        const normalizedRequestedCurrency = normalizeCurrencyCode(requestedCurrency);
+        const existingCurrency = normalizeCurrencyCode(existingInvoice.currency) || DEFAULT_ACADEMY_CURRENCY;
+        if (
+            requestedCurrency !== undefined
+            && !isSupportedCurrency(normalizedRequestedCurrency)
+            && normalizedRequestedCurrency !== existingCurrency
+        ) {
+            return res.status(400).json({ success: false, error: 'Select a supported academy currency' });
+        }
+        const currency = requestedCurrency === undefined ? null : normalizedRequestedCurrency;
+        const resolvedAcademyId = existingInvoice.academy_id;
 
         await transaction(async (client) => {
             // 1. Update Invoice
@@ -199,13 +262,14 @@ const handleUpdateInvoice: RequestHandler = async (req, res) => {
                 UPDATE invoices SET
                     invoice_number = $1, client_name = $2, client_email = $3, 
                     client_address = $4, issue_date = $5, due_date = $6, notes = $7, 
-                    subtotal = $8, total_amount = $9, status = $10, updated_at = NOW()
-                WHERE id = $11 AND academy_id = $12
+                    subtotal = $8, total_amount = $9, status = $10,
+                    currency = COALESCE($11, currency), updated_at = NOW()
+                WHERE id = $12 AND academy_id = $13
             `, [
                 invoice_number, client_name, client_email,
                 client_address, issue_date, due_date, notes,
                 subtotal, total_amount, status,
-                id, academy_id
+                currency, id, resolvedAcademyId,
             ]);
 
             // 2. Delete existing items
@@ -235,15 +299,17 @@ const handleUpdateInvoice: RequestHandler = async (req, res) => {
                     description = $2,
                     transaction_date = $3,
                     status = $4,
-                    reference_number = $5
-                WHERE academy_id = $6 AND notes LIKE $7
+                    reference_number = $5,
+                    currency = COALESCE($6, currency)
+                WHERE academy_id = $7 AND notes LIKE $8
             `, [
                 total_amount,
                 `Invoice ${invoice_number} for ${client_name}`,
                 issue_date,
                 status === 'paid' ? 'completed' : 'pending',
                 invoice_number,
-                academy_id,
+                currency,
+                resolvedAcademyId,
                 `%Linked to Invoice ID: ${id}%`
             ]);
         });

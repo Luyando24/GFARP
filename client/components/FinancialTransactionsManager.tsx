@@ -23,6 +23,12 @@ import { addCalendarMonths, addCalendarYears } from '@shared/calendar-date';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
 import InvoiceGenerator from './InvoiceGenerator';
+import CurrencySelect from './CurrencySelect';
+import {
+  DEFAULT_ACADEMY_CURRENCY,
+  formatMoney,
+  isSupportedCurrency,
+} from '@shared/currencies';
 import { 
   FinancialTransaction,
   PlayerFeeSubscription,
@@ -46,17 +52,19 @@ import {
 interface FinancialTransactionsManagerProps {
   academyId: string;
   academyDetails?: any;
+  currency?: string;
+  onCurrencyChange?: (currency: string) => void;
 }
 
-const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> = ({ academyId, academyDetails }) => {
+const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> = ({ academyId, academyDetails, currency, onCurrencyChange }) => {
   const { t } = useLanguage();
   const { toast } = useToast();
   const [transactions, setTransactions] = useState<FinancialTransaction[]>([]);
   const [budgetCategories, setBudgetCategories] = useState<BudgetCategory[]>([]);
   const [players, setPlayers] = useState<any[]>([]);
   const [feeSubscriptions, setFeeSubscriptions] = useState<PlayerFeeSubscription[]>([]);
-  const [defaultCurrency, setDefaultCurrency] = useState('USD');
-  const [currencyDraft, setCurrencyDraft] = useState('USD');
+  const [defaultCurrency, setDefaultCurrency] = useState(DEFAULT_ACADEMY_CURRENCY);
+  const [currencyDraft, setCurrencyDraft] = useState(DEFAULT_ACADEMY_CURRENCY);
   const [remindersEnabled, setRemindersEnabled] = useState(true);
   const [defaultReminderDays, setDefaultReminderDays] = useState(7);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -106,7 +114,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     category: 'Academy Fees',
     status: 'completed',
     transaction_date: new Date().toISOString().split('T')[0],
-    currency: 'USD',
+    currency: DEFAULT_ACADEMY_CURRENCY,
     payment_type: 'monthly',
     is_external_payment: true,
     reminder_days_before: 7,
@@ -198,8 +206,10 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         getAcademyFinancialSettings(academyId),
         getPlayerFeeSubscriptions(academyId),
       ]);
-      setDefaultCurrency(settings.default_currency || 'USD');
-      setCurrencyDraft(settings.default_currency || 'USD');
+      const savedCurrency = settings.default_currency || DEFAULT_ACADEMY_CURRENCY;
+      setDefaultCurrency(savedCurrency);
+      setCurrencyDraft(savedCurrency);
+      onCurrencyChange?.(savedCurrency);
       setRemindersEnabled(settings.renewal_reminders_enabled !== false);
       setDefaultReminderDays(settings.default_reminder_days ?? 7);
       setFeeSubscriptions(subscriptions || []);
@@ -226,6 +236,15 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       loadFeeManagementData();
     }
   }, [academyId, activeTab]);
+
+  useEffect(() => {
+    if (!currency || currency === defaultCurrency) return;
+    setDefaultCurrency(currency);
+    setCurrencyDraft(currency);
+    if (!editingTransaction) {
+      setTransactionForm((previous) => ({ ...previous, currency }));
+    }
+  }, [currency, defaultCurrency, editingTransaction]);
 
   useEffect(() => {
     fetchData();
@@ -382,14 +401,17 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     try {
       setSavingSettings(true);
       const currency = currencyDraft.trim().toUpperCase();
-      if (!/^[A-Z]{3}$/.test(currency)) throw new Error('Enter a valid three-letter ISO currency code');
+      if (currency !== defaultCurrency && !isSupportedCurrency(currency)) {
+        throw new Error('Select a supported academy currency');
+      }
       const settings = await updateAcademyFinancialSettings(academyId, {
-        default_currency: currency,
+        ...(currency !== defaultCurrency ? { default_currency: currency } : {}),
         renewal_reminders_enabled: remindersEnabled,
         default_reminder_days: defaultReminderDays,
       });
       setDefaultCurrency(settings.default_currency);
       setCurrencyDraft(settings.default_currency);
+      onCurrencyChange?.(settings.default_currency);
       showSuccess('Financial settings saved');
     } catch (err) {
       showError(err instanceof Error ? err.message : 'Failed to save financial settings');
@@ -551,14 +573,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   };
 
   const formatCurrency = (amount: number) => {
-    try {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: defaultCurrency
-      }).format(amount);
-    } catch {
-      return `${defaultCurrency} ${Number(amount).toFixed(2)}`;
-    }
+    return formatMoney(amount, defaultCurrency);
   };
 
   const formatDate = (dateString: string) => {
@@ -788,12 +803,12 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     if (invoice.items && Array.isArray(invoice.items)) {
         invoice.items.forEach((item: any) => {
             doc.text(item.description || 'Item', 20, yPos);
-            doc.text(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(item.amount || 0), 160, yPos);
+            doc.text(formatMoney(item.amount || 0, invoice.currency || defaultCurrency), 160, yPos);
             yPos += 10;
         });
     } else {
         doc.text('Invoice Total', 20, yPos);
-        doc.text(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(invoice.total_amount || 0), 160, yPos);
+        doc.text(formatMoney(invoice.total_amount || 0, invoice.currency || defaultCurrency), 160, yPos);
         yPos += 10;
     }
     
@@ -802,7 +817,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     yPos += 10;
     doc.setFont("helvetica", "bold");
     doc.text('Total:', 130, yPos);
-    doc.text(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(invoice.total_amount || 0), 160, yPos);
+    doc.text(formatMoney(invoice.total_amount || 0, invoice.currency || defaultCurrency), 160, yPos);
     
     doc.save(`Invoice_${invoice.invoice_number}.pdf`);
   };
@@ -811,7 +826,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     try {
       const data = await Api.get<any>(`/invoices?academy_id=${academyId}`);
       if (data.success) {
-        setInvoices(data.data);
+        setInvoices(data.data?.invoices || []);
       }
     } catch (error) {
       console.error('Error fetching invoices:', error);
@@ -869,12 +884,10 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
           <div className="grid gap-3 sm:grid-cols-4 sm:items-end">
             <label className="text-sm text-slate-700">
               Default currency
-              <input
+              <CurrencySelect
                 value={currencyDraft}
-                onChange={(event) => setCurrencyDraft(event.target.value.toUpperCase().slice(0, 3))}
-                maxLength={3}
-                className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2 uppercase"
-                placeholder="USD"
+                onValueChange={setCurrencyDraft}
+                className="mt-1"
                 aria-label="Default currency code"
               />
             </label>
@@ -1372,7 +1385,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                         </td>
                         <td className="px-5 py-4 text-sm text-gray-900">{subscription.fee_name}</td>
                         <td className="px-5 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                          {new Intl.NumberFormat('en-US', { style: 'currency', currency: subscription.currency }).format(Number(subscription.amount))}
+                          {formatMoney(subscription.amount, subscription.currency)}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-sm capitalize text-gray-700">{cycleLabel}</td>
                         <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-700">
@@ -1492,7 +1505,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                         {invoice.issue_date}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">
-                         {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(invoice.total_amount)}
+                         {formatMoney(invoice.total_amount, invoice.currency || defaultCurrency)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -1850,15 +1863,14 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Currency *
                     </label>
-                    <input
+                    <CurrencySelect
                       value={transactionForm.currency || defaultCurrency}
-                      onChange={(e) => setTransactionForm({
+                      onValueChange={(currency) => setTransactionForm({
                         ...transactionForm,
-                        currency: e.target.value.toUpperCase().slice(0, 3)
+                        currency,
                       })}
-                      maxLength={3}
-                      className="w-full rounded-lg border border-gray-300 px-3 py-2 uppercase focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                      placeholder="USD"
+                      className="rounded-lg focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                      aria-label="Transaction currency"
                     />
                   </div>
 
@@ -2194,6 +2206,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
           academyId={academyId}
           academyDetails={academyDetails}
           initialData={editingInvoice}
+          currency={defaultCurrency}
           onClose={() => {
             setShowInvoiceModal(false);
             setEditingInvoice(null);

@@ -1,7 +1,12 @@
 import React, { lazy, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { clearSession, useAuth } from '@/lib/auth';
-import { getCurrentSubscription, getSubscriptionHistory } from '@/lib/api';
+import {
+  getAcademyFinancialSettings,
+  getCurrentSubscription,
+  getSubscriptionHistory,
+  updateAcademyFinancialSettings,
+} from '@/lib/api';
 import {
   Trophy,
   Users,
@@ -72,6 +77,13 @@ import { useTranslation } from '@/lib/i18n';
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { Player, Transfer, getTransfers, createTransfer, updateTransfer, deleteTransfer, getAcademyDashboardStats, Api } from '@/lib/api';
 import { getDashboardPlayerTotal, hasCurrentSubscription, normalizeAcademyDashboardProfile } from '@/lib/academy-dashboard-data';
+import CurrencySelect from '@/components/CurrencySelect';
+import {
+  DEFAULT_ACADEMY_CURRENCY,
+  SUPPORTED_CURRENCIES,
+  formatMoney,
+  isSupportedCurrency,
+} from '@shared/currencies';
 
 const PlayerManagement = lazy(() => import('@/components/players/PlayerManagement'));
 const TrainingAttendanceManager = lazy(() => import('@/components/training/TrainingAttendanceManager'));
@@ -124,6 +136,8 @@ export default function AcademyDashboard() {
   const [activeView, setActiveView] = useState("main");
   const [searchQuery, setSearchQuery] = useState("");
   const [isEditingSettings, setIsEditingSettings] = useState(false);
+  const [academyCurrency, setAcademyCurrency] = useState(DEFAULT_ACADEMY_CURRENCY);
+  const [isSavingCurrency, setIsSavingCurrency] = useState(false);
   const [settingsFormData, setSettingsFormData] = useState({
     name: "",
     location: "",
@@ -132,7 +146,8 @@ export default function AcademyDashboard() {
     phone: "",
     directorName: "",
     directorEmail: "",
-    directorPhone: ""
+    directorPhone: "",
+    currency: DEFAULT_ACADEMY_CURRENCY,
   });
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -148,7 +163,7 @@ export default function AcademyDashboard() {
     from_club: "",
     to_club: "",
     transfer_amount: 0,
-    currency: "USD",
+    currency: DEFAULT_ACADEMY_CURRENCY,
     transfer_date: "",
     status: "pending" as "pending" | "completed" | "cancelled" | "approved" | "rejected",
     transfer_type: "permanent" as "permanent" | "loan" | "free_transfer",
@@ -320,6 +335,32 @@ export default function AcademyDashboard() {
     loadAcademyData();
   }, [session?.userId, session?.tokens?.accessToken]);
 
+  useEffect(() => {
+    if (!academyInfo?.id || isAgency) return;
+
+    let cancelled = false;
+    getAcademyFinancialSettings(academyInfo.id)
+      .then((settings) => {
+        if (cancelled) return;
+        const currency = settings.default_currency || DEFAULT_ACADEMY_CURRENCY;
+        setAcademyCurrency(currency);
+        setSettingsFormData((previous) => ({ ...previous, currency }));
+      })
+      .catch((error) => {
+        console.error('Failed to load academy currency', error);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [academyInfo?.id, isAgency]);
+
+  useEffect(() => {
+    if (!editingTransfer) {
+      setTransferFormData((previous) => ({ ...previous, currency: academyCurrency }));
+    }
+  }, [academyCurrency, editingTransfer]);
+
   // Load transfers from database
   const loadTransfers = async () => {
     if (!academyInfo?.id) return;
@@ -355,7 +396,7 @@ export default function AcademyDashboard() {
     setIsLoadingStats(true);
     try {
       // Parallel fetch for all stats
-      const [statsResult, playersResult, transfersResult, financialResult] = await Promise.all([
+      const [statsResult, playersResult, transfersResult] = await Promise.all([
         getAcademyDashboardStats(academyInfo.id).catch(error => {
           console.error('Failed to load aggregate dashboard stats:', error);
           return { success: false, data: {} } as any;
@@ -367,28 +408,13 @@ export default function AcademyDashboard() {
         Api.getTransfers(academyInfo.id).catch(error => {
           console.error('Failed to load dashboard transfers:', error);
           return { success: false, data: [] } as any;
-        }),
-        fetch(`/api/financial/summary?academyId=${academyInfo.id}&period=monthly`)
-          .then(async response => response.ok ? response.json() : Promise.reject(new Error(`HTTP ${response.status}`)))
-          .catch(error => {
-            console.error('Failed to load dashboard financial summary:', error);
-            return { success: false, data: {} };
-          })
+        })
       ]);
 
       // Calculate active transfers
       const activeTransfers = transfersResult.success && Array.isArray(transfersResult.data)
         ? transfersResult.data.filter((t: any) => t.status === 'pending' || t.status === 'approved').length
         : 0;
-
-      // Process financial data
-      const financialSummary = financialResult.success
-        ? (financialResult.data.summary || financialResult.data)
-        : { totalRevenue: 0 };
-
-      const monthlyFinancialData = financialResult.success
-        ? (financialResult.data.monthlyBreakdown || financialResult.data.monthlyData || [])
-        : [];
 
       // Get recent transfers from the transfers list (already fetched)
       const recentTransfers = transfersResult.success && Array.isArray(transfersResult.data)
@@ -400,9 +426,8 @@ export default function AcademyDashboard() {
           ...statsResult.data,
           totalPlayers: getDashboardPlayerTotal(playersResult, statsResult),
           activeTransfers: activeTransfers,
-          monthlyRevenue: financialSummary.totalRevenue || 0,
           recentTransfers: recentTransfers,
-          monthlyFinancialPerformance: monthlyFinancialData.length > 0 ? monthlyFinancialData : prev.monthlyFinancialPerformance
+          monthlyFinancialPerformance: statsResult.data.monthlyFinancialPerformance || prev.monthlyFinancialPerformance,
         }));
       } else {
         // Fallback if stats endpoint fails
@@ -410,9 +435,8 @@ export default function AcademyDashboard() {
           ...prev,
           totalPlayers: getDashboardPlayerTotal(playersResult, statsResult),
           activeTransfers: activeTransfers,
-          monthlyRevenue: financialSummary.totalRevenue || 0,
           recentTransfers: recentTransfers,
-          monthlyFinancialPerformance: monthlyFinancialData.length > 0 ? monthlyFinancialData : prev.monthlyFinancialPerformance
+          monthlyRevenue: 0,
         }));
       }
     } catch (error) {
@@ -675,7 +699,7 @@ export default function AcademyDashboard() {
       loadSubscriptionHistory();
       loadAvailablePlans();
     }
-  }, [academyInfo?.id]);
+  }, [academyInfo?.id, academyCurrency]);
 
   // Click outside handler for player search dropdown
   useEffect(() => {
@@ -702,9 +726,10 @@ export default function AcademyDashboard() {
       phone: currentData.phone || "",
       directorName: currentData.directorName || currentData.director?.name || currentData.contactPerson || "",
       directorEmail: currentData.directorEmail || currentData.director?.email || "",
-      directorPhone: currentData.directorPhone || currentData.director?.phone || ""
+      directorPhone: currentData.directorPhone || currentData.director?.phone || "",
+      currency: academyCurrency,
     });
-  }, [academyInfo]);
+  }, [academyInfo, academyCurrency]);
 
   const displayAcademyName = academyInfo?.name || "";
   const displayName = academyInfo?.contactPerson || academyInfo?.name || "";
@@ -727,6 +752,52 @@ export default function AcademyDashboard() {
   const handleLogout = () => {
     clearSession();
     navigate("/portal");
+  };
+
+  const handleTopNavCurrencyChange = async (currency: string) => {
+    if (currency === academyCurrency || !academyInfo?.id || isAgency) return;
+
+    const previousCurrency = academyCurrency;
+    setIsSavingCurrency(true);
+    setAcademyCurrency(currency);
+    setSettingsFormData((previous) => ({ ...previous, currency }));
+
+    try {
+      const settings = await updateAcademyFinancialSettings(academyInfo.id, {
+        default_currency: currency,
+      });
+      const savedCurrency = settings.default_currency || currency;
+      setAcademyCurrency(savedCurrency);
+      setSettingsFormData((previous) => ({ ...previous, currency: savedCurrency }));
+      setAcademyInfo((previous: any) => previous ? { ...previous, currency: savedCurrency } : previous);
+
+      const rawAcademyData = localStorage.getItem('academy_data');
+      if (rawAcademyData) {
+        try {
+          localStorage.setItem('academy_data', JSON.stringify({
+            ...JSON.parse(rawAcademyData),
+            currency: savedCurrency,
+          }));
+        } catch {
+          // A malformed cache must not prevent the saved database setting from taking effect.
+        }
+      }
+
+      toast({
+        title: 'Currency Updated',
+        description: `New academy financial records will use ${savedCurrency}.`,
+      });
+    } catch (error: any) {
+      setAcademyCurrency(previousCurrency);
+      setSettingsFormData((previous) => ({ ...previous, currency: previousCurrency }));
+      toast({
+        title: 'Currency Update Failed',
+        description: error?.message || 'Could not update the academy currency.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSavingCurrency(false);
+    }
   };
 
   // Settings form handlers
@@ -753,12 +824,17 @@ export default function AcademyDashboard() {
       phone: currentData.phone || "",
       directorName: currentData.directorName || currentData.director?.name || currentData.contactPerson || "",
       directorEmail: currentData.directorEmail || currentData.director?.email || "",
-      directorPhone: currentData.directorPhone || currentData.director?.phone || ""
+      directorPhone: currentData.directorPhone || currentData.director?.phone || "",
+      currency: academyCurrency,
     });
   };
 
   const handleSaveSettings = async () => {
     try {
+      if (!isAgency && settingsFormData.currency !== academyCurrency && !isSupportedCurrency(settingsFormData.currency)) {
+        throw new Error('Select a supported academy currency');
+      }
+
       // Get auth token
       const session = JSON.parse(localStorage.getItem("ipims_auth_session") || "{}");
       const token = session.tokens?.accessToken || session?.access_token || session?.token;
@@ -804,6 +880,14 @@ export default function AcademyDashboard() {
         throw new Error(result.error || "Failed to update academy information");
       }
 
+      const financialSettings = !isAgency && settingsFormData.currency !== academyCurrency
+        ? await updateAcademyFinancialSettings(academyId, {
+            default_currency: settingsFormData.currency,
+          })
+        : null;
+      const savedCurrency = financialSettings?.default_currency || academyCurrency;
+      setAcademyCurrency(savedCurrency);
+
       // Update local storage with new data (merging with existing structure)
       const savedData = result.data || {};
       const directorName = savedData.directorName || savedData.director_name || settingsFormData.directorName;
@@ -821,6 +905,7 @@ export default function AcademyDashboard() {
         directorPhone,
         foundedYear: savedData.foundedYear || savedData.founded_year || settingsFormData.established,
         established: savedData.foundedYear || savedData.founded_year || settingsFormData.established,
+        currency: savedCurrency,
         profileComplete: true,
         director: {
           name: directorName,
@@ -857,7 +942,7 @@ export default function AcademyDashboard() {
       from_club: "",
       to_club: "",
       transfer_amount: 0,
-      currency: "USD",
+      currency: academyCurrency,
       transfer_date: new Date().toISOString().split('T')[0],
       status: "pending",
       transfer_type: "permanent",
@@ -1025,7 +1110,7 @@ export default function AcademyDashboard() {
       from_club: "",
       to_club: "",
       transfer_amount: 0,
-      currency: "USD",
+      currency: academyCurrency,
       transfer_date: "",
       status: "pending",
       transfer_type: "permanent",
@@ -1105,6 +1190,7 @@ export default function AcademyDashboard() {
     ["dashboard", "players", "transfers", "finances"].includes(item.id),
   );
   const isMobileMoreActive = !mobileBottomItems.some((item) => item.id === activeTab);
+  const selectedCurrency = SUPPORTED_CURRENCIES.find(({ code }) => code === academyCurrency);
 
   return (
     <div className="min-h-screen overflow-x-clip bg-slate-50 dark:bg-slate-900" dir={dir}>
@@ -1157,6 +1243,43 @@ export default function AcademyDashboard() {
 
             {/* User Menu */}
             <div className="flex shrink-0 items-center gap-1 sm:gap-3 lg:gap-4">
+              {!isAgency && academyInfo?.id && (
+                <Select
+                  value={academyCurrency}
+                  onValueChange={handleTopNavCurrencyChange}
+                  disabled={isSavingCurrency}
+                >
+                  <SelectTrigger
+                    className="h-9 w-[78px] gap-1 px-2 sm:w-[96px]"
+                    aria-label="Switch academy currency"
+                    title="Academy currency"
+                  >
+                    {isSavingCurrency ? (
+                      <Loader2 className="h-4 w-4 shrink-0 animate-spin" />
+                    ) : (
+                      <Banknote className="h-4 w-4 shrink-0 text-slate-500" />
+                    )}
+                    <span className="truncate text-xs font-semibold">
+                      {selectedCurrency?.symbol ? `${selectedCurrency.symbol} ` : ''}{academyCurrency}
+                    </span>
+                  </SelectTrigger>
+                  <SelectContent
+                    align="end"
+                    className="max-h-80 min-w-[280px]"
+                    viewportClassName="currency-select-scrollbar overscroll-contain pr-1"
+                    showScrollButtons={false}
+                  >
+                    {!isSupportedCurrency(academyCurrency) && (
+                      <SelectItem value={academyCurrency}>{academyCurrency} — current legacy currency</SelectItem>
+                    )}
+                    {SUPPORTED_CURRENCIES.map(({ code, name, symbol }) => (
+                      <SelectItem key={code} value={code}>
+                        {symbol} {code} — {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <NotificationsPopover />
               <LanguageToggle />
               <ThemeToggle />
@@ -1404,7 +1527,7 @@ export default function AcademyDashboard() {
                               {isLoadingStats ? (
                                 <Loader2 className="h-6 w-6 animate-spin" />
                               ) : (
-                                `$${dashboardStats.monthlyRevenue.toLocaleString()}`
+                                formatMoney(dashboardStats.monthlyRevenue, academyCurrency)
                               )}
                             </p>
                           </div>
@@ -1510,20 +1633,20 @@ export default function AcademyDashboard() {
                                     <div
                                       className="absolute bottom-0 w-full bg-green-500"
                                       style={{ height: `${revenueHeight}px` }}
-                                      title={`${t('dash.financial.revenue')}: $${monthData.revenue.toLocaleString()}`}
+                                      title={`${t('dash.financial.revenue')}: ${formatMoney(monthData.revenue, academyCurrency)}`}
                                     ></div>
                                     {/* Expenses bar (red) */}
                                     <div
                                       className="absolute bottom-0 w-full bg-red-500"
                                       style={{ height: `${expensesHeight}px` }}
-                                      title={`${t('dash.financial.expenses')}: $${monthData.expenses.toLocaleString()}`}
+                                      title={`${t('dash.financial.expenses')}: ${formatMoney(monthData.expenses, academyCurrency)}`}
                                     ></div>
                                     {/* Profit bar (blue) - only show if positive */}
                                     {monthData.profit > 0 && (
                                       <div
                                         className="absolute bottom-0 w-full bg-blue-500"
                                         style={{ height: `${profitHeight}px` }}
-                                        title={`${t('dash.financial.profit')}: $${monthData.profit.toLocaleString()}`}
+                                        title={`${t('dash.financial.profit')}: ${formatMoney(monthData.profit, academyCurrency)}`}
                                       ></div>
                                     )}
                                   </div>
@@ -1538,19 +1661,19 @@ export default function AcademyDashboard() {
                             <div className="text-center">
                               <div className="text-sm text-slate-600">{t('dash.financial.revenue')}</div>
                               <div className="text-lg font-semibold text-green-600">
-                                ${dashboardStats.monthlyFinancialPerformance?.reduce((sum, month) => sum + month.revenue, 0).toLocaleString() || '0'}
+                                {formatMoney(dashboardStats.monthlyFinancialPerformance?.reduce((sum, month) => sum + month.revenue, 0) || 0, academyCurrency)}
                               </div>
                             </div>
                             <div className="text-center">
                               <div className="text-sm text-slate-600">{t('dash.financial.expenses')}</div>
                               <div className="text-lg font-semibold text-red-600">
-                                ${dashboardStats.monthlyFinancialPerformance?.reduce((sum, month) => sum + month.expenses, 0).toLocaleString() || '0'}
+                                {formatMoney(dashboardStats.monthlyFinancialPerformance?.reduce((sum, month) => sum + month.expenses, 0) || 0, academyCurrency)}
                               </div>
                             </div>
                             <div className="text-center">
                               <div className="text-sm text-slate-600">{t('dash.financial.profit')}</div>
                               <div className="text-lg font-semibold text-blue-600">
-                                ${dashboardStats.monthlyFinancialPerformance?.reduce((sum, month) => sum + month.profit, 0).toLocaleString() || '0'}
+                                {formatMoney(dashboardStats.monthlyFinancialPerformance?.reduce((sum, month) => sum + month.profit, 0) || 0, academyCurrency)}
                               </div>
                             </div>
                           </div>
@@ -1578,7 +1701,7 @@ export default function AcademyDashboard() {
                             <div key={transfer.id} className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-700 rounded-lg">
                               <div>
                                 <p className="font-medium text-slate-900 dark:text-white">{transfer.player_name}</p>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">{transfer.from_club} → {transfer.to_club} - {transfer.transfer_amount ? `$${transfer.transfer_amount.toLocaleString()}` : 'N/A'}</p>
+                                <p className="text-sm text-slate-600 dark:text-slate-400">{transfer.from_club} → {transfer.to_club} - {transfer.transfer_amount ? formatMoney(transfer.transfer_amount, transfer.currency || academyCurrency) : 'N/A'}</p>
                                 <p className="text-xs text-slate-500 dark:text-slate-400">{new Date(transfer.transfer_date).toLocaleDateString()}</p>
                               </div>
                               <Badge variant={transfer.status === 'completed' ? 'default' : 'secondary'}>
@@ -1664,7 +1787,7 @@ export default function AcademyDashboard() {
                                     <p><span className="font-medium">{t('dash.transfers.from')}:</span> {transfer.from_club}</p>
                                     <p><span className="font-medium">{t('dash.transfers.to')}:</span> {transfer.to_club}</p>
                                     <p><span className="font-medium">{t('dash.transfers.date')}:</span> {new Date(transfer.transfer_date).toLocaleDateString()}</p>
-                                    <p><span className="font-medium">{t('dash.transfers.amount')}:</span> {transfer.transfer_amount ? `${transfer.currency} ${transfer.transfer_amount.toLocaleString()}` : 'N/A'}</p>
+                                    <p><span className="font-medium">{t('dash.transfers.amount')}:</span> {transfer.transfer_amount ? formatMoney(transfer.transfer_amount, transfer.currency || academyCurrency) : 'N/A'}</p>
                                     <p><span className="font-medium">{t('dash.transfers.type')}:</span> {transfer.transfer_type}</p>
                                     <p><span className="font-medium">{t('dash.transfers.priority')}:</span> {transfer.priority}</p>
                                   </div>
@@ -1754,20 +1877,12 @@ export default function AcademyDashboard() {
 
                         <div className="space-y-2">
                           <Label htmlFor="currency">Currency</Label>
-                          <Select
+                          <CurrencySelect
+                            id="currency"
                             value={transferFormData.currency}
                             onValueChange={(value) => handleTransferInputChange('currency', value)}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select currency" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="USD">USD</SelectItem>
-                              <SelectItem value="EUR">EUR</SelectItem>
-                              <SelectItem value="GBP">GBP</SelectItem>
-                              <SelectItem value="NGN">NGN</SelectItem>
-                            </SelectContent>
-                          </Select>
+                            aria-label="Transfer currency"
+                          />
                         </div>
 
                         <div className="space-y-2">
@@ -1877,6 +1992,8 @@ export default function AcademyDashboard() {
                     <FinancialTransactionsManager
                       academyId={academyInfo?.id}
                       academyDetails={academyInfo}
+                      currency={academyCurrency}
+                      onCurrencyChange={setAcademyCurrency}
                     />
                   ) : (
                     <Card className="border-l-4 border-l-yellow-500 bg-yellow-50/50 dark:bg-yellow-900/10">
@@ -2467,6 +2584,36 @@ export default function AcademyDashboard() {
                         </div>
                       </CardContent>
                     </Card>
+
+                    {!isAgency && (
+                      <Card className="lg:col-span-2">
+                        <CardHeader>
+                          <CardTitle className="flex items-center">
+                            <Banknote className="mr-2 h-5 w-5" />
+                            Academy Currency
+                          </CardTitle>
+                          <CardDescription>
+                            Used by default for new player fees, financial entries, transfers, and invoices. Existing records keep their original currency.
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="max-w-xl">
+                            <Label htmlFor="academy-currency" className="text-sm font-medium">Default currency</Label>
+                            <CurrencySelect
+                              id="academy-currency"
+                              value={settingsFormData.currency}
+                              onValueChange={(value) => handleInputChange('currency', value)}
+                              disabled={!isEditingSettings}
+                              className="mt-1"
+                              aria-label="Academy default currency"
+                            />
+                            <p className="mt-2 text-xs text-slate-500">
+                              Currency changes do not convert or relabel payments that were already recorded.
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {/* Additional Settings Card */}
                     <Card className="lg:col-span-2">

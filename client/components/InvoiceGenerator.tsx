@@ -11,7 +11,7 @@ import {
   Save
 } from 'lucide-react';
 import jsPDF from 'jspdf';
-import { formatCurrency } from '../lib/stripe'; // Assuming this helper exists or I'll implement a simple one
+import { DEFAULT_ACADEMY_CURRENCY, formatMoney } from '@shared/currencies';
 
 interface InvoiceItem {
   id: string;
@@ -31,11 +31,13 @@ interface InvoiceGeneratorProps {
     logo?: string;
   };
   initialData?: any;
+  currency?: string;
   onClose: () => void;
   onSave?: (invoiceData: any) => void;
 }
 
-const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyDetails, initialData, onClose, onSave }) => {
+const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyDetails, initialData, currency, onClose, onSave }) => {
+  const invoiceCurrency = initialData?.currency || currency || DEFAULT_ACADEMY_CURRENCY;
   const [invoiceNumber, setInvoiceNumber] = useState(initialData?.invoice_number || `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`);
   const [date, setDate] = useState(initialData?.issue_date || new Date().toISOString().split('T')[0]);
   const [dueDate, setDueDate] = useState(initialData?.due_date || new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
@@ -97,6 +99,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyD
         notes: notes,
         subtotal: total,
         total_amount: total,
+        currency: invoiceCurrency,
         status: initialData?.status || 'draft',
         items: items
       });
@@ -169,8 +172,8 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyD
     items.forEach(item => {
       doc.text(item.description, 25, yPos);
       doc.text(item.quantity.toString(), 100, yPos);
-      doc.text(formatCurrency(item.unitPrice), 125, yPos);
-      doc.text(formatCurrency(item.amount), 160, yPos);
+      doc.text(formatMoney(item.unitPrice, invoiceCurrency), 125, yPos);
+      doc.text(formatMoney(item.amount, invoiceCurrency), 160, yPos);
       yPos += 8;
     });
 
@@ -180,7 +183,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyD
     yPos += 10;
     doc.setFont('helvetica', 'bold');
     doc.text('Total:', 125, yPos);
-    doc.text(formatCurrency(total), 160, yPos);
+    doc.text(formatMoney(total, invoiceCurrency), 160, yPos);
 
     // Notes
     if (notes) {
@@ -200,26 +203,6 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyD
 
     doc.save(`Invoice-${invoiceNumber}.pdf`);
   };
-
-  const _formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-    }).format(amount);
-  };
-
-  // Override formatCurrency if imported one fails or use local
-  const formatCurrency = (amount: number) => {
-      try {
-          return new Intl.NumberFormat('en-US', {
-              style: 'currency',
-              currency: 'USD',
-          }).format(amount);
-      } catch (e) {
-          return `$${amount.toFixed(2)}`;
-      }
-  };
-
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -270,6 +253,15 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyD
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Currency</label>
+                  <input
+                    type="text"
+                    value={invoiceCurrency}
+                    disabled
+                    className="w-full rounded-md border border-gray-300 bg-gray-100 px-3 py-2 text-gray-700"
                   />
                 </div>
               </div>
@@ -367,7 +359,7 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyD
                       />
                     </div>
                     <div className="col-span-2 text-right font-medium text-gray-900">
-                      {formatCurrency(item.amount)}
+                      {formatMoney(item.amount, invoiceCurrency)}
                     </div>
                   </div>
                 ))}
@@ -401,11 +393,11 @@ const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ academyId, academyD
               <div className="bg-gray-50 p-4 rounded-lg space-y-4">
                 <div className="flex justify-between items-center text-sm">
                   <span className="text-gray-600">Subtotal:</span>
-                  <span className="font-medium">{formatCurrency(calculateTotal())}</span>
+                  <span className="font-medium">{formatMoney(calculateTotal(), invoiceCurrency)}</span>
                 </div>
                 <div className="flex justify-between items-center text-lg font-bold">
                   <span>Total:</span>
-                  <span className="text-blue-600">{formatCurrency(calculateTotal())}</span>
+                  <span className="text-blue-600">{formatMoney(calculateTotal(), invoiceCurrency)}</span>
                 </div>
               </div>
 

@@ -5,6 +5,11 @@ import { authenticateToken } from '../middleware/auth.js';
 import { processPlayerFeeRenewalReminders } from '../lib/player-fee-reminders.js';
 import { processTrainingSessionReminders } from '../lib/training-session-reminders.js';
 import { decryptField } from '../lib/field-encryption.js';
+import {
+  DEFAULT_ACADEMY_CURRENCY,
+  isSupportedCurrency,
+  normalizeCurrencyCode,
+} from '../../shared/currencies.js';
 
 const router = Router();
 
@@ -48,7 +53,7 @@ interface BudgetCategory {
   is_active: boolean;
 }
 
-const normalizeCurrency = (value: unknown) => String(value || 'USD').trim().toUpperCase();
+const normalizeCurrency = (value: unknown) => normalizeCurrencyCode(value) || DEFAULT_ACADEMY_CURRENCY;
 const decryptPlayerValue = decryptField;
 
 function canAccessAcademy(req: any, academyId: string) {
@@ -748,22 +753,44 @@ const handleUpdateFinancialSettings: RequestHandler = async (req, res) => {
   try {
     const { academyId } = req.params;
     if (!requireAcademyAccess(req, res, academyId)) return;
-    const currency = normalizeCurrency(req.body.default_currency);
-    const reminderDays = Math.min(90, Math.max(0, Number(req.body.default_reminder_days ?? 7)));
-    if (!/^[A-Z]{3}$/.test(currency)) {
-      return res.status(400).json({ success: false, error: 'Currency must be a three-letter ISO code' });
+
+    const body = req.body || {};
+    const hasCurrency = Object.prototype.hasOwnProperty.call(body, 'default_currency');
+    const hasRemindersEnabled = Object.prototype.hasOwnProperty.call(body, 'renewal_reminders_enabled');
+    const hasReminderDays = Object.prototype.hasOwnProperty.call(body, 'default_reminder_days');
+    const currency = hasCurrency ? normalizeCurrencyCode(body.default_currency) : null;
+
+    if (hasCurrency && !isSupportedCurrency(currency)) {
+      return res.status(400).json({ success: false, error: 'Select a supported academy currency' });
     }
+    if (hasRemindersEnabled && typeof body.renewal_reminders_enabled !== 'boolean') {
+      return res.status(400).json({ success: false, error: 'Renewal reminders must be enabled or disabled' });
+    }
+
+    const reminderDays = hasReminderDays ? Number(body.default_reminder_days) : null;
+    if (hasReminderDays && (!Number.isInteger(reminderDays) || reminderDays < 0 || reminderDays > 90)) {
+      return res.status(400).json({ success: false, error: 'Reminder days must be a whole number from 0 to 90' });
+    }
+
+    await query(`
+      INSERT INTO academy_financial_settings (academy_id)
+      VALUES ($1) ON CONFLICT (academy_id) DO NOTHING
+    `, [academyId]);
+
     const result = await query(`
-      INSERT INTO academy_financial_settings (
-        academy_id, default_currency, renewal_reminders_enabled, default_reminder_days
-      ) VALUES ($1, $2, $3, $4)
-      ON CONFLICT (academy_id) DO UPDATE SET
-        default_currency = EXCLUDED.default_currency,
-        renewal_reminders_enabled = EXCLUDED.renewal_reminders_enabled,
-        default_reminder_days = EXCLUDED.default_reminder_days,
+      UPDATE academy_financial_settings SET
+        default_currency = COALESCE($2, default_currency),
+        renewal_reminders_enabled = COALESCE($3, renewal_reminders_enabled),
+        default_reminder_days = COALESCE($4, default_reminder_days),
         updated_at = NOW()
+      WHERE academy_id = $1
       RETURNING *
-    `, [academyId, currency, req.body.renewal_reminders_enabled !== false, reminderDays]);
+    `, [
+      academyId,
+      currency,
+      hasRemindersEnabled ? body.renewal_reminders_enabled : null,
+      reminderDays,
+    ]);
     res.json({ success: true, data: result.rows[0] });
   } catch (error) {
     console.error('Error updating academy financial settings:', error);

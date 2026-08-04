@@ -103,4 +103,29 @@ describe("FinancialTransactionsManager tab navigation", () => {
       duration: 6000,
     }));
   });
+
+  it("synchronizes its filters when the top navigation changes currency", async () => {
+    const { rerender } = render(
+      <FinancialTransactionsManager
+        academyId="academy-1"
+        academyDetails={{ name: "Academy" }}
+        currency="USD"
+      />,
+    );
+
+    await waitFor(() => expect(apiMocks.getAcademyFinancialSettings).toHaveBeenCalled());
+
+    rerender(
+      <FinancialTransactionsManager
+        academyId="academy-1"
+        academyDetails={{ name: "Academy" }}
+        currency="NGN"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByRole("combobox", { name: "Default currency code" })).toHaveValue("NGN");
+      expect(apiMocks.getFinancialSummary).toHaveBeenCalledWith("academy-1", { currency: "NGN" });
+    });
+  });
 });

@@ -73,6 +73,60 @@ describe('Academy player fee management', () => {
     expect(mocks.query).not.toHaveBeenCalled();
   });
 
+  it('updates the academy currency from the supported catalogue', async () => {
+    mocks.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [{
+          academy_id: academyId,
+          default_currency: 'EUR',
+          renewal_reminders_enabled: true,
+          default_reminder_days: 7,
+        }],
+      });
+
+    const response = await request(createServer())
+      .put(`/api/financial-transactions/${academyId}/settings`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ default_currency: 'eur' });
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.default_currency).toBe('EUR');
+    expect(mocks.query.mock.calls[1][1]).toEqual([academyId, 'EUR', null, null]);
+  });
+
+  it('does not reset unrelated financial settings on a partial update', async () => {
+    mocks.query
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({
+        rows: [{
+          academy_id: academyId,
+          default_currency: 'USD',
+          renewal_reminders_enabled: false,
+          default_reminder_days: 14,
+        }],
+      });
+
+    const response = await request(createServer())
+      .put(`/api/financial-transactions/${academyId}/settings`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ renewal_reminders_enabled: false });
+
+    expect(response.status).toBe(200);
+    expect(mocks.query.mock.calls[1][1]).toEqual([academyId, null, false, null]);
+  });
+
+  it('rejects unsupported academy currency codes', async () => {
+    const response = await request(createServer())
+      .put(`/api/financial-transactions/${academyId}/settings`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({ default_currency: 'ZZZ' });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Select a supported academy currency');
+    expect(mocks.query).not.toHaveBeenCalled();
+  });
+
   it('returns a successful nullable subscription response when no plan is active', async () => {
     mocks.query
       .mockResolvedValueOnce({ rows: [] })
@@ -175,5 +229,69 @@ describe('Academy player fee management', () => {
     });
     expect(mocks.transaction).toHaveBeenCalledOnce();
     expect(mocks.clientQuery).toHaveBeenCalledTimes(3);
+  });
+
+  it('propagates a transfer currency to its generated ledger entry', async () => {
+    const transferId = '55555555-5555-4555-8555-555555555555';
+    mocks.query
+      .mockResolvedValueOnce({
+        rows: [{
+          id: transferId,
+          academy_id: academyId,
+          player_name: 'Alex Banda',
+          from_club: 'Club A',
+          to_club: 'Club B',
+          transfer_amount: 2500,
+          transfer_date: '2026-08-03',
+          status: 'completed',
+          currency: 'EUR',
+        }],
+      })
+      .mockResolvedValueOnce({ rows: [{ id: 22, currency: 'EUR' }] });
+
+    const response = await request(createServer())
+      .post('/api/transfers')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        academyId,
+        playerName: 'Alex Banda',
+        fromClub: 'Club A',
+        toClub: 'Club B',
+        transferAmount: 2500,
+        transferDate: '2026-08-03',
+        status: 'completed',
+        currency: 'EUR',
+      });
+
+    expect(response.status).toBe(201);
+    expect(mocks.query.mock.calls[0][1][7]).toBe('EUR');
+    expect(mocks.query.mock.calls[1][1][12]).toBe('EUR');
+  });
+
+  it('stores an invoice currency on both the invoice and its ledger entry', async () => {
+    const invoiceId = '66666666-6666-4666-8666-666666666666';
+    mocks.clientQuery
+      .mockResolvedValueOnce({ rows: [{ id: invoiceId }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+
+    const response = await request(createServer())
+      .post('/api/invoices')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        academy_id: academyId,
+        invoice_number: 'INV-2026-1',
+        client_name: 'Alex Banda',
+        issue_date: '2026-08-03',
+        due_date: '2026-08-17',
+        subtotal: 100,
+        total_amount: 100,
+        currency: 'GBP',
+        items: [{ description: 'Training', quantity: 1, unitPrice: 100, amount: 100 }],
+      });
+
+    expect(response.status).toBe(201);
+    expect(mocks.clientQuery.mock.calls[0][1][10]).toBe('GBP');
+    expect(mocks.clientQuery.mock.calls[2][1][7]).toBe('GBP');
   });
 });

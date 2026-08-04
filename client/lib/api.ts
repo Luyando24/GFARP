@@ -1057,14 +1057,7 @@ export async function getTransfers(academyId?: string, limit = 50, offset = 0, s
     if (offset) params.append('offset', offset.toString());
     if (status) params.append('status', status);
 
-    const response = await fetch(`${BASE_URL}/transfers?${params}`);
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to fetch transfers');
-    }
-
-    return result;
+    return Api.get(`/transfers?${params}`);
   } catch (error) {
     console.error('Error fetching transfers:', error);
     throw error;
@@ -1073,14 +1066,7 @@ export async function getTransfers(academyId?: string, limit = 50, offset = 0, s
 
 export async function getTransfer(transferId: string): Promise<{ success: boolean; data: Transfer }> {
   try {
-    const response = await fetch(`${BASE_URL}/transfers/${transferId}`);
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to fetch transfer');
-    }
-
-    return result;
+    return Api.get(`/transfers/${transferId}`);
   } catch (error) {
     console.error('Error fetching transfer:', error);
     throw error;
@@ -1091,43 +1077,29 @@ export async function createTransfer(transferData: Partial<Transfer>): Promise<{
   try {
     // Transform the data to match the API expectations
     const apiData = {
-      academy_id: transferData.academyId || transferData.academy_id,
-      player_id: transferData.player_id,
-      player_name: transferData.player_name,
-      from_club: transferData.from_club,
-      to_club: transferData.to_club,
-      transfer_amount: transferData.transfer_amount,
+      academyId: transferData.academyId || transferData.academy_id,
+      playerId: transferData.player_id,
+      playerName: transferData.player_name,
+      fromClub: transferData.from_club,
+      toClub: transferData.to_club,
+      transferAmount: transferData.transfer_amount,
       currency: transferData.currency,
-      transfer_date: transferData.transfer_date,
-      contract_start_date: transferData.contract_start_date,
-      contract_end_date: transferData.contract_end_date,
+      transferDate: transferData.transfer_date,
+      contractStartDate: transferData.contract_start_date,
+      contractEndDate: transferData.contract_end_date,
       status: transferData.status,
-      transfer_type: transferData.transfer_type,
+      transferType: transferData.transfer_type,
       priority: transferData.priority,
-      agent_name: transferData.agent_name,
-      agent_fee: transferData.agent_fee,
+      agentName: transferData.agent_name,
+      agentFee: transferData.agent_fee,
       notes: transferData.notes,
       documents: transferData.documents,
-      created_by: transferData.createdBy || transferData.created_by
+      createdBy: transferData.createdBy || transferData.created_by,
     };
 
     console.log('API Data being sent to server:', apiData);
 
-    const response = await fetch(`${BASE_URL}/transfers`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(apiData),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to create transfer');
-    }
-
-    return result;
+    return Api.post('/transfers', apiData);
   } catch (error) {
     console.error('Error creating transfer:', error);
     throw error;
@@ -1138,41 +1110,27 @@ export async function updateTransfer(transferId: string, transferData: Partial<T
   try {
     // Transform the data to match the API expectations
     const apiData = {
-      academy_id: transferData.academyId || transferData.academy_id,
-      player_id: transferData.player_id,
-      player_name: transferData.player_name,
-      from_club: transferData.from_club,
-      to_club: transferData.to_club,
-      transfer_amount: transferData.transfer_amount,
+      academyId: transferData.academyId || transferData.academy_id,
+      playerId: transferData.player_id,
+      playerName: transferData.player_name,
+      fromClub: transferData.from_club,
+      toClub: transferData.to_club,
+      transferAmount: transferData.transfer_amount,
       currency: transferData.currency,
-      transfer_date: transferData.transfer_date,
-      contract_start_date: transferData.contract_start_date,
-      contract_end_date: transferData.contract_end_date,
+      transferDate: transferData.transfer_date,
+      contractStartDate: transferData.contract_start_date,
+      contractEndDate: transferData.contract_end_date,
       status: transferData.status,
-      transfer_type: transferData.transfer_type,
+      transferType: transferData.transfer_type,
       priority: transferData.priority,
-      agent_name: transferData.agent_name,
-      agent_fee: transferData.agent_fee,
+      agentName: transferData.agent_name,
+      agentFee: transferData.agent_fee,
       notes: transferData.notes,
       documents: transferData.documents,
-      created_by: transferData.createdBy || transferData.created_by
+      createdBy: transferData.createdBy || transferData.created_by,
     };
 
-    const response = await fetch(`${BASE_URL}/transfers/${transferId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(apiData),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to update transfer');
-    }
-
-    return result;
+    return Api.put(`/transfers/${transferId}`, apiData);
   } catch (error) {
     console.error('Error updating transfer:', error);
     throw error;
@@ -1181,17 +1139,7 @@ export async function updateTransfer(transferId: string, transferData: Partial<T
 
 export async function deleteTransfer(transferId: string): Promise<{ success: boolean; message: string }> {
   try {
-    const response = await fetch(`${BASE_URL}/transfers/${transferId}`, {
-      method: 'DELETE',
-    });
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to delete transfer');
-    }
-
-    return result;
+    return Api.delete(`/transfers/${transferId}`);
   } catch (error) {
     console.error('Error deleting transfer:', error);
     throw error;
@@ -1203,14 +1151,7 @@ export async function getTransferStats(academyId?: string): Promise<{ success: b
     const params = new URLSearchParams();
     if (academyId) params.append('academyId', academyId);
 
-    const response = await fetch(`${BASE_URL}/transfers/stats?${params}`);
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to fetch transfer stats');
-    }
-
-    return result;
+    return Api.get(`/transfers/stats?${params}`);
   } catch (error) {
     console.error('Error fetching transfer stats:', error);
     throw error;
@@ -1223,6 +1164,7 @@ export async function getAcademyDashboardStats(academyId: string): Promise<{
     totalPlayers: number;
     activeTransfers: number;
     monthlyRevenue: number;
+    currency: string;
     recentTransfers: {
       id: string;
       player: string;
@@ -1244,14 +1186,7 @@ export async function getAcademyDashboardStats(academyId: string): Promise<{
     const params = new URLSearchParams();
     params.append('academyId', academyId);
 
-    const response = await fetch(`${BASE_URL}/dashboard/academy-stats?${params}`);
-    const result = await response.json();
-
-    if (!response.ok) {
-      throw new Error(result.error || 'Failed to fetch academy dashboard stats');
-    }
-
-    return result;
+    return Api.get(`/dashboard/academy-stats?${params}`);
   } catch (error) {
     console.error('Error fetching academy dashboard stats:', error);
     throw error;

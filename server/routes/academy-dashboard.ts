@@ -1,10 +1,12 @@
 import { RequestHandler } from 'express';
 import { query } from '../lib/db.js';
+import { DEFAULT_ACADEMY_CURRENCY, formatMoney, normalizeCurrencyCode } from '../../shared/currencies.js';
 
 export interface AcademyDashboardStats {
   totalPlayers: number;
   activeTransfers: number;
   monthlyRevenue: number;
+  currency: string;
   recentTransfers: {
     id: string;
     player: string;
@@ -33,6 +35,15 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
         success: false,
         error: 'Organization ID is required'
       });
+    }
+
+    let currency = DEFAULT_ACADEMY_CURRENCY;
+    if (!isAgency) {
+      const currencyResult = await query(
+        'SELECT default_currency FROM academy_financial_settings WHERE academy_id = $1',
+        [orgId as any],
+      );
+      currency = normalizeCurrencyCode(currencyResult.rows[0]?.default_currency) || DEFAULT_ACADEMY_CURRENCY;
     }
 
     // Get total players count for the organization (including self-registered players for academies)
@@ -73,9 +84,10 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
        FROM transfers 
        WHERE ${idColumn} = $1 
        AND status = 'completed' 
+       AND COALESCE(NULLIF(currency, ''), 'USD') = $4
        AND transfer_date >= $2 
        AND transfer_date <= $3`,
-      [orgId as any, firstDayOfMonth.toISOString(), lastDayOfMonth.toISOString()]
+      [orgId as any, firstDayOfMonth.toISOString(), lastDayOfMonth.toISOString(), currency]
     );
     const transferRevenue = parseFloat(transferRevenueResult.rows[0].revenue) || 0;
 
@@ -86,9 +98,10 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
        WHERE ${idColumn} = $1 
        AND status = 'completed' 
        AND transaction_type = 'income'
+       AND COALESCE(NULLIF(currency, ''), 'USD') = $4
        AND transaction_date >= $2 
        AND transaction_date <= $3`,
-      [orgId as any, firstDayOfMonth.toISOString(), lastDayOfMonth.toISOString()]
+      [orgId as any, firstDayOfMonth.toISOString(), lastDayOfMonth.toISOString(), currency]
     );
     const financialRevenue = parseFloat(financialRevenueResult.rows[0].revenue) || 0;
 
@@ -119,8 +132,8 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
       from: transfer.from_club || 'Unknown Club',
       to: transfer.to_club || 'Unknown Club',
       amount: transfer.transfer_amount
-        ? `${transfer.currency || '$'}${transfer.transfer_amount.toLocaleString()}`
-        : '$0',
+        ? formatMoney(transfer.transfer_amount, transfer.currency || currency)
+        : formatMoney(0, transfer.currency || currency),
       date: transfer.transfer_date
         ? new Date(transfer.transfer_date).toLocaleDateString()
         : new Date().toLocaleDateString(),
@@ -135,11 +148,12 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
         COALESCE(SUM(CASE WHEN status = 'completed' THEN agent_fee ELSE 0 END), 0) as expenses
        FROM transfers 
        WHERE ${idColumn} = $1 
+       AND COALESCE(NULLIF(currency, ''), 'USD') = $3
        AND transfer_date >= $2
        GROUP BY DATE_TRUNC('month', transfer_date)
        ORDER BY month DESC
        LIMIT 6`,
-      [orgId as any, new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000).toISOString()]
+      [orgId as any, new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000).toISOString(), currency]
     );
 
     // Get financial transactions data for the same period
@@ -150,11 +164,12 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
         COALESCE(SUM(CASE WHEN status = 'completed' AND transaction_type = 'expense' THEN amount ELSE 0 END), 0) as expenses
        FROM financial_transactions 
        WHERE ${idColumn} = $1 
+       AND COALESCE(NULLIF(currency, ''), 'USD') = $3
        AND transaction_date >= $2
        GROUP BY DATE_TRUNC('month', transaction_date)
        ORDER BY month DESC
        LIMIT 6`,
-      [orgId as any, new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000).toISOString()]
+      [orgId as any, new Date(Date.now() - 6 * 30 * 24 * 60 * 60 * 1000).toISOString(), currency]
     );
 
     // Create monthly financial performance array with last 6 months
@@ -203,6 +218,7 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
       totalPlayers,
       activeTransfers,
       monthlyRevenue,
+      currency,
       recentTransfers,
       monthlyFinancialPerformance
     };

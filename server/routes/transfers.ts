@@ -2,6 +2,11 @@ import { Router, RequestHandler } from 'express';
 import { query } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
 import { authenticateToken, canAccessOrganizationForRequest } from '../middleware/auth.js';
+import {
+  DEFAULT_ACADEMY_CURRENCY,
+  isSupportedCurrency,
+  normalizeCurrencyCode,
+} from '../../shared/currencies.js';
 
 const router = Router();
 
@@ -36,15 +41,16 @@ async function createFinancialTransactionsForTransfer(transfer: any, isUpdate: b
         reference_number: `TRF-${transfer.id}`,
         status: transfer.status === 'completed' ? 'completed' : 'pending',
         notes: `Auto-generated from transfer ID: ${transfer.id}`,
-        created_by: transfer.created_by
+        created_by: transfer.created_by,
+        currency: transfer.currency || DEFAULT_ACADEMY_CURRENCY,
       };
 
       const result = await query(`
         INSERT INTO financial_transactions (
           academy_id, transaction_type, category, subcategory, amount, 
           description, transaction_date, payment_method, reference_number, 
-          status, notes, created_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          status, notes, created_by, currency
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING *
       `, [
         transferTransaction.academy_id,
@@ -58,7 +64,8 @@ async function createFinancialTransactionsForTransfer(transfer: any, isUpdate: b
         transferTransaction.reference_number,
         transferTransaction.status,
         transferTransaction.notes,
-        transferTransaction.created_by
+        transferTransaction.created_by,
+        transferTransaction.currency,
       ]);
 
       transactions.push(result.rows[0]);
@@ -78,15 +85,16 @@ async function createFinancialTransactionsForTransfer(transfer: any, isUpdate: b
         reference_number: `AGT-${transfer.id}`,
         status: transfer.status === 'completed' ? 'completed' : 'pending',
         notes: `Auto-generated from transfer ID: ${transfer.id}`,
-        created_by: transfer.created_by
+        created_by: transfer.created_by,
+        currency: transfer.currency || DEFAULT_ACADEMY_CURRENCY,
       };
 
       const result = await query(`
         INSERT INTO financial_transactions (
           academy_id, transaction_type, category, subcategory, amount, 
           description, transaction_date, payment_method, reference_number, 
-          status, notes, created_by
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+          status, notes, created_by, currency
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
         RETURNING *
       `, [
         agentFeeTransaction.academy_id,
@@ -100,7 +108,8 @@ async function createFinancialTransactionsForTransfer(transfer: any, isUpdate: b
         agentFeeTransaction.reference_number,
         agentFeeTransaction.status,
         agentFeeTransaction.notes,
-        agentFeeTransaction.created_by
+        agentFeeTransaction.created_by,
+        agentFeeTransaction.currency,
       ]);
 
       transactions.push(result.rows[0]);
@@ -223,7 +232,7 @@ export const handleCreateTransfer: RequestHandler = async (req, res) => {
       fromClub,
       toClub,
       transferAmount,
-      currency = 'USD',
+      currency: requestedCurrency,
       transferDate,
       contractStartDate,
       contractEndDate,
@@ -236,6 +245,23 @@ export const handleCreateTransfer: RequestHandler = async (req, res) => {
       documents = [],
       createdBy
     } = req.body;
+
+    const normalizedRequestedCurrency = normalizeCurrencyCode(requestedCurrency);
+    let currency = normalizedRequestedCurrency;
+    if (!currency || !isSupportedCurrency(currency)) {
+      const settingsResult = await query(
+        'SELECT default_currency FROM academy_financial_settings WHERE academy_id = $1',
+        [academyId],
+      );
+      const savedCurrency = normalizeCurrencyCode(settingsResult.rows[0]?.default_currency);
+      const resolvedSavedCurrency = /^[A-Z]{3}$/.test(savedCurrency)
+        ? savedCurrency
+        : DEFAULT_ACADEMY_CURRENCY;
+      if (currency && currency !== resolvedSavedCurrency) {
+        return res.status(400).json({ success: false, error: 'Select a supported academy currency' });
+      }
+      currency = currency || resolvedSavedCurrency;
+    }
 
     const transferId = uuidv4();
 
@@ -289,7 +315,7 @@ export const handleUpdateTransfer: RequestHandler = async (req, res) => {
       fromClub,
       toClub,
       transferAmount,
-      currency,
+      currency: requestedCurrency,
       transferDate,
       contractStartDate,
       contractEndDate,
@@ -319,6 +345,17 @@ export const handleUpdateTransfer: RequestHandler = async (req, res) => {
     }
 
     const currentTransfer = currentTransferResult.rows[0];
+    const normalizedCurrency = requestedCurrency === undefined
+      ? undefined
+      : normalizeCurrencyCode(requestedCurrency);
+    const currentCurrency = normalizeCurrencyCode(currentTransfer.currency) || DEFAULT_ACADEMY_CURRENCY;
+    if (
+      requestedCurrency !== undefined
+      && !isSupportedCurrency(normalizedCurrency)
+      && normalizedCurrency !== currentCurrency
+    ) {
+      return res.status(400).json({ success: false, error: 'Select a supported academy currency' });
+    }
 
     const result = await query(
       `UPDATE transfers SET
@@ -344,7 +381,7 @@ export const handleUpdateTransfer: RequestHandler = async (req, res) => {
       WHERE id = $1
       RETURNING *`,
       [
-        transferId, playerName, fromClub, toClub, transferAmount, currency,
+        transferId, playerName, fromClub, toClub, transferAmount, normalizedCurrency,
         transferDate, contractStartDate, contractEndDate, status, transferType,
         priority, agentName, agentFee, notes,
         documents ? JSON.stringify(documents) : null,
@@ -355,8 +392,34 @@ export const handleUpdateTransfer: RequestHandler = async (req, res) => {
     const updatedTransfer = result.rows[0];
 
     // Update financial transactions if status changed to 'completed' or if amounts changed
-    if (status && (status !== currentTransfer.status || transferAmount !== currentTransfer.transfer_amount || agentFee !== currentTransfer.agent_fee)) {
+    if (
+      status !== undefined
+      || transferAmount !== undefined
+      || agentFee !== undefined
+      || normalizedCurrency !== undefined
+    ) {
       try {
+        await query(
+          `UPDATE financial_transactions
+           SET amount = CASE
+                 WHEN reference_number = $2 THEN $4
+                 WHEN reference_number = $3 THEN $5
+                 ELSE amount
+               END,
+               currency = $6,
+               updated_at = CURRENT_TIMESTAMP
+           WHERE academy_id = $1
+             AND reference_number IN ($2, $3)`,
+          [
+            currentTransfer.academy_id,
+            `TRF-${transferId}`,
+            `AGT-${transferId}`,
+            updatedTransfer.transfer_amount,
+            updatedTransfer.agent_fee,
+            updatedTransfer.currency || DEFAULT_ACADEMY_CURRENCY,
+          ],
+        );
+
         // Update existing financial transactions status
         if (status === 'completed' && currentTransfer.status !== 'completed') {
           await query(
@@ -374,12 +437,6 @@ export const handleUpdateTransfer: RequestHandler = async (req, res) => {
             [`TRF-${transferId}`, `AGT-${transferId}`]
           );
           console.log(`Updated financial transaction status to cancelled for transfer ${transferId}`);
-        }
-
-        // If amounts changed significantly, we might want to create new transactions
-        // For now, we'll just log this case
-        if (transferAmount !== currentTransfer.transfer_amount || agentFee !== currentTransfer.agent_fee) {
-          console.log(`Transfer amounts changed for ${transferId}, consider manual financial transaction review`);
         }
       } catch (financialError) {
         console.error('Failed to update financial transactions for transfer:', financialError);

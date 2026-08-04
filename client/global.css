@@ -208,3 +208,51 @@ body {
     animation: none !important;
   }
 }
+
+/* Keep the long top-navigation currency menu visibly scrollable on systems
+   that normally hide native overlay scrollbars until scrolling begins. */
+.currency-select-scrollbar {
+  max-height: 18rem !important;
+  overflow-y: scroll !important;
+  scrollbar-color: #64748b #f1f5f9 !important;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin !important;
+}
+
+.currency-select-scrollbar::-webkit-scrollbar {
+  display: block !important;
+  width: 10px !important;
+}
+
+.currency-select-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9 !important;
+  border-radius: 9999px !important;
+}
+
+.currency-select-scrollbar::-webkit-scrollbar-thumb {
+  min-height: 32px !important;
+  background: #64748b !important;
+  border: 2px solid #f1f5f9 !important;
+  border-radius: 9999px !important;
+}
+
+.currency-select-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #475569 !important;
+}
+
+.dark .currency-select-scrollbar {
+  scrollbar-color: #94a3b8 #1e293b !important;
+}
+
+.dark .currency-select-scrollbar::-webkit-scrollbar-track {
+  background: #1e293b !important;
+}
+
+.dark .currency-select-scrollbar::-webkit-scrollbar-thumb {
+  background: #94a3b8 !important;
+  border-color: #1e293b !important;
+}
+
+.dark .currency-select-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #cbd5e1 !important;
+}
