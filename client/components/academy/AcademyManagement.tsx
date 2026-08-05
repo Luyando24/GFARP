@@ -29,6 +29,11 @@ import {
   Clock
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
+import { countryCodes } from '../../lib/countryCodes';
+
+const countriesList = Array.from(
+  new Map(countryCodes.map(c => [c.country, c])).values()
+).sort((a, b) => a.country.localeCompare(b.country));
 
 interface Academy {
   id: string;
@@ -663,12 +668,13 @@ export default function AcademyManagement() {
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Filter by country" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-60 overflow-y-auto">
                 <SelectItem value="all">All Countries</SelectItem>
-                <SelectItem value="Zambia">Zambia</SelectItem>
-                <SelectItem value="South Africa">South Africa</SelectItem>
-                <SelectItem value="Kenya">Kenya</SelectItem>
-                <SelectItem value="Nigeria">Nigeria</SelectItem>
+                {countriesList.map((c) => (
+                  <SelectItem key={c.country} value={c.country}>
+                    {c.flag} {c.country}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -732,6 +738,7 @@ export default function AcademyManagement() {
                     />
                   </TableHead>
                   <TableHead>Academy</TableHead>
+                  <TableHead>Country</TableHead>
                   <TableHead>Players</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Subscription Plan</TableHead>
@@ -741,13 +748,13 @@ export default function AcademyManagement() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       Loading academies...
                     </TableCell>
                   </TableRow>
                 ) : academies.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
+                    <TableCell colSpan={7} className="text-center py-8">
                       No academies found
                     </TableCell>
                   </TableRow>
@@ -765,8 +772,14 @@ export default function AcademyManagement() {
                       <TableCell>
                         <div>
                           <p className="font-medium">{academy.name}</p>
-                          <p className="text-xs text-muted-foreground">{(academy as any).player_count || 0} players</p>
+                          <p className="text-xs text-muted-foreground">{academy.email}</p>
                         </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="bg-slate-50 text-slate-700 dark:bg-slate-800 dark:text-slate-200 border-slate-200 dark:border-slate-700 font-medium flex items-center gap-1.5 w-fit">
+                          <Globe className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                          {academy.country || (academy as any).province || 'Unspecified'}
+                        </Badge>
                       </TableCell>
                       <TableCell>{(academy as any).player_count || 0}</TableCell>
                       <TableCell>
@@ -965,13 +978,12 @@ export default function AcademyManagement() {
                   <SelectTrigger>
                     <SelectValue placeholder="Select country" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Zambia">Zambia</SelectItem>
-                    <SelectItem value="South Africa">South Africa</SelectItem>
-                    <SelectItem value="Kenya">Kenya</SelectItem>
-                    <SelectItem value="Nigeria">Nigeria</SelectItem>
-                    <SelectItem value="Ghana">Ghana</SelectItem>
-                    <SelectItem value="Tanzania">Tanzania</SelectItem>
+                  <SelectContent className="max-h-60 overflow-y-auto">
+                    {countriesList.map((c) => (
+                      <SelectItem key={c.country} value={c.country}>
+                        {c.flag} {c.country}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 {formErrors.country && (

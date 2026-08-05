@@ -1565,7 +1565,10 @@ export default function AdminDashboard() {
                               </Avatar>
                               <div>
                                 <p className="font-medium text-slate-900 dark:text-white">{academy.name}</p>
-                                <p className="text-sm text-slate-600 dark:text-slate-400">{academy.location}</p>
+                                <p className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-1 font-medium mt-0.5">
+                                  <Globe className="h-3 w-3 text-blue-600 dark:text-blue-400 shrink-0" />
+                                  <span>{academy.country || academy.location || academy.province || 'Unspecified'}</span>
+                                </p>
                               </div>
                             </div>
                             <div className="text-right">

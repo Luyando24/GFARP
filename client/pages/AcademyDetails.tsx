@@ -319,7 +319,7 @@ const AcademyDetails = () => {
                   <MapPin className="h-5 w-5 mr-2 text-muted-foreground" />
                   <div>
                     <h3 className="text-sm font-medium text-muted-foreground">Location</h3>
-                    <p>{[academy.address, academy.city, academy.country].filter(Boolean).join(', ')}</p>
+                    <p>{[academy.address, academy.city, academy.country || academy.province].filter(Boolean).join(', ') || 'Not provided'}</p>
                   </div>
                 </div>
 
