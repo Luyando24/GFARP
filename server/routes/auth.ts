@@ -340,7 +340,14 @@ export const handleRegisterStaff: RequestHandler = async (req, res) => {
       firstName,
       lastName,
       role = "admin",
-    }: RegisterStaffRequest = req.body;
+      country,
+      province,
+    }: any = req.body;
+
+    const academyLocation = String(country || province || "").trim();
+    if (!email || !password || !academyName || !academyLocation) {
+      return res.status(400).json({ error: "Email, password, academy name, and country are required" });
+    }
 
     // Check if email already exists
     const existingUserResult = await query(
@@ -360,7 +367,7 @@ export const handleRegisterStaff: RequestHandler = async (req, res) => {
     await query(
       `INSERT INTO academies (id, name, code, email, password_hash, address, district, province, phone) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [academyId, academyName, academyCode, email, passwordHash, "", "", "", ""]
+      [academyId, academyName, academyCode, email, passwordHash, "", "", academyLocation, ""]
     );
 
     // Create staff user
@@ -395,7 +402,14 @@ export const handleRegisterSchool: RequestHandler = async (req, res) => {
       lastName,
       phoneNumber,
       role = "admin",
+      country,
+      province,
     } = req.body;
+
+    const academyLocation = String(country || province || "").trim();
+    if (!email || !password || !schoolName || !academyLocation) {
+      return res.status(400).json({ error: "Email, password, school name, and country are required" });
+    }
 
     // Check if email already exists
     const existingUserResult = await query(
@@ -415,7 +429,7 @@ export const handleRegisterSchool: RequestHandler = async (req, res) => {
     await query(
       `INSERT INTO academies (id, name, code, email, password_hash, address, district, province, phone) 
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [academyId, schoolName, academyCode, email, passwordHash, "", "", "", phoneNumber || ""]
+      [academyId, schoolName, academyCode, email, passwordHash, "", "", academyLocation, phoneNumber || ""]
     );
 
     // Create staff user (academy admin)

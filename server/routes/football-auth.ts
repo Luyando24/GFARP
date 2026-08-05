@@ -89,11 +89,11 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
       }
     }
 
-    // Allow minimal registration: email + password only
-    if (!email || !password) {
+    // Require email, password, and country for registration
+    if (!email || !password || !country || !String(country).trim()) {
       return res.status(400).json({
         success: false,
-        message: 'Email and password are required'
+        message: 'Email, password, and country are required'
       });
     }
 
@@ -556,8 +556,8 @@ export const handleAgencyRegister: RequestHandler = async (req, res) => {
   try {
     let { name, email, password, phone, address, city, country, subscriptionPlan, referralCode } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ success: false, message: 'Email and password are required' });
+    if (!email || !password || !country || !String(country).trim()) {
+      return res.status(400).json({ success: false, message: 'Email, password, and country are required' });
     }
 
     // Normalize email

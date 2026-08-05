@@ -139,6 +139,7 @@ describe('Individual Players Routes', () => {
           firstName: 'John',
           lastName: 'Doe',
           gender: 'female',
+          country: 'Zambia',
           academyCode: 'INVALID'
         });
 
@@ -154,6 +155,7 @@ describe('Individual Players Routes', () => {
           password: 'Password123!',
           firstName: 'John',
           lastName: 'Doe',
+          country: 'Zambia',
         });
 
       expect(missingGender.status).toBe(400);
@@ -167,6 +169,7 @@ describe('Individual Players Routes', () => {
           firstName: 'John',
           lastName: 'Doe',
           gender: 'other',
+          country: 'Zambia',
         });
 
       expect(unsupportedGender.status).toBe(400);

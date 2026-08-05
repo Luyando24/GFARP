@@ -256,7 +256,7 @@ router.post('/register', async (req, res) => {
     const normalizedGender = String(req.body.gender || '').toLowerCase().trim();
     const playerCountry = String(country || nationality || '').trim();
 
-    if (!normalizedEmail || !password || !firstName || !lastName || !normalizedGender) {
+    if (!normalizedEmail || !password || !firstName || !lastName || !normalizedGender || !playerCountry) {
       return res.status(400).json({ error: 'All fields are required' });
     }
     if (!['male', 'female'].includes(normalizedGender)) {

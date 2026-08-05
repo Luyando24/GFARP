@@ -134,6 +134,20 @@ describe('Football Auth Routes', () => {
       expect(response.body.data.academy.email).toBe('new@academy.com');
       expect(response.body.data.token).toBeDefined();
     });
+
+    it('should reject registration if country is missing', async () => {
+      const response = await request(app)
+        .post('/api/football-auth/academy/register')
+        .send({
+          name: 'No Country Academy',
+          email: 'nocountry@academy.com',
+          password: 'password123'
+        });
+
+      expect(response.status).toBe(400);
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Email, password, and country are required');
+    });
   });
 
   describe('Password reset routes', () => {
