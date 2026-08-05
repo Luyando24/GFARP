@@ -4,6 +4,7 @@ export const SUPPORTED_CURRENCIES = [
   { name: 'US Dollar', code: 'USD', symbol: '$' },
   { name: 'Euro', code: 'EUR', symbol: '€' },
   { name: 'British Pound Sterling', code: 'GBP', symbol: '£' },
+  { name: 'Israeli New Shekel', code: 'ILS', symbol: '₪' },
   { name: 'Japanese Yen', code: 'JPY', symbol: '¥' },
   { name: 'Chinese Yuan (Renminbi)', code: 'CNY', symbol: '¥' },
   { name: 'Canadian Dollar', code: 'CAD', symbol: 'C$' },

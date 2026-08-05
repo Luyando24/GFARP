@@ -19,11 +19,13 @@ describe('academy currencies', () => {
   it('normalizes and validates supported codes', () => {
     expect(normalizeCurrencyCode(' eur ')).toBe('EUR');
     expect(isSupportedCurrency(' eur ')).toBe(true);
+    expect(isSupportedCurrency('ILS')).toBe(true);
     expect(isSupportedCurrency('ZMW')).toBe(false);
   });
 
   it('formats supported currencies without throwing', () => {
     expect(formatMoney(1250, 'NGN')).toContain('1,250');
     expect(formatMoney(1250, 'USD')).toContain('$');
+    expect(formatMoney(1250, 'ILS')).toBeTruthy();
   });
 });
