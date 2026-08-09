@@ -228,7 +228,7 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
           // Input is a known slug; look up by name
           const selectedPlanName = planIdToName[selectedPlanInput];
           const planByName = await client.query(
-            `SELECT * FROM subscription_plans WHERE name = $1 AND is_active = true`,
+            `SELECT * FROM subscription_plans WHERE name = $1 AND target_type = 'ACADEMY' AND is_active = true`,
             [selectedPlanName]
           );
           console.log('[academy/register] plan lookup by name', { selectedPlanInput, selectedPlanName, found: planByName.rows[0]?.id });
@@ -239,7 +239,7 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
         } else {
           // Input may be a UUID; try by id
           const planById = await client.query(
-            `SELECT * FROM subscription_plans WHERE id = $1 AND is_active = true`,
+            `SELECT * FROM subscription_plans WHERE (id::text = $1 OR name = $1) AND target_type = 'ACADEMY' AND is_active = true`,
             [selectedPlanInput]
           );
           console.log('[academy/register] plan lookup by id', { selectedPlanInput, found: planById.rows[0]?.id });
@@ -252,13 +252,12 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
           }
         }
       } else {
-        // No plan provided: start on the free plan, never a paid plan without payment.
-        const defaultPlanByName = await client.query(
-          `SELECT * FROM subscription_plans WHERE name = $1 AND is_active = true`,
-          ['Free Plan']
+        // No plan provided: start on the free plan for ACADEMY
+        const defaultPlanRes = await client.query(
+          `SELECT * FROM subscription_plans WHERE target_type = 'ACADEMY' AND (is_free = true OR name IN ('Academy Starter', 'Free Plan')) AND is_active = true ORDER BY sort_order ASC LIMIT 1`
         );
-        if (defaultPlanByName.rows.length > 0) {
-          plan = defaultPlanByName.rows[0];
+        if (defaultPlanRes.rows.length > 0) {
+          plan = defaultPlanRes.rows[0];
         }
       }
 

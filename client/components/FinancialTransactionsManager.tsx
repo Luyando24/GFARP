@@ -16,7 +16,11 @@ import {
   Bell,
   Repeat2,
   Settings2,
-  UserRound
+  UserRound,
+  AlertTriangle,
+  CheckCircle2,
+  Target,
+  PieChart
 } from 'lucide-react';
 import { getPlayerFeePaymentState } from '@/lib/player-fee-filters';
 import { addCalendarMonths, addCalendarYears } from '@shared/calendar-date';
@@ -26,6 +30,7 @@ import InvoiceGenerator from './InvoiceGenerator';
 import CurrencySelect from './CurrencySelect';
 import {
   DEFAULT_ACADEMY_CURRENCY,
+  SUPPORTED_CURRENCIES,
   formatMoney,
   isSupportedCurrency,
 } from '@shared/currencies';
@@ -92,6 +97,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   const [filterStatus, setFilterStatus] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [filterCurrency, setFilterCurrency] = useState<string>('all');
   
   // Modal states
   const [showTransactionModal, setShowTransactionModal] = useState(false);
@@ -248,13 +254,14 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
 
   useEffect(() => {
     fetchData();
-  }, [academyId, currentPage, searchTerm, filterType, filterCategory, filterStatus, dateFrom, dateTo, activeTab, defaultCurrency]);
+  }, [academyId, currentPage, searchTerm, filterType, filterCategory, filterStatus, dateFrom, dateTo, filterCurrency, activeTab, defaultCurrency]);
 
   const fetchData = async () => {
     const requestId = ++financialRequestId.current;
     const requestedTab = activeTab;
 
     try {
+      const activeCurrencyFilter = filterCurrency === 'all' ? undefined : filterCurrency;
       const [transactionsRes, summaryRes, budgetRes] = await Promise.all([
         getFinancialTransactions(academyId, {
           page: currentPage,
@@ -265,10 +272,10 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
           dateFrom: dateFrom || undefined,
           dateTo: dateTo || undefined,
           search: searchTerm || undefined,
-          currency: defaultCurrency,
+          currency: activeCurrencyFilter,
           playerFeesOnly: requestedTab === 'player-fees',
         }),
-        getFinancialSummary(academyId, { currency: defaultCurrency }),
+        getFinancialSummary(academyId, { currency: activeCurrencyFilter }),
         getBudgetCategories(academyId)
       ]);
 
@@ -572,8 +579,9 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     setShowBudgetModal(true);
   };
 
-  const formatCurrency = (amount: number) => {
-    return formatMoney(amount, defaultCurrency);
+  const formatCurrency = (amount: number, txCurrency?: string) => {
+    const targetCurrency = txCurrency || (filterCurrency === 'all' ? defaultCurrency : filterCurrency);
+    return formatMoney(amount, targetCurrency);
   };
 
   const formatDate = (dateString: string) => {
@@ -598,6 +606,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
     setFilterStatus('');
     setDateFrom('');
     setDateTo('');
+    setFilterCurrency('all');
     setCurrentPage(1);
   };
 
@@ -1080,7 +1089,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         </div>
 
         {/* Filters */}
-        <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-4">
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value as 'all' | 'income' | 'expense')}
@@ -1089,6 +1098,22 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
             <option value="all">All Types</option>
             <option value="income">Income</option>
             <option value="expense">Expense</option>
+          </select>
+
+          <select
+            value={filterCurrency}
+            onChange={(e) => {
+              setFilterCurrency(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent w-full font-medium"
+          >
+            <option value="all">All Currencies</option>
+            {SUPPORTED_CURRENCIES.map(curr => (
+              <option key={curr.code} value={curr.code}>
+                {curr.code} ({curr.symbol}) - {curr.name}
+              </option>
+            ))}
           </select>
 
           <select
@@ -1131,7 +1156,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         </div>
 
         {/* Clear Filters Button */}
-        {(searchTerm || filterType !== 'all' || filterCategory || filterStatus || dateFrom || dateTo) && (
+        {(searchTerm || filterType !== 'all' || filterCurrency !== 'all' || filterCategory || filterStatus || dateFrom || dateTo) && (
           <div className="mt-4 flex justify-end">
             <button
               onClick={clearFilters}
@@ -1226,7 +1251,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <span className={transaction.transaction_type === 'income' ? 'text-green-600' : 'text-red-600'}>
-                        {transaction.transaction_type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
+                        {transaction.transaction_type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount, transaction.currency)}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -1549,95 +1574,277 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
       {activeTab === 'budgets' && (
         <div className="space-y-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <h3 className="text-lg font-medium text-gray-900">Budget Management</h3>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <PieChart className="h-5 w-5 text-emerald-600" /> Executive Budget vs. Actual Control
+              </h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Track live financial expenditure & revenue against target budgets for your academy.
+              </p>
+            </div>
             <button
               onClick={() => openBudgetModal()}
-              className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium shadow-sm"
             >
               <Plus className="h-4 w-4 mr-2" />
-              Create Budget
+              Create Budget Category
             </button>
           </div>
 
+          {/* Executive Overview Cards */}
+          {(() => {
+            const expenseBudgets = budgetCategories.filter(c => c.category_type === 'expense');
+            const revenueBudgets = budgetCategories.filter(c => c.category_type === 'revenue');
+            const totalBudgetedExpenses = expenseBudgets.reduce((acc, c) => acc + Number(c.budgeted_amount || 0), 0);
+            const totalActualExpenses = expenseBudgets.reduce((acc, c) => acc + Number(c.actual_amount || 0), 0);
+            const totalTargetRevenue = revenueBudgets.reduce((acc, c) => acc + Number(c.budgeted_amount || 0), 0);
+            const totalActualRevenue = revenueBudgets.reduce((acc, c) => acc + Number(c.actual_amount || 0), 0);
+
+            const overBudgetCount = expenseBudgets.filter(c => c.health_status === 'over_budget').length;
+            const warningCount = expenseBudgets.filter(c => c.health_status === 'warning').length;
+            const onTrackCount = expenseBudgets.filter(c => c.health_status === 'on_track').length;
+
+            const expensePct = totalBudgetedExpenses > 0 ? (totalActualExpenses / totalBudgetedExpenses) * 100 : 0;
+            const revenuePct = totalTargetRevenue > 0 ? (totalActualRevenue / totalTargetRevenue) * 100 : 0;
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Expense Budget vs Actual Card */}
+                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Expense Budget vs Actual</span>
+                    <TrendingDown className="h-5 w-5 text-red-500" />
+                  </div>
+                  <div className="mt-3 flex items-baseline justify-between">
+                    <div>
+                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalActualExpenses)}</p>
+                      <p className="text-xs text-gray-500">Budgeted: <span className="font-semibold">{formatCurrency(totalBudgetedExpenses)}</span></p>
+                    </div>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                      totalBudgetedExpenses - totalActualExpenses >= 0 
+                        ? 'bg-emerald-100 text-emerald-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {totalBudgetedExpenses - totalActualExpenses >= 0 
+                        ? `${formatCurrency(totalBudgetedExpenses - totalActualExpenses)} Under`
+                        : `${formatCurrency(Math.abs(totalBudgetedExpenses - totalActualExpenses))} Over`}
+                    </span>
+                  </div>
+                  <div className="mt-4">
+                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                      <span>Expense Utilization</span>
+                      <span className="font-medium">{expensePct.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          expensePct >= 100 ? 'bg-red-600' : expensePct >= 80 ? 'bg-amber-500' : 'bg-emerald-500'
+                        }`}
+                        style={{ width: `${Math.min(100, expensePct)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Revenue Target vs Actual Card */}
+                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Revenue Target vs Actual</span>
+                    <Target className="h-5 w-5 text-emerald-600" />
+                  </div>
+                  <div className="mt-3 flex items-baseline justify-between">
+                    <div>
+                      <p className="text-2xl font-bold text-gray-900">{formatCurrency(totalActualRevenue)}</p>
+                      <p className="text-xs text-gray-500">Target: <span className="font-semibold">{formatCurrency(totalTargetRevenue)}</span></p>
+                    </div>
+                    <span className={`text-xs font-bold px-2 py-1 rounded-full ${
+                      totalActualRevenue >= totalTargetRevenue 
+                        ? 'bg-emerald-100 text-emerald-800' 
+                        : 'bg-amber-100 text-amber-800'
+                    }`}>
+                      {totalActualRevenue >= totalTargetRevenue 
+                        ? 'Target Reached 🎉' 
+                        : `${formatCurrency(totalTargetRevenue - totalActualRevenue)} Left`}
+                    </span>
+                  </div>
+                  <div className="mt-4">
+                    <div className="flex justify-between text-xs text-gray-500 mb-1">
+                      <span>Goal Progress</span>
+                      <span className="font-medium">{revenuePct.toFixed(1)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                      <div
+                        className={`h-2 rounded-full transition-all duration-300 ${
+                          revenuePct >= 100 ? 'bg-emerald-600' : revenuePct >= 70 ? 'bg-amber-500' : 'bg-red-500'
+                        }`}
+                        style={{ width: `${Math.min(100, revenuePct)}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Budget Health Overview Card */}
+                <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">Budget Health Status</span>
+                    {overBudgetCount > 0 ? (
+                      <AlertTriangle className="h-5 w-5 text-red-500" />
+                    ) : (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                    )}
+                  </div>
+                  <div className="mt-3 grid grid-cols-3 gap-2 text-center">
+                    <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-100">
+                      <p className="text-lg font-bold text-emerald-700">{onTrackCount}</p>
+                      <p className="text-[10px] font-medium uppercase text-emerald-600">On Track</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-amber-50 border border-amber-100">
+                      <p className="text-lg font-bold text-amber-700">{warningCount}</p>
+                      <p className="text-[10px] font-medium uppercase text-amber-600">Near Limit</p>
+                    </div>
+                    <div className="p-2 rounded-lg bg-red-50 border border-red-100">
+                      <p className="text-lg font-bold text-red-700">{overBudgetCount}</p>
+                      <p className="text-[10px] font-medium uppercase text-red-600">Over Budget</p>
+                    </div>
+                  </div>
+                  <p className="mt-3 text-xs text-gray-500">
+                    {overBudgetCount > 0 
+                      ? `${overBudgetCount} category requires cost reduction.` 
+                      : 'All budget categories are within target limits.'}
+                  </p>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Synchronized Budget vs Actual Table */}
           {budgetCategories.length === 0 ? (
-            <div className="bg-white rounded-lg shadow p-12 text-center">
+            <div className="bg-white rounded-xl border border-gray-200 p-12 text-center shadow-sm">
               <DollarSign className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">No Budget Categories</h3>
-              <p className="text-gray-500 mb-6">Create your first budget category to start tracking.</p>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No Budget Categories Defined</h3>
+              <p className="text-gray-500 mb-6 max-w-md mx-auto">
+                Create budget categories aligned with your financial records (e.g. Staff Salaries, Equipment, Academy Fees) to start real-time tracking.
+              </p>
               <button
-                onClick={() => setShowBudgetModal(true)}
-                className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                onClick={() => openBudgetModal()}
+                className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors font-medium"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Create Budget
+                Create Budget Category
               </button>
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                <h4 className="font-semibold text-gray-900 text-sm">Budget vs. Actual Variance Ledger</h4>
+                <span className="text-xs text-gray-500 font-medium">Fiscal Year {new Date().getFullYear()}</span>
+              </div>
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                  <thead className="bg-gray-50 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Category Name
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Type
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Fiscal Year
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Budgeted Amount
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Period
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
+                      <th className="px-6 py-3 text-left">Category</th>
+                      <th className="px-6 py-3 text-left">Type & Period</th>
+                      <th className="px-6 py-3 text-right">Budgeted</th>
+                      <th className="px-6 py-3 text-right">Actual Recorded</th>
+                      <th className="px-6 py-3 text-right">Variance</th>
+                      <th className="px-6 py-3 text-center">Utilization</th>
+                      <th className="px-6 py-3 text-center">Health Status</th>
+                      <th className="px-6 py-3 text-right">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {budgetCategories.map((category) => (
-                      <tr key={category.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {category.category_name}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                            category.category_type === 'revenue' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}>
-                            {category.category_type === 'revenue' ? 'Revenue' : 'Expense'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {category.fiscal_year}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {formatCurrency(category.budgeted_amount)}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 capitalize">
-                          {category.period_type}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => openBudgetModal(category)}
-                              className="text-indigo-600 hover:text-indigo-900"
-                            >
-                              <Edit className="h-4 w-4" />
-                            </button>
-                            <button
-                              onClick={() => category.id && handleDeleteBudgetCategory(category.id)}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                  <tbody className="bg-white divide-y divide-gray-200 text-sm">
+                    {budgetCategories.map((category) => {
+                      const isExpense = category.category_type === 'expense';
+                      const actual = Number(category.actual_amount || 0);
+                      const budgeted = Number(category.budgeted_amount || 0);
+                      const variance = category.variance !== undefined ? category.variance : (isExpense ? budgeted - actual : actual - budgeted);
+                      const pctNum = parseFloat(category.percentage_used || (budgeted > 0 ? (actual / budgeted) * 100 : 0).toFixed(1));
+
+                      return (
+                        <tr key={category.id} className="hover:bg-gray-50 transition-colors">
+                          <td className="px-6 py-4 font-semibold text-gray-900">
+                            <div>{category.category_name}</div>
+                            <div className="text-xs font-normal text-gray-500">{category.transaction_count || 0} linked transactions</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                              category.category_type === 'revenue' ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'
+                            }`}>
+                              {category.category_type === 'revenue' ? 'Revenue' : 'Expense'}
+                            </span>
+                            <div className="text-xs text-gray-500 mt-1 capitalize">{category.period_type} ({category.fiscal_year})</div>
+                          </td>
+                          <td className="px-6 py-4 text-right font-medium text-gray-900">
+                            {formatCurrency(budgeted)}
+                          </td>
+                          <td className="px-6 py-4 text-right font-bold text-gray-900">
+                            {formatCurrency(actual)}
+                          </td>
+                          <td className="px-6 py-4 text-right font-semibold whitespace-nowrap">
+                            <span className={variance >= 0 ? 'text-emerald-600' : 'text-red-600'}>
+                              {variance >= 0 ? '+' : ''}{formatCurrency(variance)}
+                            </span>
+                            <div className="text-[10px] text-gray-400 font-normal">
+                              {isExpense 
+                                ? (variance >= 0 ? 'Under Budget' : 'Over Budget')
+                                : (variance >= 0 ? 'Revenue Surplus' : 'Revenue Shortfall')}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 min-w-[140px]">
+                            <div className="flex justify-between text-xs text-gray-600 mb-1 font-medium">
+                              <span>{pctNum.toFixed(1)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                              <div
+                                className={`h-2 rounded-full transition-all duration-300 ${
+                                  isExpense
+                                    ? pctNum >= 100 ? 'bg-red-600' : pctNum >= 80 ? 'bg-amber-500' : 'bg-emerald-500'
+                                    : pctNum >= 100 ? 'bg-emerald-600' : pctNum >= 70 ? 'bg-amber-500' : 'bg-red-500'
+                                }`}
+                                style={{ width: `${Math.min(100, pctNum)}%` }}
+                              />
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-center whitespace-nowrap">
+                            {category.health_status === 'over_budget' ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800">
+                                <AlertTriangle className="h-3 w-3" />
+                                {isExpense ? 'Over Budget' : 'Shortfall Alert'}
+                              </span>
+                            ) : category.health_status === 'warning' ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">
+                                <AlertTriangle className="h-3 w-3" />
+                                Near Limit (80%)
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">
+                                <CheckCircle2 className="h-3 w-3" />
+                                {isExpense ? 'Within Budget' : 'Target Reached'}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 text-right whitespace-nowrap font-medium">
+                            <div className="flex items-center justify-end space-x-2">
+                              <button
+                                onClick={() => openBudgetModal(category)}
+                                className="p-1 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 rounded-md"
+                                title="Edit Budget"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => category.id && handleDeleteBudgetCategory(category.id)}
+                                className="p-1 text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded-md"
+                                title="Delete Budget"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1766,6 +1973,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                                           setTransactionForm({
                                             ...transactionForm,
                                             player_id: player.id,
+                                            player_email: player.email || transactionForm.player_email || '',
                                             is_external_payment: true,
                                           });
                                           setModalPlayerSearchQuery('');
@@ -1952,34 +2160,53 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                     )}
 
                     {(transactionForm.is_recurring || transactionForm.fee_subscription_id) && (
-                      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                        <div>
-                          <label className="mb-1 block text-sm font-medium text-gray-700">
-                            {transactionForm.fee_subscription_id && transactionForm.payment_type === 'custom'
-                              ? 'Next renewal after this payment *'
-                              : 'Next renewal date *'}
-                          </label>
-                          <input
-                            type="date"
-                            value={transactionForm.next_renewal_date || ''}
-                            onChange={(event) => setTransactionForm({ ...transactionForm, next_renewal_date: event.target.value })}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                          />
-                        </div>
-                        {!transactionForm.fee_subscription_id && (
+                      <>
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                           <div>
-                            <label className="mb-1 block text-sm font-medium text-gray-700">Remind days before renewal</label>
+                            <label className="mb-1 block text-sm font-medium text-gray-700">
+                              {transactionForm.fee_subscription_id && transactionForm.payment_type === 'custom'
+                                ? 'Next renewal after this payment *'
+                                : 'Next renewal date *'}
+                            </label>
                             <input
-                              type="number"
-                              min={0}
-                              max={90}
-                              value={transactionForm.reminder_days_before ?? defaultReminderDays}
-                              onChange={(event) => setTransactionForm({ ...transactionForm, reminder_days_before: Number(event.target.value) })}
+                              type="date"
+                              value={transactionForm.next_renewal_date || ''}
+                              onChange={(event) => setTransactionForm({ ...transactionForm, next_renewal_date: event.target.value })}
                               className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                             />
                           </div>
-                        )}
-                      </div>
+                          {!transactionForm.fee_subscription_id && (
+                            <div>
+                              <label className="mb-1 block text-sm font-medium text-gray-700">Remind days before renewal</label>
+                              <input
+                                type="number"
+                                min={0}
+                                max={90}
+                                value={transactionForm.reminder_days_before ?? defaultReminderDays}
+                                onChange={(event) => setTransactionForm({ ...transactionForm, reminder_days_before: Number(event.target.value) })}
+                                className="w-full rounded-lg border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                          )}
+                        </div>
+                        <div className="mt-3">
+                          <label className="mb-1 block text-sm font-medium text-gray-700">
+                            Player / Parent Email for Renewal Reminders (Optional)
+                          </label>
+                          <input
+                            type="email"
+                            value={transactionForm.player_email || ''}
+                            onChange={(e) => setTransactionForm({ ...transactionForm, player_email: e.target.value })}
+                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                            placeholder="e.g. parent@example.com"
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            {transactionForm.player_email?.trim()
+                              ? 'Automated renewal reminders will be sent to this email address.'
+                              : 'No email address specified. The recurring fee schedule will be created for tracking, but email reminders will be skipped until an email is provided.'}
+                          </p>
+                        </div>
+                      </>
                     )}
                   </div>
                 )}
@@ -2099,16 +2326,50 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Category Name *
                   </label>
-                  <input
-                    type="text"
-                    value={budgetForm.category_name || ''}
-                    onChange={(e) => setBudgetForm({
-                      ...budgetForm,
-                      category_name: e.target.value
-                    })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="e.g., Equipment, Travel"
-                  />
+                  <div className="space-y-2">
+                    <select
+                      value={budgetForm.category_name || ''}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === 'custom') {
+                          setBudgetForm({ ...budgetForm, category_name: '' });
+                        } else {
+                          const isIncome = incomeCategories.some(c => c.value === val);
+                          const isExpense = expenseCategories.some(c => c.value === val);
+                          setBudgetForm({
+                            ...budgetForm,
+                            category_name: val,
+                            category_type: isIncome ? 'revenue' : isExpense ? 'expense' : budgetForm.category_type || 'expense'
+                          });
+                        }
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-medium"
+                    >
+                      <option value="">Select standard financial category...</option>
+                      <optgroup label="Income Categories">
+                        {incomeCategories.map(c => (
+                          <option key={c.value} value={c.value}>{c.label}</option>
+                        ))}
+                      </optgroup>
+                      <optgroup label="Expense Categories">
+                        {expenseCategories.map(c => (
+                          <option key={c.value} value={c.value}>{c.label}</option>
+                        ))}
+                      </optgroup>
+                      <option value="custom">-- Custom Category Name --</option>
+                    </select>
+
+                    <input
+                      type="text"
+                      value={budgetForm.category_name || ''}
+                      onChange={(e) => setBudgetForm({
+                        ...budgetForm,
+                        category_name: e.target.value
+                      })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                      placeholder="Or enter custom category name..."
+                    />
+                  </div>
                 </div>
 
                 <div>

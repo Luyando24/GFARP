@@ -109,7 +109,7 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
         const proPlanQuery = `
           SELECT id, name, player_limit 
           FROM subscription_plans 
-          WHERE name = 'Pro' OR name = 'Pro Plan'
+          WHERE (name = 'Pro' OR name = 'Pro Plan' OR name = 'Academy Pro') AND target_type = 'ACADEMY' AND is_active = true
           LIMIT 1
         `;
         const proPlanResult = await query(proPlanQuery);

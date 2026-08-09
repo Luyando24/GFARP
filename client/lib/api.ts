@@ -1260,9 +1260,12 @@ export interface BudgetCategory {
   category_name: string;
   category_type: 'revenue' | 'expense';
   budgeted_amount: number;
+  actual_amount?: number;
   spent_amount?: number;
   remaining_amount?: number;
+  variance?: number;
   percentage_used?: string;
+  health_status?: 'on_track' | 'warning' | 'over_budget';
   period_type: 'monthly' | 'quarterly' | 'yearly';
   fiscal_year: number;
   is_active: boolean;
@@ -1493,8 +1496,10 @@ export interface PlayerProfile {
   player_id: string;
   display_name?: string;
   age?: number;
+  date_of_birth?: string;
   nationality?: string;
   position?: string;
+  secondary_position?: string;
   current_club?: string;
   video_links?: string[];
   transfermarket_link?: string;
@@ -1509,6 +1514,8 @@ export interface PlayerProfile {
   honours?: string;
   education?: string;
   contact_email?: string;
+  phone?: string;
+  location?: string;
   whatsapp_number?: string;
   social_links?: {
     instagram?: string;

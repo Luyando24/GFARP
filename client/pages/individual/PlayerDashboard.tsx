@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PlayerApi, PlayerProfile } from "@/lib/api";
 import { useAutoSaveForm } from "@/hooks/useAutoSaveForm";
+import { generatePlayerPDF } from "@/lib/player-pdf";
 import { getProfileSaveErrorMessage } from "@/lib/profile-save-error";
 import { uploadPlayerImage } from "@/lib/image-upload";
 import { useAuth } from "@/lib/auth";
@@ -464,244 +465,37 @@ export default function PlayerDashboard() {
 
   const generatePDF = async () => {
     if (!profile) return;
-    const toastId = toast.loading("Generating PDF...");
+    const toastId = toast.loading("Generating Scouting Report PDF...");
 
     try {
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.width;
-      const pageHeight = doc.internal.pageSize.height;
-      const margin = 20;
-      let y = 0;
+      await generatePlayerPDF({
+        displayName: profile.display_name || `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || 'Player Profile',
+        position: profile.position,
+        secondaryPosition: profile.secondary_position,
+        age: profile.age,
+        dateOfBirth: profile.date_of_birth,
+        nationality: profile.nationality,
+        currentClub: profile.current_club,
+        height: profile.height,
+        weight: profile.weight,
+        preferredFoot: profile.preferred_foot,
+        contactEmail: profile.contact_email,
+        whatsappNumber: profile.whatsapp_number,
+        phone: profile.phone,
+        location: profile.location,
+        bio: profile.bio,
+        careerHistory: profile.career_history,
+        honours: profile.honours,
+        education: profile.education,
+        transfermarktLink: profile.transfermarket_link,
+        videoLinks: profile.video_links,
+        galleryImages: profile.gallery_images,
+        profileImageUrl: profile.profile_image_url,
+        profileSlug: profile.slug,
+      });
 
-      // Helper for text wrapping
-      const printText = (text: string, x: number, yPos: number, size: number = 12, font: string = "helvetica", style: string = "normal", color: [number, number, number] = [0, 0, 0], maxWidth?: number) => {
-        doc.setFont(font, style);
-        doc.setFontSize(size);
-        doc.setTextColor(color[0], color[1], color[2]);
-        if (maxWidth) {
-          const splitText = doc.splitTextToSize(text, maxWidth);
-          doc.text(splitText, x, yPos);
-          return splitText.length * (size * 0.5); // Approx height
-        } else {
-          doc.text(text, x, yPos);
-          return size * 0.5;
-        }
-      };
-
-      // --- HEADER ---
-      // Green Background
-      doc.setFillColor(34, 197, 94); // Green-500
-      doc.rect(0, 0, pageWidth, 50, 'F');
-
-      // Brand / Title
-      printText("SOCCER CIRCULAR", margin, 15, 10, "helvetica", "bold", [255, 255, 255]);
-      printText("SCOUTING REPORT", margin, 20, 8, "helvetica", "normal", [220, 220, 220]);
-
-      // Player Name
-      printText(profile.display_name || "Unknown Player", margin, 35, 24, "helvetica", "bold", [255, 255, 255]);
-      
-      // Position Badge-like
-      if (profile.position) {
-         printText(profile.position.toUpperCase(), margin, 42, 12, "helvetica", "bold", [255, 255, 255]);
-      }
-
-      // --- PROFILE IMAGE ---
-      y = 60;
-      if (profile.profile_image_url) {
-        try {
-           const base64Img = await getBase64ImageFromURL(profile.profile_image_url);
-           // Add image at top right of header
-           doc.addImage(base64Img, 'JPEG', pageWidth - margin - 35, 8, 35, 35);
-        } catch (e) {
-           console.error("Could not load profile image", e);
-        }
-      }
-
-      // --- INFO GRID ---
-      // 2 Columns
-      const col1X = margin;
-      const col2X = pageWidth / 2 + 10;
-      
-      doc.setDrawColor(200, 200, 200);
-      doc.line(margin, y, pageWidth - margin, y); // Separator
-      y += 10;
-
-      const addInfoRow = (label: string, value: string | number | undefined | null, x: number, currentY: number) => {
-         if (!value) return 0;
-         doc.setFont("helvetica", "bold");
-         doc.setFontSize(10);
-         doc.setTextColor(100, 100, 100);
-         doc.text(label.toUpperCase(), x, currentY);
-         
-         doc.setFont("helvetica", "bold");
-         doc.setFontSize(12);
-         doc.setTextColor(0, 0, 0);
-         doc.text(String(value), x, currentY + 5);
-         return 15; // row height
-      };
-
-      let leftY = y;
-      let rightY = y;
-
-      leftY += addInfoRow("Age", profile.age ? `${profile.age} Years` : "N/A", col1X, leftY);
-      leftY += addInfoRow("Nationality", profile.nationality, col1X, leftY);
-      leftY += addInfoRow("Current Club", profile.current_club, col1X, leftY);
-
-      rightY += addInfoRow("Height", profile.height ? `${profile.height} cm` : "-", col2X, rightY);
-      rightY += addInfoRow("Weight", profile.weight ? `${profile.weight} kg` : "-", col2X, rightY);
-      rightY += addInfoRow("Preferred Foot", profile.preferred_foot, col2X, rightY);
-
-      y = Math.max(leftY, rightY) + 5;
-
-      // Contact Info if available
-      if (profile.contact_email || profile.whatsapp_number) {
-        doc.setFillColor(245, 245, 245);
-        doc.rect(margin, y, pageWidth - (margin * 2), 25, 'F');
-        doc.setDrawColor(220, 220, 220);
-        doc.rect(margin, y, pageWidth - (margin * 2), 25, 'S');
-        
-        let contactX = margin + 5;
-        const contactY = y + 8;
-        
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        doc.text("CONTACT DETAILS", contactX, contactY);
-        
-        let detailsY = contactY + 8;
-        if (profile.contact_email) {
-           doc.setFont("helvetica", "normal");
-           doc.text(`Email: ${profile.contact_email}`, contactX, detailsY);
-           detailsY += 6;
-        }
-        if (profile.whatsapp_number) {
-           doc.setFont("helvetica", "normal");
-           doc.text(`WhatsApp: ${profile.whatsapp_number}`, contactX, detailsY);
-        }
-        y += 35;
-      }
-
-      // --- SECTIONS ---
-      const addSection = (title: string, content: string | undefined | null) => {
-         if (!content) return;
-         
-         // Check for page break
-         if (y > pageHeight - 40) {
-            doc.addPage();
-            y = 20;
-         }
-
-         doc.setFont("helvetica", "bold");
-         doc.setFontSize(14);
-         doc.setTextColor(34, 197, 94); // Green header
-         doc.text(title, margin, y);
-         y += 2;
-         doc.setDrawColor(34, 197, 94);
-         doc.line(margin, y, margin + 20, y); // Underline
-         y += 8;
-
-         doc.setFont("helvetica", "normal");
-         doc.setFontSize(11);
-         doc.setTextColor(50, 50, 50);
-         
-         const splitContent = doc.splitTextToSize(content, pageWidth - (margin * 2));
-         doc.text(splitContent, margin, y);
-         y += (splitContent.length * 5) + 10;
-      };
-
-      addSection("Professional Bio", profile.bio);
-      addSection("Career History", profile.career_history);
-      addSection("Honours & Achievements", profile.honours);
-      addSection("Education", profile.education);
-
-      // --- LINKS ---
-      if ((profile.video_links && profile.video_links.length > 0) || profile.transfermarket_link) {
-         if (y > pageHeight - 40) {
-            doc.addPage();
-            y = 20;
-         }
-         
-         doc.setFont("helvetica", "bold");
-         doc.setFontSize(14);
-         doc.setTextColor(34, 197, 94);
-         doc.text("Links & Media", margin, y);
-         y += 10;
-
-         doc.setFont("helvetica", "normal");
-         doc.setFontSize(11);
-         doc.setTextColor(0, 0, 255);
-
-         if (profile.transfermarket_link) {
-            doc.textWithLink("TransferMarket Profile", margin, y, { url: profile.transfermarket_link });
-            y += 8;
-         }
-
-         if (profile.video_links) {
-            profile.video_links.forEach((link, i) => {
-               if (link) {
-                  doc.textWithLink(`Video Highlight #${i+1}`, margin, y, { url: link });
-                  y += 8;
-               }
-            });
-         }
-      }
-
-      // --- GALLERY (New Page) ---
-      if (profile.gallery_images && profile.gallery_images.some(img => img)) {
-         doc.addPage();
-         y = 20;
-         doc.setFont("helvetica", "bold");
-         doc.setFontSize(14);
-         doc.setTextColor(0, 0, 0);
-         doc.text("Image Gallery", margin, y);
-         y += 15;
-
-         const validImages = profile.gallery_images.filter(img => img);
-         // Grid of images? 2 per row
-         let xPos = margin;
-         const imgW = (pageWidth - (margin * 3)) / 2;
-         const imgH = imgW * 0.75; // 4:3 aspect ratio
-
-         for (let i = 0; i < validImages.length; i++) {
-            const imgUrl = validImages[i];
-            if (!imgUrl) continue;
-
-            try {
-               // Check page break
-               if (y + imgH > pageHeight - 20) {
-                  doc.addPage();
-                  y = 20;
-               }
-
-               const base64 = await getBase64ImageFromURL(imgUrl);
-               doc.addImage(base64, 'JPEG', xPos, y, imgW, imgH);
-               
-               // Update positions
-               if (xPos === margin) {
-                  xPos += imgW + margin; // Move to second column
-               } else {
-                  xPos = margin; // Reset to first column
-                  y += imgH + 10; // Move down
-               }
-            } catch (e) {
-               console.warn("Failed to load gallery image for PDF", e);
-            }
-         }
-      }
-
-      // Footer
-      const pageCount = doc.internal.getNumberOfPages();
-      for(let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(10);
-        doc.setTextColor(150, 150, 150);
-        doc.text(`Generated by Soccer Circular - Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-      }
-
-      doc.save(`${profile.display_name?.replace(/\s+/g, '_')}_Profile.pdf`);
       toast.dismiss(toastId);
       toast.success("PDF Downloaded successfully!");
-
     } catch (err) {
       console.error("PDF Generation Error", err);
       toast.dismiss(toastId);

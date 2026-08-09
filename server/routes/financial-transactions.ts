@@ -270,14 +270,66 @@ const handleGetBudgetCategories: RequestHandler = async (req, res) => {
     const { year = new Date().getFullYear() } = req.query;
 
     const result = await query(`
-      SELECT * FROM budget_categories 
-      WHERE academy_id = $1 AND fiscal_year = $2 AND is_active = true
-      ORDER BY category_type, category_name
-    `, [academyId, year as any]);
+      SELECT 
+        bc.*,
+        COALESCE(actual.total_amount, 0.00) AS actual_amount,
+        COALESCE(actual.tx_count, 0) AS transaction_count
+      FROM budget_categories bc
+      LEFT JOIN LATERAL (
+        SELECT 
+          SUM(amount) as total_amount,
+          COUNT(*) as tx_count
+        FROM (
+          SELECT category, amount, transaction_date, academy_id
+          FROM financial_transactions
+          WHERE academy_id = $1 AND status = 'completed'
+          UNION ALL
+          SELECT 'Transfer Fees' as category, transfer_amount as amount, transfer_date as transaction_date, academy_id
+          FROM transfers
+          WHERE academy_id = $1 AND status = 'completed' AND transfer_amount > 0
+        ) combined_tx
+        WHERE LOWER(combined_tx.category) = LOWER(bc.category_name)
+          AND EXTRACT(YEAR FROM combined_tx.transaction_date) = bc.fiscal_year
+      ) actual ON true
+      WHERE bc.academy_id = $1 AND bc.fiscal_year = $2 AND bc.is_active = true
+      ORDER BY bc.category_type, bc.category_name
+    `, [academyId, Number(year)]);
+
+    const categories = result.rows.map((row: any) => {
+      const budgeted = Number(row.budgeted_amount || 0);
+      const actual = Number(row.actual_amount || 0);
+      const isExpense = row.category_type === 'expense';
+
+      const variance = isExpense ? budgeted - actual : actual - budgeted;
+      const percentageNum = budgeted > 0 ? (actual / budgeted) * 100 : 0;
+      const percentage_used = percentageNum.toFixed(1);
+
+      let health_status: 'on_track' | 'warning' | 'over_budget' = 'on_track';
+      if (isExpense) {
+        if (percentageNum >= 100) health_status = 'over_budget';
+        else if (percentageNum >= 80) health_status = 'warning';
+        else health_status = 'on_track';
+      } else {
+        if (percentageNum >= 100) health_status = 'on_track';
+        else if (percentageNum >= 70) health_status = 'warning';
+        else health_status = 'over_budget';
+      }
+
+      return {
+        ...row,
+        budgeted_amount: budgeted,
+        actual_amount: actual,
+        spent_amount: actual,
+        remaining_amount: isExpense ? Math.max(0, budgeted - actual) : 0,
+        variance,
+        percentage_used,
+        health_status
+      };
+    });
 
     res.json({
       success: true,
-      data: result.rows
+      data: categories
     });
   } catch (error) {
     console.error('Error fetching budget categories:', error);

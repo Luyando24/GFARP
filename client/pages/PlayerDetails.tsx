@@ -52,6 +52,7 @@ import { countryCodes, formatPhoneDisplay, parsePhoneNumber } from '@/lib/countr
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PlayerAttendanceCard from '@/components/training/PlayerAttendanceCard';
 import jsPDF from 'jspdf';
+import { generatePlayerPDF } from '@/lib/player-pdf';
 import { uploadPlayerImage } from '@/lib/image-upload';
 
 const playerPositions = [
@@ -741,250 +742,51 @@ const PlayerDetails = () => {
 
   const generatePDF = async () => {
     if (!player) return;
-    const toastId = toast({
+    toast({
       title: "Generating PDF",
       description: "Please wait while we compile the scouting report...",
     });
 
     try {
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.width;
-      const pageHeight = doc.internal.pageSize.height;
-      const margin = 20;
-      let y = 0;
-
-      // Helper for text wrapping
-      const printText = (text: string, x: number, yPos: number, size: number = 12, font: string = "helvetica", style: string = "normal", color: [number, number, number] = [0, 0, 0], maxWidth?: number) => {
-        doc.setFont(font, style);
-        doc.setFontSize(size);
-        doc.setTextColor(color[0], color[1], color[2]);
-        if (maxWidth) {
-          const splitText = doc.splitTextToSize(text, maxWidth);
-          doc.text(splitText, x, yPos);
-          return splitText.length * (size * 0.5); // Approx height
-        } else {
-          doc.text(text, x, yPos);
-          return size * 0.5;
-        }
-      };
-
-      // --- HEADER ---
-      doc.setFillColor(34, 197, 94); // Green-500
-      doc.rect(0, 0, pageWidth, 50, 'F');
-
-      printText("SOCCER CIRCULAR", margin, 15, 10, "helvetica", "bold", [255, 255, 255]);
-      printText("SCOUTING REPORT", margin, 20, 8, "helvetica", "normal", [220, 220, 220]);
-
-      const displayName = player.display_name || `${player.firstName} ${player.lastName}`.trim();
-      printText(displayName, margin, 35, 24, "helvetica", "bold", [255, 255, 255]);
-      
-      if (player.position) {
-         printText(player.position.toUpperCase(), margin, 42, 12, "helvetica", "bold", [255, 255, 255]);
-      }
-
-      // --- PROFILE IMAGE ---
-      y = 60;
+      const displayName = player.display_name || `${player.firstName || ''} ${player.lastName || ''}`.trim() || 'Player Profile';
+      const ageVal = player.dateOfBirth ? calculateAge(player.dateOfBirth) : undefined;
       const profilePhoto = player.profile_image_url || getSavedDocument('player_photo')?.file_url;
-      if (profilePhoto) {
-        try {
-           const base64Img = await getBase64ImageFromURL(profilePhoto);
-           doc.addImage(base64Img, 'JPEG', pageWidth - margin - 35, 8, 35, 35);
-        } catch (e) {
-           console.error("Could not load profile image", e);
-        }
-      }
 
-      // --- INFO GRID ---
-      const col1X = margin;
-      const col2X = pageWidth / 2 + 10;
-      
-      doc.setDrawColor(200, 200, 200);
-      doc.line(margin, y, pageWidth - margin, y); // Separator
-      y += 10;
+      await generatePlayerPDF({
+        displayName,
+        position: player.position,
+        secondaryPosition: (player as any).secondaryPosition,
+        age: ageVal,
+        dateOfBirth: player.dateOfBirth,
+        nationality: player.nationality,
+        currentClub: player.currentClub,
+        height: player.height,
+        weight: player.weight,
+        preferredFoot: player.preferredFoot,
+        contactEmail: player.contact_email || player.email,
+        whatsappNumber: player.whatsapp_number || player.phone,
+        phone: player.phone,
+        bio: player.bio,
+        careerHistory: player.career_history,
+        honours: player.honours,
+        education: player.education,
+        transfermarktLink: player.transfermarket_link,
+        videoLinks: player.video_links,
+        galleryImages: player.gallery_images,
+        profileImageUrl: profilePhoto,
+        profileSlug: (player as any).slug,
+      });
 
-      const addInfoRow = (label: string, value: string | number | undefined | null, x: number, currentY: number) => {
-         if (!value) return 0;
-         doc.setFont("helvetica", "bold");
-         doc.setFontSize(10);
-         doc.setTextColor(100, 100, 100);
-         doc.text(label.toUpperCase(), x, currentY);
-         
-         doc.setFont("helvetica", "bold");
-         doc.setFontSize(12);
-         doc.setTextColor(0, 0, 0);
-         doc.text(String(value), x, currentY + 5);
-         return 15; // row height
-      };
-
-      let leftY = y;
-      let rightY = y;
-
-      const ageVal = player.dateOfBirth ? `${calculateAge(player.dateOfBirth)} Years` : "-";
-      leftY += addInfoRow("Age", ageVal, col1X, leftY);
-      leftY += addInfoRow("Nationality", player.nationality, col1X, leftY);
-      leftY += addInfoRow("Current Club", player.currentClub, col1X, leftY);
-
-      rightY += addInfoRow("Height", player.height ? `${player.height} cm` : "-", col2X, rightY);
-      rightY += addInfoRow("Weight", player.weight ? `${player.weight} kg` : "-", col2X, rightY);
-      rightY += addInfoRow("Preferred Foot", player.preferredFoot, col2X, rightY);
-
-      y = Math.max(leftY, rightY) + 5;
-
-      // Contact Info
-      const contactEmail = player.contact_email || player.email;
-      const whatsappNumber = player.whatsapp_number || player.phone;
-      if (contactEmail || whatsappNumber) {
-        doc.setFillColor(245, 245, 245);
-        doc.rect(margin, y, pageWidth - (margin * 2), 25, 'F');
-        doc.setDrawColor(220, 220, 220);
-        doc.rect(margin, y, pageWidth - (margin * 2), 25, 'S');
-        
-        let contactX = margin + 5;
-        const contactY = y + 8;
-        
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(10);
-        doc.setTextColor(0, 0, 0);
-        doc.text("CONTACT DETAILS", contactX, contactY);
-        
-        let detailsY = contactY + 8;
-        if (contactEmail) {
-           doc.setFont("helvetica", "normal");
-           doc.text(`Email: ${contactEmail}`, contactX, detailsY);
-           detailsY += 6;
-        }
-        if (whatsappNumber) {
-           doc.setFont("helvetica", "normal");
-           doc.text(`WhatsApp: ${whatsappNumber}`, contactX, detailsY);
-        }
-        y += 35;
-      }
-
-      // --- SECTIONS ---
-      const addSection = (title: string, content: string | undefined | null) => {
-         if (!content) return;
-         
-         if (y > pageHeight - 40) {
-            doc.addPage();
-            y = 20;
-         }
-
-         doc.setFont("helvetica", "bold");
-         doc.setFontSize(14);
-         doc.setTextColor(34, 197, 94);
-         doc.text(title, margin, y);
-         y += 2;
-         doc.setDrawColor(34, 197, 94);
-         doc.line(margin, y, margin + 20, y);
-         y += 8;
-
-         doc.setFont("helvetica", "normal");
-         doc.setFontSize(11);
-         doc.setTextColor(50, 50, 50);
-         
-         const splitContent = doc.splitTextToSize(content, pageWidth - (margin * 2));
-         doc.text(splitContent, margin, y);
-         y += (splitContent.length * 5) + 10;
-      };
-
-      addSection("Professional Bio", player.bio);
-      addSection("Career History", player.career_history);
-      addSection("Honours & Achievements", player.honours);
-      addSection("Education", player.education);
-
-      // --- LINKS ---
-      if ((player.video_links && player.video_links.length > 0) || player.transfermarket_link) {
-         if (y > pageHeight - 40) {
-            doc.addPage();
-            y = 20;
-         }
-         
-         doc.setFont("helvetica", "bold");
-         doc.setFontSize(14);
-         doc.setTextColor(34, 197, 94);
-         doc.text("Links & Media", margin, y);
-         y += 10;
-
-         doc.setFont("helvetica", "normal");
-         doc.setFontSize(11);
-         doc.setTextColor(0, 0, 255);
-
-         if (player.transfermarket_link) {
-            doc.textWithLink("TransferMarket Profile", margin, y, { url: player.transfermarket_link });
-            y += 8;
-         }
-
-         if (player.video_links) {
-            player.video_links.forEach((link, i) => {
-               if (link) {
-                  doc.textWithLink(`Video Highlight #${i+1}`, margin, y, { url: link });
-                  y += 8;
-               }
-            });
-         }
-      }
-
-      // --- GALLERY ---
-      if (player.gallery_images && player.gallery_images.some(img => img)) {
-         doc.addPage();
-         y = 20;
-         doc.setFont("helvetica", "bold");
-         doc.setFontSize(14);
-         doc.setTextColor(0, 0, 0);
-         doc.text("Image Gallery", margin, y);
-         y += 15;
-
-         const validImages = player.gallery_images.filter(img => img);
-         let xPos = margin;
-         const imgW = (pageWidth - (margin * 3)) / 2;
-         const imgH = imgW * 0.75;
-
-         for (let i = 0; i < validImages.length; i++) {
-            const imgUrl = validImages[i];
-            if (!imgUrl) continue;
-
-            try {
-               if (y + imgH > pageHeight - 20) {
-                  doc.addPage();
-                  y = 20;
-               }
-
-               const base64 = await getBase64ImageFromURL(imgUrl);
-               doc.addImage(base64, 'JPEG', xPos, y, imgW, imgH);
-               
-               if (xPos === margin) {
-                  xPos += imgW + margin;
-               } else {
-                  xPos = margin;
-                  y += imgH + 10;
-               }
-            } catch (e) {
-               console.warn("Failed to load gallery image for PDF", e);
-            }
-         }
-      }
-
-      // Footer
-      const pageCount = doc.internal.getNumberOfPages();
-      for(let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(10);
-        doc.setTextColor(150, 150, 150);
-        doc.text(`Generated by Soccer Circular - Page ${i} of ${pageCount}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-      }
-
-      doc.save(`${displayName.replace(/\s+/g, '_')}_Profile.pdf`);
       toast({
         title: "Success",
         description: "PDF Scouting Report downloaded successfully!",
       });
-
     } catch (err) {
       console.error("PDF Generation Error", err);
       toast({
         title: "Error",
         description: "Failed to generate PDF. Please try again.",
-        variant: "destructive"
+        variant: "destructive",
       });
     }
   };

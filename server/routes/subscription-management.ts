@@ -768,6 +768,25 @@ export const handleCreatePlan: RequestHandler = async (req, res) => {
       player_limit, storage_limit, features, is_active, is_free, sort_order, target_type 
     } = req.body;
 
+    const target = String(target_type || 'ACADEMY').toUpperCase();
+    if (!['ACADEMY', 'INDIVIDUAL', 'AGENCY'].includes(target)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid target_type. Must be ACADEMY, INDIVIDUAL, or AGENCY.'
+      });
+    }
+
+    const existingName = await query(
+      `SELECT id FROM subscription_plans WHERE LOWER(name) = LOWER($1) AND target_type = $2 AND is_active = true`,
+      [name, target]
+    );
+    if (existingName.rows.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: `An active plan with the name "${name}" already exists for ${target} users.`
+      });
+    }
+
     const id = uuidv4();
     const insertQuery = `
       INSERT INTO subscription_plans (
@@ -782,7 +801,7 @@ export const handleCreatePlan: RequestHandler = async (req, res) => {
     const result = await query(insertQuery, [
       id, name, description, price || 0, currency || 'USD', billing_cycle || 'MONTHLY',
       player_limit || 0, storage_limit || 5368709120, JSON.stringify(features || []), is_active !== false, is_free === true, 
-      sort_order || 0, target_type || 'ACADEMY'
+      sort_order || 0, target
     ]);
 
     res.status(201).json({
