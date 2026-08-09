@@ -8,6 +8,7 @@ import { saveSession } from '@/lib/auth';
 import { useTranslation } from '@/lib/i18n';
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { countryCodes } from '@/lib/countryCodes';
+import { useAutoSaveForm } from '@/hooks/useAutoSaveForm';
 
 interface FormData {
   name: string;
@@ -43,6 +44,14 @@ export default function RegisterAgency() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+
+  const autoSave = useAutoSaveForm({
+    storageKey: 'agency_registration_draft',
+    formData,
+    setFormData,
+    excludeKeys: ['password', 'confirmPassword'],
+    debounceMs: 500,
+  });
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -97,6 +106,7 @@ export default function RegisterAgency() {
       const data = await response.json();
 
       if (data.success) {
+        autoSave.clearDraft();
         const session = {
           userId: data.data.agency.id,
           role: 'agency_admin' as const,

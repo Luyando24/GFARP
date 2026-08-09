@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { PlayerApi, PlayerProfile } from "@/lib/api";
+import { useAutoSaveForm } from "@/hooks/useAutoSaveForm";
 import { getProfileSaveErrorMessage } from "@/lib/profile-save-error";
 import { uploadPlayerImage } from "@/lib/image-upload";
 import { useAuth } from "@/lib/auth";
@@ -127,6 +128,15 @@ export default function PlayerDashboard() {
 
   // Form State
   const [formData, setFormData] = useState<Partial<PlayerProfile>>({});
+
+  // Auto-save form draft for profile completion
+  const autoSave = useAutoSaveForm({
+    storageKey: profile?.player_id ? `player_profile_draft_${profile.player_id}` : 'player_profile_draft',
+    formData,
+    setFormData,
+    debounceMs: 800,
+    enabled: isEditing || !!profile,
+  });
   
   // Slug Verification State
   const [isCheckingSlug, setIsCheckingSlug] = useState(false);
@@ -410,7 +420,7 @@ export default function PlayerDashboard() {
       // Safely merge profile to ensure state updates
       setProfile(prev => prev ? { ...prev, ...formData } as PlayerProfile : formData as PlayerProfile);
       setIsEditing(false);
-      localStorage.removeItem('player_profile_draft');
+      autoSave.clearDraft();
       toast.success("Profile updated successfully");
     } catch (error: unknown) {
       console.error("Failed to update profile", error);

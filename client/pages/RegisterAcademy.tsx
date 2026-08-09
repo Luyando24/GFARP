@@ -8,6 +8,7 @@ import { saveSession } from '@/lib/auth';
 import { useTranslation } from '@/lib/i18n';
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { countryCodes } from '@/lib/countryCodes';
+import { useAutoSaveForm } from '@/hooks/useAutoSaveForm';
 
 interface FormData {
   email: string;
@@ -41,6 +42,14 @@ export default function RegisterAcademy() {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+
+  const autoSave = useAutoSaveForm({
+    storageKey: 'academy_registration_draft',
+    formData,
+    setFormData,
+    excludeKeys: ['password', 'confirmPassword'],
+    debounceMs: 500,
+  });
 
   useEffect(() => {
     const searchParams = new URLSearchParams(location.search);
@@ -96,6 +105,7 @@ export default function RegisterAcademy() {
       else throw new Error(await response.text());
 
       if (data.success) {
+        autoSave.clearDraft();
         // If registration requires verification (it should now), redirect to login or a pending page
         // But we also want to clear any existing session to force new login after verification
 

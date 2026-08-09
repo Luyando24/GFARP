@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '../../hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
+import { useAutoSaveForm } from '../../hooks/useAutoSaveForm';
 
 interface RegistrationFormData {
   name: string;
@@ -85,6 +86,14 @@ export default function AcademyRegistrationForm() {
 
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const autoSave = useAutoSaveForm({
+    storageKey: 'academy_full_registration_draft',
+    formData,
+    setFormData,
+    excludeKeys: ['password', 'confirmPassword'],
+    debounceMs: 500,
+  });
 
   const totalSteps = 4;
 

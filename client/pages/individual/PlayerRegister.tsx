@@ -19,6 +19,7 @@ import { usePageTitle } from "@/hooks/usePageTitle";
 import LanguageToggle from "@/components/navigation/LanguageToggle";
 import { useToast } from "@/hooks/use-toast";
 import { countryCodes } from "@/lib/countryCodes";
+import { useAutoSaveForm } from "@/hooks/useAutoSaveForm";
 
 const countriesList = Array.from(
   new Map(countryCodes.map(c => [c.country, c])).values()
@@ -26,11 +27,13 @@ const countriesList = Array.from(
 
 export default function PlayerRegister() {
   usePageTitle("Player Registration");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [email, setEmail] = useState("");
-  const [country, setCountry] = useState("");
-  const [gender, setGender] = useState<"" | "male" | "female">("");
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    country: "",
+    gender: "" as "" | "male" | "female",
+  });
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -41,6 +44,13 @@ export default function PlayerRegister() {
   const { toast } = useToast();
   const { t, dir } = useTranslation();
 
+  const autoSave = useAutoSaveForm({
+    storageKey: 'player_registration_draft',
+    formData,
+    setFormData,
+    debounceMs: 500,
+  });
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -50,22 +60,24 @@ export default function PlayerRegister() {
       if (password !== confirmPassword) {
         throw new Error("Passwords do not match");
       }
-      if (!country) {
+      if (!formData.country) {
         throw new Error("Please select a country");
       }
-      if (!gender) {
+      if (!formData.gender) {
         throw new Error(t("auth.error.genderRequired"));
       }
 
       const res = await PlayerApi.register({
-        firstName,
-        lastName,
-        email,
-        country,
-        gender,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        email: formData.email,
+        country: formData.country,
+        gender: formData.gender,
         password,
         academyCode: academyCode || undefined,
       });
+
+      autoSave.clearDraft();
 
       if (res.requireVerification) {
         toast({
@@ -74,7 +86,7 @@ export default function PlayerRegister() {
           duration: 6000,
         });
         navigate("/verification-pending", {
-          state: { email, accountType: "player" },
+          state: { email: formData.email, accountType: "player" },
         });
         return;
       }
@@ -145,16 +157,16 @@ export default function PlayerRegister() {
               <div className="space-y-2">
                 <Input
                   placeholder={t('auth.firstName')}
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
+                  value={formData.firstName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, firstName: e.target.value }))}
                   required
                 />
               </div>
               <div className="space-y-2">
                 <Input
                   placeholder={t('auth.lastName')}
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
+                  value={formData.lastName}
+                  onChange={(e) => setFormData(prev => ({ ...prev, lastName: e.target.value }))}
                   required
                 />
               </div>
@@ -164,9 +176,9 @@ export default function PlayerRegister() {
               <div className="space-y-2">
                 <Label htmlFor="player-gender">{t("auth.gender")}</Label>
                 <Select
-                  value={gender}
+                  value={formData.gender}
                   onValueChange={(value) =>
-                    setGender(value as "male" | "female")
+                    setFormData(prev => ({ ...prev, gender: value as "male" | "female" }))
                   }
                 >
                   <SelectTrigger id="player-gender" aria-required="true">
@@ -182,8 +194,8 @@ export default function PlayerRegister() {
               <div className="space-y-2">
                 <Label htmlFor="player-country">Country</Label>
                 <Select
-                  value={country}
-                  onValueChange={(value) => setCountry(value)}
+                  value={formData.country}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, country: value }))}
                 >
                   <SelectTrigger id="player-country" aria-required="true">
                     <SelectValue placeholder="Select Country" />
@@ -203,8 +215,8 @@ export default function PlayerRegister() {
               <Input
                 type="email"
                 placeholder={t('auth.email')}
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={formData.email}
+                onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                 required
               />
             </div>
