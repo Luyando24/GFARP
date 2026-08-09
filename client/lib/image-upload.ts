@@ -43,7 +43,9 @@ export async function uploadPlayerImage(playerId: string, file: File, kind: stri
   const formData = new FormData();
   formData.append('file', compressed);
   formData.append('kind', kind.replace(/[^a-z0-9_-]/gi, '').slice(0, 40) || 'profile');
-  const response = await Api.postFormData<{ success: boolean; data: { url: string } }>(`/uploads/player/${playerId}`, formData);
-  if (!response.success || !response.data?.url) throw new Error('Image upload failed');
+  const response = await Api.postFormData<{ success: boolean; data?: { url: string }; error?: string }>(`/uploads/player/${playerId}`, formData);
+  if (!response.success || !response.data?.url) {
+    throw new Error(response.error || 'Image upload failed');
+  }
   return response.data.url;
 }

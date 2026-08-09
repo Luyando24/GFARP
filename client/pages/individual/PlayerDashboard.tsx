@@ -784,10 +784,7 @@ export default function PlayerDashboard() {
 
     setUploadingImages(prev => ({ ...prev, [uploadKey]: false }));
 
-    if (!url) {
-      toast.error('Image upload failed. Please try again.');
-      return;
-    }
+    if (!url) return;
 
     if (field === 'profile_image_url') {
       setFormData(prev => ({ ...prev, profile_image_url: url }));

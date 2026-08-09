@@ -10,22 +10,96 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: true 
 // Lazy initialization to prevent crashes if env vars are missing at startup
 let supabaseInstance: SupabaseClient | null = null;
 
+function cleanSupabaseUrl(rawUrl?: string): string | null {
+  if (!rawUrl) return null;
+
+  let cleaned = rawUrl
+    .replace(/^["']|["']$/g, '')
+    .replace(/[\r\n\t]/g, '')
+    .trim()
+    .replace(/\/+$/, '');
+
+  if (!cleaned) return null;
+
+  if (cleaned.startsWith('postgres://') || cleaned.startsWith('postgresql://') || cleaned.includes('pooler.supabase.com')) {
+    const match = cleaned.match(/postgres\.([a-z0-9]+)@/i);
+    if (match && match[1]) {
+      return `https://${match[1]}.supabase.co`;
+    }
+    return null;
+  }
+
+  if (!cleaned.startsWith('http://') && !cleaned.startsWith('https://')) {
+    cleaned = `https://${cleaned}`;
+  }
+
+  try {
+    const parsed = new URL(cleaned);
+    let hostname = parsed.hostname;
+
+    if (hostname.includes('pooler.supabase.com') || hostname.startsWith('db.')) {
+      return null;
+    }
+
+    let port = parsed.port;
+    if (port === '443' || port === '80' || (hostname.endsWith('.supabase.co') && port)) {
+      port = '';
+    }
+
+    const origin = `${parsed.protocol}//${hostname}${port ? ':' + port : ''}`;
+    return origin;
+  } catch {
+    return null;
+  }
+}
+
 export const getSupabase = () => {
   if (!supabaseInstance) {
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const candidates = [
+      process.env.SUPABASE_URL,
+      process.env.VITE_SUPABASE_URL,
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.REACT_APP_SUPABASE_URL,
+    ];
+
+    let supabaseUrl: string | null = null;
+    for (const cand of candidates) {
+      if (cand) {
+        supabaseUrl = cleanSupabaseUrl(cand);
+        if (supabaseUrl) break;
+      }
+    }
+
+    if (!supabaseUrl && process.env.DATABASE_URL) {
+      const match = process.env.DATABASE_URL.match(/postgres\.([a-z0-9]+)@/i);
+      if (match && match[1]) {
+        supabaseUrl = `https://${match[1]}.supabase.co`;
+      }
+    }
+
+    const rawKey =
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_ANON_KEY ||
+      process.env.VITE_SUPABASE_ANON_KEY ||
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+      process.env.REACT_APP_SUPABASE_ANON_KEY ||
+      '';
+
+    const supabaseServiceKey = rawKey
+      .replace(/^["']|["']$/g, '')
+      .replace(/[\r\n\t]/g, '')
+      .trim();
 
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Missing Supabase environment variables:', { 
-        url: !!supabaseUrl, 
-        key: !!supabaseServiceKey 
+        url: supabaseUrl, 
+        hasKey: !!supabaseServiceKey 
       });
-      throw new Error('Server requires SUPABASE_SERVICE_ROLE_KEY and a Supabase URL.');
+      throw new Error('Server requires a valid Supabase API URL and Key.');
     }
 
     supabaseInstance = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
-        // Disable auth since we're using custom authentication
         persistSession: false,
         autoRefreshToken: false,
         detectSessionInUrl: false

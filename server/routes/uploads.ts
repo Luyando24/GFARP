@@ -90,13 +90,36 @@ router.post('/player/:playerId', authenticateToken, upload.single('file'), async
         const kind = String(req.body.kind || 'profile').replace(/[^a-z0-9_-]/gi, '').slice(0, 40) || 'profile';
         const fileName = `${kind}_${Date.now()}_${uuidv4()}.jpg`;
         const filePath = `players/${playerId}/${fileName}`;
-        const { error } = await supabase.storage.from('public-uploads').upload(filePath, file.buffer, {
-            contentType: 'image/jpeg', upsert: false,
-        });
-        if (error) throw error;
-        const { data } = supabase.storage.from('public-uploads').getPublicUrl(filePath);
-        return res.json({ success: true, data: { url: data.publicUrl, fileName } });
+
+        try {
+            let { error } = await supabase.storage.from('public-uploads').upload(filePath, file.buffer, {
+                contentType: file.mimetype || 'image/jpeg', 
+                upsert: false,
+            });
+            if (error && (error.message?.includes('not found') || (error as any).statusCode === '404' || (error as any).error === 'Bucket not found')) {
+                console.log('[Uploads] public-uploads bucket not found, attempting to create...');
+                await supabase.storage.createBucket('public-uploads', { public: true });
+                const retryRes = await supabase.storage.from('public-uploads').upload(filePath, file.buffer, {
+                    contentType: file.mimetype || 'image/jpeg',
+                    upsert: false,
+                });
+                error = retryRes.error;
+            }
+            if (error) {
+                console.error('[Uploads] Supabase storage upload returned error:', error);
+                throw error;
+            }
+            const { data } = supabase.storage.from('public-uploads').getPublicUrl(filePath);
+            return res.json({ success: true, data: { url: data.publicUrl, fileName } });
+        } catch (storageErr: any) {
+            console.error('[Uploads] Storage upload exception:', storageErr);
+            return res.status(500).json({
+                success: false,
+                error: storageErr?.message || 'Failed to upload image to storage'
+            });
+        }
     } catch (error: any) {
+        console.error('[Uploads] Player image upload route error:', error);
         return res.status(500).json({ success: false, error: error.message || 'Upload failed' });
     }
 });
