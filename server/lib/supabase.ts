@@ -10,9 +10,25 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: true 
 // Lazy initialization to prevent crashes if env vars are missing at startup
 let supabaseInstance: SupabaseClient | null = null;
 
-function cleanSupabaseUrl(rawUrl?: string): string | null {
+export function cleanSupabaseUrl(rawUrl?: string): string | null {
   if (!rawUrl) return null;
 
+  // 1. Extract valid .supabase.co URL if env vars were concatenated without newlines (e.g. ...supabase.coNEXT_PUBLIC_...)
+  const supabaseCoMatch = rawUrl.match(/https?:\/\/[a-z0-9-]+\.supabase\.co/i);
+  if (supabaseCoMatch) {
+    return supabaseCoMatch[0].toLowerCase();
+  }
+
+  // 2. Handle Postgres connection strings / poolers (e.g. postgres.ref:password@host)
+  if (rawUrl.startsWith('postgres://') || rawUrl.startsWith('postgresql://') || rawUrl.includes('pooler.supabase.com')) {
+    const match = rawUrl.match(/postgres\.([a-z0-9]+)/i);
+    if (match && match[1]) {
+      return `https://${match[1]}.supabase.co`;
+    }
+    return null;
+  }
+
+  // 3. Extract generic http/https URL origin
   let cleaned = rawUrl
     .replace(/^["']|["']$/g, '')
     .replace(/[\r\n\t]/g, '')
@@ -20,14 +36,6 @@ function cleanSupabaseUrl(rawUrl?: string): string | null {
     .replace(/\/+$/, '');
 
   if (!cleaned) return null;
-
-  if (cleaned.startsWith('postgres://') || cleaned.startsWith('postgresql://') || cleaned.includes('pooler.supabase.com')) {
-    const match = cleaned.match(/postgres\.([a-z0-9]+)@/i);
-    if (match && match[1]) {
-      return `https://${match[1]}.supabase.co`;
-    }
-    return null;
-  }
 
   if (!cleaned.startsWith('http://') && !cleaned.startsWith('https://')) {
     cleaned = `https://${cleaned}`;
@@ -51,6 +59,20 @@ function cleanSupabaseUrl(rawUrl?: string): string | null {
   } catch {
     return null;
   }
+}
+
+export function cleanSupabaseKey(rawKey?: string): string | null {
+  if (!rawKey) return null;
+
+  let cleaned = rawKey.trim();
+
+  // Match standard Supabase JWT string: header.payload.43-char-signature
+  const jwtMatch = cleaned.match(/(eyJ[A-Za-z0-9_-]+\.eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]{43})/);
+  if (jwtMatch) {
+    return jwtMatch[1];
+  }
+
+  return cleaned.replace(/^["']|["']$/g, '').replace(/[\r\n\t]/g, '').trim() || null;
 }
 
 export const getSupabase = () => {
@@ -77,18 +99,21 @@ export const getSupabase = () => {
       }
     }
 
-    const rawKey =
-      process.env.SUPABASE_SERVICE_ROLE_KEY ||
-      process.env.SUPABASE_ANON_KEY ||
-      process.env.VITE_SUPABASE_ANON_KEY ||
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-      process.env.REACT_APP_SUPABASE_ANON_KEY ||
-      '';
+    const keyCandidates = [
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      process.env.SUPABASE_ANON_KEY,
+      process.env.VITE_SUPABASE_ANON_KEY,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      process.env.REACT_APP_SUPABASE_ANON_KEY,
+    ];
 
-    const supabaseServiceKey = rawKey
-      .replace(/^["']|["']$/g, '')
-      .replace(/[\r\n\t]/g, '')
-      .trim();
+    let supabaseServiceKey: string | null = null;
+    for (const keyCand of keyCandidates) {
+      if (keyCand) {
+        supabaseServiceKey = cleanSupabaseKey(keyCand);
+        if (supabaseServiceKey) break;
+      }
+    }
 
     if (!supabaseUrl || !supabaseServiceKey) {
       console.error('Missing Supabase environment variables:', { 

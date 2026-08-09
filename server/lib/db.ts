@@ -93,10 +93,11 @@ if (resolvedConnectionString) {
     if (u.hostname.includes('pooler.supabase.com') && !u.username.includes('.')) {
       // Try to get project ref from hostname (usually available in direct URL but not pooler URL)
       // OR try to get it from VITE_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_URL
-      const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-      if (supabaseUrl) {
+      const rawSupabaseUrl = process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+      const match = rawSupabaseUrl?.match(/https?:\/\/[a-z0-9-]+\.supabase\.co/i);
+      if (match) {
         try {
-          const su = new URL(supabaseUrl);
+          const su = new URL(match[0]);
           const ref = su.hostname.split('.')[0];
           if (ref) {
             u.username = `${u.username}.${ref}`;
