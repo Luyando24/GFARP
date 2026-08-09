@@ -598,9 +598,6 @@ const handleCreateTransaction: RequestHandler = async (req, res) => {
       if (financialEntry.player_id) {
         player = await resolveAcademyPlayer(client, financialEntry.academy_id, financialEntry.player_id);
         if (!player) throw new Error('Selected player does not belong to this academy');
-        if (financialEntry.is_recurring && !player.email) {
-          throw new Error('The selected player needs an email address before renewal reminders can be enabled');
-        }
       }
 
       let feeSubscriptionId = financialEntry.fee_subscription_id || null;

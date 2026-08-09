@@ -108,6 +108,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
   const [editingBudget, setEditingBudget] = useState<BudgetCategory | null>(null);
   const [modalPlayerSearchQuery, setModalPlayerSearchQuery] = useState('');
   const [isModalPlayerDropdownOpen, setIsModalPlayerDropdownOpen] = useState(false);
+  const [emailValidationError, setEmailValidationError] = useState('');
   
   // Invoice state
   const [activeTab, setActiveTab] = useState<'player-fees' | 'subscriptions' | 'transactions' | 'budgets' | 'invoices'>('player-fees');
@@ -313,6 +314,11 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
         showError('Choose the next renewal date for this recurring fee');
         return;
       }
+      if (transactionForm.player_email?.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(transactionForm.player_email.trim())) {
+        setEmailValidationError('Please enter a valid email address (e.g. parent@example.com)');
+        return;
+      }
+      setEmailValidationError('');
 
       const descriptionValue = transactionForm.description || transactionForm.category || 'Transaction';
 
@@ -2196,15 +2202,31 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                           <input
                             type="email"
                             value={transactionForm.player_email || ''}
-                            onChange={(e) => setTransactionForm({ ...transactionForm, player_email: e.target.value })}
-                            className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              setTransactionForm({ ...transactionForm, player_email: val });
+                              if (val.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val.trim())) {
+                                setEmailValidationError('Please enter a valid email address (e.g. parent@example.com)');
+                              } else {
+                                setEmailValidationError('');
+                              }
+                            }}
+                            className={`w-full rounded-lg border px-3 py-2 text-sm focus:border-transparent focus:ring-2 focus:ring-blue-500 ${
+                              emailValidationError ? 'border-red-500 bg-red-50/20' : 'border-gray-300'
+                            }`}
                             placeholder="e.g. parent@example.com"
                           />
-                          <p className="mt-1 text-xs text-gray-500">
-                            {transactionForm.player_email?.trim()
-                              ? 'Automated renewal reminders will be sent to this email address.'
-                              : 'No email address specified. The recurring fee schedule will be created for tracking, but email reminders will be skipped until an email is provided.'}
-                          </p>
+                          {emailValidationError ? (
+                            <p className="mt-1 text-xs font-semibold text-red-600 flex items-center gap-1">
+                              <AlertTriangle className="h-3.5 w-3.5 inline" /> {emailValidationError}
+                            </p>
+                          ) : (
+                            <p className="mt-1 text-xs text-gray-500">
+                              {transactionForm.player_email?.trim()
+                                ? 'Automated renewal reminders will be sent to this email address.'
+                                : 'No email address specified. The recurring fee schedule will be created for tracking, but email reminders will be skipped until an email is provided.'}
+                            </p>
+                          )}
                         </div>
                       </>
                     )}
