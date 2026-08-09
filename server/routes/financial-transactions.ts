@@ -40,7 +40,19 @@ interface FinancialTransaction {
   is_recurring?: boolean;
   next_renewal_date?: string;
   reminder_days_before?: number;
+  budget_category_id?: string;
+  budget_category_name?: string;
 }
+
+try {
+  const res = query(`
+    ALTER TABLE financial_transactions 
+    ADD COLUMN IF NOT EXISTS budget_category_id VARCHAR(255)
+  `);
+  if (res && typeof res.catch === 'function') {
+    res.catch(() => {});
+  }
+} catch {}
 
 interface BudgetCategory {
   id?: number;
@@ -280,15 +292,15 @@ const handleGetBudgetCategories: RequestHandler = async (req, res) => {
           SUM(amount) as total_amount,
           COUNT(*) as tx_count
         FROM (
-          SELECT category, amount, transaction_date, academy_id
+          SELECT category, amount, transaction_date, academy_id, budget_category_id
           FROM financial_transactions
           WHERE academy_id = $1 AND status = 'completed'
           UNION ALL
-          SELECT 'Transfer Fees' as category, transfer_amount as amount, transfer_date as transaction_date, academy_id
+          SELECT 'Transfer Fees' as category, transfer_amount as amount, transfer_date as transaction_date, academy_id, NULL::text as budget_category_id
           FROM transfers
           WHERE academy_id = $1 AND status = 'completed' AND transfer_amount > 0
         ) combined_tx
-        WHERE LOWER(combined_tx.category) = LOWER(bc.category_name)
+        WHERE (combined_tx.budget_category_id::text = bc.id::text OR LOWER(combined_tx.category) = LOWER(bc.category_name))
           AND EXTRACT(YEAR FROM combined_tx.transaction_date) = bc.fiscal_year
       ) actual ON true
       WHERE bc.academy_id = $1 AND bc.fiscal_year = $2 AND bc.is_active = true
@@ -535,10 +547,11 @@ const handleGetTransactions: RequestHandler = async (req, res) => {
     `;
 
     const dataQuery = `
-      SELECT *
-      FROM financial_transactions 
-      WHERE ${whereConditions.join(' AND ')}
-      ORDER BY transaction_date DESC, created_at DESC
+      SELECT ft.*, bc.category_name AS budget_category_name
+      FROM financial_transactions ft
+      LEFT JOIN budget_categories bc ON ft.budget_category_id::text = bc.id::text
+      WHERE ${whereConditions.map(c => `ft.${c}`).join(' AND ')}
+      ORDER BY ft.transaction_date DESC, ft.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
 
@@ -634,16 +647,18 @@ const handleCreateTransaction: RequestHandler = async (req, res) => {
         feeSubscriptionId = subscriptionResult.rows[0].id;
       }
 
+      const budgetCategoryId = financialEntry.budget_category_id || null;
+
       const insertResult = await client.query(`
         INSERT INTO financial_transactions (
           academy_id, transaction_type, category, subcategory, amount,
           description, transaction_date, payment_method, reference_number,
           status, notes, created_by, currency, player_id, player_source,
           player_name, player_email, payment_type, custom_payment_type,
-          is_external_payment, fee_subscription_id
+          is_external_payment, fee_subscription_id, budget_category_id
         ) VALUES (
           $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12,
-          $13, $14, $15, $16, $17, $18, $19, $20, $21
+          $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
         ) RETURNING *
       `, [
         financialEntry.academy_id,
@@ -667,6 +682,7 @@ const handleCreateTransaction: RequestHandler = async (req, res) => {
         financialEntry.custom_payment_type || null,
         financialEntry.player_id ? true : Boolean(financialEntry.is_external_payment),
         feeSubscriptionId,
+        budgetCategoryId,
       ]);
 
       if (financialEntry.fee_subscription_id && financialEntry.status !== 'pending') {
@@ -687,7 +703,7 @@ const handleCreateTransaction: RequestHandler = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      data: result.rows[0]
+      data: result?.rows?.[0] || result
     });
   } catch (error: any) {
     console.error('Error creating financial transaction:', error);
@@ -722,8 +738,9 @@ const handleUpdateTransaction: RequestHandler = async (req, res) => {
         currency = COALESCE($11, currency),
         payment_type = COALESCE($12, payment_type),
         custom_payment_type = COALESCE($13, custom_payment_type),
+        budget_category_id = COALESCE($14, budget_category_id),
         updated_at = CURRENT_TIMESTAMP
-      WHERE id = $14
+      WHERE id = $15
       RETURNING *
     `, [
       transaction.transaction_type,
@@ -739,6 +756,7 @@ const handleUpdateTransaction: RequestHandler = async (req, res) => {
       transaction.currency ? normalizeCurrency(transaction.currency) : null,
       transaction.payment_type,
       transaction.custom_payment_type,
+      transaction.budget_category_id,
       id
     ]);
 

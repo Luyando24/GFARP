@@ -20,7 +20,8 @@ import {
   AlertTriangle,
   CheckCircle2,
   Target,
-  PieChart
+  PieChart,
+  Eye
 } from 'lucide-react';
 import { getPlayerFeePaymentState } from '@/lib/player-fee-filters';
 import { addCalendarMonths, addCalendarYears } from '@shared/calendar-date';
@@ -1240,7 +1241,13 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {categoryLabel}
+                      <div>{categoryLabel}</div>
+                      {(transaction.budget_category_name || transaction.budget_category_id) && (
+                        <div className="mt-0.5 inline-flex items-center gap-1 rounded bg-blue-50 px-1.5 py-0.5 text-[11px] font-medium text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                          <PieChart className="h-3 w-3" />
+                          Budget: {transaction.budget_category_name || categoryLabel}
+                        </div>
+                      )}
                     </td>
                     {activeTab === 'player-fees' && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm capitalize text-gray-900">
@@ -1833,15 +1840,26 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                           <td className="px-6 py-4 text-right whitespace-nowrap font-medium">
                             <div className="flex items-center justify-end space-x-2">
                               <button
+                                onClick={() => {
+                                  setFilterCategory(category.category_name);
+                                  setActiveTab('transactions');
+                                }}
+                                className="p-1.5 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded-md flex items-center gap-1 text-xs font-medium"
+                                title="View Linked Transactions"
+                              >
+                                <Eye className="h-4 w-4" />
+                                <span className="hidden lg:inline">Transactions</span>
+                              </button>
+                              <button
                                 onClick={() => openBudgetModal(category)}
-                                className="p-1 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 rounded-md"
+                                className="p-1.5 text-gray-500 hover:text-indigo-600 hover:bg-gray-100 rounded-md"
                                 title="Edit Budget"
                               >
                                 <Edit className="h-4 w-4" />
                               </button>
                               <button
                                 onClick={() => category.id && handleDeleteBudgetCategory(category.id)}
-                                className="p-1 text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded-md"
+                                className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-gray-100 rounded-md"
                                 title="Delete Budget"
                               >
                                 <Trash2 className="h-4 w-4" />
@@ -2037,12 +2055,17 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                     </label>
                     <select
                       value={transactionForm.category}
-                      onChange={(e) => setTransactionForm({
-                        ...transactionForm,
-                        category: e.target.value,
-                        transaction_type: e.target.value === 'Academy Fees' ? 'income' : transactionForm.transaction_type,
-                        is_external_payment: e.target.value === 'Academy Fees' ? true : transactionForm.is_external_payment,
-                      })}
+                      onChange={(e) => {
+                        const newCat = e.target.value;
+                        const matchingB = budgetCategories.find(b => b.category_name.toLowerCase() === newCat.toLowerCase());
+                        setTransactionForm({
+                          ...transactionForm,
+                          category: newCat,
+                          budget_category_id: matchingB ? String(matchingB.id) : transactionForm.budget_category_id,
+                          transaction_type: newCat === 'Academy Fees' ? 'income' : transactionForm.transaction_type,
+                          is_external_payment: newCat === 'Academy Fees' ? true : transactionForm.is_external_payment,
+                        });
+                      }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">Select Category</option>
@@ -2051,6 +2074,91 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
                       ))}
                     </select>
                   </div>
+                </div>
+
+                {/* Source of Funds / Budget Allocation Selection */}
+                <div className="rounded-xl border border-blue-100 bg-blue-50/40 p-4 dark:border-blue-900/40 dark:bg-slate-800/60">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="block text-sm font-semibold text-blue-950 dark:text-blue-200 flex items-center gap-1.5">
+                      <PieChart className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                      Source of Funds / Budget Allocation (Optional)
+                    </label>
+                    <span className="text-[11px] font-medium text-blue-600 dark:text-blue-300">Syncs with Budget Ledger</span>
+                  </div>
+
+                  <select
+                    value={transactionForm.budget_category_id || ''}
+                    onChange={(e) => {
+                      const bId = e.target.value;
+                      if (!bId) {
+                        setTransactionForm({
+                          ...transactionForm,
+                          budget_category_id: undefined,
+                        });
+                        return;
+                      }
+                      const selectedB = budgetCategories.find(b => String(b.id) === String(bId));
+                      setTransactionForm({
+                        ...transactionForm,
+                        budget_category_id: bId,
+                        category: selectedB ? selectedB.category_name : transactionForm.category,
+                        transaction_type: selectedB ? (selectedB.category_type === 'revenue' ? 'income' : 'expense') : transactionForm.transaction_type,
+                      });
+                    }}
+                    className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm bg-white dark:bg-slate-900 dark:border-slate-700"
+                  >
+                    <option value="">No specific budget linked (General Entry)</option>
+                    <optgroup label={transactionForm.transaction_type === 'expense' ? 'Expense Budget Allocations' : 'Revenue Goal Targets'}>
+                      {budgetCategories
+                        .filter(b => transactionForm.transaction_type === 'expense' ? b.category_type === 'expense' : b.category_type === 'revenue')
+                        .map(b => {
+                          const rem = b.remaining_amount ?? (b.category_type === 'expense' ? b.budgeted_amount - (b.actual_amount || 0) : b.budgeted_amount);
+                          return (
+                            <option key={b.id} value={b.id}>
+                              {b.category_name} — {b.category_type === 'expense' ? `Remaining: ${formatCurrency(rem, transactionForm.currency || defaultCurrency)}` : `Earned: ${formatCurrency(b.actual_amount || 0, transactionForm.currency || defaultCurrency)} / ${formatCurrency(b.budgeted_amount, transactionForm.currency || defaultCurrency)}`}
+                            </option>
+                          );
+                        })}
+                    </optgroup>
+                  </select>
+
+                  {/* Real-time Linked Budget Impact Preview */}
+                  {(() => {
+                    const selectedModalBudget = budgetCategories.find(b => String(b.id) === String(transactionForm.budget_category_id));
+                    if (!selectedModalBudget) return null;
+
+                    const isExpense = selectedModalBudget.category_type === 'expense';
+                    const rem = selectedModalBudget.remaining_amount ?? (isExpense ? selectedModalBudget.budgeted_amount - (selectedModalBudget.actual_amount || 0) : selectedModalBudget.budgeted_amount);
+                    const txAmount = Number(transactionForm.amount || 0);
+                    const isOverage = isExpense && txAmount > rem;
+                    const overageAmt = isOverage ? txAmount - rem : 0;
+
+                    return (
+                      <div className={`mt-3 p-3 rounded-lg border text-xs transition-all ${
+                        isOverage
+                          ? 'border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/50 dark:text-amber-200'
+                          : 'border-emerald-200 bg-emerald-50/50 text-emerald-900 dark:border-emerald-900/50 dark:bg-slate-900 dark:text-emerald-300'
+                      }`}>
+                        <div className="flex items-center justify-between font-semibold mb-1">
+                          <span>Linked Budget: {selectedModalBudget.category_name}</span>
+                          <span>
+                            {isExpense
+                              ? `Current Remaining: ${formatCurrency(rem, transactionForm.currency || defaultCurrency)}`
+                              : `Target Goal: ${formatCurrency(selectedModalBudget.budgeted_amount, transactionForm.currency || defaultCurrency)}`}
+                          </span>
+                        </div>
+
+                        {isOverage && (
+                          <div className="flex items-start gap-1.5 mt-1.5 font-medium text-amber-800 dark:text-amber-300">
+                            <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
+                            <span>
+                              Warning: Recording this transaction of {formatCurrency(txAmount, transactionForm.currency || defaultCurrency)} will exceed the remaining allocated budget for <strong>{selectedModalBudget.category_name}</strong> by {formatCurrency(overageAmt, transactionForm.currency || defaultCurrency)}.
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                 </div>
 
 

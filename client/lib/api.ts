@@ -1224,6 +1224,8 @@ export interface FinancialTransaction {
   is_recurring?: boolean;
   next_renewal_date?: string;
   reminder_days_before?: number;
+  budget_category_id?: string;
+  budget_category_name?: string;
 }
 
 export interface AcademyFinancialSettings {
