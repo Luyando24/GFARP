@@ -294,4 +294,36 @@ describe('Academy player fee management', () => {
     expect(mocks.clientQuery.mock.calls[0][1][10]).toBe('GBP');
     expect(mocks.clientQuery.mock.calls[2][1][7]).toBe('GBP');
   });
+
+  it('fetches financial transactions with search and filter parameters without SQL syntax errors', async () => {
+    mocks.query
+      .mockResolvedValueOnce({ rows: [{ total: '1' }] })
+      .mockResolvedValueOnce({
+        rows: [{
+          id: 1,
+          academy_id: academyId,
+          description: 'Match',
+          amount: 100,
+        }],
+      });
+
+    const response = await request(createServer())
+      .get(`/api/financial-transactions/${academyId}?search=ma&playerFeesOnly=true`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(response.status).toBe(200);
+    expect(response.body.data.transactions).toHaveLength(1);
+
+    const countQueryCall = mocks.query.mock.calls[0][0];
+    const dataQueryCall = mocks.query.mock.calls[1][0];
+
+    expect(countQueryCall).toContain('FROM financial_transactions ft');
+    expect(countQueryCall).toContain('(ft.description ILIKE $2 OR ft.reference_number ILIKE $2 OR ft.player_name ILIKE $2)');
+    expect(countQueryCall).not.toContain('ft.(');
+
+    expect(dataQueryCall).toContain('FROM financial_transactions ft');
+    expect(dataQueryCall).toContain('(ft.description ILIKE $2 OR ft.reference_number ILIKE $2 OR ft.player_name ILIKE $2)');
+    expect(dataQueryCall).not.toContain('ft.(');
+  });
 });
+

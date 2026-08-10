@@ -488,61 +488,61 @@ const handleGetTransactions: RequestHandler = async (req, res) => {
     const parsedPage = Math.max(1, Number(page) || 1);
     const parsedLimit = Math.min(200, Math.max(1, Number(limit) || 50));
 
-    let whereConditions = ['academy_id = $1'];
+    let whereConditions = ['ft.academy_id = $1'];
     let queryParams: any[] = [academyId];
     let paramIndex = 2;
 
     if (type) {
-      whereConditions.push(`transaction_type = $${paramIndex}`);
+      whereConditions.push(`ft.transaction_type = $${paramIndex}`);
       queryParams.push(type);
       paramIndex++;
     }
 
     if (category) {
-      whereConditions.push(`category = $${paramIndex}`);
+      whereConditions.push(`ft.category = $${paramIndex}`);
       queryParams.push(category);
       paramIndex++;
     }
 
     if (status) {
-      whereConditions.push(`status = $${paramIndex}`);
+      whereConditions.push(`ft.status = $${paramIndex}`);
       queryParams.push(status);
       paramIndex++;
     }
 
     if (dateFrom) {
-      whereConditions.push(`transaction_date >= $${paramIndex}`);
+      whereConditions.push(`ft.transaction_date >= $${paramIndex}`);
       queryParams.push(dateFrom);
       paramIndex++;
     }
 
     if (dateTo) {
-      whereConditions.push(`transaction_date <= $${paramIndex}`);
+      whereConditions.push(`ft.transaction_date <= $${paramIndex}`);
       queryParams.push(dateTo);
       paramIndex++;
     }
 
     if (search) {
-      whereConditions.push(`(description ILIKE $${paramIndex} OR reference_number ILIKE $${paramIndex} OR player_name ILIKE $${paramIndex})`);
+      whereConditions.push(`(ft.description ILIKE $${paramIndex} OR ft.reference_number ILIKE $${paramIndex} OR ft.player_name ILIKE $${paramIndex})`);
       queryParams.push(`%${search}%`);
       paramIndex++;
     }
 
     if (currency) {
-      whereConditions.push(`currency = $${paramIndex}`);
+      whereConditions.push(`ft.currency = $${paramIndex}`);
       queryParams.push(normalizeCurrency(currency));
       paramIndex++;
     }
 
     if (playerFeesOnly === 'true') {
-      whereConditions.push('(player_id IS NOT NULL OR category = \'Academy Fees\')');
+      whereConditions.push('(ft.player_id IS NOT NULL OR ft.category = \'Academy Fees\')');
     }
 
     const offset = (parsedPage - 1) * parsedLimit;
 
     const countQuery = `
       SELECT COUNT(*) as total
-      FROM financial_transactions 
+      FROM financial_transactions ft
       WHERE ${whereConditions.join(' AND ')}
     `;
 
@@ -550,7 +550,7 @@ const handleGetTransactions: RequestHandler = async (req, res) => {
       SELECT ft.*, bc.category_name AS budget_category_name
       FROM financial_transactions ft
       LEFT JOIN budget_categories bc ON ft.budget_category_id::text = bc.id::text
-      WHERE ${whereConditions.map(c => `ft.${c}`).join(' AND ')}
+      WHERE ${whereConditions.join(' AND ')}
       ORDER BY ft.transaction_date DESC, ft.created_at DESC
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
