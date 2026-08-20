@@ -23,8 +23,8 @@ export default function BillingSettings() {
       try {
         const data = await Api.get<typeof settings>('/stripe/admin/settings');
         setSettings(data);
-        const plansData = await Api.get<{ plans: any[] }>('/stripe/admin/plans');
-        setPlans(plansData.plans);
+        const plansData = await Api.get<any>('/stripe/admin/plans');
+        setPlans(Array.isArray(plansData) ? plansData : (plansData?.plans || []));
       } catch (e) {
         console.error('Failed to load billing data', e);
       }
@@ -61,8 +61,8 @@ export default function BillingSettings() {
     setLoading(true);
     try {
       await Api.post(`/stripe/admin/plans/${id}/price`, { amount: Number(u.amount), currency: u.currency || 'USD', interval: u.interval || undefined });
-      const p = await Api.get<{ plans: any[] }>('/stripe/admin/plans');
-      setPlans(p.plans);
+      const p = await Api.get<any>('/stripe/admin/plans');
+      setPlans(Array.isArray(p) ? p : (p?.plans || []));
     } finally {
       setLoading(false);
     }

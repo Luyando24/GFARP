@@ -120,18 +120,31 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
     }
 
     const includeInactive = req.query.includeInactive === 'true';
-    const result = await query(
+    let result = await query(
       `SELECT id, name, description, price, currency, billing_cycle,
               player_limit, storage_limit, features, is_active, is_free,
               sort_order, target_type
        FROM subscription_plans
-       WHERE target_type = $1
+       WHERE (UPPER(target_type) = $1 OR (target_type IS NULL AND $1 = 'ACADEMY'))
          AND ($2::boolean = true OR is_active = true)
        ORDER BY sort_order ASC`,
       [targetType, includeInactive],
     );
 
-    const plans = result.rows.map((plan) => {
+    // If no target-specific active plans were found in DB, attempt query without target_type filter
+    if (result.rows.length === 0) {
+      result = await query(
+        `SELECT id, name, description, price, currency, billing_cycle,
+                player_limit, storage_limit, features, is_active, is_free,
+                sort_order, target_type
+         FROM subscription_plans
+         WHERE ($1::boolean = true OR is_active = true)
+         ORDER BY sort_order ASC`,
+        [includeInactive],
+      );
+    }
+
+    let plans: any[] = result.rows.map((plan) => {
       let features = plan.features;
       if (typeof features === 'string') {
         try {
@@ -148,6 +161,140 @@ export const handleGetPlans: RequestHandler = async (req, res) => {
         storage_limit: Number(plan.storage_limit || 0),
       };
     });
+
+    // Fallback default plans if database query returned 0 rows
+    if (plans.length === 0) {
+      if (targetType === 'AGENCY') {
+        plans = [
+          {
+            id: 'agency-starter',
+            name: 'Basic Agency',
+            description: 'For growing talent agencies',
+            price: 99.99,
+            currency: 'USD',
+            billing_cycle: 'MONTHLY',
+            player_limit: 100,
+            storage_limit: 10737418240,
+            features: ['100 player profiles', 'Agency branding', 'Document management'],
+            is_active: true,
+            is_free: false,
+            sort_order: 0,
+            target_type: 'AGENCY',
+          },
+          {
+            id: 'agency-pro',
+            name: 'Professional Agency',
+            description: 'Advanced tools for busy agencies',
+            price: 299.99,
+            currency: 'USD',
+            billing_cycle: 'MONTHLY',
+            player_limit: 500,
+            storage_limit: 53687091200,
+            features: ['500 player profiles', 'Advanced analytics', 'Priority support'],
+            is_active: true,
+            is_free: false,
+            sort_order: 10,
+            target_type: 'AGENCY',
+          },
+          {
+            id: 'agency-enterprise',
+            name: 'Enterprise Agency',
+            description: 'Maximum capacity for large agencies',
+            price: 999.99,
+            currency: 'USD',
+            billing_cycle: 'MONTHLY',
+            player_limit: 2000,
+            storage_limit: 107374182400,
+            features: ['2000 player profiles', 'Dedicated account team', 'White-labeling'],
+            is_active: true,
+            is_free: false,
+            sort_order: 20,
+            target_type: 'AGENCY',
+          },
+        ];
+      } else if (targetType === 'INDIVIDUAL') {
+        plans = [
+          {
+            id: 'individual-free',
+            name: 'Individual Free',
+            description: 'Basic player profile and public link',
+            price: 0.00,
+            currency: 'USD',
+            billing_cycle: 'LIFETIME',
+            player_limit: 1,
+            storage_limit: 536870912,
+            features: ['Basic player profile', 'Public profile link'],
+            is_active: true,
+            is_free: true,
+            sort_order: 0,
+            target_type: 'INDIVIDUAL',
+          },
+          {
+            id: 'individual-pro',
+            name: 'Individual Pro',
+            description: 'Advanced tools for rising players',
+            price: 19.99,
+            currency: 'USD',
+            billing_cycle: 'LIFETIME',
+            player_limit: 1,
+            storage_limit: 5368709120,
+            features: ['Video highlights', 'Verified player badge', 'Priority support'],
+            is_active: true,
+            is_free: false,
+            sort_order: 10,
+            target_type: 'INDIVIDUAL',
+          },
+        ];
+      } else {
+        plans = [
+          {
+            id: 'starter',
+            name: 'Starter Plan',
+            description: 'Essential tools for new academies',
+            price: 0.00,
+            currency: 'USD',
+            billing_cycle: 'MONTHLY',
+            player_limit: 30,
+            storage_limit: 1073741824,
+            features: ['Up to 30 players', 'Digital player registration', 'Standard support'],
+            is_active: true,
+            is_free: true,
+            sort_order: 0,
+            target_type: 'ACADEMY',
+          },
+          {
+            id: 'pro',
+            name: 'Pro Plan',
+            description: 'Professional features for established academies',
+            price: 49.99,
+            currency: 'USD',
+            billing_cycle: 'MONTHLY',
+            player_limit: 500,
+            storage_limit: 10737418240,
+            features: ['Up to 500 players', 'Advanced analytics', 'Priority support'],
+            is_active: true,
+            is_free: false,
+            sort_order: 10,
+            target_type: 'ACADEMY',
+          },
+          {
+            id: 'elite',
+            name: 'Elite Plan',
+            description: 'Comprehensive suite for large organizations',
+            price: 99.99,
+            currency: 'USD',
+            billing_cycle: 'MONTHLY',
+            player_limit: -1,
+            storage_limit: 53687091200,
+            features: ['Unlimited players', 'Full FIFA compliance', 'Dedicated manager'],
+            is_active: true,
+            is_free: false,
+            sort_order: 20,
+            target_type: 'ACADEMY',
+          },
+        ];
+      }
+    }
 
     return res.json({ success: true, data: plans });
   } catch (error: any) {

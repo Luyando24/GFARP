@@ -1662,7 +1662,7 @@ export async function getSubscriptionPlans(): Promise<SubscriptionPlan[]> {
       throw new Error(result.message || 'Failed to get subscription plans');
     }
 
-    return result.data.plans;
+    return Array.isArray(result.data) ? result.data : (result.data?.plans || []);
   } catch (error) {
     console.error('Error getting subscription plans:', error);
     throw error;
