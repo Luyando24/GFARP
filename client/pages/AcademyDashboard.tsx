@@ -2286,49 +2286,6 @@ export default function AcademyDashboard() {
                                                      plan.name.toLowerCase().includes('pro') ? t('plans.pro.desc') : 
                                                      plan.name.toLowerCase().includes('elite') ? t('plans.elite.desc') : plan.description}
                                                   </p>
-                                                  
-                                                  <div className="mt-3 flex flex-wrap gap-2">
-                                                    {plan.features && (Array.isArray(plan.features) ? plan.features : []).slice(0, 3).map((f: string, i: number) => {
-                                                      const lowerF = f.toLowerCase();
-                                                      let translatedF = f;
-                                                      if (lowerF.includes('player')) {
-                                                        const count = f.match(/\d+/)?.[0] || plan.playerLimit || plan.player_limit;
-                                                        translatedF = t('plans.feature.playerCount', { count });
-                                                      } else if (lowerF.includes('analytics')) translatedF = t('plans.feature.analytics');
-                                                      else if (lowerF.includes('priority support')) translatedF = t('plans.feature.prioritySupport');
-                                                      else if (lowerF.includes('email support')) translatedF = t('plans.feature.emailSupport');
-                                                      else if (lowerF.includes('registration')) translatedF = t('plans.feature.registration');
-                                                      else if (lowerF.includes('dedicated manager')) translatedF = t('plans.feature.dedicatedManager');
-                                                      else if (lowerF.includes('white-label')) translatedF = t('plans.feature.whiteLabel');
-                                                      else if (lowerF.includes('api access')) translatedF = t('plans.feature.advancedApi');
-                                                      else if (lowerF.includes('financial tools')) translatedF = t('plans.feature.financialTools');
-                                                      else if (lowerF.includes('standard support')) translatedF = t('plans.feature.standardSupport');
-                                                      else if (lowerF.includes('profile placement')) translatedF = t('plans.feature.profilePlacement');
-                                                      else if (lowerF.includes('legal')) translatedF = t('plans.feature.legalGuidance');
-                                                      else if (lowerF.includes('trial notifications')) translatedF = t('plans.feature.trialNotifications');
-                                                      else if (lowerF.includes('video highlight')) translatedF = t('plans.feature.videoReels');
-                                                      else if (lowerF.includes('scout messaging')) translatedF = t('plans.feature.scoutMessaging');
-                                                      else if (lowerF.includes('digital resume')) translatedF = t('plans.feature.digitalResume');
-                                                      else if (lowerF.includes('public profile')) translatedF = t('plans.feature.publicProfile');
-                                                      else if (lowerF.includes('stats tracking')) translatedF = t('plans.feature.statsTracking');
-                                                      else if (lowerF.includes('api integration')) translatedF = t('plans.feature.apiIntegrations');
-                                                      else if (lowerF.includes('account team')) translatedF = t('plans.feature.accountTeam');
-                                                      else if (lowerF.includes('scouting filter')) translatedF = t('plans.feature.scoutingFilters');
-                                                      else if (lowerF.includes('commission tracking')) translatedF = t('plans.feature.commissionTracking');
-                                                      else if (lowerF.includes('sub-agent management')) translatedF = t('plans.feature.subAgentMgmt');
-                                                      else if (lowerF.includes('premium support')) translatedF = t('plans.feature.premiumSupport');
-                                                      else if (lowerF.includes('transfer tracking')) translatedF = t('plans.feature.transferTracking');
-                                                      else if (lowerF.includes('document cloud')) translatedF = t('plans.feature.documentCloud');
-                                                      else if (lowerF.includes('scouting tools')) translatedF = t('plans.feature.scoutingTools');
-                                                      
-                                                      return (
-                                                        <div key={i} className="flex items-center gap-1 text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                                                          <CheckCircle className="h-3 w-3 text-green-500" />
-                                                          {translatedF}
-                                                        </div>
-                                                      );
-                                                    })}
-                                                  </div>
                                                 </div>
                                                 
                                                 <div className="text-right flex flex-col items-end">
@@ -2480,49 +2437,6 @@ export default function AcademyDashboard() {
                                            plan.name.toLowerCase().includes('pro') ? t('plans.pro.desc') : 
                                            plan.name.toLowerCase().includes('elite') ? t('plans.elite.desc') : plan.description}
                                         </p>
-                                        
-                                        <div className="mt-3 flex flex-wrap gap-2">
-                                          {plan.features && (Array.isArray(plan.features) ? plan.features : []).slice(0, 3).map((f: string, i: number) => {
-                                            const lowerF = f.toLowerCase();
-                                            let translatedF = f;
-                                            if (lowerF.includes('player')) {
-                                              const count = f.match(/\d+/)?.[0] || plan.playerLimit || plan.player_limit;
-                                              translatedF = t('plans.feature.playerCount', { count });
-                                            } else if (lowerF.includes('analytics')) translatedF = t('plans.feature.analytics');
-                                            else if (lowerF.includes('priority support')) translatedF = t('plans.feature.prioritySupport');
-                                            else if (lowerF.includes('email support')) translatedF = t('plans.feature.emailSupport');
-                                            else if (lowerF.includes('registration')) translatedF = t('plans.feature.registration');
-                                            else if (lowerF.includes('dedicated manager')) translatedF = t('plans.feature.dedicatedManager');
-                                            else if (lowerF.includes('white-label')) translatedF = t('plans.feature.whiteLabel');
-                                            else if (lowerF.includes('api access')) translatedF = t('plans.feature.advancedApi');
-                                            else if (lowerF.includes('financial tools')) translatedF = t('plans.feature.financialTools');
-                                            else if (lowerF.includes('standard support')) translatedF = t('plans.feature.standardSupport');
-                                            else if (lowerF.includes('profile placement')) translatedF = t('plans.feature.profilePlacement');
-                                            else if (lowerF.includes('legal')) translatedF = t('plans.feature.legalGuidance');
-                                            else if (lowerF.includes('trial notifications')) translatedF = t('plans.feature.trialNotifications');
-                                            else if (lowerF.includes('video highlight')) translatedF = t('plans.feature.videoReels');
-                                            else if (lowerF.includes('scout messaging')) translatedF = t('plans.feature.scoutMessaging');
-                                            else if (lowerF.includes('digital resume')) translatedF = t('plans.feature.digitalResume');
-                                            else if (lowerF.includes('public profile')) translatedF = t('plans.feature.publicProfile');
-                                            else if (lowerF.includes('stats tracking')) translatedF = t('plans.feature.statsTracking');
-                                            else if (lowerF.includes('api integration')) translatedF = t('plans.feature.apiIntegrations');
-                                            else if (lowerF.includes('account team')) translatedF = t('plans.feature.accountTeam');
-                                            else if (lowerF.includes('scouting filter')) translatedF = t('plans.feature.scoutingFilters');
-                                            else if (lowerF.includes('commission tracking')) translatedF = t('plans.feature.commissionTracking');
-                                            else if (lowerF.includes('sub-agent management')) translatedF = t('plans.feature.subAgentMgmt');
-                                            else if (lowerF.includes('premium support')) translatedF = t('plans.feature.premiumSupport');
-                                            else if (lowerF.includes('transfer tracking')) translatedF = t('plans.feature.transferTracking');
-                                            else if (lowerF.includes('document cloud')) translatedF = t('plans.feature.documentCloud');
-                                            else if (lowerF.includes('scouting tools')) translatedF = t('plans.feature.scoutingTools');
-                                            
-                                            return (
-                                              <div key={i} className="flex items-center gap-1 text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
-                                                <CheckCircle className="h-3 w-3 text-green-500" />
-                                                {translatedF}
-                                              </div>
-                                            );
-                                          })}
-                                        </div>
                                       </div>
                                       
                                       <div className="text-right flex flex-col items-end">
