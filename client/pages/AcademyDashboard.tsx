@@ -2424,11 +2424,136 @@ export default function AcademyDashboard() {
                       <CreditCard className="h-10 w-10 mx-auto mb-3 text-slate-400" />
                       <div className="font-semibold text-slate-900 dark:text-white mb-1">No active subscription</div>
                       <div className="text-sm text-slate-500 mb-4">Choose a plan to activate subscription features for this academy.</div>
-                      <Button
-                        onClick={() => navigate('/shop')}
-                      >
-                        Choose a plan
-                      </Button>
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button className="bg-[#005391] hover:bg-[#004080] text-white">
+                            Choose a plan
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-3xl">
+                          <DialogHeader>
+                            <DialogTitle>{t('dash.plan.select')}</DialogTitle>
+                            <DialogDescription>
+                              {t('landing.pricing.title.choose')}
+                            </DialogDescription>
+                          </DialogHeader>
+
+                          <div className="grid grid-cols-1 gap-4 max-h-[60vh] overflow-y-auto pr-2">
+                            {availablePlans.map((plan: any) => {
+                              const isMostExpensive = availablePlans.length > 0 && 
+                                plan.price === Math.max(...availablePlans.map((p: any) => p.price || 0)) &&
+                                plan.price > 0;
+                              
+                              const displayPrice: string | number = plan.price;
+                              const formattedPrice = `${t(`common.currency.${(plan.currency || 'USD').toUpperCase()}` as any) || plan.currency || 'USD'} ${displayPrice}`;
+
+                              return (
+                                <Card
+                                  key={plan.id}
+                                  className={`relative cursor-pointer transition-all duration-300 hover:shadow-lg border-2 ${
+                                    isMostExpensive 
+                                      ? 'border-yellow-400 bg-yellow-50/10' 
+                                      : 'border-slate-200 hover:border-blue-300'
+                                  }`}
+                                  onClick={() => handleUpgradePlan(plan.id)}
+                                >
+                                  {isMostExpensive && (
+                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 z-10">
+                                      <Badge className="bg-yellow-400 text-black font-black px-4 py-1 shadow-md border-none">
+                                        {t('landing.pricing.tier.recommended')}
+                                      </Badge>
+                                    </div>
+                                  )}
+                                  
+                                  <CardContent className="p-6">
+                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <h3 className="font-bold text-lg text-slate-900">
+                                            {plan.name.toLowerCase().includes('starter') ? t('plans.starter.name') : 
+                                             plan.name.toLowerCase().includes('pro') ? t('plans.pro.name') : 
+                                             plan.name.toLowerCase().includes('elite') ? t('plans.elite.name') : plan.name}
+                                          </h3>
+                                        </div>
+                                        <p className="text-sm text-slate-600 mt-1">
+                                          {plan.name.toLowerCase().includes('starter') ? t('plans.starter.desc') : 
+                                           plan.name.toLowerCase().includes('pro') ? t('plans.pro.desc') : 
+                                           plan.name.toLowerCase().includes('elite') ? t('plans.elite.desc') : plan.description}
+                                        </p>
+                                        
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                          {plan.features && (Array.isArray(plan.features) ? plan.features : []).slice(0, 3).map((f: string, i: number) => {
+                                            const lowerF = f.toLowerCase();
+                                            let translatedF = f;
+                                            if (lowerF.includes('player')) {
+                                              const count = f.match(/\d+/)?.[0] || plan.playerLimit || plan.player_limit;
+                                              translatedF = t('plans.feature.playerCount', { count });
+                                            } else if (lowerF.includes('analytics')) translatedF = t('plans.feature.analytics');
+                                            else if (lowerF.includes('priority support')) translatedF = t('plans.feature.prioritySupport');
+                                            else if (lowerF.includes('email support')) translatedF = t('plans.feature.emailSupport');
+                                            else if (lowerF.includes('registration')) translatedF = t('plans.feature.registration');
+                                            else if (lowerF.includes('dedicated manager')) translatedF = t('plans.feature.dedicatedManager');
+                                            else if (lowerF.includes('white-label')) translatedF = t('plans.feature.whiteLabel');
+                                            else if (lowerF.includes('api access')) translatedF = t('plans.feature.advancedApi');
+                                            else if (lowerF.includes('financial tools')) translatedF = t('plans.feature.financialTools');
+                                            else if (lowerF.includes('standard support')) translatedF = t('plans.feature.standardSupport');
+                                            else if (lowerF.includes('profile placement')) translatedF = t('plans.feature.profilePlacement');
+                                            else if (lowerF.includes('legal')) translatedF = t('plans.feature.legalGuidance');
+                                            else if (lowerF.includes('trial notifications')) translatedF = t('plans.feature.trialNotifications');
+                                            else if (lowerF.includes('video highlight')) translatedF = t('plans.feature.videoReels');
+                                            else if (lowerF.includes('scout messaging')) translatedF = t('plans.feature.scoutMessaging');
+                                            else if (lowerF.includes('digital resume')) translatedF = t('plans.feature.digitalResume');
+                                            else if (lowerF.includes('public profile')) translatedF = t('plans.feature.publicProfile');
+                                            else if (lowerF.includes('stats tracking')) translatedF = t('plans.feature.statsTracking');
+                                            else if (lowerF.includes('api integration')) translatedF = t('plans.feature.apiIntegrations');
+                                            else if (lowerF.includes('account team')) translatedF = t('plans.feature.accountTeam');
+                                            else if (lowerF.includes('scouting filter')) translatedF = t('plans.feature.scoutingFilters');
+                                            else if (lowerF.includes('commission tracking')) translatedF = t('plans.feature.commissionTracking');
+                                            else if (lowerF.includes('sub-agent management')) translatedF = t('plans.feature.subAgentMgmt');
+                                            else if (lowerF.includes('premium support')) translatedF = t('plans.feature.premiumSupport');
+                                            else if (lowerF.includes('transfer tracking')) translatedF = t('plans.feature.transferTracking');
+                                            else if (lowerF.includes('document cloud')) translatedF = t('plans.feature.documentCloud');
+                                            else if (lowerF.includes('scouting tools')) translatedF = t('plans.feature.scoutingTools');
+                                            
+                                            return (
+                                              <div key={i} className="flex items-center gap-1 text-[11px] text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">
+                                                <CheckCircle className="h-3 w-3 text-green-500" />
+                                                {translatedF}
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                      
+                                      <div className="text-right flex flex-col items-end">
+                                        <div className="text-2xl font-black text-[#005391]">
+                                          {formattedPrice}
+                                          <span className="text-xs font-normal text-slate-500 ml-1">
+                                            /{String(plan.billing_cycle).toUpperCase() === 'YEARLY'
+                                              ? t('landing.pricing.year')
+                                              : String(plan.billing_cycle).toUpperCase() === 'LIFETIME'
+                                                ? 'one-time'
+                                                : t('landing.pricing.month')}
+                                          </span>
+                                        </div>
+                                        <div className="text-xs font-medium text-slate-500 mt-1 bg-slate-100 px-2 py-1 rounded">
+                                          {plan.playerLimit === -1 ? t('common.unlimited') : (plan.playerLimit || plan.player_limit || 0)} {t('dash.stats.players')}
+                                        </div>
+                                        <Button 
+                                          size="sm"
+                                          className="mt-3 w-full md:w-auto font-bold"
+                                        >
+                                          {t('dash.plan.choosePlan')}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              );
+                            })}
+                          </div>
+                        </DialogContent>
+                      </Dialog>
                     </div>
                   )}
                 </TabsContent>
