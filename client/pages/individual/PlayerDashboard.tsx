@@ -1350,7 +1350,7 @@ export default function PlayerDashboard() {
                   </CardFooter>
                 </Card>
 
-                {/* Danger Zone: Permanent Account Deletion */}
+                {/* Danger Zone: Permanent Account Deletion (Hidden/Commented out)
                 <Card className="border-red-200 dark:border-red-950 bg-red-50/40 dark:bg-red-950/20 shadow-sm">
                   <CardHeader>
                     <CardTitle className="text-lg font-bold text-red-600 dark:text-red-400 flex items-center gap-2">
@@ -1378,6 +1378,7 @@ export default function PlayerDashboard() {
                     </Button>
                   </CardContent>
                 </Card>
+                */}
               </div>
             )}
 
@@ -1852,7 +1853,7 @@ export default function PlayerDashboard() {
         </main>
       </div >
 
-      {/* Delete Account Modal */}
+      {/* Delete Account Modal (Hidden/Commented out)
       {isDeleteModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200 dark:border-slate-800 animate-in fade-in zoom-in duration-200">
@@ -1916,6 +1917,7 @@ export default function PlayerDashboard() {
           </div>
         </div>
       )}
+      */}
 
       <PlayerPaymentMethodSelector
         isOpen={isPaymentModalOpen}
