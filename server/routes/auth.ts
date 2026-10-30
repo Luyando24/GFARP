@@ -17,6 +17,7 @@ import {
   signSessionToken,
 } from "../lib/auth-tokens.js";
 import { authenticateToken, requireAdmin, requireSuperAdmin } from "../middleware/auth.js";
+import { isConfigurationError } from "../lib/config.js";
 
 // Create router
 const router = Router();
@@ -221,6 +222,13 @@ export const handleLogin: RequestHandler = async (req, res) => {
     res.json(session);
   } catch (error) {
     console.error('Login error:', error);
+    if (isConfigurationError(error)) {
+      return res.status(503).json({
+        success: false,
+        code: "CONFIGURATION_ERROR",
+        message: "The service is not fully configured. Please contact support.",
+      });
+    }
     res.status(500).json({ error: "Internal server error" });
   }
 };

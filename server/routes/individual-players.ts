@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
-import jwt from 'jsonwebtoken';
-import { getJwtSecret } from '../lib/jwt.js';
+import {
+  ACCESS_TOKEN_TTL_SECONDS,
+  signSessionToken,
+} from '../lib/auth-tokens.js';
+import { isConfigurationError } from '../lib/config.js';
 import { query, hashPassword, verifyPassword, transaction } from '../lib/db.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { getStripe, createStripeCustomer } from '../lib/stripe.js';
@@ -430,7 +433,7 @@ router.post('/verify-email', async (req, res) => {
     }
 
     const result = await query(
-      `SELECT id, email, first_name, last_name, email_verified
+      `SELECT id, email, first_name, last_name, email_verified, token_version
        FROM individual_players
        WHERE verification_token = $1`,
       [token]
@@ -451,16 +454,13 @@ router.post('/verify-email', async (req, res) => {
       );
     }
 
-    const accessToken = jwt.sign(
-      {
-        id: player.id,
-        email: player.email,
-        name: `${player.first_name} ${player.last_name}`,
-        role: 'individual_player'
-      },
-      getJwtSecret(),
-      { expiresIn: '24h' }
-    );
+    const accessToken = signSessionToken({
+      id: player.id,
+      email: player.email,
+      name: `${player.first_name} ${player.last_name}`,
+      role: 'individual_player',
+      tokenVersion: player.token_version,
+    });
 
     res.json({
       success: true,
@@ -478,6 +478,13 @@ router.post('/verify-email', async (req, res) => {
     });
   } catch (error) {
     console.error('Player verify email error:', error);
+    if (isConfigurationError(error)) {
+      return res.status(503).json({
+        success: false,
+        code: 'CONFIGURATION_ERROR',
+        message: 'The service is not fully configured. Please contact support.',
+      });
+    }
     res.status(500).json({ success: false, message: 'Verification failed' });
   }
 });
@@ -540,7 +547,7 @@ router.post('/login', async (req, res) => {
     const normalizedEmail = String(email || '').toLowerCase().trim();
 
     const result = await query(
-      `SELECT id, email, password_hash, first_name, last_name, email_verified
+      `SELECT id, email, password_hash, first_name, last_name, email_verified, token_version
        FROM individual_players WHERE email = $1`,
       [normalizedEmail]
     );
@@ -563,20 +570,18 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    const token = jwt.sign(
-      {
-        id: player.id,
-        email: player.email,
-        name: `${player.first_name} ${player.last_name}`,
-        role: 'individual_player'
-      },
-      getJwtSecret(),
-      { expiresIn: '24h' }
-    );
+    const token = signSessionToken({
+      id: player.id,
+      email: player.email,
+      name: `${player.first_name} ${player.last_name}`,
+      role: 'individual_player',
+      tokenVersion: player.token_version,
+    });
 
     res.json({
       success: true,
       token,
+      expiresInSec: ACCESS_TOKEN_TTL_SECONDS,
       user: {
         id: player.id,
         email: player.email,
@@ -588,6 +593,13 @@ router.post('/login', async (req, res) => {
 
   } catch (error) {
     console.error('Player login error:', error);
+    if (isConfigurationError(error)) {
+      return res.status(503).json({
+        success: false,
+        code: 'CONFIGURATION_ERROR',
+        message: 'The service is not fully configured. Please contact support.',
+      });
+    }
     res.status(500).json({ error: 'Internal server error' });
   }
 });

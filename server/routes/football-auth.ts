@@ -10,6 +10,7 @@ import {
   issueEmailVerificationToken,
   signSessionToken,
 } from '../lib/auth-tokens.js';
+import { isConfigurationError } from '../lib/config.js';
 
 // Determine academies.id column type to align FKs
 async function getAcademiesIdType(client: any): Promise<'uuid' | 'integer'> {
@@ -505,6 +506,9 @@ export const handleAcademyLogin: RequestHandler = async (req, res) => {
     });
   } catch (error: any) {
     console.error('Academy login error:', error);
+    if (isConfigurationError(error)) {
+      return res.status(503).json({ success: false, code: 'CONFIGURATION_ERROR', message: 'The service is not fully configured. Please contact support.' });
+    }
     return res.status(500).json({ success: false, message: 'Login failed', error: error.message || 'Unknown error' });
   }
 }
@@ -573,6 +577,9 @@ export const handleVerifyEmail: RequestHandler = async (req, res) => {
 
   } catch (error: any) {
     console.error('Verify email error:', error);
+    if (isConfigurationError(error)) {
+      return res.status(503).json({ success: false, code: 'CONFIGURATION_ERROR', message: 'The service is not fully configured. Please contact support.' });
+    }
     return res.status(500).json({ success: false, message: 'Verification failed', error: error.message });
   }
 };
@@ -683,6 +690,9 @@ export const handleAgencyRegister: RequestHandler = async (req, res) => {
     });
   } catch (error: any) {
     console.error('Agency registration error:', error);
+    if (isConfigurationError(error)) {
+      return res.status(503).json({ success: false, code: 'CONFIGURATION_ERROR', message: 'The service is not fully configured. Please contact support.' });
+    }
     return res.status(500).json({ success: false, message: 'Failed to register agency', error: error.message });
   }
 };
@@ -735,6 +745,9 @@ export const handleAgencyLogin: RequestHandler = async (req, res) => {
     });
   } catch (error: any) {
     console.error('Agency login error:', error);
+    if (isConfigurationError(error)) {
+      return res.status(503).json({ success: false, code: 'CONFIGURATION_ERROR', message: 'The service is not fully configured. Please contact support.' });
+    }
     return res.status(500).json({ success: false, message: 'Login failed', error: error.message });
   }
 };
@@ -800,6 +813,9 @@ export const handleStaffLogin: RequestHandler = async (req, res) => {
     });
   } catch (error: any) {
     console.error('Staff login error:', error);
+    if (isConfigurationError(error)) {
+      return res.status(503).json({ success: false, code: 'CONFIGURATION_ERROR', message: 'The service is not fully configured. Please contact support.' });
+    }
     return res.status(500).json({ success: false, message: 'Login failed', error: error.message });
   }
 };

@@ -4,9 +4,13 @@ import bcrypt from 'bcryptjs';
 import path from 'path';
 import dotenv from 'dotenv';
 
-// Ensure environment variables are loaded from the root .env
-dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true });
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: true });
+// Local env files are a development convenience only. In production the
+// platform environment is authoritative; loading a bundled .env with override
+// would silently replace the deployment's real configuration.
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config({ path: path.resolve(process.cwd(), '.env'), override: true });
+  dotenv.config({ path: path.resolve(process.cwd(), '.env.local'), override: true });
+}
 
 // Resolve database connection string for production/serverless environments
 function resolveConnectionString(): string | undefined {
@@ -140,6 +144,15 @@ const pool: any = cleanConnectionString
     application_name: 'soccer-circular-api',
   })
   : null;
+
+// An idle client error (dropped TLS connection, pooler restart) is emitted on
+// the pool. Without a listener Node treats it as an uncaught exception and the
+// serverless invocation dies, so log it and let the next query reconnect.
+if (pool) {
+  pool.on('error', (error: Error) => {
+    console.error('[DB] Idle client error:', error.message);
+  });
+}
 
 const debugQueries = process.env.DB_DEBUG === 'true';
 

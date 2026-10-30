@@ -63,20 +63,20 @@ import {
   requireSuperAdmin,
 } from "./middleware/auth.js";
 import { enforceMaintenanceMode } from "./middleware/maintenance.js";
+import { isConfigurationError, missingProductionConfig } from "./lib/config.js";
 
-function assertProductionConfig() {
+function logProductionConfig() {
   if (process.env.NODE_ENV !== 'production') return;
 
-  const checks: Array<[string, boolean]> = [
-    ['JWT_SECRET', Boolean(process.env.JWT_SECRET?.trim())],
-    ['NRC_SALT', Boolean(process.env.NRC_SALT?.trim())],
-    ['FIELD_ENCRYPTION_KEY', Boolean(process.env.FIELD_ENCRYPTION_KEY?.trim())],
-    ['CRON_SECRET', Boolean(process.env.CRON_SECRET?.trim())],
-    ['DATABASE_URL or SUPABASE_DB_URL', Boolean(process.env.DATABASE_URL || process.env.SUPABASE_DB_URL)],
-  ];
-  const missing = checks.filter(([, present]) => !present).map(([name]) => name);
+  const missing = missingProductionConfig();
   if (missing.length > 0) {
-    throw new Error(`[SERVER] Missing required production configuration: ${missing.join(', ')}`);
+    console.error(
+      `[SERVER] Missing production configuration: ${missing.join(', ')}. ` +
+        'The server will start, but requests that need these values will fail with HTTP 503.',
+    );
+  }
+  if (!process.env.CRON_SECRET?.trim()) {
+    console.warn('[SERVER] CRON_SECRET is not set; the reminder cron endpoint will reject requests.');
   }
 }
 
@@ -102,7 +102,7 @@ const registrationLimiter = rateLimit({
 
 export function createServer() {
   console.log("Creating Express server...");
-  assertProductionConfig();
+  logProductionConfig();
   const app = express();
   console.log("[SERVER] Express app instantiated");
 
@@ -375,6 +375,13 @@ export function createServer() {
   const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
     if (res.headersSent) return next(err);
     console.error(`[SERVER] Unhandled error on ${req.method} ${req.originalUrl}:`, err);
+    if (isConfigurationError(err)) {
+      return res.status(503).json({
+        success: false,
+        code: 'CONFIGURATION_ERROR',
+        message: 'The service is not fully configured. Please contact support.',
+      });
+    }
     const isClientError = err?.type === 'entity.parse.failed' || err?.type === 'entity.too.large';
     res.status(isClientError ? 400 : 500).json({
       success: false,
