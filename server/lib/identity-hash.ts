@@ -2,6 +2,9 @@ import crypto from 'crypto';
 
 const NON_PRODUCTION_KEY = 'local-development-national-id-key-not-for-production';
 
+// Stored alongside the hash so the algorithm can be rotated later.
+export const IDENTITY_HASH_VERSION = 'hmac-sha256:v1';
+
 function getIdentityHashKey(): string {
   const key = process.env.NRC_SALT?.trim();
   if (key) {

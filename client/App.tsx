@@ -16,6 +16,7 @@ import { lazy, Suspense, useEffect, useState } from "react";
 import { syncService } from "@/lib/sync";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { LanguageProvider } from "@/lib/i18n";
+import { getSession, isAdmin } from "@/lib/auth";
 
 const AuthLogin = lazy(() => import("./pages/AuthLogin"));
 const Index = lazy(() => import("./pages/Index"));
@@ -23,6 +24,7 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const LoginPortal = lazy(() => import("./pages/LoginPortal"));
 const AgencyLogin = lazy(() => import("./pages/AgencyLogin"));
+const StaffLogin = lazy(() => import("./pages/StaffLogin"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const Shop = lazy(() => import("./pages/Shop"));
@@ -62,6 +64,45 @@ const IndividualPlayerDetails = lazy(() => import("./pages/admin/IndividualPlaye
 const Maintenance = lazy(() => import("./pages/Maintenance"));
 
 const queryClient = new QueryClient();
+
+const RESERVED_HOST_LABELS = new Set([
+  'www', 'api', 'app', 'admin', 'portal', 'mail', 'static', 'assets', 'cdn', 'docs',
+]);
+
+const PLAYER_PROFILE_DOMAIN = (import.meta.env.VITE_PLAYER_PROFILE_DOMAIN || 'soccercircular.com')
+  .trim()
+  .toLowerCase()
+  .replace(/^https?:\/\//, '')
+  .replace(/^www\./, '')
+  .replace(/\/.*$/, '');
+
+function getPlayerProfileSubdomain(hostname: string): string | null {
+  const host = hostname.toLowerCase();
+  if (host === 'localhost' || /^\d{1,3}(\.\d{1,3}){3}$/.test(host)) return null;
+
+  if (host.endsWith('.localhost')) {
+    const label = host.split('.')[0];
+    return label && !RESERVED_HOST_LABELS.has(label) ? label : null;
+  }
+
+  // Only the configured player-profile domain serves slug subdomains. Every
+  // other host (Netlify previews, custom domains) must render the normal app.
+  if (host === PLAYER_PROFILE_DOMAIN || !host.endsWith(`.${PLAYER_PROFILE_DOMAIN}`)) return null;
+
+  const subdomain = host.slice(0, -(PLAYER_PROFILE_DOMAIN.length + 1));
+  if (!subdomain || subdomain.includes('.') || RESERVED_HOST_LABELS.has(subdomain)) return null;
+  return subdomain;
+}
+
+const MAINTENANCE_EXEMPT_PREFIXES = [
+  '/admin', '/portal', '/login', '/agency/login', '/staff/login', '/forgot-password', '/reset-password',
+];
+
+function isMaintenanceExempt(pathname: string): boolean {
+  return MAINTENANCE_EXEMPT_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
 
 const App = () => {
   const [systemSettings, setSystemSettings] = useState<any>(null);
@@ -106,18 +147,12 @@ const App = () => {
   const maintenanceMessage = systemSettings?.general?.maintenanceMessage;
   const maintenanceEndTime = systemSettings?.general?.maintenanceEndTime;
   
-  // Get user role from local storage to check for bypass without waiting for full auth mount
-  // This is a quick check, full auth will still happen in ProtectedRoute
-  const sessionData = localStorage.getItem('auth_session');
-  let isStaff = false;
-  try {
-    if (sessionData) {
-      const session = JSON.parse(sessionData);
-      isStaff = session.role === 'admin' || session.role === 'superadmin';
-    }
-  } catch (e) {}
+  // Quick bypass check so admins keep access; ProtectedRoute still enforces roles.
+  const canBypassMaintenance = isAdmin(getSession());
 
-  const showMaintenance = isMaintenanceMode && !isStaff;
+  const showMaintenance = isMaintenanceMode
+    && !canBypassMaintenance
+    && !isMaintenanceExempt(window.location.pathname);
 
   return (
     <HelmetProvider>
@@ -133,18 +168,8 @@ const App = () => {
               </div>
             )}>
             {(() => {
-              const hostname = window.location.hostname;
-              const parts = hostname.split('.');
-              let subdomain = null;
-              const isIp = hostname.match(/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/);
-              if (!isIp && hostname !== 'localhost' && !hostname.endsWith('.vercel.app')) {
-                 if (hostname.endsWith('localhost')) {
-                     if (parts.length > 1) subdomain = parts[0];
-                 } else if (parts.length > 2 && parts[0] !== 'www' && parts[0] !== 'api') {
-                     subdomain = parts[0];
-                 }
-              }
-              if (showMaintenance && !window.location.pathname.startsWith('/admin')) {
+              const subdomain = getPlayerProfileSubdomain(window.location.hostname);
+              if (showMaintenance) {
                 return (
                   <BrowserRouter>
                     <Maintenance message={maintenanceMessage} endTime={maintenanceEndTime} />
@@ -169,6 +194,7 @@ const App = () => {
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/portal" element={<LoginPortal />} />
               <Route path="/agency/login" element={<AgencyLogin />} />
+              <Route path="/staff/login" element={<StaffLogin />} />
               <Route path="/reset-password" element={<ResetPassword />} />
 
               {/* Temporary Setup Route */}
@@ -201,7 +227,7 @@ const App = () => {
               </Route>
 
               {/* Academy & Agency Dashboard - Protected route requiring authentication */}
-              <Route element={<ProtectedRoute allowedRoles={["academy", "agency_admin"]} />}>
+              <Route element={<ProtectedRoute allowedRoles={["academy", "agency_admin", "staff"]} />}>
                 <Route path="/academy-dashboard" element={<AcademyDashboard />} />
                 <Route path="/academy-dashboard/player-details/:id" element={<PlayerDetails />} />
               </Route>

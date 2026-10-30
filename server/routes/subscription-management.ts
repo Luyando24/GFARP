@@ -848,15 +848,51 @@ export const handleCancelSubscription: RequestHandler = async (req, res) => {
 
     const currentSubscription = currentSubscriptionResult.rows[0];
 
-    // Update subscription to cancelled (but keep active until end date)
+    // Stripe owns recurring billing. Cancel there first so a local update can
+    // never claim success while the card keeps being charged.
+    let stripeEndDate: Date | null = null;
+    if (currentSubscription.stripe_subscription_id) {
+      try {
+        const stripe = getStripe();
+        const stripeSubscription = await stripe.subscriptions.update(
+          currentSubscription.stripe_subscription_id,
+          { cancel_at_period_end: true },
+        );
+        // Stripe 2025+ moved current_period_end onto subscription items.
+        const periodEndUnix = stripeSubscription.items?.data?.[0]?.current_period_end
+          ?? (stripeSubscription as unknown as { current_period_end?: number }).current_period_end;
+        if (periodEndUnix) {
+          stripeEndDate = new Date(periodEndUnix * 1000);
+        }
+      } catch (stripeError: any) {
+        if (stripeError?.code !== 'resource_missing') {
+          console.error('[SUBSCRIPTIONS] Stripe cancellation failed:', stripeError);
+          return res.status(502).json({
+            success: false,
+            message: 'Could not cancel the subscription with Stripe. Please try again or contact support.',
+          });
+        }
+        console.warn(
+          '[SUBSCRIPTIONS] Stripe subscription missing; cancelling local record',
+          currentSubscription.stripe_subscription_id,
+        );
+      }
+    }
+
+    // Update subscription to cancelled (but keep access until end date)
     const cancelSubscriptionQuery = `
       UPDATE ${subTable} 
-      SET auto_renew = false, updated_at = NOW()
+      SET auto_renew = false,
+          end_date = COALESCE($2, end_date),
+          updated_at = NOW()
       WHERE id = $1
       RETURNING *
     `;
 
-    const cancelResult = await query(cancelSubscriptionQuery, [currentSubscription.id]);
+    const cancelResult = await query(cancelSubscriptionQuery, [
+      currentSubscription.id,
+      stripeEndDate,
+    ]);
     const cancelledSubscription = cancelResult.rows[0];
 
     // Log the cancellation in subscription history

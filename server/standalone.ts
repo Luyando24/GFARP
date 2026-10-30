@@ -12,8 +12,10 @@ try {
         console.log(`Standalone server listening on port ${port}`);
         console.log(`Test URL: http://localhost:${port}/api/subscriptions/plans`);
     });
-    startPlayerFeeReminderScheduler();
-    startTrainingSessionReminderScheduler();
+    if (process.env.ENABLE_IN_PROCESS_SCHEDULERS !== 'false') {
+        startPlayerFeeReminderScheduler();
+        startTrainingSessionReminderScheduler();
+    }
 
     server.on('error', (err) => {
         console.error('Server error:', err);

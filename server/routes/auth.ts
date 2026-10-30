@@ -4,15 +4,18 @@ import { Router } from "express";
 import jwt from "jsonwebtoken";
 import {
   LoginRequest,
-  StudentLoginRequest,
-  StudentAlternativeLoginRequest,
-  RegisterStaffRequest,
   AuthSession,
-  RegisterStaffResponse,
 } from "../../shared/api.js";
 import { query, hashPassword, verifyPassword } from "../lib/db.js";
 import { emailService } from "../lib/email-service.js";
 import { getJwtSecret } from "../lib/jwt.js";
+import {
+  ACCESS_TOKEN_TTL_SECONDS,
+  consumePasswordResetToken,
+  issuePasswordResetToken,
+  revokeAccountSessions,
+  signSessionToken,
+} from "../lib/auth-tokens.js";
 import { authenticateToken, requireAdmin, requireSuperAdmin } from "../middleware/auth.js";
 
 // Create router
@@ -33,34 +36,30 @@ router.post('/auth/forgot-password', async (req, res) => {
   }
 
   try {
-    let accountType: ResetAccountType | null = null;
+    let account: { accountType: ResetAccountType; userId: string } | null = null;
 
-    const academy = await query('SELECT id FROM academies WHERE LOWER(email) = $1 LIMIT 1', [email]);
+    const academy = await query('SELECT id FROM academies WHERE LOWER(TRIM(email)) = $1 LIMIT 1', [email]);
     if (academy.rows.length) {
-      accountType = 'academy';
+      account = { accountType: 'academy', userId: academy.rows[0].id };
     } else {
-      const agency = await query('SELECT id FROM agencies WHERE LOWER(email) = $1 LIMIT 1', [email]);
+      const agency = await query('SELECT id FROM agencies WHERE LOWER(TRIM(email)) = $1 LIMIT 1', [email]);
       if (agency.rows.length) {
-        accountType = 'agency';
+        account = { accountType: 'agency', userId: agency.rows[0].id };
       } else {
-        const player = await query('SELECT id FROM individual_players WHERE LOWER(email) = $1 LIMIT 1', [email]);
+        const player = await query('SELECT id FROM individual_players WHERE LOWER(TRIM(email)) = $1 LIMIT 1', [email]);
         if (player.rows.length) {
-          accountType = 'individual_player';
+          account = { accountType: 'individual_player', userId: player.rows[0].id };
         } else {
-          const admin = await query('SELECT id FROM "Admin" WHERE LOWER(email) = $1 LIMIT 1', [email]);
-          if (admin.rows.length) accountType = 'admin';
+          const admin = await query('SELECT id FROM "Admin" WHERE LOWER(TRIM(email)) = $1 LIMIT 1', [email]);
+          if (admin.rows.length) account = { accountType: 'admin', userId: admin.rows[0].id };
         }
       }
     }
 
     // Always return the same response so this endpoint cannot be used to enumerate accounts.
-    if (!accountType) return res.json(PASSWORD_RESET_RESPONSE);
+    if (!account) return res.json(PASSWORD_RESET_RESPONSE);
 
-    const token = jwt.sign(
-      { email, accountType, purpose: 'password-reset' },
-      getJwtSecret(),
-      { expiresIn: '30m' }
-    );
+    const token = await issuePasswordResetToken(account.accountType, account.userId);
     const appUrl = (process.env.APP_URL || process.env.FRONTEND_URL || 'https://www.soccercircular.com').replace(/\/$/, '');
     const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(token)}`;
     const result = await emailService.sendEmail({
@@ -90,59 +89,61 @@ router.post('/auth/reset-password', async (req, res) => {
   }
 
   try {
-    const payload = jwt.verify(token, getJwtSecret()) as jwt.JwtPayload & {
-      email?: string;
-      accountType?: ResetAccountType;
-      purpose?: string;
-    };
-    if (payload.purpose !== 'password-reset' || !payload.email || !payload.accountType) {
+    if (!token) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired password reset link.' });
+    }
+
+    // Tokens are single-use: consuming marks used_at before the password changes.
+    const reset = await consumePasswordResetToken(token);
+    if (!reset) {
       return res.status(400).json({ success: false, message: 'Invalid or expired password reset link.' });
     }
 
     const passwordHash = await hashPassword(password);
     let result;
-    if (payload.accountType === 'academy') {
-      result = await query('UPDATE academies SET password_hash = $1, updated_at = NOW() WHERE LOWER(email) = $2 RETURNING id', [passwordHash, payload.email]);
-      await query('UPDATE staff_users SET password_hash = $1, updated_at = NOW() WHERE LOWER(email) = $2', [passwordHash, payload.email]);
-    } else if (payload.accountType === 'agency') {
-      result = await query('UPDATE agencies SET password_hash = $1, updated_at = NOW() WHERE LOWER(email) = $2 RETURNING id', [passwordHash, payload.email]);
-    } else if (payload.accountType === 'individual_player') {
-      result = await query('UPDATE individual_players SET password_hash = $1, updated_at = NOW() WHERE LOWER(email) = $2 RETURNING id', [passwordHash, payload.email]);
+    if (reset.accountType === 'academy') {
+      result = await query(
+        'UPDATE academies SET password_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING id',
+        [passwordHash, reset.userId],
+      );
+      // Legacy academies keep the administrator password on staff_users; scope
+      // the update to this academy so a shared email cannot hit other accounts.
+      if (result.rows.length) {
+        await query(
+          'UPDATE staff_users SET password_hash = $1, updated_at = NOW() WHERE academy_id = $2',
+          [passwordHash, reset.userId],
+        );
+      }
+    } else if (reset.accountType === 'agency') {
+      result = await query(
+        'UPDATE agencies SET password_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING id',
+        [passwordHash, reset.userId],
+      );
+    } else if (reset.accountType === 'individual_player') {
+      result = await query(
+        'UPDATE individual_players SET password_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING id',
+        [passwordHash, reset.userId],
+      );
     } else {
-      result = await query('UPDATE "Admin" SET password_hash = $1, updated_at = NOW() WHERE LOWER(email) = $2 RETURNING id', [passwordHash, payload.email]);
+      result = await query(
+        'UPDATE "Admin" SET password_hash = $1, updated_at = NOW() WHERE id = $2 RETURNING id',
+        [passwordHash, reset.userId],
+      );
     }
 
     if (!result.rows.length) {
       return res.status(400).json({ success: false, message: 'Invalid or expired password reset link.' });
     }
+
+    // Force every previously issued token for this account to stop working.
+    await revokeAccountSessions(reset.accountType, reset.userId);
+
     return res.json({ success: true, message: 'Your password has been reset successfully.' });
   } catch (error) {
-    if (error instanceof jwt.JsonWebTokenError || error instanceof jwt.TokenExpiredError) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired password reset link.' });
-    }
     console.error('[AUTH] Reset password error:', error);
     return res.status(500).json({ success: false, message: 'Unable to reset the password.' });
   }
 });
-
-// Helper function to create academy code
-function createAcademyCode(name: string): string {
-  return name
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
-    .slice(0, 6)
-    .padEnd(3, "0");
-}
-
-// Helper function to generate 6-character student ID
-function generateStudentId(): string {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-  let result = "";
-  for (let i = 0; i < 6; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
 
 export const handleLogin: RequestHandler = async (req, res) => {
   const start = Date.now();
@@ -154,7 +155,7 @@ export const handleLogin: RequestHandler = async (req, res) => {
     console.log('[AUTH] Querying user...');
     const queryStart = Date.now();
     const result = await query(
-      'SELECT id, email, password_hash, role, first_name, last_name, is_active FROM "Admin" WHERE email = $1',
+      'SELECT id, email, password_hash, role, first_name, last_name, is_active, token_version FROM "Admin" WHERE LOWER(TRIM(email)) = LOWER($1)',
       [email]
     );
     console.log(`[AUTH] User query took ${Date.now() - queryStart}ms`);
@@ -199,24 +200,20 @@ export const handleLogin: RequestHandler = async (req, res) => {
     // Convert database role (ADMIN/SUPERADMIN) to frontend role (admin/superadmin)
     const frontendRole = adminUser.role.toLowerCase();
 
-    // Generate real JWT token
-    const token = jwt.sign(
-      { 
-        id: adminUser.id, 
-        email: adminUser.email, 
-        name: `${adminUser.first_name} ${adminUser.last_name}`,
-        role: frontendRole 
-      },
-      getJwtSecret(),
-      { expiresIn: '24h' }
-    );
+    const token = signSessionToken({
+      id: adminUser.id,
+      email: adminUser.email,
+      name: `${adminUser.first_name} ${adminUser.last_name}`,
+      role: frontendRole,
+      tokenVersion: adminUser.token_version,
+    });
 
     const session: AuthSession = {
       userId: adminUser.id,
       role: frontendRole,
       tokens: {
         accessToken: token,
-        expiresInSec: 86400, // 24 hours
+        expiresInSec: ACCESS_TOKEN_TTL_SECONDS,
       },
     };
 
@@ -224,243 +221,6 @@ export const handleLogin: RequestHandler = async (req, res) => {
     res.json(session);
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-export const handleStudentLogin: RequestHandler = async (req, res) => {
-  try {
-    const { studentId }: StudentLoginRequest = req.body;
-
-    // Find student by student ID
-    const result = await query(
-      'SELECT id, student_id, first_name_cipher, last_name_cipher FROM students WHERE student_id = $1',
-      [studentId]
-    );
-
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: "Invalid student ID" });
-    }
-
-    const student = result.rows[0];
-
-    // Generate real JWT token
-    const token = jwt.sign(
-      { 
-        id: student.id, 
-        role: "student" 
-      },
-      getJwtSecret(),
-      { expiresIn: '24h' }
-    );
-
-    const session: AuthSession = {
-      userId: student.id,
-      role: "student",
-      studentId: student.id,
-      tokens: {
-        accessToken: token,
-        expiresInSec: 86400,
-      },
-    };
-
-    res.json(session);
-  } catch (error) {
-    console.error('Student login error:', error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-export const handleStudentAlternativeLogin: RequestHandler = async (req, res) => {
-  try {
-    const { email, phone, password }: StudentAlternativeLoginRequest = req.body;
-
-    let result;
-    if (email) {
-      // Find student by email
-      result = await query(
-        'SELECT id, password_hash FROM students WHERE email_cipher = $1 AND password_hash IS NOT NULL',
-        [email] // Note: In production, this should be encrypted
-      );
-    } else if (phone) {
-      // Find student by phone
-      result = await query(
-        'SELECT id, password_hash FROM students WHERE phone_auth_cipher = $1 AND password_hash IS NOT NULL',
-        [phone] // Note: In production, this should be encrypted
-      );
-    } else {
-      return res.status(400).json({ error: "Email or phone required" });
-    }
-
-    if (result.rows.length === 0) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    const student = result.rows[0];
-
-    // Verify password
-    const isValidPassword = await verifyPassword(password, student.password_hash);
-    if (!isValidPassword) {
-      return res.status(401).json({ error: "Invalid credentials" });
-    }
-
-    // Generate real JWT token
-    const token = jwt.sign(
-      { 
-        id: student.id, 
-        role: "student" 
-      },
-      getJwtSecret(),
-      { expiresIn: '24h' }
-    );
-
-    const session: AuthSession = {
-      userId: student.id,
-      role: "student",
-      studentId: student.id,
-      tokens: {
-        accessToken: token,
-        expiresInSec: 86400,
-      },
-    };
-
-    res.json(session);
-  } catch (error) {
-    console.error('Student alternative login error:', error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-export const handleRegisterStaff: RequestHandler = async (req, res) => {
-  try {
-    const {
-      schoolName: academyName,
-      email,
-      password,
-      firstName,
-      lastName,
-      role = "admin",
-      country,
-      province,
-    }: any = req.body;
-
-    const academyLocation = String(country || province || "").trim();
-    if (!email || !password || !academyName || !academyLocation) {
-      return res.status(400).json({ error: "Email, password, academy name, and country are required" });
-    }
-
-    // Check if email already exists
-    const existingUserResult = await query(
-      'SELECT id FROM staff_users WHERE email = $1',
-      [email]
-    );
-
-    if (existingUserResult.rows.length > 0) {
-      return res.status(400).json({ error: "Email already registered" });
-    }
-
-    // Create academy
-    const academyId = uuidv4();
-    const academyCode = createAcademyCode(academyName);
-    const passwordHash = await hashPassword(password);
-
-    await query(
-      `INSERT INTO academies (id, name, code, email, password_hash, address, district, province, phone) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [academyId, academyName, academyCode, email, passwordHash, "", "", academyLocation, ""]
-    );
-
-    // Create staff user
-    const userId = uuidv4();
-
-    await query(
-      `INSERT INTO staff_users (id, academy_id, email, password_hash, role, first_name, last_name, phone, is_active) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [userId, academyId, email, passwordHash, role, firstName, lastName, "", true]
-    );
-
-    const response: RegisterStaffResponse = {
-      userId,
-      schoolId: academyId, // Keep the same property name for backward compatibility
-    };
-
-    res.status(201).json(response);
-  } catch (error) {
-    console.error('Staff registration error:', error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-};
-
-export const handleRegisterSchool: RequestHandler = async (req, res) => {
-  try {
-    const {
-      schoolName,
-      schoolType,
-      email,
-      password,
-      firstName,
-      lastName,
-      phoneNumber,
-      role = "admin",
-      country,
-      province,
-    } = req.body;
-
-    const academyLocation = String(country || province || "").trim();
-    if (!email || !password || !schoolName || !academyLocation) {
-      return res.status(400).json({ error: "Email, password, school name, and country are required" });
-    }
-
-    // Check if email already exists
-    const existingUserResult = await query(
-      'SELECT id FROM staff_users WHERE email = $1',
-      [email]
-    );
-
-    if (existingUserResult.rows.length > 0) {
-      return res.status(400).json({ error: "Email already registered" });
-    }
-
-    // Create academy (using academies table)
-    const academyId = uuidv4();
-    const academyCode = createAcademyCode(schoolName);
-    const passwordHash = await hashPassword(password);
-
-    await query(
-      `INSERT INTO academies (id, name, code, email, password_hash, address, district, province, phone) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [academyId, schoolName, academyCode, email, passwordHash, "", "", academyLocation, phoneNumber || ""]
-    );
-
-    // Create staff user (academy admin)
-    const userId = uuidv4();
-
-    await query(
-      `INSERT INTO staff_users (id, academy_id, email, password_hash, role, first_name, last_name, phone, is_active) 
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
-      [userId, academyId, email, passwordHash, role, firstName, lastName, phoneNumber || "", true]
-    );
-
-    // Generate JWT token
-    const token = jwt.sign(
-      { 
-        id: userId, 
-        email, 
-        role: role.toLowerCase() 
-      },
-      getJwtSecret(),
-      { expiresIn: '24h' }
-    );
-
-    const response = {
-      userId,
-      schoolId: academyId, // Keep the same property name for backward compatibility
-      token
-    };
-
-    res.status(201).json(response);
-  } catch (error) {
-    console.error('School registration error:', error);
     res.status(500).json({ error: "Internal server error" });
   }
 };

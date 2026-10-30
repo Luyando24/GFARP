@@ -276,7 +276,10 @@ async function handlePaymentSucceeded(invoice: any) {
         status: 'active',
         current_period_start: invoice.period_start,
         current_period_end: invoice.period_end,
-        cancel_at_period_end: false,
+        // A paid invoice must not resurrect a subscription the customer has
+        // already cancelled. Preserve the local decision until Stripe tells us
+        // otherwise via customer.subscription.updated.
+        cancel_at_period_end: context.subscription.auto_renew === false,
       },
       'ACTIVE',
     );
@@ -388,7 +391,11 @@ async function handlePaymentFailed(invoice: any) {
     await updateLocalSubscriptionFromStripe(
       client,
       context,
-      { id: stripeSubscriptionId, status: 'past_due', cancel_at_period_end: false },
+      {
+        id: stripeSubscriptionId,
+        status: 'past_due',
+        cancel_at_period_end: context.subscription.auto_renew === false,
+      },
       'SUSPENDED',
     );
   });

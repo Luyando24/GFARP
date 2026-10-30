@@ -1,11 +1,27 @@
 import { Router, RequestHandler } from 'express';
-import { query } from '../lib/db.js';
+import { randomBytes } from 'node:crypto';
+import { query, transaction } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
 import { authenticateToken, canAccessOrganizationForRequest, requireAdmin, requireRoles } from '../middleware/auth.js';
 import { decryptField, encryptField } from '../lib/field-encryption.js';
-import { hashNationalId } from '../lib/identity-hash.js';
+import { hashNationalId, IDENTITY_HASH_VERSION } from '../lib/identity-hash.js';
 
 const router = Router();
+
+const CARD_ID_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+function generatePlayerCardId(): string {
+  const bytes = randomBytes(6);
+  let cardId = '';
+  for (let i = 0; i < 6; i++) {
+    cardId += CARD_ID_ALPHABET[bytes[i] % CARD_ID_ALPHABET.length];
+  }
+  return cardId;
+}
+
+function isUniqueViolation(error: any, column: string): boolean {
+  return error?.code === '23505' && String(error?.constraint || '').includes(column);
+}
 
 const requireAcademyQuery: RequestHandler = async (req, res, next) => {
   const academyId = req.query.academyId;
@@ -16,10 +32,21 @@ const requireAcademyQuery: RequestHandler = async (req, res, next) => {
 };
 
 const requireAcademyBody: RequestHandler = async (req, res, next) => {
-  const academyId = req.body?.academyId || req.body?.academy_id;
-  if (!academyId || !(await canAccessOrganizationForRequest(req.user, academyId))) {
-    return res.status(403).json({ success: false, message: 'You cannot access this academy' });
+  const organizationIds = [
+    req.body?.academyId || req.body?.academy_id,
+    req.body?.agencyId || req.body?.agency_id,
+  ].filter(Boolean);
+
+  if (organizationIds.length === 0) {
+    return res.status(403).json({ success: false, message: 'You cannot access this organization' });
   }
+
+  for (const organizationId of organizationIds) {
+    if (!(await canAccessOrganizationForRequest(req.user, organizationId))) {
+      return res.status(403).json({ success: false, message: 'You cannot access this organization' });
+    }
+  }
+
   next();
 };
 
@@ -90,9 +117,7 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
       const subscriptionQuery = `
         SELECT 
           sp.name as plan_name,
-          sp.player_limit,
-          sp.id as plan_id,
-          asub.status as subscription_status
+          sp.player_limit
         FROM ${subTable} asub
         JOIN subscription_plans sp ON asub.plan_id = sp.id
         WHERE asub.${orgIdColumn} = $1 
@@ -104,84 +129,49 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
 
       const subscriptionResult = await query(subscriptionQuery, [orgId]);
 
-      let subscription;
       if (subscriptionResult.rows.length === 0) {
-        const proPlanQuery = `
-          SELECT id, name, player_limit 
-          FROM subscription_plans 
-          WHERE (name = 'Pro' OR name = 'Pro Plan' OR name = 'Academy Pro') AND target_type = 'ACADEMY' AND is_active = true
-          LIMIT 1
-        `;
-        const proPlanResult = await query(proPlanQuery);
+        return res.status(403).json({
+          success: false,
+          code: 'SUBSCRIPTION_REQUIRED',
+          message: 'An active subscription is required to add players. Please upgrade or renew your plan.',
+        });
+      }
 
-        if (proPlanResult.rows.length > 0) {
-          const proPlan = proPlanResult.rows[0];
-          subscription = {
-            plan_name: proPlan.name,
-            player_limit: proPlan.player_limit,
-            plan_id: proPlan.id
-          };
-        } else {
-          return res.status(500).json({
-            success: false,
-            message: 'No subscription plan configured. Please contact support.'
-          });
-        }
+      const subscription = subscriptionResult.rows[0];
+      const playerLimit = subscription.player_limit == null
+        ? 0
+        : Number(subscription.player_limit);
 
-        let currentPlayerCount = 0;
-        const playerCountQuery = `
-          SELECT COUNT(*) as player_count 
-          FROM players 
-          WHERE ${orgIdColumn} = $1
-        `;
-        const playerCountResult = await query(playerCountQuery, [orgId]);
-        currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
+      if (playerLimit !== -1) {
+        const playerCountResult = await query(
+          `SELECT COUNT(*) as player_count FROM players WHERE ${orgIdColumn} = $1`,
+          [orgId],
+        );
+        const currentPlayerCount = parseInt(playerCountResult.rows[0].player_count, 10);
 
-        if (subscription.player_limit !== -1 && currentPlayerCount >= subscription.player_limit) {
+        if (currentPlayerCount >= playerLimit) {
           return res.status(403).json({
             success: false,
-            message: `Player limit reached. Your ${subscription.plan_name} allows up to ${subscription.player_limit} players. Please upgrade your subscription to add more players.`,
+            code: 'PLAYER_LIMIT_REACHED',
+            message: `Player limit reached. Your ${subscription.plan_name} plan allows up to ${playerLimit} players. Please upgrade your subscription to add more players.`,
             data: {
               currentPlayers: currentPlayerCount,
-              playerLimit: subscription.player_limit,
-              planName: subscription.plan_name
-            }
+              playerLimit,
+              planName: subscription.plan_name,
+            },
           });
-        }
-      } else {
-        subscription = subscriptionResult.rows[0];
-
-        if (subscription.player_limit !== -1) {
-          const playerCountQuery = `
-            SELECT COUNT(*) as player_count 
-            FROM players 
-            WHERE ${orgIdColumn} = $1
-          `;
-          const playerCountResult = await query(playerCountQuery, [orgId]);
-          const currentPlayerCount = parseInt(playerCountResult.rows[0].player_count);
-
-          if (currentPlayerCount >= subscription.player_limit) {
-            return res.status(403).json({
-              success: false,
-              message: `Player limit reached. Your ${subscription.plan_name} plan allows up to ${subscription.player_limit} players. Please upgrade your subscription to add more players.`,
-              data: {
-                currentPlayers: currentPlayerCount,
-                playerLimit: subscription.player_limit,
-                planName: subscription.plan_name
-              }
-            });
-          }
         }
       }
     }
 
     const playerId = uuidv4();
-    const playerCardId = Math.random().toString(36).substr(2, 6).toUpperCase();
     const cardId = `CARD-${Date.now()}`;
     const cardQrSignature = `QR-${playerId}`;
 
-    const nrcHash = nrc ? hashNationalId(nrc) : `missing:${playerId}`;
-    const nrcSalt = 'hmac-sha256:v1';
+    // NRC is optional. Use NULL (not a fake placeholder) so uniqueness only
+    // applies to players who actually have a national ID on file.
+    const nrcHash = nrc ? hashNationalId(nrc) : null;
+    const nrcSalt = nrc ? IDENTITY_HASH_VERSION : null;
 
     const insertQuery = `
       INSERT INTO players (
@@ -209,7 +199,7 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
 
     const values = [
       playerId,
-      playerCardId,
+      generatePlayerCardId(),
       nrcHash,
       nrcSalt,
       encrypt(firstName),
@@ -240,8 +230,31 @@ export const handleCreatePlayer: RequestHandler = async (req, res) => {
       agencyId || null
     ];
 
-    const result = await query(insertQuery, values);
-    const created = result.rows[0];
+    let created: any = null;
+    for (let attempt = 0; attempt < 3 && !created; attempt++) {
+      values[1] = generatePlayerCardId();
+      try {
+        created = (await query(insertQuery, values)).rows[0];
+      } catch (insertError: any) {
+        if (isUniqueViolation(insertError, 'player_card_id') && attempt < 2) {
+          continue;
+        }
+        if (isUniqueViolation(insertError, 'nrc_hash')) {
+          return res.status(409).json({
+            success: false,
+            message: 'A player with this national registration number already exists.',
+          });
+        }
+        throw insertError;
+      }
+    }
+
+    if (!created) {
+      return res.status(503).json({
+        success: false,
+        message: 'Could not allocate a player card ID. Please try again.',
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -1601,12 +1614,20 @@ export const handleBulkImportPlayers: RequestHandler = async (req, res) => {
       });
     }
 
-    if (academy.player_limit !== -1) {
-      const newPlayerCount = parseInt(academy.player_count) + players.length;
-      if (newPlayerCount > academy.player_limit) {
+    if (players.length > 500) {
+      return res.status(400).json({
+        success: false,
+        message: 'Bulk import is limited to 500 players per request.',
+      });
+    }
+
+    const playerLimit = academy.player_limit == null ? 0 : Number(academy.player_limit);
+    if (playerLimit !== -1) {
+      const newPlayerCount = parseInt(academy.player_count, 10) + players.length;
+      if (newPlayerCount > playerLimit) {
         return res.status(403).json({
           success: false,
-          message: `Bulk import would exceed player limit. Your ${academy.plan_name} plan allows up to ${academy.player_limit} players. You currently have ${academy.player_count} players and are trying to add ${players.length} more.`
+          message: `Bulk import would exceed player limit. Your ${academy.plan_name} plan allows up to ${playerLimit} players. You currently have ${academy.player_count} players and are trying to add ${players.length} more.`
         });
       }
     }
@@ -1616,104 +1637,151 @@ export const handleBulkImportPlayers: RequestHandler = async (req, res) => {
       failed: [] as any[]
     };
 
-    for (let i = 0; i < players.length; i++) {
-      const playerData = players[i];
+    const createPlayerQuery = `
+      INSERT INTO players (
+        id, player_card_id, nrc_hash, nrc_salt,
+        first_name_cipher, last_name_cipher, email_cipher, phone_cipher,
+        gender, dob_cipher, address_cipher,
+        guardian_contact_name_cipher, guardian_contact_phone_cipher,
+        position, preferred_foot, height_cm, weight_kg, jersey_number,
+        registration_date, guardian_info_cipher, medical_info_cipher,
+        playing_history_cipher, emergency_contact_cipher,
+        current_club_cipher, city_cipher, country_cipher,
+        notes_cipher, card_id, card_qr_signature, academy_id,
+        is_active, created_at, updated_at
+      ) VALUES (
+        $1, $2, $3, $4,
+        $5, $6, $7, $8,
+        $9, $10, $11,
+        $12, $13,
+        $14, $15, $16, $17, $18,
+        $19, $20, $21,
+        $22, $23,
+        $24, $25, $26,
+        $27, $28, $29, $30,
+        true, NOW(), NOW()
+      ) RETURNING id, player_card_id, position, jersey_number
+    `;
 
-      try {
-        if (!playerData.firstName || !playerData.lastName || !playerData.dateOfBirth || !playerData.position) {
-          results.failed.push({
-            row: i + 1,
-            data: playerData,
-            error: 'Missing required fields: firstName, lastName, dateOfBirth, position'
-          });
-          continue;
-        }
+    await transaction(async (client) => {
+      for (let i = 0; i < players.length; i++) {
+        const playerData = players[i];
+        await client.query('SAVEPOINT bulk_row');
 
-        if (playerData.jerseyNumber) {
-          const jerseyNumberQuery = `
-            SELECT id FROM players 
-            WHERE academy_id = $1 
-            AND jersey_number = $2 
-            AND is_active = true
-          `;
-
-          const jerseyResult = await query(jerseyNumberQuery, [
-            academyId,
-            parseInt(playerData.jerseyNumber)
-          ]);
-
-          if (jerseyResult.rows.length > 0) {
+        try {
+          if (!playerData.firstName || !playerData.lastName || !playerData.dateOfBirth || !playerData.position) {
             results.failed.push({
               row: i + 1,
               data: playerData,
-              error: `Jersey number ${playerData.jerseyNumber} is already taken`
+              error: 'Missing required fields: firstName, lastName, dateOfBirth, position'
             });
+            await client.query('RELEASE SAVEPOINT bulk_row');
             continue;
           }
-        }
 
-        const playerId = uuidv4();
-        const createPlayerQuery = `
-          INSERT INTO players (
-            id, academy_id, first_name, last_name, date_of_birth, position,
-            email, phone, address, city, country, parent_name, parent_phone,
-            parent_email, medical_info, emergency_contact, emergency_phone,
-            height, weight, preferred_foot, jersey_number, notes, is_active,
-            created_at, updated_at
-          ) VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13,
-            $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, NOW(), NOW()
-          ) RETURNING id, first_name, last_name, position, jersey_number
-        `;
+          if (playerData.jerseyNumber) {
+            const jerseyResult = await client.query(
+              `SELECT id FROM players
+               WHERE academy_id = $1 AND jersey_number = $2 AND is_active = true`,
+              [academyId, parseInt(playerData.jerseyNumber, 10)],
+            );
 
-        const playerValues = [
-          playerId,
-          academyId,
-          playerData.firstName,
-          playerData.lastName,
-          new Date(playerData.dateOfBirth),
-          playerData.position,
-          playerData.email || null,
-          playerData.phone || null,
-          playerData.address || null,
-          playerData.city || null,
-          playerData.country || null,
-          playerData.parentName || null,
-          playerData.parentPhone || null,
-          playerData.parentEmail || null,
-          playerData.medicalInfo || null,
-          playerData.emergencyContact || null,
-          playerData.emergencyPhone || null,
-          playerData.height ? parseFloat(playerData.height) : null,
-          playerData.weight ? parseFloat(playerData.weight) : null,
-          playerData.preferredFoot || null,
-          playerData.jerseyNumber ? parseInt(playerData.jerseyNumber) : null,
-          playerData.notes || null,
-          true
-        ];
-
-        const playerResult = await query(createPlayerQuery, playerValues);
-        const player = playerResult.rows[0];
-
-        results.successful.push({
-          row: i + 1,
-          player: {
-            id: player.id,
-            firstName: player.first_name,
-            lastName: player.last_name,
-            position: player.position,
-            jerseyNumber: player.jersey_number
+            if (jerseyResult.rows.length > 0) {
+              results.failed.push({
+                row: i + 1,
+                data: playerData,
+                error: `Jersey number ${playerData.jerseyNumber} is already taken`
+              });
+              await client.query('RELEASE SAVEPOINT bulk_row');
+              continue;
+            }
           }
-        });
 
-      } catch (error) {
-        results.failed.push({
-          row: i + 1,
-          data: playerData,
-          error: error instanceof Error ? error.message : 'Unknown error'
-        });
+          const playerId = uuidv4();
+          const guardianName = playerData.parentName || playerData.guardianName || null;
+          const guardianPhone = playerData.parentPhone || playerData.guardianPhone || null;
+          const guardianEmail = playerData.parentEmail || playerData.guardianEmail || null;
+          const guardianInfo = [guardianName, guardianPhone, guardianEmail]
+            .filter(Boolean)
+            .join(' - ') || null;
+
+          const playerValues = [
+            playerId,
+            generatePlayerCardId(),
+            playerData.nrc ? hashNationalId(playerData.nrc) : null,
+            playerData.nrc ? IDENTITY_HASH_VERSION : null,
+            encrypt(playerData.firstName),
+            encrypt(playerData.lastName),
+            playerData.email ? encrypt(playerData.email) : null,
+            playerData.phone ? encrypt(playerData.phone) : null,
+            'Unknown',
+            encrypt(String(playerData.dateOfBirth)),
+            playerData.address ? encrypt(playerData.address) : null,
+            guardianName ? encrypt(guardianName) : null,
+            guardianPhone ? encrypt(guardianPhone) : null,
+            playerData.position,
+            playerData.preferredFoot ? String(playerData.preferredFoot).toLowerCase() : null,
+            playerData.height ? parseFloat(playerData.height) : null,
+            playerData.weight ? parseFloat(playerData.weight) : null,
+            playerData.jerseyNumber ? parseInt(playerData.jerseyNumber, 10) : null,
+            new Date(),
+            guardianInfo ? encrypt(guardianInfo) : null,
+            playerData.medicalInfo ? encrypt(playerData.medicalInfo) : null,
+            (playerData.playingHistory || playerData.playing_history) ? encrypt(playerData.playingHistory || playerData.playing_history) : null,
+            playerData.emergencyContact ? encrypt(playerData.emergencyContact) : null,
+            (playerData.currentClub || playerData.current_club) ? encrypt(playerData.currentClub || playerData.current_club) : null,
+            playerData.city ? encrypt(playerData.city) : null,
+            playerData.country ? encrypt(playerData.country) : null,
+            playerData.notes ? encrypt(playerData.notes) : null,
+            `CARD-${Date.now()}-${i}`,
+            `QR-${playerId}`,
+            academyId,
+          ];
+
+          let inserted: any = null;
+          for (let attempt = 0; attempt < 3 && !inserted; attempt++) {
+            playerValues[1] = generatePlayerCardId();
+            await client.query('SAVEPOINT bulk_card');
+            try {
+              inserted = (await client.query(createPlayerQuery, playerValues)).rows[0];
+              await client.query('RELEASE SAVEPOINT bulk_card');
+            } catch (insertError: any) {
+              await client.query('ROLLBACK TO SAVEPOINT bulk_card');
+              if (isUniqueViolation(insertError, 'player_card_id') && attempt < 2) {
+                continue;
+              }
+              throw insertError;
+            }
+          }
+
+          if (!inserted) {
+            throw new Error('Could not allocate a player card ID');
+          }
+
+          results.successful.push({
+            row: i + 1,
+            player: {
+              id: inserted.id,
+              firstName: playerData.firstName,
+              lastName: playerData.lastName,
+              position: inserted.position,
+              jerseyNumber: inserted.jersey_number
+            }
+          });
+
+          await client.query('RELEASE SAVEPOINT bulk_row');
+        } catch (error) {
+          await client.query('ROLLBACK TO SAVEPOINT bulk_row');
+          results.failed.push({
+            row: i + 1,
+            data: playerData,
+            error: isUniqueViolation(error, 'nrc_hash')
+              ? 'A player with this national registration number already exists'
+              : error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
       }
-    }
+    });
 
     const logActivityQuery = `
       INSERT INTO activities (

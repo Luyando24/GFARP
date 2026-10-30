@@ -194,7 +194,11 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
       });
     }
 
-    const academy = academyResult.rows[0];
+    const academyRow = academyResult.rows[0];
+    delete academyRow.password_hash;
+    delete academyRow.stripe_customer_id;
+    delete academyRow.stripe_subscription_id;
+    const academy = academyRow;
 
     // Get academy players - using encrypted columns and decrypting them (combines standard players and self-registered individual players)
     const playersResult = await query(

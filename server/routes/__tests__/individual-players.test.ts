@@ -63,6 +63,31 @@ describe('Individual Players Routes', () => {
       expect(response.body.is_academy_player).toBeUndefined(); // Backend doesn't return this flag for individual players
     });
 
+    it('should not expose private contact fields on a public profile', async () => {
+      const mockPlayer = {
+        player_id: 'uuid-123',
+        display_name: 'John Doe',
+        slug: 'john-doe',
+        bio: 'Midfielder',
+        contact_email: 'private@example.com',
+        whatsapp_number: '+260900000000',
+        guardian_phone: '+260911111111',
+        medical_info: 'sensitive',
+      };
+
+      (query as any).mockResolvedValueOnce({ rows: [mockPlayer] });
+
+      const response = await request(app)
+        .get('/api/individual-players/public/by-slug/john-doe');
+
+      expect(response.status).toBe(200);
+      expect(response.body.bio).toBe('Midfielder');
+      expect(response.body.contact_email).toBeUndefined();
+      expect(response.body.whatsapp_number).toBeUndefined();
+      expect(response.body.guardian_phone).toBeUndefined();
+      expect(response.body.medical_info).toBeUndefined();
+    });
+
     it('should fallback to academy player if not found in individual_players', async () => {
       const mockAcademyPlayer = { 
         id: '123e4567-e89b-12d3-a456-426614174000', 

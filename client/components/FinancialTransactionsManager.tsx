@@ -264,6 +264,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
 
     try {
       const activeCurrencyFilter = filterCurrency === 'all' ? undefined : filterCurrency;
+      const summaryCurrency = activeCurrencyFilter ?? defaultCurrency;
       const [transactionsRes, summaryRes, budgetRes] = await Promise.all([
         getFinancialTransactions(academyId, {
           page: currentPage,
@@ -277,7 +278,7 @@ const FinancialTransactionsManager: React.FC<FinancialTransactionsManagerProps> 
           currency: activeCurrencyFilter,
           playerFeesOnly: requestedTab === 'player-fees',
         }),
-        getFinancialSummary(academyId, { currency: activeCurrencyFilter }),
+        getFinancialSummary(academyId, { currency: summaryCurrency }),
         getBudgetCategories(academyId)
       ]);
 

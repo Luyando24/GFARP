@@ -4,6 +4,7 @@ import { createServer } from '../../index';
 
 vi.mock('../../lib/db.js', () => ({
   query: vi.fn().mockResolvedValue({ rows: [] }),
+  transaction: vi.fn(),
 }));
 
 import { query } from '../../lib/db.js';
@@ -61,6 +62,73 @@ describe('Football Players Routes', () => {
         expect.stringContaining('FROM individual_players'),
         ['academy-1', 10, 10],
       );
+    });
+  });
+
+  describe('POST /api/football-players', () => {
+    it('rejects player creation when the organization has no active subscription', async () => {
+      (query as any).mockResolvedValueOnce({ rows: [] });
+
+      const response = await request(app)
+        .post('/api/football-players')
+        .set('Authorization', 'Bearer valid_token')
+        .send({
+          firstName: 'Jane',
+          lastName: 'Doe',
+          dateOfBirth: '2010-01-01',
+          position: 'forward',
+          academyId: 'academy-1',
+        });
+
+      expect(response.status).toBe(403);
+      expect(response.body.code).toBe('SUBSCRIPTION_REQUIRED');
+      expect(query).toHaveBeenCalledTimes(1);
+    });
+
+    it('stores NULL national id fields when no NRC is supplied', async () => {
+      (query as any)
+        .mockResolvedValueOnce({ rows: [{ plan_name: 'Pro', player_limit: -1 }] })
+        .mockResolvedValueOnce({ rows: [{ id: 'player-1', player_card_id: 'CARD-1', position: 'forward', created_at: new Date(), updated_at: new Date() }] });
+
+      const response = await request(app)
+        .post('/api/football-players')
+        .set('Authorization', 'Bearer valid_token')
+        .send({
+          firstName: 'Jane',
+          lastName: 'Doe',
+          dateOfBirth: '2010-01-01',
+          position: 'forward',
+          academyId: 'academy-1',
+        });
+
+      expect(response.status).toBe(201);
+      const insertParams = (query as any).mock.calls[1][1];
+      expect(insertParams[2]).toBeNull();
+      expect(insertParams[3]).toBeNull();
+    });
+
+    it('hashes a supplied NRC and records the hash version', async () => {
+      (query as any)
+        .mockResolvedValueOnce({ rows: [{ plan_name: 'Pro', player_limit: -1 }] })
+        .mockResolvedValueOnce({ rows: [{ id: 'player-2', player_card_id: 'CARD-2', position: 'forward', created_at: new Date(), updated_at: new Date() }] });
+
+      const response = await request(app)
+        .post('/api/football-players')
+        .set('Authorization', 'Bearer valid_token')
+        .send({
+          firstName: 'Jane',
+          lastName: 'Doe',
+          dateOfBirth: '2010-01-01',
+          position: 'forward',
+          academyId: 'academy-1',
+          nrc: '123456/78/9',
+        });
+
+      expect(response.status).toBe(201);
+      const insertParams = (query as any).mock.calls[1][1];
+      expect(insertParams[2]).toMatch(/^[a-f0-9]{64}$/);
+      expect(insertParams[2]).not.toBe('123456/78/9');
+      expect(insertParams[3]).toBe('hmac-sha256:v1');
     });
   });
 });

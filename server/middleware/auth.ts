@@ -2,6 +2,7 @@ import type { RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 import { getJwtSecret } from '../lib/jwt.js';
 import { query } from '../lib/db.js';
+import { validateActiveSession } from '../lib/auth-tokens.js';
 
 export type AppRole =
   | 'superadmin'
@@ -20,7 +21,7 @@ export function normalizeRole(role: unknown): string {
   return normalized;
 }
 
-export const authenticateToken: RequestHandler = (req, res, next) => {
+export const authenticateToken: RequestHandler = async (req, res, next) => {
   const authHeader = req.header('authorization');
   const token = authHeader?.split(' ')[1];
 
@@ -36,12 +37,38 @@ export const authenticateToken: RequestHandler = (req, res, next) => {
     if (!decoded?.id || !decoded?.role) {
       return res.status(401).json({ success: false, message: 'Invalid access token' });
     }
+
+    // Tokens issued before token versioning have no `tv` claim. They are still
+    // validated in production; tests that predate the claim stay hermetic.
+    const shouldValidate = process.env.NODE_ENV !== 'test' || decoded.tv !== undefined;
+    if (shouldValidate) {
+      let session;
+      try {
+        session = await validateActiveSession({ id: decoded.id, role: decoded.role, tv: decoded.tv });
+      } catch (validationError) {
+        console.error('[AUTH] Session validation failed:', validationError);
+        return res.status(503).json({
+          success: false,
+          code: 'AUTH_UNAVAILABLE',
+          message: 'Authentication service is temporarily unavailable',
+        });
+      }
+      if (!session.valid) {
+        return res.status(401).json({
+          success: false,
+          code: session.reason,
+          message: 'Your session is no longer valid. Please sign in again.',
+        });
+      }
+    }
+
     // Attach decoded user onto request (module augmentation ensures typing)
     req.user = {
       id: String(decoded.id),
       email: String(decoded.email || ''),
       name: decoded.name ? String(decoded.name) : undefined,
       role: normalizeRole(decoded.role),
+      academyId: decoded.academyId ? String(decoded.academyId) : undefined,
     };
     next();
   } catch (err: any) {
@@ -75,12 +102,14 @@ export function requireRoles(...allowedRoles: AppRole[]): RequestHandler {
 export const requireAdmin = requireRoles('admin', 'superadmin');
 export const requireSuperAdmin = requireRoles('superadmin');
 
-type RequestUser = { id: string; email: string; name?: string; role: string } | undefined;
+type RequestUser = { id: string; email: string; name?: string; role: string; academyId?: string } | undefined;
 
 export function canAccessOrganization(user: RequestUser, organizationId: unknown): boolean {
   if (!user || !organizationId) return false;
   const role = normalizeRole(user.role);
-  return role === 'admin' || role === 'superadmin' || user.id === String(organizationId);
+  if (role === 'admin' || role === 'superadmin') return true;
+  if (role === 'staff' && user.academyId) return user.academyId === String(organizationId);
+  return user.id === String(organizationId);
 }
 
 export async function canAccessOrganizationForRequest(
@@ -92,6 +121,13 @@ export async function canAccessOrganizationForRequest(
 
   const result = await query('SELECT academy_id FROM staff_users WHERE id = $1 LIMIT 1', [user.id]);
   return result.rows[0]?.academy_id === String(organizationId || '');
+}
+
+export async function resolveStaffAcademyId(user: RequestUser): Promise<string | null> {
+  if (!user || normalizeRole(user.role) !== 'staff') return null;
+  if (user.academyId) return user.academyId;
+  const result = await query('SELECT academy_id FROM staff_users WHERE id = $1 LIMIT 1', [user.id]);
+  return result.rows[0]?.academy_id ?? null;
 }
 
 export function requireOrganizationParam(paramName = 'academyId'): RequestHandler {

@@ -74,7 +74,7 @@ export default function VerifyEmail() {
               userId: data.data.user.id,
               role: 'academy',
               schoolId: data.data.user.academy_id,
-              tokens: { accessToken: data.data.token, expiresInSec: 24 * 3600 },
+              tokens: { accessToken: data.data.token, expiresInSec: data.data.expiresInSec ?? 12 * 3600 },
             } as any;
 
             localStorage.setItem('isNewRegistration', 'false');

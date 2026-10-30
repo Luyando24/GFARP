@@ -26,7 +26,7 @@ import {
   AuthError,
   validateStudentData,
 } from "./errors";
-import { getSession, clearSession } from "./auth";
+import { getSession, clearSession, redirectToLogin } from "./auth";
 
 // Player types
 export interface Player {
@@ -295,7 +295,14 @@ export function normalizePlayersListResponse(
   };
 }
 
+const HTTP_TIMEOUT_MS = Number(import.meta.env.VITE_API_TIMEOUT_MS) || 30_000;
+
 async function http<T>(path: string, init?: RequestInit): Promise<T> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), HTTP_TIMEOUT_MS);
+  const forwardAbort = () => controller.abort();
+  init?.signal?.addEventListener('abort', forwardAbort, { once: true });
+
   try {
     const finalPath = path.startsWith('/') ? path.substring(1) : path;
 
@@ -319,11 +326,20 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
       headers["Authorization"] = `Bearer ${token}`;
     }
 
-    const res = await fetch(`${API_BASE}/${finalPath}`, {
-      credentials: "include",
-      headers,
-      ...init,
-    });
+    let res: Response;
+    try {
+      res = await fetch(`${API_BASE}/${finalPath}`, {
+        credentials: "include",
+        headers,
+        ...init,
+        signal: controller.signal,
+      });
+    } catch (error) {
+      if (controller.signal.aborted) {
+        throw new NetworkError("The request timed out. Please try again.");
+      }
+      throw error;
+    }
 
     if (!res.ok) {
       let rawText = "";
@@ -351,7 +367,9 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
         // Wrong credentials are an expected form error. Only a request that
         // actually carried a session token can prove that session is invalid.
         if (token) {
+          const role = session?.role;
           clearSession();
+          redirectToLogin(role);
         }
         throw new AuthError(message || "Authentication failed");
       }
@@ -369,6 +387,9 @@ async function http<T>(path: string, init?: RequestInit): Promise<T> {
       throw new NetworkError("Unable to connect to server");
     }
     throw error;
+  } finally {
+    clearTimeout(timeoutId);
+    init?.signal?.removeEventListener('abort', forwardAbort);
   }
 }
 
@@ -1047,7 +1068,7 @@ export async function enqueueSync(op: Parameters<typeof db.syncQueue.add>[0]) {
 }
 
 // Transfer API functions
-const BASE_URL = import.meta.env.VITE_API_BASE || '/api';
+const BASE_URL = API_BASE;
 
 export async function getTransfers(academyId?: string, limit = 50, offset = 0, status?: string): Promise<{ success: boolean; data: Transfer[]; total: number }> {
   try {

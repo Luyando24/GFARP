@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Run tests
+        run: pnpm test
+        env:
+          NODE_ENV: test
+          JWT_SECRET: ci-only-jwt-secret-value-32-characters
+          NRC_SALT: ci-only-nrc-salt-value-32-characters
+          FIELD_ENCRYPTION_KEY: ci-only-field-encryption-key-32-chars
+
+      - name: Build
+        run: pnpm build
+        env:
+          NODE_ENV: production
+          JWT_SECRET: ci-only-jwt-secret-value-32-characters
+          NRC_SALT: ci-only-nrc-salt-value-32-characters
+          FIELD_ENCRYPTION_KEY: ci-only-field-encryption-key-32-chars
+          CRON_SECRET: ci-only-cron-secret
+          DATABASE_URL: postgres://ci:ci@localhost:5432/ci

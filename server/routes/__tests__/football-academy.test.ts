@@ -47,7 +47,13 @@ describe('Academy Routes', () => {
     });
 
     it('should return academy profile if found', async () => {
-      const mockAcademy = { id: 'academy-1', name: 'Elite Academy' };
+      const mockAcademy = {
+        id: 'academy-1',
+        name: 'Elite Academy',
+        password_hash: 'should-never-leave-the-server',
+        stripe_customer_id: 'cus_secret',
+        stripe_subscription_id: 'sub_secret',
+      };
       // First query: academy details
       (query as any).mockResolvedValueOnce({ rows: [mockAcademy] });
       // Second query: players
@@ -64,6 +70,9 @@ describe('Academy Routes', () => {
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
       expect(response.body.data.name).toBe('Elite Academy');
+      expect(response.body.data.password_hash).toBeUndefined();
+      expect(response.body.data.stripe_customer_id).toBeUndefined();
+      expect(response.body.data.stripe_subscription_id).toBeUndefined();
     });
   });
 });

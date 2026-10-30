@@ -1,11 +1,15 @@
 import express, { RequestHandler } from 'express';
 import { Router } from 'express';
-// bcrypt usage is centralized in lib/db; avoid importing here
-import jwt from 'jsonwebtoken';
-import { getJwtSecret } from '../lib/jwt.js';
 import { v4 as uuidv4 } from 'uuid';
 import { query, transaction, hashPassword, verifyPassword } from '../lib/db.js';
 import { addBillingCycleToDate } from '../../shared/calendar-date.js';
+import { emailService } from '../lib/email-service.js';
+import {
+  ACCESS_TOKEN_TTL_SECONDS,
+  consumeEmailVerificationToken,
+  issueEmailVerificationToken,
+  signSessionToken,
+} from '../lib/auth-tokens.js';
 
 // Determine academies.id column type to align FKs
 async function getAcademiesIdType(client: any): Promise<'uuid' | 'integer'> {
@@ -100,8 +104,11 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
     // Normalize email
     const normalizedEmail = email.toLowerCase().trim();
 
-    // Check if academy already exists
-    const existingAcademyResult = await query('SELECT * FROM academies WHERE email = $1', [normalizedEmail]);
+    // Check if academy already exists (email is case-insensitive)
+    const existingAcademyResult = await query(
+      'SELECT id FROM academies WHERE LOWER(TRIM(email)) = $1 LIMIT 1',
+      [normalizedEmail],
+    );
     if (existingAcademyResult.rows.length > 0) {
       return res.status(409).json({
         success: false,
@@ -341,16 +348,24 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
       return { academy, subscription, plan };
     });
 
-    // Generate JWT token
-    const token = jwt.sign(
-      { id: result.academy.id, email: result.academy.email, role: 'ACADEMY_ADMIN' },
-      getJwtSecret(),
-      { expiresIn: '24h' }
-    );
+    // Registration no longer auto-issues a role token. Send a one-time
+    // verification link and let the user log in with the password they chose.
+    const verificationToken = await issueEmailVerificationToken('academy', result.academy.id);
+    try {
+      await emailService.initializeFromDatabase();
+      const appUrl = (process.env.APP_URL || process.env.FRONTEND_URL || 'https://www.soccercircular.com').replace(/\/$/, '');
+      await emailService.sendEmail({
+        to: result.academy.email,
+        subject: 'Verify your Soccer Circular academy account',
+        html: `<p>Welcome to Soccer Circular.</p><p>Please confirm your email address:</p><p><a href="${appUrl}/verify-email?token=${encodeURIComponent(verificationToken)}&type=academy">Verify my email</a></p><p>This link expires in 24 hours.</p>`,
+      });
+    } catch (emailError) {
+      console.error('[academy/register] Could not send verification email:', emailError);
+    }
 
     return res.status(201).json({
       success: true,
-      message: 'Academy registered successfully',
+      message: 'Academy registered. Please check your email to verify your account.',
       data: {
         academy: {
           id: result.academy.id,
@@ -368,10 +383,16 @@ export const handleAcademyRegister: RequestHandler = async (req, res) => {
           endDate: result.subscription.end_date,
           autoRenew: result.subscription.auto_renew
         } : null,
-        token
+        requireVerification: true
       }
     });
   } catch (error: any) {
+    if (error?.code === '23505') {
+      return res.status(409).json({
+        success: false,
+        message: 'An account with this email already exists',
+      });
+    }
     const details = {
       message: error?.message,
       code: error?.code,
@@ -407,9 +428,10 @@ export const handleAcademyLogin: RequestHandler = async (req, res) => {
 
     // Find academy by email (allow any status for now to give better error)
     const academyResult = await query(`
-      SELECT id, name, code, email, address, district, province, phone, director_name, password_hash, status
+      SELECT id, name, code, email, address, district, province, phone, director_name,
+             password_hash, status, token_version
       FROM academies
-      WHERE email = $1
+      WHERE LOWER(TRIM(email)) = $1
       LIMIT 1
     `, [normalizedEmail]);
 
@@ -455,11 +477,12 @@ export const handleAcademyLogin: RequestHandler = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
-    const token = jwt.sign(
-      { id: academy.id, email: academy.email, role: 'ACADEMY_ADMIN' },
-      getJwtSecret(),
-      { expiresIn: '7d' }
-    );
+    const token = signSessionToken({
+      id: academy.id,
+      email: academy.email,
+      role: 'academy',
+      tokenVersion: academy.token_version,
+    });
 
     return res.json({
       success: true,
@@ -476,7 +499,8 @@ export const handleAcademyLogin: RequestHandler = async (req, res) => {
           city: academy.district,
           country: academy.province
         },
-        token
+        token,
+        expiresInSec: ACCESS_TOKEN_TTL_SECONDS
       }
     });
   } catch (error: any) {
@@ -485,49 +509,41 @@ export const handleAcademyLogin: RequestHandler = async (req, res) => {
   }
 }
 
-// Email Verification
+// Email Verification (one-time, purpose-bound token stored hashed in the DB)
 export const handleVerifyEmail: RequestHandler = async (req, res) => {
   try {
-    const { token } = req.body;
-    
+    const token = String(req.body?.token || '').trim();
+
     if (!token) {
       return res.status(400).json({ success: false, message: 'Token is required' });
     }
 
-    // Verify the token
-    let decoded: any;
-    try {
-      decoded = jwt.verify(token, getJwtSecret());
-    } catch (err) {
-      return res.status(400).json({ success: false, message: 'Invalid or expired token' });
+    const academyId = await consumeEmailVerificationToken(token, 'academy');
+    if (!academyId) {
+      return res.status(400).json({ success: false, message: 'Invalid or expired verification link' });
     }
 
-    // In a real app, you might have a dedicated verification token or check a 'is_verified' flag
-    // For now, we'll assume the token contains the academy ID and we just need to confirm it exists
-    // and potentially mark it as verified if you had such a column.
-    
-    // We'll return the user data so the frontend can auto-login
     const academyResult = await query(`
-      SELECT *
-      FROM academies 
+      SELECT id, name, code, email, address, district, province, phone, director_name,
+             status, token_version
+      FROM academies
       WHERE id = $1
-    `, [decoded.id]);
+      LIMIT 1
+    `, [academyId]);
 
     if (academyResult.rows.length === 0) {
       return res.status(404).json({ success: false, message: 'Academy not found' });
     }
 
     const academy = academyResult.rows[0];
-    
-    // Remove sensitive data
-    delete academy.password_hash;
-    
-    // Generate a new long-lived token for login
-    const loginToken = jwt.sign(
-      { id: academy.id, email: academy.email, role: 'ACADEMY_ADMIN' },
-      getJwtSecret(),
-      { expiresIn: '24h' }
-    );
+    await query('UPDATE academies SET email_verified = TRUE, updated_at = NOW() WHERE id = $1', [academy.id]);
+
+    const loginToken = signSessionToken({
+      id: academy.id,
+      email: academy.email,
+      role: 'academy',
+      tokenVersion: academy.token_version,
+    });
 
     return res.json({
       success: true,
@@ -535,12 +551,23 @@ export const handleVerifyEmail: RequestHandler = async (req, res) => {
       data: {
         user: {
           id: academy.id,
-          academy_id: academy.id, // Ensure compatibility with frontend expecting academy_id
+          academy_id: academy.id,
           name: academy.name,
           email: academy.email
         },
-        academy: academy, // Return full academy object for local storage
-        token: loginToken
+        academy: {
+          id: academy.id,
+          name: academy.name,
+          code: academy.code,
+          email: academy.email,
+          contactPerson: academy.director_name,
+          phone: academy.phone,
+          address: academy.address,
+          city: academy.district,
+          country: academy.province
+        },
+        token: loginToken,
+        expiresInSec: ACCESS_TOKEN_TTL_SECONDS
       }
     });
 
@@ -635,11 +662,11 @@ export const handleAgencyRegister: RequestHandler = async (req, res) => {
       return { agency, subscription, plan };
     });
 
-    const token = jwt.sign(
-      { id: result.agency.id, email: result.agency.email, role: 'AGENCY_ADMIN' },
-      getJwtSecret(),
-      { expiresIn: '24h' }
-    );
+    const token = signSessionToken({
+      id: result.agency.id,
+      email: result.agency.email,
+      role: 'agency_admin',
+    });
 
     return res.status(201).json({
       success: true,
@@ -650,7 +677,8 @@ export const handleAgencyRegister: RequestHandler = async (req, res) => {
           ...result.subscription,
           plan: result.plan.name
         } : null,
-        token
+        token,
+        expiresInSec: ACCESS_TOKEN_TTL_SECONDS
       }
     });
   } catch (error: any) {
@@ -670,7 +698,7 @@ export const handleAgencyLogin: RequestHandler = async (req, res) => {
     // Normalize email
     const normalizedEmail = email.toLowerCase().trim();
 
-    const result = await query('SELECT * FROM agencies WHERE email = $1', [normalizedEmail]);
+    const result = await query('SELECT * FROM agencies WHERE LOWER(TRIM(email)) = $1', [normalizedEmail]);
     if (result.rows.length === 0) {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
@@ -686,11 +714,12 @@ export const handleAgencyLogin: RequestHandler = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
-    const token = jwt.sign(
-      { id: agency.id, email: agency.email, role: 'AGENCY_ADMIN' },
-      getJwtSecret(),
-      { expiresIn: '7d' }
-    );
+    const token = signSessionToken({
+      id: agency.id,
+      email: agency.email,
+      role: 'agency_admin',
+      tokenVersion: agency.token_version,
+    });
 
     return res.json({
       success: true,
@@ -710,12 +739,78 @@ export const handleAgencyLogin: RequestHandler = async (req, res) => {
   }
 };
 
+// Staff Login (academy staff accounts created under an academy)
+export const handleStaffLogin: RequestHandler = async (req, res) => {
+  try {
+    const email = String(req.body?.email || '').toLowerCase().trim();
+    const password = String(req.body?.password || '');
+
+    if (!email || !password) {
+      return res.status(400).json({ success: false, message: 'Email and password are required' });
+    }
+
+    const result = await query(`
+      SELECT id, academy_id, email, first_name, last_name, password_hash, role, is_active, token_version
+      FROM staff_users
+      WHERE LOWER(email) = $1
+      LIMIT 1
+    `, [email]);
+
+    const staff = result.rows[0];
+    if (!staff) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
+    if (!staff.is_active) {
+      return res.status(401).json({ success: false, message: 'Account is inactive. Please contact your academy administrator.' });
+    }
+    if (!staff.academy_id) {
+      return res.status(403).json({ success: false, message: 'This staff account is not linked to an academy.' });
+    }
+
+    const isValid = await verifyPassword(password, staff.password_hash);
+    if (!isValid) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
+
+    const token = signSessionToken({
+      id: staff.id,
+      email: staff.email,
+      name: `${staff.first_name || ''} ${staff.last_name || ''}`.trim() || undefined,
+      role: 'staff',
+      academyId: staff.academy_id,
+      tokenVersion: staff.token_version,
+    });
+
+    return res.json({
+      success: true,
+      message: 'Login successful',
+      data: {
+        user: {
+          id: staff.id,
+          email: staff.email,
+          firstName: staff.first_name,
+          lastName: staff.last_name,
+          role: 'staff',
+          staffRole: staff.role,
+          academyId: staff.academy_id,
+        },
+        token,
+        expiresInSec: ACCESS_TOKEN_TTL_SECONDS,
+      },
+    });
+  } catch (error: any) {
+    console.error('Staff login error:', error);
+    return res.status(500).json({ success: false, message: 'Login failed', error: error.message });
+  }
+};
+
 // Define the router and routes
 const footballAuthRouter = Router();
 footballAuthRouter.post('/academy/register', handleAcademyRegister);
 footballAuthRouter.post('/academy/login', handleAcademyLogin);
 footballAuthRouter.post('/agency/register', handleAgencyRegister);
 footballAuthRouter.post('/agency/login', handleAgencyLogin);
+footballAuthRouter.post('/staff/login', handleStaffLogin);
 footballAuthRouter.post('/verify-email', handleVerifyEmail);
 
 // Export the router as the default export

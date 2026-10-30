@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const authMocks = vi.hoisted(() => ({
   clearSession: vi.fn(),
   getSession: vi.fn(),
+  redirectToLogin: vi.fn(),
 }));
 
 vi.mock("./auth", () => authMocks);
@@ -13,6 +14,7 @@ describe("API authentication failures", () => {
   beforeEach(() => {
     authMocks.clearSession.mockReset();
     authMocks.getSession.mockReset();
+    authMocks.redirectToLogin.mockReset();
     vi.restoreAllMocks();
   });
 
@@ -67,5 +69,6 @@ describe("API authentication failures", () => {
       .rejects.toThrow("Session expired");
 
     expect(authMocks.clearSession).toHaveBeenCalledOnce();
+    expect(authMocks.redirectToLogin).toHaveBeenCalledWith("academy");
   });
 });

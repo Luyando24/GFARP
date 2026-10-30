@@ -1,7 +1,13 @@
 import express from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { query } from '../lib/db.js';
-import { authenticateToken, canAccessOrganizationForRequest, normalizeRole, requireAdmin } from '../middleware/auth.js';
+import {
+  authenticateToken,
+  canAccessOrganizationForRequest,
+  normalizeRole,
+  requireAdmin,
+  resolveStaffAcademyId,
+} from '../middleware/auth.js';
 
 const router = express.Router();
 router.use(authenticateToken);
@@ -37,9 +43,21 @@ router.get('/tickets', async (req, res) => {
     const params: any[] = [];
     let paramCount = 0;
     if (!['admin', 'superadmin'].includes(normalizeRole(req.user?.role))) {
+      // Staff ids are not academy ids; resolve the staff member's academy first.
+      const staffAcademyId = await resolveStaffAcademyId(req.user);
       paramCount++;
-      sql += ` AND (st.created_by = $${paramCount} OR st.school_id = $${paramCount})`;
+      sql += ` AND (st.created_by = $${paramCount}`;
       params.push(req.user?.id);
+      if (staffAcademyId) {
+        paramCount++;
+        sql += ` OR st.school_id = $${paramCount}`;
+        params.push(staffAcademyId);
+      } else {
+        paramCount++;
+        sql += ` OR st.school_id = $${paramCount}`;
+        params.push(req.user?.id);
+      }
+      sql += ')';
     }
 
     if (status) {

@@ -118,18 +118,30 @@ if (resolvedConnectionString) {
   }
 }
 
+const isServerless = Boolean(
+  process.env.VERCEL ||
+  process.env.NETLIFY ||
+  process.env.AWS_LAMBDA_FUNCTION_NAME ||
+  process.env.LAMBDA_TASK_ROOT,
+);
+
 const pool: any = cleanConnectionString
   ? new Pool({
     connectionString: cleanConnectionString,
     ssl: computeSslOption(resolvedConnectionString),
-    max: parseInt(process.env.DB_POOL_MAX || '1'), // Reduced to 1 for serverless to avoid max_connections errors
-    connectionTimeoutMillis: parseInt(process.env.DB_CONNECT_TIMEOUT_MS || '5000'), // 5s timeout
-    idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS || '2000'), // Close idle clients after 2s
-    allowExitOnIdle: true, // Allow process to exit if pool is idle
+    max: parseInt(process.env.DB_POOL_MAX || (isServerless ? '1' : '10')),
+    connectionTimeoutMillis: parseInt(process.env.DB_CONNECT_TIMEOUT_MS || '10000'),
+    idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT_MS || (isServerless ? '2000' : '30000')),
+    statement_timeout: parseInt(process.env.DB_STATEMENT_TIMEOUT_MS || '15000'),
+    query_timeout: parseInt(process.env.DB_QUERY_TIMEOUT_MS || '15000'),
+    allowExitOnIdle: isServerless,
     keepAlive: true,
-    keepAliveInitialDelayMillis: 3000, // Reduced from 10000ms for faster serverless startup
+    keepAliveInitialDelayMillis: 3000,
+    application_name: 'soccer-circular-api',
   })
   : null;
+
+const debugQueries = process.env.DB_DEBUG === 'true';
 
 console.log('[DB] Pool initialized:', pool ? 'Connected' : 'No connection string');
 
@@ -156,9 +168,9 @@ export async function query(text: string, params?: any[]): Promise<{ rows: Query
 
   let client;
   try {
-    console.log('[DB] Acquiring connection from pool...');
+    if (debugQueries) console.log('[DB] Acquiring connection from pool');
     client = await pool.connect();
-    console.log('[DB] Connection acquired, executing query');
+    if (debugQueries) console.log('[DB] Connection acquired, executing query');
     const result = await client.query(text, params);
     return { rows: result.rows };
   } catch (error) {
@@ -170,7 +182,7 @@ export async function query(text: string, params?: any[]): Promise<{ rows: Query
   } finally {
     if (client) {
       client.release();
-      console.log('[DB] Connection released back to pool');
+      if (debugQueries) console.log('[DB] Connection released back to pool');
     }
   }
 }
@@ -204,28 +216,14 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash);
 }
 
-// Graceful shutdown
-process.on('SIGINT', async () => {
-  try {
-    if (pool) {
-      console.log('Closing database pool...');
-      await pool.end();
-    }
-  } finally {
-    process.exit(0);
+// Graceful shutdown is owned by the process entrypoint (node-build.ts) so the
+// HTTP server can stop accepting requests before the pool is closed.
+export async function closePool(): Promise<void> {
+  if (pool) {
+    console.log('Closing database pool...');
+    await pool.end();
   }
-});
-
-process.on('SIGTERM', async () => {
-  try {
-    if (pool) {
-      console.log('Closing database pool...');
-      await pool.end();
-    }
-  } finally {
-    process.exit(0);
-  }
-});
+}
 
 // export { pool };
 // export default pool;

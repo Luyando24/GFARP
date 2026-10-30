@@ -4,12 +4,33 @@ import { normalizeRole, requireAdmin } from '../middleware/auth.js';
 
 const router = express.Router();
 
+// Notifications are addressed to any account type, not only staff users.
+const ROLE_TO_NOTIFICATION_TYPE: Record<string, string> = {
+  admin: 'admin',
+  superadmin: 'admin',
+  academy: 'academy',
+  agency_admin: 'agency',
+  staff: 'staff',
+  individual_player: 'player',
+  student: 'student',
+};
+
+function notificationIdentity(user: { id?: string; role?: string } | undefined): { userId: string; userType: string } {
+  const role = normalizeRole(user?.role);
+  return {
+    userId: String(user?.id || ''),
+    userType: ROLE_TO_NOTIFICATION_TYPE[role] || 'staff',
+  };
+}
+
 // Get notifications for a specific user (used by NotificationsPopover)
 router.get('/list', (async (req, res) => {
   try {
     const requestedUserId = String(req.query.userId || '');
     const isAdmin = ['admin', 'superadmin'].includes(normalizeRole(req.user?.role));
-    const userId = isAdmin && requestedUserId ? requestedUserId : req.user?.id;
+    const identity = notificationIdentity(req.user);
+    const userId = isAdmin && requestedUserId ? requestedUserId : identity.userId;
+    const userType = isAdmin && req.query.userType ? String(req.query.userType) : identity.userType;
 
     if (!userId) {
       return res.status(400).json({ error: 'User ID is required' });
@@ -28,12 +49,12 @@ router.get('/list', (async (req, res) => {
         n.created_at as "createdAt"
       FROM notifications n
       JOIN user_notifications un ON n.id = un.notification_id
-      WHERE un.user_id = $1
+      WHERE un.user_id = $1 AND un.user_type = $2
       ORDER BY n.created_at DESC
       LIMIT 50
     `;
 
-    const { rows } = await query(sql, [userId]);
+    const { rows } = await query(sql, [userId, userType]);
     res.json({ success: true, data: rows });
   } catch (error) {
     console.error('Error fetching notification list:', error);
@@ -45,18 +66,20 @@ router.get('/list', (async (req, res) => {
 router.get('/', requireAdmin, (async (req, res) => {
   try {
     const { type, status, limit = 20, offset = 0 } = req.query;
-    const userId = (req as any).user?.id;
+    const identity = notificationIdentity(req.user);
+    const userId = identity.userId || null;
+    const userType = identity.userType;
 
     let sql = `
       SELECT n.*, 
              CASE WHEN un.read_at IS NOT NULL THEN true ELSE false END as read
       FROM notifications n
-      LEFT JOIN user_notifications un ON n.id = un.notification_id AND un.user_id = $1
+      LEFT JOIN user_notifications un ON n.id = un.notification_id AND un.user_id = $1 AND un.user_type = $2
       WHERE 1=1
     `;
 
-    const queryParams = [userId || null];
-    let paramCount = 2;
+    const queryParams: any[] = [userId, userType];
+    let paramCount = 3;
 
     if (type) {
       sql += ` AND n.type = $${paramCount}`;
@@ -79,11 +102,11 @@ router.get('/', requireAdmin, (async (req, res) => {
     const countQuery = `
       SELECT COUNT(*) 
       FROM notifications n
-      LEFT JOIN user_notifications un ON n.id = un.notification_id AND un.user_id = $1
+      LEFT JOIN user_notifications un ON n.id = un.notification_id AND un.user_id = $1 AND un.user_type = $2
       WHERE 1=1
     `;
 
-    const { rows: countRows } = await query(countQuery, [userId || null]);
+    const { rows: countRows } = await query(countQuery, [userId, userType]);
     const totalCount = parseInt(countRows[0].count);
 
     res.json({
@@ -126,17 +149,17 @@ router.get('/events', requireAdmin, (async (_req, res) => {
 router.get('/:id', (async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user?.id;
+    const identity = notificationIdentity(req.user);
 
     const sql = `
       SELECT n.*, 
              CASE WHEN un.read_at IS NOT NULL THEN true ELSE false END as read
       FROM notifications n
-      LEFT JOIN user_notifications un ON n.id = un.notification_id AND un.user_id = $1
+      LEFT JOIN user_notifications un ON n.id = un.notification_id AND un.user_id = $1 AND un.user_type = $3
       WHERE n.id = $2
     `;
 
-    const { rows } = await query(sql, [userId || null, id]);
+    const { rows } = await query(sql, [identity.userId || null, id, identity.userType]);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Notification not found' });
@@ -157,14 +180,15 @@ router.post('/mark-read', (async (req, res) => {
       return res.status(400).json({ error: 'User Notification ID is required' });
     }
 
+    const identity = notificationIdentity(req.user);
     const sql = `
       UPDATE user_notifications
       SET read = true, read_at = NOW()
-      WHERE id = $1 AND user_id = $2
+      WHERE id = $1 AND user_id = $2 AND user_type = $3
       RETURNING *
     `;
 
-    const { rows } = await query(sql, [userNotificationId, req.user?.id]);
+    const { rows } = await query(sql, [userNotificationId, identity.userId, identity.userType]);
     if (rows.length === 0) {
       return res.status(404).json({ error: 'Notification record not found' });
     }
@@ -230,30 +254,43 @@ router.post('/', requireAdmin, (async (req, res) => {
       const { rows } = await client.query(notificationQuery, notificationValues);
       const notification = rows[0];
 
-      // If recipients are specified, create user_notifications entries
+      // If recipients are specified, create user_notifications entries. Each
+      // recipient is either an id (staff by default) or { id, type }.
       if (recipients && recipients.length > 0) {
-        const userNotificationQuery = `
-          INSERT INTO user_notifications (notification_id, user_id)
-          VALUES ($1, $2)
-        `;
-
-        for (const userId of recipients) {
-          await client.query(userNotificationQuery, [notification.id, userId]);
+        const recipientType = String(req.body.recipientType || 'staff');
+        for (const recipient of recipients) {
+          const recipientId = typeof recipient === 'string' ? recipient : recipient?.id;
+          const recipientKind = typeof recipient === 'string'
+            ? recipientType
+            : String(recipient?.type || recipientType);
+          if (!recipientId) continue;
+          await client.query(`
+            INSERT INTO user_notifications (notification_id, user_type, user_id)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (notification_id, user_type, user_id) DO NOTHING
+          `, [notification.id, recipientKind, recipientId]);
         }
       }
 
-      // Resolve selected academies to their staff recipients.
+      // Selected academies are addressed as academy recipients, so the academy
+      // account (not just its staff) sees the notification.
       if (schoolIds && schoolIds.length > 0) {
         await client.query(`
-          INSERT INTO user_notifications (notification_id, user_id)
-          SELECT $1, id FROM staff_users WHERE academy_id = ANY($2::uuid[])
-          ON CONFLICT (notification_id, user_id) DO NOTHING
+          INSERT INTO user_notifications (notification_id, user_type, user_id)
+          SELECT $1, 'academy', id FROM academies WHERE id = ANY($2::uuid[])
+          ON CONFLICT (notification_id, user_type, user_id) DO NOTHING
         `, [notification.id, schoolIds]);
       } else if (isGlobal) {
         await client.query(`
-          INSERT INTO user_notifications (notification_id, user_id)
-          SELECT $1, id FROM staff_users
-          ON CONFLICT (notification_id, user_id) DO NOTHING
+          INSERT INTO user_notifications (notification_id, user_type, user_id)
+          SELECT $1, recipient_type, recipient_id FROM (
+            SELECT 'staff' AS recipient_type, id AS recipient_id FROM staff_users
+            UNION ALL
+            SELECT 'academy', id FROM academies WHERE status = 'active'
+            UNION ALL
+            SELECT 'agency', id FROM agencies WHERE status = 'active'
+          ) recipients
+          ON CONFLICT (notification_id, user_type, user_id) DO NOTHING
         `, [notification.id]);
       }
 
@@ -269,40 +306,40 @@ router.post('/', requireAdmin, (async (req, res) => {
 router.post('/:id/read', (async (req, res) => {
   try {
     const { id } = req.params;
-    const userId = (req as any).user?.id;
+    const identity = notificationIdentity(req.user);
 
-    if (!userId) {
+    if (!identity.userId) {
       return res.status(401).json({ error: 'User not authenticated' });
     }
 
     // Check if user_notification entry exists
     const checkQuery = `
       SELECT * FROM user_notifications
-      WHERE notification_id = $1 AND user_id = $2
+      WHERE notification_id = $1 AND user_id = $2 AND user_type = $3
     `;
 
-    const { rows: checkRows } = await query(checkQuery, [id, userId]);
+    const { rows: checkRows } = await query(checkQuery, [id, identity.userId, identity.userType]);
 
     if (checkRows.length === 0) {
       // Create a new user_notification entry
       const insertQuery = `
-        INSERT INTO user_notifications (notification_id, user_id, read_at)
-        VALUES ($1, $2, NOW())
+        INSERT INTO user_notifications (notification_id, user_type, user_id, read_at)
+        VALUES ($1, $2, $3, NOW())
         RETURNING *
       `;
 
-      const { rows } = await query(insertQuery, [id, userId]);
+      const { rows } = await query(insertQuery, [id, identity.userType, identity.userId]);
       return res.json(rows[0]);
     } else {
       // Update existing user_notification entry
       const updateQuery = `
         UPDATE user_notifications
         SET read_at = NOW()
-        WHERE notification_id = $1 AND user_id = $2
+        WHERE notification_id = $1 AND user_id = $2 AND user_type = $3
         RETURNING *
       `;
 
-      const { rows } = await query(updateQuery, [id, userId]);
+      const { rows } = await query(updateQuery, [id, identity.userId, identity.userType]);
       return res.json(rows[0]);
     }
   } catch (error) {

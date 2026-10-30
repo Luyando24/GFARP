@@ -20,6 +20,7 @@ export type UserRole =
   | "academy"
   | "agency"
   | "agency_admin"
+  | "staff"
   | "individual_player"
   | "sales_agent";
 
@@ -276,30 +277,6 @@ export interface TaskRecord {
 export interface LoginRequest {
   email: string;
   password: string;
-}
-
-export interface StudentLoginRequest {
-  studentId: string;
-}
-
-export interface StudentAlternativeLoginRequest {
-  email?: string;
-  phone?: string;
-  password: string;
-}
-
-export interface RegisterStaffRequest {
-  schoolName: string;
-  email: string;
-  password: string;
-  firstName: string;
-  lastName: string;
-  role?: Exclude<UserRole, "student" | "parent">; // default admin
-}
-
-export interface RegisterStaffResponse {
-  userId: UUID;
-  schoolId: UUID;
 }
 
 export interface RegisterTeacherRequest {

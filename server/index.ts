@@ -1,7 +1,9 @@
 import "dotenv/config";
 import { query } from "./lib/db.js";
-import express from "express";
+import express, { type ErrorRequestHandler } from "express";
 import cors from "cors";
+import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import { emailService } from "./lib/email-service.js";
 import authRouter, {
   handleLogin,
@@ -54,12 +56,63 @@ import agenciesRouter from "./routes/agencies.js";
 import sitemapRouter from "./routes/sitemap.js";
 import blogsRouter from "./routes/blogs.js";
 import testimonialsRouter from "./routes/testimonials.js";
-import { authenticateToken, requireAdmin, requireSuperAdmin } from "./middleware/auth.js";
+import {
+  authenticateToken,
+  canAccessOrganizationForRequest,
+  requireAdmin,
+  requireSuperAdmin,
+} from "./middleware/auth.js";
+import { enforceMaintenanceMode } from "./middleware/maintenance.js";
+
+function assertProductionConfig() {
+  if (process.env.NODE_ENV !== 'production') return;
+
+  const checks: Array<[string, boolean]> = [
+    ['JWT_SECRET', Boolean(process.env.JWT_SECRET?.trim())],
+    ['NRC_SALT', Boolean(process.env.NRC_SALT?.trim())],
+    ['FIELD_ENCRYPTION_KEY', Boolean(process.env.FIELD_ENCRYPTION_KEY?.trim())],
+    ['CRON_SECRET', Boolean(process.env.CRON_SECRET?.trim())],
+    ['DATABASE_URL or SUPABASE_DB_URL', Boolean(process.env.DATABASE_URL || process.env.SUPABASE_DB_URL)],
+  ];
+  const missing = checks.filter(([, present]) => !present).map(([name]) => name);
+  if (missing.length > 0) {
+    throw new Error(`[SERVER] Missing required production configuration: ${missing.join(', ')}`);
+  }
+}
+
+const isTestEnv = () => process.env.NODE_ENV === 'test';
+
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: isTestEnv,
+  message: { success: false, message: 'Too many attempts. Please try again later.' },
+});
+
+const registrationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: isTestEnv,
+  message: { success: false, message: 'Too many registration attempts. Please try again later.' },
+});
 
 export function createServer() {
   console.log("Creating Express server...");
+  assertProductionConfig();
   const app = express();
   console.log("[SERVER] Express app instantiated");
+
+  app.disable('x-powered-by');
+  app.set('trust proxy', 1);
+  app.use(helmet({
+    contentSecurityPolicy: false,
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
+  }));
 
   // Tests must remain hermetic and must not connect to the production database.
   if (process.env.NODE_ENV !== 'test') {
@@ -69,6 +122,8 @@ export function createServer() {
   }
 
   // Middleware
+  // Explicit allow-list in every environment. Same-origin is always allowed;
+  // localhost is only auto-allowed outside production.
   const configuredOrigins = new Set(
     [
       ...(process.env.CORS_ORIGINS || '').split(','),
@@ -79,14 +134,19 @@ export function createServer() {
       .filter(Boolean)
       .map((origin) => String(origin).trim().replace(/\/$/, '')),
   );
+  const localhostOriginPattern = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/;
   app.use(cors((req, callback) => {
     const origin = String(req.headers.origin || '').trim().replace(/\/$/, '');
+    if (!origin) {
+      // Non-browser clients (curl, server-to-server) do not send Origin.
+      return callback(null, { origin: true, credentials: true });
+    }
+
     const forwardedHost = String(req.headers['x-forwarded-host'] || req.headers.host || '')
       .split(',')[0]
       .trim();
     let isSameOrigin = false;
-
-    if (origin && forwardedHost) {
+    if (forwardedHost) {
       try {
         isSameOrigin = new URL(origin).host === forwardedHost;
       } catch {
@@ -95,10 +155,13 @@ export function createServer() {
     }
 
     const allowed =
-      !origin ||
-      process.env.NODE_ENV !== 'production' ||
       isSameOrigin ||
-      configuredOrigins.has(origin);
+      configuredOrigins.has(origin) ||
+      (process.env.NODE_ENV !== 'production' && localhostOriginPattern.test(origin));
+
+    if (!allowed) {
+      console.warn(`[CORS] Rejected cross-origin request from ${origin}`);
+    }
 
     callback(null, {
       origin: allowed,
@@ -127,6 +190,25 @@ export function createServer() {
   const api = express.Router();
   console.log("[SERVER] API router created");
 
+  // Maintenance mode is enforced server-side for every API route except the
+  // explicit exemptions (admin login, public banner, Stripe webhooks, cron).
+  api.use(enforceMaintenanceMode);
+
+  // Throttle credential endpoints before any auth handler runs
+  api.use("/auth/login", authLimiter);
+  api.use("/auth/forgot-password", authLimiter);
+  api.use("/auth/reset-password", authLimiter);
+  api.use("/football-auth/academy/login", authLimiter);
+  api.use("/football-auth/agency/login", authLimiter);
+  api.use("/football-auth/staff/login", authLimiter);
+  api.use("/football-auth/verify-email", authLimiter);
+  api.use("/football-auth/academy/register", registrationLimiter);
+  api.use("/football-auth/agency/register", registrationLimiter);
+  api.use("/individual-players/login", authLimiter);
+  api.use("/individual-players/verify-email", authLimiter);
+  api.use("/individual-players/resend-verification", authLimiter);
+  api.use("/individual-players/register", registrationLimiter);
+
   // Authentication routes
   api.post("/auth/login", handleLogin);
   api.post("/auth/register-superadmin", authenticateToken, requireSuperAdmin, handleRegisterSuperAdmin);
@@ -143,7 +225,19 @@ export function createServer() {
   api.get("/dashboard/country-distribution", authenticateToken, requireAdmin, handleGetCountryDistribution);
   api.get("/dashboard/financial-growth", authenticateToken, requireAdmin, handleGetFinancialGrowth);
   api.get("/dashboard/transactions", authenticateToken, requireAdmin, handleGetAdminTransactions);
-  api.get("/dashboard/academy-stats", authenticateToken, requireAdmin, handleGetAcademyDashboardStats);
+  // Tenant dashboards (academy, agency, staff) may only read their own stats.
+  api.get(
+    "/dashboard/academy-stats",
+    authenticateToken,
+    async (req, res, next) => {
+      const orgId = req.query.academyId || req.query.agencyId || req.query.orgId;
+      if (!(await canAccessOrganizationForRequest(req.user, orgId))) {
+        return res.status(403).json({ success: false, message: "You cannot access this organization" });
+      }
+      next();
+    },
+    handleGetAcademyDashboardStats,
+  );
   console.log("[SERVER] Dashboard routes registered");
 
   // Notifications routes
@@ -272,6 +366,22 @@ export function createServer() {
 
   // Dynamic Sitemap
   app.use("/", sitemapRouter);
+
+  // Unknown API paths must return JSON, never the SPA HTML fallback
+  app.use("/api", (_req, res) => {
+    res.status(404).json({ success: false, error: "Not found" });
+  });
+
+  const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
+    if (res.headersSent) return next(err);
+    console.error(`[SERVER] Unhandled error on ${req.method} ${req.originalUrl}:`, err);
+    const isClientError = err?.type === 'entity.parse.failed' || err?.type === 'entity.too.large';
+    res.status(isClientError ? 400 : 500).json({
+      success: false,
+      error: isClientError ? 'Invalid request body' : 'Internal server error',
+    });
+  };
+  app.use(errorHandler);
 
   console.log("[SERVER] ✅ Server creation completed successfully");
   return app;

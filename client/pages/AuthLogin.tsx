@@ -51,7 +51,7 @@ export default function AuthLogin() {
           schoolId: response.data.academy.id,
           tokens: {
             accessToken: response.data.token,
-            expiresInSec: 7 * 24 * 3600 // 7 days
+            expiresInSec: response.data.expiresInSec ?? 12 * 3600
           }
         };
         // Store additional academy data

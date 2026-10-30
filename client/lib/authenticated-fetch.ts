@@ -1,4 +1,4 @@
-import { getSession } from './auth';
+import { getSession, clearSession, redirectToLogin } from './auth';
 
 declare global {
   interface Window {
@@ -27,9 +27,16 @@ export function installAuthenticatedFetch(): void {
 
     const headers = new Headers(input instanceof Request ? input.headers : undefined);
     new Headers(init?.headers).forEach((value, key) => headers.set(key, value));
-    const token = isPublicAuthRequest ? undefined : getSession()?.tokens?.accessToken;
+    const session = isPublicAuthRequest ? null : getSession();
+    const token = session?.tokens?.accessToken;
     if (token && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`);
-    return nativeFetch(input, { ...init, headers });
+
+    const response = await nativeFetch(input, { ...init, headers });
+    if (response.status === 401 && token) {
+      clearSession();
+      redirectToLogin(session?.role);
+    }
+    return response;
   };
   window.__authenticatedFetchInstalled = true;
 }

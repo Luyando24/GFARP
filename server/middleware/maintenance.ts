@@ -1,47 +1,75 @@
-import { Request, Response, NextFunction } from 'express';
-import { query } from '../lib/db';
+import type { RequestHandler } from 'express';
+import jwt from 'jsonwebtoken';
+import { getJwtSecret } from '../lib/jwt.js';
+import { query } from '../lib/db.js';
 
-export async function maintenanceMiddleware(req: Request, res: Response, next: NextFunction) {
-  // Bypasses
-  const bypassPaths = [
-    '/api/auth/login',
-    '/api/system-settings',
-    '/api/setup-super-admin',
-    '/ping',
-    '/demo'
-  ];
+const CACHE_TTL_MS = 30_000;
+let maintenanceCache = { enabled: false, expiresAt: 0 };
 
-  if (bypassPaths.some(path => req.path.startsWith(path))) {
+export function clearMaintenanceCache(): void {
+  maintenanceCache = { enabled: false, expiresAt: 0 };
+}
+
+// These must stay reachable during maintenance so admins can sign in, read the
+// public banner and turn maintenance off, and so Stripe/cron traffic is not lost.
+const EXEMPT_PREFIXES = [
+  '/auth',
+  '/system-settings/public',
+  '/stripe/webhooks',
+  '/financial-transactions/cron',
+];
+
+function isExempt(pathname: string): boolean {
+  return EXEMPT_PREFIXES.some(
+    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+  );
+}
+
+async function isMaintenanceEnabled(): Promise<boolean> {
+  if (Date.now() < maintenanceCache.expiresAt) return maintenanceCache.enabled;
+
+  const result = await query(
+    "SELECT value FROM system_settings WHERE key = 'general.maintenanceMode' LIMIT 1",
+  );
+  const raw = result.rows[0]?.value;
+  const normalized = String(raw ?? '').trim().replace(/^"|"$/g, '').toLowerCase();
+  maintenanceCache = {
+    enabled: normalized === 'true',
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  };
+  return maintenanceCache.enabled;
+}
+
+function isAdminToken(token: string): boolean {
+  try {
+    const decoded: any = jwt.verify(token, getJwtSecret());
+    const role = String(decoded?.role || '').toLowerCase();
+    return role === 'admin' || role === 'superadmin' || role === 'super_admin';
+  } catch {
+    return false;
+  }
+}
+
+export const enforceMaintenanceMode: RequestHandler = async (req, res, next) => {
+  if (process.env.NODE_ENV === 'test') return next();
+  if (isExempt(req.path)) return next();
+
+  let enabled = false;
+  try {
+    enabled = await isMaintenanceEnabled();
+  } catch (error) {
+    // Never take the API down because the settings table is unreadable.
+    console.error('[MAINTENANCE] Could not read maintenance setting:', error);
     return next();
   }
+  if (!enabled) return next();
 
-  try {
-    // Check maintenance mode in DB
-    const result = await query("SELECT value FROM system_settings WHERE key = 'general.maintenanceMode'");
-    const isMaintenance = result.rows.length > 0 ? JSON.parse(result.rows[0].value) : false;
+  const token = req.header('authorization')?.split(' ')[1];
+  if (token && isAdminToken(token)) return next();
 
-    if (isMaintenance) {
-      // Check if user is admin
-      // This part depends on how auth is implemented. 
-      // If there's a token in the header, we could decode it.
-      // For now, let's just check the header for a specific bypass or role if possible.
-      
-      const authHeader = req.headers.authorization;
-      if (authHeader) {
-        // In a real app, you'd verify the JWT here and check for admin role
-        // For simplicity, we'll allow requests with a valid-looking auth header for now 
-        // OR we can leave it to the client-side to handle the UX and the server-side to just be aware.
-      }
-
-      // If we want to be strict:
-      // return res.status(503).json({ 
-      //   error: 'Maintenance Mode', 
-      //   message: 'The system is currently undergoing maintenance.' 
-      // });
-    }
-  } catch (error) {
-    console.error('Maintenance middleware error:', error);
-  }
-
-  next();
-}
+  return res.status(503).json({
+    success: false,
+    code: 'MAINTENANCE_MODE',
+    message: 'The service is temporarily unavailable for scheduled maintenance. Please try again shortly.',
+  });
+};

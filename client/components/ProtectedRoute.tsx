@@ -30,6 +30,8 @@ export const ProtectedRoute = ({
         return <Navigate to="/academy-dashboard" replace />;
       case "agency_admin":
         return <Navigate to="/academy-dashboard" replace />;
+      case "staff":
+        return <Navigate to="/academy-dashboard" replace />;
       case "individual_player":
         return <Navigate to="/player/dashboard" replace />;
       default:

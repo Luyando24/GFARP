@@ -42,6 +42,26 @@ export function clearSession() {
   window.dispatchEvent(new CustomEvent("auth:changed"));
 }
 
+const LOGIN_PATH_BY_ROLE: Record<string, string> = {
+  admin: "/admin/login",
+  superadmin: "/admin/login",
+  academy: "/login",
+  agency_admin: "/agency/login",
+  staff: "/staff/login",
+  individual_player: "/player/login",
+};
+
+let redirectingToLogin = false;
+
+export function redirectToLogin(role?: string | null) {
+  if (typeof window === "undefined") return;
+  const target = (role && LOGIN_PATH_BY_ROLE[role]) || "/portal";
+  if (window.location.pathname === target) return;
+  if (redirectingToLogin) return;
+  redirectingToLogin = true;
+  window.location.assign(target);
+}
+
 export function getSession(): AuthSession | null {
   const raw = localStorage.getItem(KEY);
   if (!raw) return null;
