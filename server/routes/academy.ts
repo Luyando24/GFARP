@@ -1,7 +1,7 @@
 import { Router, RequestHandler } from 'express';
 import { query, hashPassword, verifyPassword } from '../lib/db.js';
 import { emailService } from '../lib/email-service.js';
-import { authenticateToken, requireAdmin, requireOrganizationParam } from '../middleware/auth.js';
+import { authenticateToken, requireAcademyOwner, requireAdmin, requireOrganizationParam } from '../middleware/auth.js';
 import { decryptField } from '../lib/field-encryption.js';
 
 const router = Router();
@@ -685,7 +685,7 @@ const handleUpdateAcademy: RequestHandler = async (req, res) => {
   }
 };
 
-router.put('/:id', authenticateToken, requireOrganizationParam('id'), handleUpdateAcademy);
+router.put('/:id', authenticateToken, requireAcademyOwner, requireOrganizationParam('id'), handleUpdateAcademy);
 // DELETE /api/academies/:id - Delete academy (soft delete by setting status to inactive)
 const handleDeleteAcademy: RequestHandler = async (req, res) => {
   try {

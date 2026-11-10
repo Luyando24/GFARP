@@ -46,6 +46,78 @@ export function getPlayerBirthYear(dateOfBirth?: string): number | null {
   return Number.isNaN(birthDate.getTime()) ? null : birthDate.getFullYear();
 }
 
+const MONTH_NAMES = [
+  'january',
+  'february',
+  'march',
+  'april',
+  'may',
+  'june',
+  'july',
+  'august',
+  'september',
+  'october',
+  'november',
+  'december',
+];
+
+export function matchesDateOfBirth(
+  dateOfBirth: string | null | undefined,
+  query: string,
+): boolean {
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  if (!normalizedQuery) return true;
+  if (!dateOfBirth) return false;
+
+  // Read YYYY-MM-DD straight from the string so timezone offsets cannot shift the day.
+  const isoMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateOfBirth);
+  const birthDate = isoMatch
+    ? {
+        year: Number(isoMatch[1]),
+        monthIndex: Number(isoMatch[2]) - 1,
+        day: Number(isoMatch[3]),
+      }
+    : (() => {
+        const parsed = new Date(dateOfBirth);
+        if (Number.isNaN(parsed.getTime())) return null;
+        return {
+          year: parsed.getFullYear(),
+          monthIndex: parsed.getMonth(),
+          day: parsed.getDate(),
+        };
+      })();
+  if (!birthDate) return false;
+
+  const year = String(birthDate.year);
+  const month = String(birthDate.monthIndex + 1).padStart(2, '0');
+  const day = String(birthDate.day).padStart(2, '0');
+  const monthName = MONTH_NAMES[birthDate.monthIndex];
+  const shortMonth = monthName.slice(0, 3);
+  const numericDay = String(birthDate.day);
+  const numericMonth = String(birthDate.monthIndex + 1);
+
+  const candidates = [
+    `${year}-${month}-${day}`,
+    `${year}/${month}/${day}`,
+    `${year}-${month}`,
+    year,
+    `${day}/${month}/${year}`,
+    `${numericDay}/${numericMonth}/${year}`,
+    `${month}/${day}/${year}`,
+    `${numericMonth}/${numericDay}/${year}`,
+    `${day}-${month}-${year}`,
+    `${numericDay}-${numericMonth}-${year}`,
+    `${day} ${monthName} ${year}`,
+    `${numericDay} ${monthName} ${year}`,
+    `${shortMonth} ${year}`,
+    `${day} ${shortMonth} ${year}`,
+    `${numericDay} ${shortMonth} ${year}`,
+    `${monthName} ${year}`,
+  ];
+
+  return candidates.some((candidate) => candidate.includes(normalizedQuery));
+}
+
 export function filterPlayersByAdvancedFilters<T extends AdvancedSearchablePlayer>(
   players: T[],
   filters: AdvancedPlayerFilters,

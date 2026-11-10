@@ -15,6 +15,7 @@ import {
   Trophy,
   UserCheck,
   Users,
+  X,
 } from 'lucide-react';
 import {
   Api,
@@ -47,6 +48,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
+import { matchesDateOfBirth } from '@/lib/player-search';
 
 interface TrainingAttendanceManagerProps {
   academyId: string;
@@ -188,6 +190,9 @@ export default function TrainingAttendanceManager({
     Record<string, TrainingAttendanceStatus>
   >({});
   const [rosterSearch, setRosterSearch] = useState('');
+  const [rosterSearchMode, setRosterSearchMode] = useState<'details' | 'dateOfBirth'>(
+    'details',
+  );
   const [isRosterLoading, setIsRosterLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -436,15 +441,32 @@ export default function TrainingAttendanceManager({
     );
   };
 
+  const setPlayerStatus = (key: string, status: TrainingAttendanceStatus) => {
+    setAttendance((current) => ({ ...current, [key]: status }));
+  };
+
   const filteredRoster = useMemo(() => {
-    const term = rosterSearch.trim().toLowerCase();
+    const term = rosterSearch.trim();
     if (!term) return roster;
+    if (rosterSearchMode === 'dateOfBirth') {
+      return roster.filter((player) => matchesDateOfBirth(player.dateOfBirth, term));
+    }
+    const normalizedTerm = term.toLowerCase();
     return roster.filter((player) =>
       `${player.firstName} ${player.lastName} ${player.position || ''} ${player.email || ''}`
         .toLowerCase()
-        .includes(term),
+        .includes(normalizedTerm),
     );
-  }, [roster, rosterSearch]);
+  }, [roster, rosterSearch, rosterSearchMode]);
+
+  const formatRosterDateOfBirth = (value?: string) => {
+    if (!value) return '';
+    const isoMatch = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+    if (isoMatch) return `${isoMatch[3]}/${isoMatch[2]}/${isoMatch[1]}`;
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return '';
+    return parsed.toLocaleDateString();
+  };
 
   const attendedCount = roster.filter((player) =>
     ['present', 'late'].includes(
@@ -736,14 +758,38 @@ export default function TrainingAttendanceManager({
                 ) : (
                   <div className="space-y-4">
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="relative min-w-0 flex-1">
-                        <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                        <Input
-                          value={rosterSearch}
-                          onChange={(event) => setRosterSearch(event.target.value)}
-                          placeholder="Search players"
-                          className="ps-10"
-                        />
+                      <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row">
+                        <Select
+                          value={rosterSearchMode}
+                          onValueChange={(value: 'details' | 'dateOfBirth') =>
+                            setRosterSearchMode(value)
+                          }
+                        >
+                          <SelectTrigger
+                            className="w-full shrink-0 sm:w-48"
+                            aria-label="Search players by"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="details">All fields</SelectItem>
+                            <SelectItem value="dateOfBirth">Date of birth</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <div className="relative min-w-0 flex-1">
+                          <Search className="absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                          <Input
+                            value={rosterSearch}
+                            onChange={(event) => setRosterSearch(event.target.value)}
+                            placeholder={
+                              rosterSearchMode === 'dateOfBirth'
+                                ? 'e.g. 2012 or 15/03/2012'
+                                : 'Search players'
+                            }
+                            className="ps-10"
+                            autoComplete="off"
+                          />
+                        </div>
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Button
@@ -767,6 +813,18 @@ export default function TrainingAttendanceManager({
                     </div>
 
                     <div className="max-h-[540px] space-y-2 overflow-y-auto pe-1">
+                      {filteredRoster.length === 0 && (
+                        <div className="rounded-2xl border border-dashed border-slate-300 py-10 text-center dark:border-slate-700">
+                          <p className="font-semibold text-slate-700 dark:text-slate-200">
+                            No players match your search
+                          </p>
+                          <p className="mt-1 text-sm text-slate-500">
+                            {rosterSearchMode === 'dateOfBirth'
+                              ? 'Try a full date such as 15/03/2012, or just the year.'
+                              : 'Try a different name, position, or email.'}
+                          </p>
+                        </div>
+                      )}
                       {filteredRoster.map((player) => {
                         const key = `${player.playerSource}:${player.id}`;
                         const value = attendance[key] || 'absent';
@@ -780,12 +838,19 @@ export default function TrainingAttendanceManager({
                                 {player.firstName.slice(0, 1)}
                                 {player.lastName.slice(0, 1)}
                               </div>
-                              <div className="min-w-0">
+                              <div className="min-w-0 flex-1">
                                 <p className="truncate font-semibold text-slate-900 dark:text-white">
                                   {player.firstName} {player.lastName}
                                 </p>
                                 <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
                                   <span>{player.position || 'Position not set'}</span>
+                                  {rosterSearchMode === 'dateOfBirth' && (
+                                    <span>
+                                      {player.dateOfBirth
+                                        ? `Born ${formatRosterDateOfBirth(player.dateOfBirth)}`
+                                        : 'No date of birth'}
+                                    </span>
+                                  )}
                                   {player.isSelfRegistered && (
                                     <Badge variant="outline" className="h-5 text-[10px]">
                                       Self-registered
@@ -793,14 +858,43 @@ export default function TrainingAttendanceManager({
                                   )}
                                 </div>
                               </div>
+                              <div className="flex shrink-0 items-center gap-1.5">
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  className={`h-9 w-9 rounded-full bg-emerald-600 text-white hover:bg-emerald-700 ${
+                                    value === 'present'
+                                      ? 'ring-2 ring-emerald-400 ring-offset-2 ring-offset-white dark:ring-offset-slate-900'
+                                      : ''
+                                  }`}
+                                  aria-label={`Mark ${player.firstName} ${player.lastName} present`}
+                                  aria-pressed={value === 'present'}
+                                  title="Mark present"
+                                  onClick={() => setPlayerStatus(key, 'present')}
+                                >
+                                  <Check className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  className={`h-9 w-9 rounded-full bg-rose-600 text-white hover:bg-rose-700 ${
+                                    value === 'absent'
+                                      ? 'ring-2 ring-rose-400 ring-offset-2 ring-offset-white dark:ring-offset-slate-900'
+                                      : ''
+                                  }`}
+                                  aria-label={`Mark ${player.firstName} ${player.lastName} absent`}
+                                  aria-pressed={value === 'absent'}
+                                  title="Mark absent"
+                                  onClick={() => setPlayerStatus(key, 'absent')}
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </div>
                             <Select
                               value={value}
                               onValueChange={(next: TrainingAttendanceStatus) =>
-                                setAttendance((current) => ({
-                                  ...current,
-                                  [key]: next,
-                                }))
+                                setPlayerStatus(key, next)
                               }
                             >
                               <SelectTrigger

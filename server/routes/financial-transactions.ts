@@ -1,7 +1,7 @@
 
 import { Router, RequestHandler } from 'express';
 import { query, transaction as dbTransaction } from '../lib/db.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, requirePermission } from '../middleware/auth.js';
 import { processPlayerFeeRenewalReminders } from '../lib/player-fee-reminders.js';
 import { processTrainingSessionReminders } from '../lib/training-session-reminders.js';
 import { decryptField } from '../lib/field-encryption.js';
@@ -990,6 +990,7 @@ const handleCronReminders: RequestHandler = async (req, res) => {
 router.get('/reminders/process', handleCronReminders);
 router.post('/reminders/process', handleCronReminders);
 router.use(authenticateToken);
+router.use(requirePermission('finances'));
 
 // Academy player-fee settings and recurring fee schedules
 router.get('/:academyId/settings', handleGetFinancialSettings);

@@ -8,6 +8,7 @@ declare global {
         role: string;
         academyId?: string;
         schoolId?: string;
+        permissions?: string[];
       };
     }
   }

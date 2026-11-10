@@ -223,6 +223,20 @@ export const handleGetAcademyDashboardStats: RequestHandler = async (req, res) =
       monthlyFinancialPerformance
     };
 
+    // Staff accounts without the finances module never receive money figures,
+    // even though they can still see the rest of the dashboard.
+    const isStaffAccount = req.user?.role === 'staff';
+    const canViewFinances =
+      !isStaffAccount || (req.user?.permissions ?? []).includes('finances');
+    if (!canViewFinances) {
+      stats.monthlyRevenue = 0;
+      stats.monthlyFinancialPerformance = [];
+      stats.recentTransfers = (stats.recentTransfers || []).map((transfer) => ({
+        ...transfer,
+        transfer_amount: 0,
+      }));
+    }
+
     res.json({
       success: true,
       data: stats

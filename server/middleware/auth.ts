@@ -3,6 +3,10 @@ import jwt from 'jsonwebtoken';
 import { getJwtSecret } from '../lib/jwt.js';
 import { query } from '../lib/db.js';
 import { validateActiveSession } from '../lib/auth-tokens.js';
+import {
+  normalizeStaffPermissions,
+  type StaffPermission,
+} from '../../shared/permissions.js';
 
 export type AppRole =
   | 'superadmin'
@@ -63,12 +67,15 @@ export const authenticateToken: RequestHandler = async (req, res, next) => {
     }
 
     // Attach decoded user onto request (module augmentation ensures typing)
+    const role = normalizeRole(decoded.role);
     req.user = {
       id: String(decoded.id),
       email: String(decoded.email || ''),
       name: decoded.name ? String(decoded.name) : undefined,
-      role: normalizeRole(decoded.role),
+      role,
       academyId: decoded.academyId ? String(decoded.academyId) : undefined,
+      permissions:
+        role === 'staff' ? normalizeStaffPermissions(decoded.perm) : undefined,
     };
     next();
   } catch (err: any) {
@@ -102,7 +109,45 @@ export function requireRoles(...allowedRoles: AppRole[]): RequestHandler {
 export const requireAdmin = requireRoles('admin', 'superadmin');
 export const requireSuperAdmin = requireRoles('superadmin');
 
-type RequestUser = { id: string; email: string; name?: string; role: string; academyId?: string } | undefined;
+// Billing and academy-profile changes belong to the owner. Staff accounts work
+// inside the academy through the modules the owner granted them.
+export const requireAcademyOwner: RequestHandler = (req, res, next) => {
+  if (normalizeRole(req.user?.role) === 'staff') {
+    return res.status(403).json({
+      success: false,
+      code: 'OWNER_ONLY',
+      message: 'Only the academy owner can manage this.',
+    });
+  }
+  next();
+};
+
+// Academy owners and platform admins keep full access; staff accounts are
+// limited to the modules the academy owner granted them at creation time.
+export function requirePermission(permission: StaffPermission): RequestHandler {
+  return (req, res, next) => {
+    if (!req.user) {
+      return res.status(401).json({ success: false, message: 'Access token required' });
+    }
+    if (normalizeRole(req.user.role) !== 'staff') return next();
+    if (req.user.permissions?.includes(permission)) return next();
+    return res.status(403).json({
+      success: false,
+      code: 'PERMISSION_DENIED',
+      message:
+        'You do not have access to this part of the academy workspace. Ask the academy owner to update your access, then sign in again.',
+    });
+  };
+}
+
+type RequestUser = {
+  id: string;
+  email: string;
+  name?: string;
+  role: string;
+  academyId?: string;
+  permissions?: string[];
+} | undefined;
 
 export function canAccessOrganization(user: RequestUser, organizationId: unknown): boolean {
   if (!user || !organizationId) return false;

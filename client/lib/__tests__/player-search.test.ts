@@ -3,6 +3,7 @@ import {
   filterPlayersByAdvancedFilters,
   filterPlayersBySearch,
   getPlayerBirthYear,
+  matchesDateOfBirth,
 } from "../player-search";
 
 const players = [
@@ -52,5 +53,31 @@ describe("advanced academy player search", () => {
       filterPlayersByAdvancedFilters(players, { birthYear: "201" }),
     ).toHaveLength(2);
     expect(getPlayerBirthYear("not-a-date")).toBeNull();
+  });
+});
+
+describe("matchesDateOfBirth", () => {
+  it("matches a full year, an ISO prefix, and local date formats", () => {
+    expect(matchesDateOfBirth("2010-04-12", "2010")).toBe(true);
+    expect(matchesDateOfBirth("2010-04-12", "2010-04")).toBe(true);
+    expect(matchesDateOfBirth("2010-04-12", "12/04/2010")).toBe(true);
+    expect(matchesDateOfBirth("2010-04-12", "12-04-2010")).toBe(true);
+    expect(matchesDateOfBirth("2010-04-12", "12 april 2010")).toBe(true);
+  });
+
+  it("reads the calendar day without timezone drift", () => {
+    expect(matchesDateOfBirth("2010-04-12T00:00:00.000Z", "12/04/2010")).toBe(
+      true,
+    );
+  });
+
+  it("rejects other dates, missing values, and invalid input", () => {
+    expect(matchesDateOfBirth("2012-01-01", "2010")).toBe(false);
+    expect(matchesDateOfBirth(undefined, "2010")).toBe(false);
+    expect(matchesDateOfBirth("not-a-date", "2010")).toBe(false);
+  });
+
+  it("returns every player when the query is empty", () => {
+    expect(matchesDateOfBirth(undefined, "   ")).toBe(true);
   });
 });

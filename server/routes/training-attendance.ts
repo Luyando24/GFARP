@@ -1,6 +1,6 @@
 import { Router, type Request, type Response } from 'express';
 import { query, transaction } from '../lib/db.js';
-import { authenticateToken } from '../middleware/auth.js';
+import { authenticateToken, requirePermission } from '../middleware/auth.js';
 import {
   buildRecurringSessionDates,
   calculateAttendanceGamification,
@@ -122,6 +122,7 @@ function mapCreatedSession(row: any) {
 }
 
 router.use(authenticateToken);
+router.use(requirePermission('training'));
 
 // GET /api/training-attendance/academies/:academyId/locations
 router.get('/academies/:academyId/locations', async (req, res) => {
@@ -607,6 +608,7 @@ router.get('/sessions/:sessionId/roster', async (req, res) => {
            p.email_cipher AS email_value,
            p.position,
            p.jersey_number,
+           p.dob_cipher AS dob_value,
            FALSE AS is_self_registered
          FROM players p
          WHERE p.academy_id = $1
@@ -621,6 +623,7 @@ router.get('/sessions/:sessionId/roster', async (req, res) => {
            ip.email::bytea AS email_value,
            pp.position,
            NULL::integer AS jersey_number,
+           NULL::bytea AS dob_value,
            TRUE AS is_self_registered
          FROM individual_players ip
          LEFT JOIN player_profiles pp ON pp.player_id = ip.id
@@ -645,6 +648,7 @@ router.get('/sessions/:sessionId/roster', async (req, res) => {
       email: decryptPlayerValue(row.email_value),
       position: row.position || '',
       jerseyNumber: row.jersey_number,
+      dateOfBirth: decryptPlayerValue(row.dob_value),
       isSelfRegistered: Boolean(row.is_self_registered),
       attendanceStatus: (row.status || 'absent') as TrainingAttendanceStatus,
       attendanceNotes: row.notes || '',

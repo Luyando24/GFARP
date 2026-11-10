@@ -10,6 +10,7 @@ import {
   issueEmailVerificationToken,
   signSessionToken,
 } from '../lib/auth-tokens.js';
+import { normalizeStaffPermissions } from '../../shared/permissions.js';
 import { isConfigurationError } from '../lib/config.js';
 
 // Determine academies.id column type to align FKs
@@ -763,7 +764,7 @@ export const handleStaffLogin: RequestHandler = async (req, res) => {
     }
 
     const result = await query(`
-      SELECT id, academy_id, email, first_name, last_name, password_hash, role, is_active, token_version
+      SELECT id, academy_id, email, first_name, last_name, password_hash, role, is_active, token_version, permissions
       FROM staff_users
       WHERE LOWER(email) = $1
       LIMIT 1
@@ -785,6 +786,8 @@ export const handleStaffLogin: RequestHandler = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
+    const permissions = normalizeStaffPermissions(staff.permissions);
+
     const token = signSessionToken({
       id: staff.id,
       email: staff.email,
@@ -792,6 +795,7 @@ export const handleStaffLogin: RequestHandler = async (req, res) => {
       role: 'staff',
       academyId: staff.academy_id,
       tokenVersion: staff.token_version,
+      permissions,
     });
 
     return res.json({
@@ -806,6 +810,7 @@ export const handleStaffLogin: RequestHandler = async (req, res) => {
           role: 'staff',
           staffRole: staff.role,
           academyId: staff.academy_id,
+          permissions,
         },
         token,
         expiresInSec: ACCESS_TOKEN_TTL_SECONDS,

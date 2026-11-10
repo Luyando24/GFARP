@@ -40,6 +40,9 @@ export default function StaffLogin() {
         role: "staff",
         schoolId: response.data.user.academyId,
         email: response.data.user.email,
+        permissions: Array.isArray(response.data.user.permissions)
+          ? response.data.user.permissions
+          : [],
         tokens: {
           accessToken: response.data.token,
           expiresInSec: response.data.expiresInSec ?? 12 * 3600,

@@ -30,6 +30,7 @@ import systemSettingsRouter, { handleGetPublicSystemSettings } from "./routes/sy
 import academyRouter from "./routes/academy.js";
 import footballAuthRouter from "./routes/football-auth.js";
 import footballPlayersRouter from "./routes/football-players.js";
+import academyStaffRouter from "./routes/academy-staff.js";
 import transfersRouter from "./routes/transfers.js";
 import financialTransactionsRouter from "./routes/financial-transactions.js";
 import trainingAttendanceRouter from "./routes/training-attendance.js";
@@ -61,6 +62,9 @@ import {
   canAccessOrganizationForRequest,
   requireAdmin,
   requireSuperAdmin,
+  requireRoles,
+  requireAcademyOwner,
+  requirePermission,
 } from "./middleware/auth.js";
 import { enforceMaintenanceMode } from "./middleware/maintenance.js";
 import { isConfigurationError, missingProductionConfig } from "./lib/config.js";
@@ -271,14 +275,17 @@ export function createServer() {
   // Football players routes
   api.use("/football-players", footballPlayersRouter);
 
+  // Academy owner-managed team accounts (owner role only)
+  api.use("/academy-staff", authenticateToken, requireRoles("academy"), academyStaffRouter);
+
   // Subscription routes
-  api.use("/subscriptions", subscriptionRouter);
+  api.use("/subscriptions", requireAcademyOwner, subscriptionRouter);
 
   // Stripe payment routes
-  api.use("/stripe", stripePaymentsRouter);
+  api.use("/stripe", requireAcademyOwner, stripePaymentsRouter);
 
   // Payment verification (Stripe checkout success callback)
-  api.use("/payments", paymentsRouter);
+  api.use("/payments", requireAcademyOwner, paymentsRouter);
 
   // Stripe admin routes
   api.use("/stripe/admin", stripeAdminRouter);
@@ -314,9 +321,9 @@ export function createServer() {
   console.log("[SERVER] Transfer & financial routes registered");
 
   // Player documents routes
-  api.post("/player-documents/upload", authenticateToken, uploadMiddleware, handleUploadPlayerDocument);
-  api.get("/player-documents/:playerId", authenticateToken, handleGetPlayerDocuments);
-  api.delete("/player-documents/:documentId", authenticateToken, handleDeletePlayerDocument);
+  api.post("/player-documents/upload", authenticateToken, requirePermission('players'), uploadMiddleware, handleUploadPlayerDocument);
+  api.get("/player-documents/:playerId", authenticateToken, requirePermission('players'), handleGetPlayerDocuments);
+  api.delete("/player-documents/:documentId", authenticateToken, requirePermission('players'), handleDeletePlayerDocument);
 
   // Temporary maintenance route to check database connection and schema
   api.get("/maintenance/check-db", authenticateToken, requireAdmin, async (req, res) => {

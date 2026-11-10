@@ -1,10 +1,11 @@
 
 import { Router, RequestHandler } from 'express';
 import { query } from '../lib/db.js';
-import { authenticateToken, canAccessOrganizationForRequest } from '../middleware/auth.js';
+import { authenticateToken, canAccessOrganizationForRequest, requirePermission } from '../middleware/auth.js';
 
 const router = Router();
 router.use(authenticateToken);
+router.use(requirePermission('finances'));
 
 // GET /api/financial/summary
 const handleGetSummary: RequestHandler = async (req, res) => {

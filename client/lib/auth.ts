@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { AuthSession } from "@shared/api";
+import type { StaffPermission } from "@shared/permissions";
 
 const KEY = "ipims_auth_session";
 
@@ -122,5 +123,13 @@ export function canAccessReports(session: AuthSession | null): boolean {
 
 export function canAccessSupportManagement(session: AuthSession | null): boolean {
   return isAdmin(session);
+}
+
+// Academy owners (and platform admins) keep full access. Staff accounts only
+// see the modules the owner granted them.
+export function hasPermission(session: AuthSession | null, permission: StaffPermission): boolean {
+  if (!session) return false;
+  if (session.role !== 'staff') return true;
+  return Array.isArray(session.permissions) && session.permissions.includes(permission);
 }
 

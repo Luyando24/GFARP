@@ -1,7 +1,7 @@
 
 import { Router, RequestHandler } from 'express';
 import { query, transaction } from '../lib/db.js';
-import { authenticateToken, canAccessOrganizationForRequest } from '../middleware/auth.js';
+import { authenticateToken, canAccessOrganizationForRequest, requirePermission } from '../middleware/auth.js';
 import {
     DEFAULT_ACADEMY_CURRENCY,
     isSupportedCurrency,
@@ -10,6 +10,7 @@ import {
 
 const router = Router();
 router.use(authenticateToken);
+router.use(requirePermission('finances'));
 
 async function resolveAcademyCurrency(academyId: string): Promise<string> {
     const result = await query(

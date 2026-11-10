@@ -20,6 +20,7 @@ export interface SessionTokenInput {
   role: string;
   academyId?: string | null;
   tokenVersion?: number | null;
+  permissions?: string[] | null;
 }
 
 export function normalizeSessionRole(role: unknown): string {
@@ -42,6 +43,7 @@ export function signSessionToken(
   if (input.email) payload.email = input.email;
   if (input.name) payload.name = input.name;
   if (input.academyId) payload.academyId = input.academyId;
+  if (Array.isArray(input.permissions)) payload.perm = input.permissions;
   return jwt.sign(payload, getJwtSecret(), { expiresIn });
 }
 

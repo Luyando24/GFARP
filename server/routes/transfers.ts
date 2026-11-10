@@ -1,7 +1,7 @@
 import { Router, RequestHandler } from 'express';
 import { query } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
-import { authenticateToken, canAccessOrganizationForRequest } from '../middleware/auth.js';
+import { authenticateToken, canAccessOrganizationForRequest, requirePermission } from '../middleware/auth.js';
 import {
   DEFAULT_ACADEMY_CURRENCY,
   isSupportedCurrency,
@@ -581,6 +581,7 @@ export const handleGetTransferStats: RequestHandler = async (req, res) => {
 
 // Routes
 router.use(authenticateToken);
+router.use(requirePermission('transfers'));
 router.get('/', requireTransferOrganization, handleGetTransfers);
 router.get('/stats', requireTransferOrganization, handleGetTransferStats);
 router.get('/:transferId', requireTransferOrganization, handleGetTransfer);

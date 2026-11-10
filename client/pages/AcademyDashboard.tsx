@@ -1,6 +1,6 @@
 import React, { lazy, useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { clearSession, useAuth } from '@/lib/auth';
+import { clearSession, hasPermission, useAuth } from '@/lib/auth';
 import {
   getAcademyFinancialSettings,
   getCurrentSubscription,
@@ -56,7 +56,8 @@ import {
   Upload,
   Crown,
   Sparkles,
-  Lock
+  Lock,
+  UserCog
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -86,12 +87,14 @@ import {
   formatMoney,
   isSupportedCurrency,
 } from '@shared/currencies';
+import type { StaffPermission } from '@shared/permissions';
 
 const PlayerManagement = lazy(() => import('@/components/players/PlayerManagement'));
 const TrainingAttendanceManager = lazy(() => import('@/components/training/TrainingAttendanceManager'));
 const FinancialTransactionsManager = lazy(() => import('@/components/FinancialTransactionsManager'));
 const PaymentMethodSelector = lazy(() => import('@/components/PaymentMethodSelector'));
 const AcademyComplianceTab = lazy(() => import('@/components/academy/AcademyComplianceTab'));
+const StaffManagement = lazy(() => import('@/components/academy/StaffManagement'));
 const ComplianceDocuments = lazy(() => import('./ComplianceDocuments'));
 import MissingCountryModal from '@/components/modals/MissingCountryModal';
 
@@ -123,15 +126,17 @@ export default function AcademyDashboard() {
   const { t, dir, language } = useTranslation();
   const { session } = useAuth();
   const isAgency = session?.role === 'agency_admin';
+  const isStaff = session?.role === 'staff';
+  const canManageTeam = !isAgency && !isStaff;
   const navigationLabels = {
-    en: { open: 'Open menu', close: 'Close menu', logout: 'Sign out', training: 'Training' },
-    es: { open: 'Abrir menú', close: 'Cerrar menú', logout: 'Cerrar sesión', training: 'Entrenamiento' },
-    fr: { open: 'Ouvrir le menu', close: 'Fermer le menu', logout: 'Se déconnecter', training: 'Entraînement' },
-    pt: { open: 'Abrir menu', close: 'Fechar menu', logout: 'Terminar sessão', training: 'Treino' },
-    de: { open: 'Menü öffnen', close: 'Menü schließen', logout: 'Abmelden', training: 'Training' },
-    it: { open: 'Apri menu', close: 'Chiudi menu', logout: 'Esci', training: 'Allenamento' },
-    ar: { open: 'فتح القائمة', close: 'إغلاق القائمة', logout: 'تسجيل الخروج', training: 'التدريب' },
-    zh: { open: '打开菜单', close: '关闭菜单', logout: '退出登录', training: '训练' },
+    en: { open: 'Open menu', close: 'Close menu', logout: 'Sign out', training: 'Training', team: 'Team' },
+    es: { open: 'Abrir menú', close: 'Cerrar menú', logout: 'Cerrar sesión', training: 'Entrenamiento', team: 'Equipo' },
+    fr: { open: 'Ouvrir le menu', close: 'Fermer le menu', logout: 'Se déconnecter', training: 'Entraînement', team: 'Équipe' },
+    pt: { open: 'Abrir menu', close: 'Fechar menu', logout: 'Terminar sessão', training: 'Treino', team: 'Equipa' },
+    de: { open: 'Menü öffnen', close: 'Menü schließen', logout: 'Abmelden', training: 'Training', team: 'Team' },
+    it: { open: 'Apri menu', close: 'Chiudi menu', logout: 'Esci', training: 'Allenamento', team: 'Squadra' },
+    ar: { open: 'فتح القائمة', close: 'إغلاق القائمة', logout: 'تسجيل الخروج', training: 'التدريب', team: 'الفريق' },
+    zh: { open: '打开菜单', close: '关闭菜单', logout: '退出登录', training: '训练', team: '团队' },
   }[language];
   usePageTitle("Academy Dashboard");
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -1189,20 +1194,41 @@ export default function AcademyDashboard() {
     handlePlayerSearch(value);
   };
 
-  const sidebarItems = [
+  const tabDefinitions: {
+    id: string;
+    label: string;
+    icon: typeof Home;
+    permission?: StaffPermission;
+    ownerOnly?: boolean;
+    badge?: string;
+  }[] = [
     { id: "dashboard", label: t('dash.menu.dashboard'), icon: Home },
-    { id: "players", label: t('dash.menu.players'), icon: Users },
-    { id: "training", label: navigationLabels.training, icon: ClipboardCheck },
-    { id: "transfers", label: t('dash.menu.transfers'), icon: TrendingUp },
-    { id: "finances", label: t('dash.menu.finances'), icon: DollarSign },
-    { id: "fifa-compliance", label: t('dash.menu.compliance'), icon: Shield },
-    { id: "subscription", label: t('dash.stats.subscription'), icon: CreditCard },
-    { id: "settings", label: t('dash.menu.settings'), icon: Settings }
+    { id: "players", label: t('dash.menu.players'), icon: Users, permission: 'players' },
+    { id: "training", label: navigationLabels.training, icon: ClipboardCheck, permission: 'training' },
+    { id: "transfers", label: t('dash.menu.transfers'), icon: TrendingUp, permission: 'transfers', badge: 'Soon' },
+    { id: "finances", label: t('dash.menu.finances'), icon: DollarSign, permission: 'finances' },
+    { id: "fifa-compliance", label: t('dash.menu.compliance'), icon: Shield, permission: 'compliance' },
+    { id: "subscription", label: t('dash.stats.subscription'), icon: CreditCard, ownerOnly: true },
+    { id: "settings", label: t('dash.menu.settings'), icon: Settings, ownerOnly: true },
+    ...(canManageTeam
+      ? [{ id: "team", label: navigationLabels.team, icon: UserCog, ownerOnly: true }]
+      : []),
   ];
-  const mobileBottomItems = sidebarItems.filter((item) =>
+  const visibleTabs = tabDefinitions.filter((item) => {
+    if (item.ownerOnly && isStaff) return false;
+    if (item.permission && !hasPermission(session, item.permission)) return false;
+    return true;
+  });
+  const sidebarItems = visibleTabs;
+  const mobileBottomItems = visibleTabs.filter((item) =>
     ["dashboard", "players", "transfers", "finances"].includes(item.id),
   );
   const isMobileMoreActive = !mobileBottomItems.some((item) => item.id === activeTab);
+  useEffect(() => {
+    if (!visibleTabs.some((item) => item.id === activeTab)) {
+      setActiveTab("dashboard");
+    }
+  }, [activeTab, session?.permissions, session?.role]);
   const selectedCurrency = SUPPORTED_CURRENCIES.find(({ code }) => code === academyCurrency);
 
   return (
@@ -1394,7 +1420,7 @@ export default function AcademyDashboard() {
             {/* Sticky Navigation Section */}
             <div className="sticky top-16 z-40 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 shadow-sm">
               {/* Incomplete Profile Banner */}
-              {academyInfo && (
+              {!isStaff && academyInfo && (
                 (!academyInfo.address || academyInfo.address.trim() === '') ||
                 (!academyInfo.phone || academyInfo.phone.trim() === '') ||
                 (!academyInfo.directorName || academyInfo.directorName.trim() === '')
@@ -1427,18 +1453,24 @@ export default function AcademyDashboard() {
 
               {/* Tabs Navigation */}
               <div className="mx-auto hidden w-full max-w-7xl overflow-x-auto px-4 py-2 sm:px-6 lg:block">
-                <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-1 lg:grid lg:w-full lg:grid-cols-8">
-                  <TabsTrigger className="shrink-0 px-3 py-2" value="dashboard">{t('dash.menu.dashboard')}</TabsTrigger>
-                  <TabsTrigger className="shrink-0 px-3 py-2" value="players">{t('dash.menu.players')}</TabsTrigger>
-                  <TabsTrigger className="shrink-0 px-3 py-2" value="training">{navigationLabels.training}</TabsTrigger>
-                  <TabsTrigger className="shrink-0 px-3 py-2 flex items-center justify-center gap-1.5" value="transfers">
-                    {t('dash.menu.transfers')}
-                    <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-extrabold text-amber-800 dark:bg-amber-950 dark:text-amber-300">Soon</span>
-                  </TabsTrigger>
-                  <TabsTrigger className="shrink-0 px-3 py-2" value="finances">{t('dash.menu.finances')}</TabsTrigger>
-                  <TabsTrigger className="shrink-0 px-3 py-2" value="fifa-compliance">{t('dash.menu.compliance')}</TabsTrigger>
-                  <TabsTrigger className="shrink-0 px-3 py-2" value="subscription">{t('dash.stats.subscription')}</TabsTrigger>
-                  <TabsTrigger className="shrink-0 px-3 py-2" value="settings">{t('dash.menu.settings')}</TabsTrigger>
+                <TabsList
+                  className="inline-flex h-auto w-max min-w-full justify-start gap-1 lg:grid lg:w-full"
+                  style={{ gridTemplateColumns: `repeat(${visibleTabs.length}, minmax(0, 1fr))` }}
+                >
+                  {visibleTabs.map((item) => (
+                    <TabsTrigger
+                      key={item.id}
+                      className="shrink-0 px-3 py-2 flex items-center justify-center gap-1.5"
+                      value={item.id}
+                    >
+                      {item.label}
+                      {item.badge && (
+                        <span className="rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-extrabold text-amber-800 dark:bg-amber-950 dark:text-amber-300">
+                          {item.badge}
+                        </span>
+                      )}
+                    </TabsTrigger>
+                  ))}
                 </TabsList>
               </div>
 
@@ -1534,27 +1566,30 @@ export default function AcademyDashboard() {
                       </CardContent>
                     </Card>
 
-                    <Card>
-                      <CardContent className="p-6">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="text-sm text-slate-600 dark:text-slate-400">{t('dash.stats.revenue')}</p>
-                            <p className="text-2xl font-bold text-slate-900 dark:text-white">
-                              {isLoadingStats ? (
-                                <Loader2 className="h-6 w-6 animate-spin" />
-                              ) : (
-                                formatMoney(dashboardStats.monthlyRevenue, academyCurrency)
-                              )}
-                            </p>
+                    {hasPermission(session, 'finances') && (
+                      <Card>
+                        <CardContent className="p-6">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-sm text-slate-600 dark:text-slate-400">{t('dash.stats.revenue')}</p>
+                              <p className="text-2xl font-bold text-slate-900 dark:text-white">
+                                {isLoadingStats ? (
+                                  <Loader2 className="h-6 w-6 animate-spin" />
+                                ) : (
+                                  formatMoney(dashboardStats.monthlyRevenue, academyCurrency)
+                                )}
+                              </p>
+                            </div>
+                            <DollarSign className="h-8 w-8 text-green-600" />
                           </div>
-                          <DollarSign className="h-8 w-8 text-green-600" />
-                        </div>
-                      </CardContent>
-                    </Card>
+                        </CardContent>
+                      </Card>
+                    )}
 
 
 
-                    <Card>
+                    {!isStaff && (
+                      <Card>
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                           <div>
@@ -1594,9 +1629,11 @@ export default function AcademyDashboard() {
                         </div>
                       </CardContent>
                     </Card>
+                    )}
                   </div>
 
                   {/* Monthly Financial Performance Chart */}
+                  {hasPermission(session, 'finances') && (
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -1697,6 +1734,7 @@ export default function AcademyDashboard() {
                       )}
                     </CardContent>
                   </Card>
+                  )}
 
                   {/* Recent Transfers */}
                   <div className="grid grid-cols-1 gap-6">
@@ -2749,6 +2787,12 @@ export default function AcademyDashboard() {
                     </Card>
                   </div>
                 </TabsContent>
+
+                {canManageTeam && (
+                  <TabsContent value="team" className="space-y-6">
+                    <StaffManagement />
+                  </TabsContent>
+                )}
               </>
             )}
             </div>

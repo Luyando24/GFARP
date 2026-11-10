@@ -2,7 +2,7 @@ import { Router, RequestHandler } from 'express';
 import { randomBytes } from 'node:crypto';
 import { query, transaction } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
-import { authenticateToken, canAccessOrganizationForRequest, requireAdmin, requireRoles } from '../middleware/auth.js';
+import { authenticateToken, canAccessOrganizationForRequest, requireAdmin, requirePermission, requireRoles } from '../middleware/auth.js';
 import { decryptField, encryptField } from '../lib/field-encryption.js';
 import { hashNationalId, IDENTITY_HASH_VERSION } from '../lib/identity-hash.js';
 
@@ -1860,6 +1860,7 @@ export const handleCheckSlugAvailability: RequestHandler = async (req, res) => {
 
 // Mount routes
 router.use(authenticateToken);
+router.use(requirePermission('players'));
 router.get('/all-admin', requireAdmin, handleGetAllAdminPlayers);
 router.get('/', requireAcademyQuery, handleGetAcademyPlayers);
 router.get('/search', requireAcademyQuery, handleSearchPlayers);

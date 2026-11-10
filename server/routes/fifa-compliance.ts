@@ -5,12 +5,14 @@ import {
   canAccessOrganizationForRequest,
   normalizeRole,
   requireAdmin,
+  requirePermission,
 } from '../middleware/auth.js';
 
 const router = Router();
 
 // Apply authentication to all FIFA compliance routes
 router.use(authenticateToken);
+router.use(requirePermission('compliance'));
 
 async function requireAcademyAccess(req: any, res: any, academyId: unknown): Promise<boolean> {
   if (!academyId || !(await canAccessOrganizationForRequest(req.user, academyId))) {

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   getAccessTokenExpiration,
   getSession,
+  hasPermission,
   isAccessTokenExpired,
 } from "./auth";
 
@@ -67,5 +68,32 @@ describe("stored authentication session", () => {
     }));
 
     expect(getSession()?.userId).toBe("academy-1");
+  });
+});
+
+describe("hasPermission", () => {
+  const sessionFor = (role: string, permissions?: string[]) => ({
+    userId: "user-1",
+    role: role as any,
+    permissions,
+    tokens: { accessToken: "token", expiresInSec: 3600 },
+  });
+
+  it("keeps full access for academy owners", () => {
+    expect(hasPermission(sessionFor("academy"), "finances")).toBe(true);
+  });
+
+  it("limits staff to the modules they were granted", () => {
+    const staff = sessionFor("staff", ["players", "training"]);
+    expect(hasPermission(staff, "players")).toBe(true);
+    expect(hasPermission(staff, "finances")).toBe(false);
+  });
+
+  it("treats a staff account without stored permissions as not granted", () => {
+    expect(hasPermission(sessionFor("staff"), "players")).toBe(false);
+  });
+
+  it("denies everything without a session", () => {
+    expect(hasPermission(null, "players")).toBe(false);
   });
 });

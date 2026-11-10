@@ -177,6 +177,7 @@ export interface AuthSession {
   studentId?: UUID; // for student users
   agencyId?: UUID; // for agency users
   email?: string;
+  permissions?: string[]; // staff accounts only: granted academy modules
   tokens: AuthTokens;
 }
 

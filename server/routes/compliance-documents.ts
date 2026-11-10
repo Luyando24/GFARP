@@ -4,12 +4,13 @@ import { uploadMiddleware } from './player-documents.js';
 import { supabase } from '../lib/supabase.js';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
-import { authenticateToken, canAccessOrganizationForRequest, requireAdmin } from '../middleware/auth.js';
+import { authenticateToken, canAccessOrganizationForRequest, requireAdmin, requirePermission } from '../middleware/auth.js';
 
 const router = Router();
 
 // Apply authentication to all compliance routes
 router.use(authenticateToken);
+router.use(requirePermission('compliance'));
 
 // GET /api/compliance-documents?academyId=...
 router.get('/', async (req, res) => {

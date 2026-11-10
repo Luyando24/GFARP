@@ -98,6 +98,7 @@ export interface TrainingRosterPlayer {
   email?: string;
   position?: string;
   jerseyNumber?: number | null;
+  dateOfBirth?: string;
   isSelfRegistered: boolean;
   attendanceStatus: TrainingAttendanceStatus;
   attendanceNotes?: string;
