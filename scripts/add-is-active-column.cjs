@@ -1,5 +1,5 @@
 const { Client } = require('pg');
-require('dotenv').config({ path: '.env.local' });
+require('dotenv').config();
 
 async function addIsActiveColumn() {
   const client = new Client({

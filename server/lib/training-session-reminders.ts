@@ -1,6 +1,6 @@
 import { query } from './db.js';
 import { emailService } from './email-service.js';
-import { decryptField } from './field-encryption.js';
+import { decryptFieldSafe } from './field-encryption.js';
 
 type ReminderRecipientType = 'academy_admin' | 'player';
 
@@ -39,7 +39,7 @@ const escapeHtml = (value: unknown) =>
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 
-const decryptPlayerValue = decryptField;
+const decryptPlayerValue = decryptFieldSafe;
 
 function normalizeEmail(value: unknown) {
   const email = decryptPlayerValue(value).trim().toLowerCase();

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Api } from "@/lib/api";
 import { saveSession, useAuth } from "@/lib/auth";
+import { SESSION_TTL_SECONDS } from "@shared/session";
 import { handleError, validateEmail, validateRequired } from "@/lib/errors";
 import { Building, Eye, EyeOff, ArrowLeft, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
@@ -53,7 +54,7 @@ export default function AgencyLogin() {
           agencyId: response.data.agency.id,
           tokens: {
             accessToken: response.data.token,
-            expiresInSec: 7 * 24 * 3600 // 7 days
+            expiresInSec: response.data.expiresInSec ?? SESSION_TTL_SECONDS
           }
         };
         

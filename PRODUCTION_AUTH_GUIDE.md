@@ -200,6 +200,21 @@ Role: SUPERADMIN
    - Check table name casing
    - Verify database permissions
 
+4. **"Encrypted field could not be decrypted"**
+   - Player names, dates of birth and contact details are stored as `enc:v1:` AES-256-GCM
+     envelopes in the `*_cipher` columns. The key is `sha256(FIELD_ENCRYPTION_KEY)`, or
+     `sha256(JWT_SECRET)` for rows written before `FIELD_ENCRYPTION_KEY` existed.
+   - The error means the value was written with a key this deployment no longer uses:
+     `FIELD_ENCRYPTION_KEY` or `JWT_SECRET` changed, or another environment (a Vercel
+     preview, or a laptop pointed at the production `DATABASE_URL`) wrote the row.
+   - Fix: set the **same** `FIELD_ENCRYPTION_KEY` in production, previews and local dev
+     whenever they share a database. After rotating it, keep the previous value readable by
+     listing it in `FIELD_ENCRYPTION_KEY_LEGACY` (comma separated) - reads try the current
+     key first, then each legacy key, and every write uses the current key.
+   - Rows already encrypted under a key you no longer have cannot be recovered; re-enter
+     those players. Listing endpoints now blank only the unreadable fields instead of
+     failing the whole request.
+
 ## Next Steps
 
 1. **Immediate**: Test current mock authentication

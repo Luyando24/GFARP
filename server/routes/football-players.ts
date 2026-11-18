@@ -3,7 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { query, transaction } from '../lib/db.js';
 import { v4 as uuidv4 } from 'uuid';
 import { authenticateToken, canAccessOrganizationForRequest, requireAdmin, requirePermission, requireRoles } from '../middleware/auth.js';
-import { decryptField, encryptField } from '../lib/field-encryption.js';
+import { decryptField, decryptFieldSafe, encryptField } from '../lib/field-encryption.js';
 import { hashNationalId, IDENTITY_HASH_VERSION } from '../lib/identity-hash.js';
 
 const router = Router();
@@ -63,6 +63,7 @@ const requirePlayerAccess: RequestHandler = async (req, res, next) => {
 
 const encrypt = encryptField;
 const decrypt = decryptField;
+const decryptSafe = decryptFieldSafe;
 
 // Create Player
 export const handleCreatePlayer: RequestHandler = async (req, res) => {
@@ -365,20 +366,20 @@ export const handleGetAcademyPlayers: RequestHandler = async (req, res) => {
     const mapped = rows.map((p: any) => ({
       id: p.id,
       playerCardId: p.player_card_id,
-      firstName: decrypt(p.first_name_cipher),
-      lastName: decrypt(p.last_name_cipher),
+      firstName: decryptSafe(p.first_name_cipher, `player ${p.id} first name`),
+      lastName: decryptSafe(p.last_name_cipher, `player ${p.id} last name`),
       displayName: p.display_name || null,
       profileImageUrl: p.profile_image_url || null,
       slug: p.slug || null,
-      dateOfBirth: decrypt(p.dob_cipher),
+      dateOfBirth: decryptSafe(p.dob_cipher, `player ${p.id} date of birth`),
       position: p.position,
-      email: decrypt(p.email_cipher),
-      phone: decrypt(p.phone_cipher),
+      email: decryptSafe(p.email_cipher, `player ${p.id} email`),
+      phone: decryptSafe(p.phone_cipher, `player ${p.id} phone`),
       jerseyNumber: p.jersey_number ?? null,
       height: p.height_cm ?? null,
       weight: p.weight_kg ?? null,
       preferredFoot: p.preferred_foot ?? null,
-      currentClub: p.current_club_cipher ? decrypt(p.current_club_cipher) : null,
+      currentClub: p.current_club_cipher ? decryptSafe(p.current_club_cipher, `player ${p.id} current club`) : null,
       nationality: p.nationality || null,
       gender: p.gender || null,
       isActive: true,
@@ -442,13 +443,13 @@ export const handleGetAllAdminPlayers: RequestHandler = async (req, res) => {
     const { rows } = await query(baseQuery);
 
     let mapped = rows.map((p: any) => {
-      const firstName = decrypt(p.first_name_cipher) || '';
-      const lastName = decrypt(p.last_name_cipher) || '';
+      const firstName = decryptSafe(p.first_name_cipher, `player ${p.id} first name`) || '';
+      const lastName = decryptSafe(p.last_name_cipher, `player ${p.id} last name`) || '';
       const fullName = p.display_name || `${firstName} ${lastName}`.trim() || 'Unnamed Player';
-      const email = decrypt(p.email_cipher) || '';
-      const phone = decrypt(p.phone_cipher) || '';
-      const currentClub = p.current_club_cipher ? decrypt(p.current_club_cipher) : null;
-      const dateOfBirth = decrypt(p.dob_cipher) || null;
+      const email = decryptSafe(p.email_cipher, `player ${p.id} email`) || '';
+      const phone = decryptSafe(p.phone_cipher, `player ${p.id} phone`) || '';
+      const currentClub = p.current_club_cipher ? decryptSafe(p.current_club_cipher, `player ${p.id} current club`) : null;
+      const dateOfBirth = decryptSafe(p.dob_cipher, `player ${p.id} date of birth`) || null;
 
       let age: number | null = null;
       if (dateOfBirth) {
@@ -591,9 +592,9 @@ export const handleSearchPlayers: RequestHandler = async (req, res) => {
     const searchTerm = query_param.toLowerCase();
     const filteredResults = rows
       .map((p: any) => {
-        const firstName = decrypt(p.first_name_cipher) || '';
-        const lastName = decrypt(p.last_name_cipher) || '';
-        const currentClub = decrypt(p.current_club_cipher) || '';
+        const firstName = decryptSafe(p.first_name_cipher, `player ${p.id} first name`) || '';
+        const lastName = decryptSafe(p.last_name_cipher, `player ${p.id} last name`) || '';
+        const currentClub = decryptSafe(p.current_club_cipher, `player ${p.id} current club`) || '';
 
         return {
           id: p.id,

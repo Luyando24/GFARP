@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { PlayerApi } from "@/lib/api";
 import { saveSession } from "@/lib/auth";
+import { SESSION_TTL_SECONDS } from "@shared/session";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { User, ArrowLeft, Loader2 } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
@@ -99,7 +100,7 @@ export default function PlayerRegister() {
         userId: res.user.id,
         role: "individual_player",
         schoolId: null,
-        tokens: { accessToken: res.token, expiresInSec: 86400 },
+        tokens: { accessToken: res.token, expiresInSec: SESSION_TTL_SECONDS },
       });
 
       navigate("/player/dashboard");

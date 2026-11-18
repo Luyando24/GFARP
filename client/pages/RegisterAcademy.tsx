@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '../hooks/use-toast';
 import { saveSession } from '@/lib/auth';
+import { SESSION_TTL_SECONDS } from '@shared/session';
 import { useTranslation } from '@/lib/i18n';
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { countryCodes } from '@/lib/countryCodes';
@@ -126,7 +127,7 @@ export default function RegisterAcademy() {
             userId: data.data.academy.id,
             role: 'academy' as const,
             schoolId: data.data.academy.id,
-            tokens: { accessToken: data.data.token, expiresInSec: 24 * 3600 }
+            tokens: { accessToken: data.data.token, expiresInSec: data.data.expiresInSec ?? SESSION_TTL_SECONDS }
           };
           localStorage.setItem('academy_data', JSON.stringify(data.data.academy));
           localStorage.setItem('isNewRegistration', 'true');

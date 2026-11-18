@@ -2,11 +2,13 @@ import crypto from 'crypto';
 import jwt, { type SignOptions } from 'jsonwebtoken';
 import { getJwtSecret } from './jwt.js';
 import { query } from './db.js';
+import { SESSION_TTL, SESSION_TTL_SECONDS } from '../../shared/session.js';
 
-// Access tokens are deliberately short-lived. Revocation is enforced through
-// the per-account token_version claim checked in authenticateToken.
-export const ACCESS_TOKEN_TTL = '12h';
-export const ACCESS_TOKEN_TTL_SECONDS = 12 * 60 * 60;
+// Sessions last a month so owners and staff are not cut off mid-task. Revocation
+// stays immediate through the per-account token_version claim enforced by
+// authenticateToken, so a long TTL does not mean a long grace period.
+export const ACCESS_TOKEN_TTL = SESSION_TTL;
+export const ACCESS_TOKEN_TTL_SECONDS = SESSION_TTL_SECONDS;
 export const PASSWORD_RESET_TTL_MINUTES = 30;
 export const EMAIL_VERIFICATION_TTL_MINUTES = 24 * 60;
 

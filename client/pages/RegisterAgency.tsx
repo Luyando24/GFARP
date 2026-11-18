@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '../hooks/use-toast';
 import { saveSession } from '@/lib/auth';
+import { SESSION_TTL_SECONDS } from '@shared/session';
 import { useTranslation } from '@/lib/i18n';
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { countryCodes } from '@/lib/countryCodes';
@@ -111,7 +112,7 @@ export default function RegisterAgency() {
           userId: data.data.agency.id,
           role: 'agency_admin' as const,
           agencyId: data.data.agency.id,
-          tokens: { accessToken: data.data.token, expiresInSec: 24 * 3600 }
+          tokens: { accessToken: data.data.token, expiresInSec: data.data.expiresInSec ?? SESSION_TTL_SECONDS }
         };
         
         localStorage.setItem('agency_data', JSON.stringify(data.data.agency));

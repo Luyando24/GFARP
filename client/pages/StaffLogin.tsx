@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Api } from "@/lib/api";
 import { saveSession } from "@/lib/auth";
+import { SESSION_TTL_SECONDS } from "@shared/session";
 import { handleError, validateEmail, validateRequired } from "@/lib/errors";
 import { Trophy, Eye, EyeOff, ArrowLeft } from "lucide-react";
 
@@ -45,7 +46,7 @@ export default function StaffLogin() {
           : [],
         tokens: {
           accessToken: response.data.token,
-          expiresInSec: response.data.expiresInSec ?? 12 * 3600,
+          expiresInSec: response.data.expiresInSec ?? SESSION_TTL_SECONDS,
         },
       } as any);
 

@@ -6,7 +6,7 @@ import {
   calculateAttendanceGamification,
   type TrainingAttendanceStatus,
 } from '../lib/training-attendance.js';
-import { decryptField } from '../lib/field-encryption.js';
+import { decryptFieldSafe } from '../lib/field-encryption.js';
 
 const router = Router();
 
@@ -20,7 +20,7 @@ const attendanceStatuses = new Set<TrainingAttendanceStatus>([
 
 type PlayerSource = 'academy' | 'individual';
 
-const decryptPlayerValue = decryptField;
+const decryptPlayerValue = decryptFieldSafe;
 
 function normalizeRole(role: unknown): string {
   return String(role || '').trim().toLowerCase().replace(/-/g, '_');
@@ -643,12 +643,12 @@ router.get('/sessions/:sessionId/roster', async (req, res) => {
     const players = result.rows.map((row) => ({
       id: row.id,
       playerSource: row.player_source as PlayerSource,
-      firstName: decryptPlayerValue(row.first_name_value),
-      lastName: decryptPlayerValue(row.last_name_value),
-      email: decryptPlayerValue(row.email_value),
+      firstName: decryptPlayerValue(row.first_name_value, `player ${row.id} first name`),
+      lastName: decryptPlayerValue(row.last_name_value, `player ${row.id} last name`),
+      email: decryptPlayerValue(row.email_value, `player ${row.id} email`),
       position: row.position || '',
       jerseyNumber: row.jersey_number,
-      dateOfBirth: decryptPlayerValue(row.dob_value),
+      dateOfBirth: decryptPlayerValue(row.dob_value, `player ${row.id} date of birth`),
       isSelfRegistered: Boolean(row.is_self_registered),
       attendanceStatus: (row.status || 'absent') as TrainingAttendanceStatus,
       attendanceNotes: row.notes || '',

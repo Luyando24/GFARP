@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import jwt from 'jsonwebtoken';
+import { SESSION_TTL_SECONDS } from '../../../shared/session.js';
 import { getJwtSecret } from '../jwt.js';
 import {
   clearSessionValidationCache,
@@ -32,6 +33,13 @@ describe('session tokens', () => {
     expect(decoded.id).toBe('academy-1');
     expect(decoded.role).toBe('academy');
     expect(decoded.tv).toBe(4);
+  });
+
+  it('keeps users signed in for 30 days', () => {
+    const token = signSessionToken({ id: 'academy-1', role: 'academy', tokenVersion: 0 });
+    const decoded = jwt.verify(token, getJwtSecret()) as any;
+
+    expect(decoded.exp - decoded.iat).toBe(SESSION_TTL_SECONDS);
   });
 
   it('accepts a session whose token version and account status still match', async () => {

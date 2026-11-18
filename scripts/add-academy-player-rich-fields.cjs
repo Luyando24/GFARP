@@ -5,7 +5,7 @@ const dotenv = require('dotenv');
 // Load environment variables
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 if (!process.env.DATABASE_URL) {
-  dotenv.config({ path: path.join(__dirname, '..', '.env.local') });
+  dotenv.config();
 }
 
 async function runMigration() {

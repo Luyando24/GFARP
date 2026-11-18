@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Api } from "@/lib/api";
 import { saveSession, useAuth } from "@/lib/auth";
+import { SESSION_TTL_SECONDS } from "@shared/session";
 import { handleError, validateEmail, validateRequired } from "@/lib/errors";
 import { Trophy, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { useTranslation } from "@/lib/i18n";
@@ -51,7 +52,7 @@ export default function AuthLogin() {
           schoolId: response.data.academy.id,
           tokens: {
             accessToken: response.data.token,
-            expiresInSec: response.data.expiresInSec ?? 12 * 3600
+            expiresInSec: response.data.expiresInSec ?? SESSION_TTL_SECONDS
           }
         };
         // Store additional academy data

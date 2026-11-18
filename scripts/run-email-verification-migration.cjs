@@ -1,5 +1,5 @@
 const { Client } = require('pg');
-require('dotenv').config({ path: '.env.local' });
+require('dotenv').config();
 
 // Helper to extract project ref from Supabase URL
 function getProjectRef() {

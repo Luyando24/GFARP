@@ -338,6 +338,10 @@ describe('Football Auth Routes', () => {
       const decoded = jwt.verify(response.body.data.token, getJwtSecret()) as any;
       expect(decoded.role).toBe('staff');
       expect(decoded.academyId).toBe('academy-1');
+      expect(query).toHaveBeenCalledWith(
+        expect.stringContaining('SET last_login = NOW()'),
+        ['staff-1'],
+      );
     });
 
     it('rejects inactive staff accounts', async () => {

@@ -786,6 +786,12 @@ export const handleStaffLogin: RequestHandler = async (req, res) => {
       return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
+    try {
+      await query('UPDATE staff_users SET last_login = NOW() WHERE id = $1', [staff.id]);
+    } catch (lastLoginError) {
+      console.error('Failed to record staff last login:', lastLoginError);
+    }
+
     const permissions = normalizeStaffPermissions(staff.permissions);
 
     const token = signSessionToken({

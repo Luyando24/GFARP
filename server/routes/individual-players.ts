@@ -10,7 +10,7 @@ import { authenticateToken, requireAdmin } from '../middleware/auth.js';
 import { getStripe, createStripeCustomer } from '../lib/stripe.js';
 import { emailService } from '../lib/email-service.js';
 import { sendPlayerPurchaseReceipt } from '../lib/payment-receipt.js';
-import { decryptField } from '../lib/field-encryption.js';
+import { decryptFieldSafe } from '../lib/field-encryption.js';
 
 const router = Router();
 
@@ -30,9 +30,9 @@ function calculateAge(dateOfBirth: string | null): number | null {
 // Fields safe to expose on an unauthenticated profile page. Contact details,
 // guardian information and medical data are intentionally excluded.
 function buildPublicAcademyPlayer(player: any) {
-  const firstName = decryptField(player.first_name_cipher);
-  const lastName = decryptField(player.last_name_cipher);
-  const dateOfBirth = decryptField(player.dob_cipher);
+  const firstName = decryptFieldSafe(player.first_name_cipher, `player ${player.id} first name`);
+  const lastName = decryptFieldSafe(player.last_name_cipher, `player ${player.id} last name`);
+  const dateOfBirth = decryptFieldSafe(player.dob_cipher, `player ${player.id} date of birth`);
 
   return {
     id: player.id,
@@ -43,7 +43,7 @@ function buildPublicAcademyPlayer(player: any) {
     age: player.age || calculateAge(dateOfBirth),
     nationality: player.nationality || '',
     position: player.position || '',
-    current_club: player.current_club_cipher ? decryptField(player.current_club_cipher) : '',
+    current_club: player.current_club_cipher ? decryptFieldSafe(player.current_club_cipher, `player ${player.id} current club`) : '',
     video_links: player.video_links || [],
     transfermarket_link: player.transfermarket_link || '',
     bio: player.bio || '',

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '../hooks/use-toast';
 import { saveSession } from '@/lib/auth';
+import { SESSION_TTL_SECONDS } from '@shared/session';
 import { PlayerApi } from '@/lib/api';
 
 type AccountType = 'academy' | 'player';
@@ -40,7 +41,7 @@ export default function VerifyEmail() {
               userId: data.data.user.id,
               role: 'individual_player',
               schoolId: null,
-              tokens: { accessToken: data.data.token, expiresInSec: 24 * 3600 },
+              tokens: { accessToken: data.data.token, expiresInSec: SESSION_TTL_SECONDS },
             });
 
             toast({
@@ -74,7 +75,7 @@ export default function VerifyEmail() {
               userId: data.data.user.id,
               role: 'academy',
               schoolId: data.data.user.academy_id,
-              tokens: { accessToken: data.data.token, expiresInSec: data.data.expiresInSec ?? 12 * 3600 },
+              tokens: { accessToken: data.data.token, expiresInSec: data.data.expiresInSec ?? SESSION_TTL_SECONDS },
             } as any;
 
             localStorage.setItem('isNewRegistration', 'false');

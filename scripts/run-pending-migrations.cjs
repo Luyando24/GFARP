@@ -10,7 +10,7 @@ process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 const localEnvPath = path.resolve(__dirname, '../.env.local');
 const defaultEnvPath = path.resolve(__dirname, '../.env');
 if (fs.existsSync(localEnvPath)) {
-  dotenv.config({ path: localEnvPath });
+  dotenv.config();
 } else if (fs.existsSync(defaultEnvPath)) {
   dotenv.config({ path: defaultEnvPath });
 } else {

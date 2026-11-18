@@ -8,6 +8,7 @@ vi.mock('../../lib/db.js', () => ({
 }));
 
 import { query } from '../../lib/db.js';
+import { encryptField } from '../../lib/field-encryption.js';
 
 vi.mock('../../lib/email-service.js', () => ({
   emailService: {
@@ -63,12 +64,45 @@ describe('Football Players Routes', () => {
         ['academy-1', 10, 10],
       );
     });
+
+    it('still returns the roster when one row was encrypted with an unknown key', async () => {
+      const unreadable = Buffer.from('enc:v1:AAAAAAAAAAAAAAAA:BBBBBBBBBBBBBBBBBBBBBBBB:Q2lwaA==', 'utf8');
+      (query as any).mockImplementation(async (sql: string) => {
+        if (sql.includes('COUNT(*)')) return { rows: [{ count: 2 }] };
+        return {
+          rows: [
+            {
+              id: 'player-1',
+              first_name_cipher: encryptField('Chanda'),
+              last_name_cipher: encryptField('Banda'),
+              position: 'Forward',
+              created_at: new Date('2026-01-05T10:00:00Z'),
+            },
+            {
+              id: 'player-2',
+              first_name_cipher: unreadable,
+              last_name_cipher: unreadable,
+              position: 'Goalkeeper',
+              created_at: new Date('2026-01-04T10:00:00Z'),
+            },
+          ],
+        };
+      });
+
+      const response = await request(app)
+        .get('/api/football-players?academyId=academy-1')
+        .set('Authorization', 'Bearer valid_token');
+
+      expect(response.status).toBe(200);
+      expect(response.body.data.players).toHaveLength(2);
+      expect(response.body.data.players[0]).toMatchObject({ id: 'player-1', firstName: 'Chanda', lastName: 'Banda' });
+      expect(response.body.data.players[1]).toMatchObject({ id: 'player-2', firstName: '', lastName: '' });
+    });
   });
 
   describe('POST /api/football-players', () => {
     it('rejects player creation when the organization has no active subscription', async () => {
       (query as any).mockResolvedValueOnce({ rows: [] });
-
       const response = await request(app)
         .post('/api/football-players')
         .set('Authorization', 'Bearer valid_token')

@@ -4,7 +4,7 @@ import { query, transaction as dbTransaction } from '../lib/db.js';
 import { authenticateToken, requirePermission } from '../middleware/auth.js';
 import { processPlayerFeeRenewalReminders } from '../lib/player-fee-reminders.js';
 import { processTrainingSessionReminders } from '../lib/training-session-reminders.js';
-import { decryptField } from '../lib/field-encryption.js';
+import { decryptFieldSafe } from '../lib/field-encryption.js';
 import {
   DEFAULT_ACADEMY_CURRENCY,
   isSupportedCurrency,
@@ -66,7 +66,7 @@ interface BudgetCategory {
 }
 
 const normalizeCurrency = (value: unknown) => normalizeCurrencyCode(value) || DEFAULT_ACADEMY_CURRENCY;
-const decryptPlayerValue = decryptField;
+const decryptPlayerValue = decryptFieldSafe;
 
 function canAccessAcademy(req: any, academyId: string) {
   const user = req.user || {};
@@ -102,8 +102,8 @@ async function resolveAcademyPlayer(client: any, academyId: string, playerId: st
   return {
     id: player.id,
     source: player.player_source as 'academy' | 'individual',
-    name: `${decryptPlayerValue(player.first_name_cipher)} ${decryptPlayerValue(player.last_name_cipher)}`.trim(),
-    email: decryptPlayerValue(player.email_cipher),
+    name: `${decryptPlayerValue(player.first_name_cipher, `player ${player.id} first name`)} ${decryptPlayerValue(player.last_name_cipher, `player ${player.id} last name`)}`.trim(),
+    email: decryptPlayerValue(player.email_cipher, `player ${player.id} email`),
   };
 }
 
