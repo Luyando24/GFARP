@@ -2,11 +2,12 @@ import { Router, RequestHandler } from 'express';
 import { query, hashPassword, verifyPassword } from '../lib/db.js';
 import { emailService } from '../lib/email-service.js';
 import { authenticateToken, requireAcademyOwner, requireAdmin, requireOrganizationParam } from '../middleware/auth.js';
-import { decryptField } from '../lib/field-encryption.js';
+// import { decryptField } from '../lib/field-encryption.js';
+import { decryptFieldOrPlaceholder } from '../lib/field-encryption.js';
 
 const router = Router();
 
-const decrypt = decryptField;
+// const decrypt = decryptField;
 
 // Helper function to log activation history
 async function logActivationHistory(
@@ -263,8 +264,10 @@ const handleGetAcademyById: RequestHandler = async (req, res) => {
 
     const decryptedPlayers = (playersResult.rows as PlayerRow[]).map(p => ({
         ...p,
-        firstName: decrypt(p.first_name_cipher),
-        lastName: decrypt(p.last_name_cipher),
+        // firstName: decrypt(p.first_name_cipher),
+        // lastName: decrypt(p.last_name_cipher),
+        firstName: decryptFieldOrPlaceholder(p.first_name_cipher, `player ${p.id} first_name`),
+        lastName: decryptFieldOrPlaceholder(p.last_name_cipher, `player ${p.id} last_name`),
         first_name_cipher: undefined,
         last_name_cipher: undefined
     }));

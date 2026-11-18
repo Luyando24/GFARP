@@ -42,3 +42,14 @@ export function decryptField(value: unknown): string {
     throw new Error('Encrypted field could not be decrypted');
   }
 }
+
+export const UNREADABLE_FIELD = '[unreadable]';
+
+export function decryptFieldOrPlaceholder(value: unknown, context: string): string {
+  try {
+    return decryptField(value);
+  } catch {
+    console.error(`Failed to decrypt field (${context}); FIELD_ENCRYPTION_KEY may not match the key used to encrypt it`);
+    return UNREADABLE_FIELD;
+  }
+}

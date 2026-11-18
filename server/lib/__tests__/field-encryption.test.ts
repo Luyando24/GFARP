@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { decryptField, encryptField } from '../field-encryption.js';
+// import { decryptField, encryptField } from '../field-encryption.js';
+import { decryptField, decryptFieldOrPlaceholder, encryptField, UNREADABLE_FIELD } from '../field-encryption.js';
 
 describe('sensitive player field encryption', () => {
   const previousKey = process.env.FIELD_ENCRYPTION_KEY;
@@ -27,5 +28,12 @@ describe('sensitive player field encryption', () => {
   it('does not silently accept tampered ciphertext', () => {
     const encrypted = encryptField('protected').toString('utf8');
     expect(() => decryptField(`${encrypted.slice(0, -2)}AA`)).toThrow('could not be decrypted');
+  });
+
+  it('returns a placeholder instead of throwing when a field was encrypted with another key', () => {
+    const encrypted = encryptField('protected');
+    process.env.FIELD_ENCRYPTION_KEY = 'a-different-field-encryption-key-with-32-chars';
+    expect(decryptFieldOrPlaceholder(encrypted, 'test')).toBe(UNREADABLE_FIELD);
+    expect(decryptFieldOrPlaceholder(Buffer.from('legacy value'), 'test')).toBe('legacy value');
   });
 });
