@@ -31,3 +31,5 @@ dist-ssr
 .env.test
 .env.production
 .env.*
+# The example file documents which variables exist, but it is kept local only.
+.env.example
